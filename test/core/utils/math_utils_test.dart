@@ -86,4 +86,56 @@ void main() {
       expect(range, isNull);
     });
   });
+
+  group('segmentSegmentIntersectionT', () {
+    test('returns t where two crossing segments intersect', () {
+      final t = MathUtils.segmentSegmentIntersectionT(
+        const Offset(0, 0),
+        const Offset(10, 0),
+        const Offset(5, -5),
+        const Offset(5, 5),
+      );
+      expect(t, closeTo(0.5, 1e-9));
+    });
+
+    test('returns null for parallel segments', () {
+      final t = MathUtils.segmentSegmentIntersectionT(
+        const Offset(0, 0),
+        const Offset(10, 0),
+        const Offset(0, 5),
+        const Offset(10, 5),
+      );
+      expect(t, isNull);
+    });
+
+    test('returns null when segments do not actually cross within both bounds', () {
+      final t = MathUtils.segmentSegmentIntersectionT(
+        const Offset(0, 0),
+        const Offset(10, 0),
+        const Offset(20, -5),
+        const Offset(20, 5),
+      );
+      expect(t, isNull);
+    });
+  });
+
+  group('isAngleInRange', () {
+    test('handles a normal (non-wrapping) range', () {
+      expect(MathUtils.isAngleInRange(1.0, 0.5, 1.5), isTrue);
+      expect(MathUtils.isAngleInRange(2.0, 0.5, 1.5), isFalse);
+    });
+
+    test('handles a range that wraps through 0/2pi (wide wedge)', () {
+      // Range from 5.5 rad wrapping through 0 to 1.0 rad (a >180 degree span).
+      expect(MathUtils.isAngleInRange(0.1, 5.5, 1.0), isTrue);
+      expect(MathUtils.isAngleInRange(6.0, 5.5, 1.0), isTrue);
+      expect(MathUtils.isAngleInRange(3.0, 5.5, 1.0), isFalse);
+    });
+
+    test('normalizes angles outside [0, 2pi)', () {
+      final twoPi = 2 * math.pi;
+      expect(MathUtils.isAngleInRange(-0.1, 0.0, 1.0), isFalse);
+      expect(MathUtils.isAngleInRange(twoPi + 0.1, 0.0, 1.0), isTrue);
+    });
+  });
 }

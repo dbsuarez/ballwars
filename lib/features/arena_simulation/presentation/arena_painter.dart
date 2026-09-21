@@ -58,6 +58,8 @@ class ArenaPainter extends CustomPainter {
 
   void _paintLaserRays(Canvas canvas) {
     final owners = state.territory.sectorOwners;
+    final wedges = _computeWedges();
+
     for (var i = 0; i < owners.length; i++) {
       final ownerId = owners[i];
       if (ownerId.isEmpty) continue;
@@ -72,21 +74,73 @@ class ArenaPainter extends CustomPainter {
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
 
-      for (final segment in _visibleRaySegments(ball.position, rimPoint, ownerId)) {
+      for (final segment in _visibleRaySegments(ball.position, rimPoint, ownerId, wedges)) {
         canvas.drawLine(segment[0], segment[1], paint);
       }
     }
   }
 
+  /// Computes each ball's current owned territory as a wedge (apex at the
+  /// ball's position, bounded by the rim points of its first/last owned
+  /// sector), used to cut other balls' rays wherever they pass through it —
+  /// not just where a ball's body physically sits on the line.
+  Map<String, _Wedge> _computeWedges() {
+    final owners = state.territory.sectorOwners;
+    final total = owners.length;
+    final sectorAngleStep = 2 * math.pi / total;
+    final wedges = <String, _Wedge>{};
+
+    Offset rimPointAt(int index) {
+      final theta = rimAngle + (index * sectorAngleStep);
+      return Offset(math.cos(theta), math.sin(theta)) * arenaRadius;
+    }
+
+    for (var i = 0; i < total; i++) {
+      final id = owners[i];
+      if (id.isEmpty) continue;
+      final prev = (i - 1 + total) % total;
+      if (owners[prev] == id) continue; // not the start of this ball's run
+
+      var end = i;
+      while (owners[(end + 1) % total] == id) {
+        end = (end + 1) % total;
+      }
+
+      final ownerBall = state.balls.where((b) => b.config.id == id);
+      if (ownerBall.isEmpty) continue;
+
+      wedges[id] = _Wedge(
+        apex: ownerBall.first.position,
+        edge1: rimPointAt(i),
+        edge2: rimPointAt(end),
+        minAngle: rimAngle + i * sectorAngleStep,
+        maxAngle: rimAngle + end * sectorAngleStep,
+      );
+    }
+
+    return wedges;
+  }
+
   /// Splits a ray into the sub-segments that are NOT covered by any other
-  /// ball's body, so the ray visibly cuts wherever an opposing ball's path
-  /// crosses it, while staying visible before and after that crossing.
-  List<List<Offset>> _visibleRaySegments(Offset origin, Offset target, String ownerId) {
+  /// ball's body or territory wedge, so the ray visibly cuts wherever an
+  /// opposing ball or its owned fan crosses it, while staying visible
+  /// before and after that crossing.
+  List<List<Offset>> _visibleRaySegments(
+    Offset origin,
+    Offset target,
+    String ownerId,
+    Map<String, _Wedge> wedges,
+  ) {
     final blocked = <List<double>>[];
     for (final ball in state.balls) {
       if (ball.config.id == ownerId) continue;
       final range = MathUtils.segmentCircleOverlapRange(origin, target, ball.position, ball.radius);
       if (range != null) blocked.add(range);
+    }
+
+    for (final entry in wedges.entries) {
+      if (entry.key == ownerId) continue;
+      blocked.addAll(_blockedRangesForWedge(origin, target, entry.value));
     }
 
     if (blocked.isEmpty) return [[origin, target]];
@@ -114,6 +168,35 @@ class ArenaPainter extends CustomPainter {
       segments.add([origin + delta * cursor, origin + delta * 1.0]);
     }
     return segments;
+  }
+
+  /// Finds the t-ranges along segment [origin]->[target] that fall inside
+  /// [wedge]'s angular span as seen from its apex, by crossing the ray
+  /// against the wedge's two boundary edges and sampling each resulting
+  /// sub-interval's midpoint (robust to any number/order of crossings).
+  List<List<double>> _blockedRangesForWedge(Offset origin, Offset target, _Wedge wedge) {
+    final tValues = <double>[0.0, 1.0];
+    final t1 = MathUtils.segmentSegmentIntersectionT(origin, target, wedge.apex, wedge.edge1);
+    if (t1 != null) tValues.add(t1);
+    final t2 = MathUtils.segmentSegmentIntersectionT(origin, target, wedge.apex, wedge.edge2);
+    if (t2 != null) tValues.add(t2);
+    tValues.sort();
+
+    final delta = target - origin;
+    final blocked = <List<double>>[];
+    for (var i = 0; i < tValues.length - 1; i++) {
+      final segStart = tValues[i];
+      final segEnd = tValues[i + 1];
+      if (segEnd - segStart < 1e-9) continue;
+
+      final mid = (segStart + segEnd) / 2;
+      final midPoint = origin + delta * mid;
+      final angle = math.atan2(midPoint.dy - wedge.apex.dy, midPoint.dx - wedge.apex.dx);
+      if (MathUtils.isAngleInRange(angle, wedge.minAngle, wedge.maxAngle)) {
+        blocked.add([segStart, segEnd]);
+      }
+    }
+    return blocked;
   }
 
   void _paintParticles(Canvas canvas) {
@@ -189,4 +272,22 @@ class ArenaPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant ArenaPainter oldDelegate) => true;
+}
+
+/// A ball's currently owned territory, as an angular wedge fanning out from
+/// its current position to the rim points of its first/last owned sector.
+class _Wedge {
+  final Offset apex;
+  final Offset edge1;
+  final Offset edge2;
+  final double minAngle;
+  final double maxAngle;
+
+  const _Wedge({
+    required this.apex,
+    required this.edge1,
+    required this.edge2,
+    required this.minAngle,
+    required this.maxAngle,
+  });
 }

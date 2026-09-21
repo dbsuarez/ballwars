@@ -60,4 +60,46 @@ class MathUtils {
 
     return [t1, t2];
   }
+
+  /// Returns the parametric t (along segment [p0]->[p1]) where it crosses
+  /// segment [q0]->[q1], or null if they don't cross within both segments.
+  static double? segmentSegmentIntersectionT(
+    Offset p0,
+    Offset p1,
+    Offset q0,
+    Offset q1,
+  ) {
+    final r = p1 - p0;
+    final s = q1 - q0;
+    final rxs = r.dx * s.dy - r.dy * s.dx;
+    if (rxs == 0) return null;
+
+    final qp = q0 - p0;
+    final t = (qp.dx * s.dy - qp.dy * s.dx) / rxs;
+    final u = (qp.dx * r.dy - qp.dy * r.dx) / rxs;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+
+    return t;
+  }
+
+  /// Whether [angle] falls within [minAngle]..[maxAngle] going the forward
+  /// (increasing) direction, correctly handling a range that wraps through
+  /// 0/2*pi and spans that are wider than pi (reflex wedges).
+  static bool isAngleInRange(double angle, double minAngle, double maxAngle) {
+    final twoPi = 2 * math.pi;
+    double normalize(double a) {
+      var result = a % twoPi;
+      if (result < 0) result += twoPi;
+      return result;
+    }
+
+    final normAngle = normalize(angle);
+    final normMin = normalize(minAngle);
+    final normMax = normalize(maxAngle);
+
+    if (normMin <= normMax) {
+      return normAngle >= normMin && normAngle <= normMax;
+    }
+    return normAngle >= normMin || normAngle <= normMax;
+  }
 }

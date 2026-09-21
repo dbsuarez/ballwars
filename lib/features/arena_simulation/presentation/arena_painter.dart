@@ -70,10 +70,7 @@ class ArenaPainter extends CustomPainter {
       final paint = Paint()
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
-      // Each sector's line runs from wherever it was last claimed (frozen),
-      // not the ball's live position, so it stays put once claimed instead
-      // of sweeping/rotating as the owning ball keeps moving.
-      canvas.drawLine(state.territory.sectorClaimOrigin[i], rimPoint, paint);
+      canvas.drawLine(ball.position, rimPoint, paint);
     }
   }
 

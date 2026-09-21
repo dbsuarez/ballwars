@@ -33,6 +33,8 @@ class MatchSimulationController {
     final resolvedSeed = seed ?? DateTime.now().millisecondsSinceEpoch;
     _rng = SeededRandom(resolvedSeed);
     _physics = ArenaPhysicsEngine(arenaRadius, _rng);
+    _territory = TerritoryEngine();
+    _territory.initializeSplit(contestants.map((c) => c.id).toList());
 
     final ballRadius = arenaRadius * 0.08;
     _balls = List.generate(contestants.length, (i) {
@@ -52,12 +54,6 @@ class MatchSimulationController {
         lineCount: TerritoryEngine.totalSectors ~/ contestants.length,
       );
     });
-
-    _territory = TerritoryEngine();
-    _territory.initializeSplit(
-      contestants.map((c) => c.id).toList(),
-      _balls.map((b) => b.position).toList(),
-    );
   }
 
   Future<void> preloadImages() async {
@@ -128,13 +124,8 @@ class MatchSimulationController {
   /// Permanently claims any sector whose line a ball's body is currently
   /// touching, for every ball that doesn't already own it -- this is the
   /// core territory mechanic: cutting a line permanently transfers it.
-  /// A sector's line runs from wherever it was last claimed from (frozen)
-  /// to its fixed rim point, so it stays put once claimed even as balls
-  /// keep moving; claiming it again moves that frozen origin to the new
-  /// claimant's current position.
   void _resolveLineCrossings() {
     final owners = _territory.sectorOwners;
-    final claimOrigins = _territory.sectorClaimOrigin;
     const sectorAngleStep = 2 * math.pi / TerritoryEngine.totalSectors;
 
     for (final claimant in _balls) {
@@ -142,18 +133,21 @@ class MatchSimulationController {
         final ownerId = owners[i];
         if (ownerId.isEmpty || ownerId == claimant.config.id) continue;
 
+        final ownerBall = _balls.where((b) => b.config.id == ownerId);
+        if (ownerBall.isEmpty) continue;
+
         final theta = i * sectorAngleStep;
         final rimPoint = Offset(math.cos(theta), math.sin(theta)) * arenaRadius;
 
         final overlap = MathUtils.segmentCircleOverlapRange(
-          claimOrigins[i],
+          ownerBall.first.position,
           rimPoint,
           claimant.position,
           claimant.radius,
         );
         if (overlap == null) continue;
 
-        _territory.claimSector(claimant.config.id, i, claimant.position);
+        _territory.claimSector(claimant.config.id, i);
       }
     }
   }

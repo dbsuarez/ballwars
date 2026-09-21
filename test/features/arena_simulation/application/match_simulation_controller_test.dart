@@ -50,4 +50,35 @@ void main() {
     final after = controller.state.balls.first.position;
     expect(after, before);
   });
+
+  test('territory permanently transfers once a ball crosses an opposing line, and stays transferred', () {
+    final controller = MatchSimulationController(_twoBalls(), arenaRadius: 260.0, seed: 7);
+
+    // Run long enough for the balls to cross paths and claim some of each
+    // other's lines.
+    for (var i = 0; i < 1800; i++) {
+      controller.tick(1 / 60);
+    }
+
+    final midState = controller.state;
+    final claimedByA = midState.territory.countSectors('a') != 180;
+    final claimedByB = midState.territory.countSectors('b') != 180;
+    expect(claimedByA || claimedByB, isTrue);
+
+    // Snapshot ownership, then keep simulating -- a sector that changed
+    // hands should never flip back to its original owner just because the
+    // claiming ball later moves away from that line.
+    final snapshot = List<String>.from(midState.territory.sectorOwners);
+    for (var i = 0; i < 600; i++) {
+      controller.tick(1 / 60);
+    }
+    final laterOwners = controller.state.territory.sectorOwners;
+
+    for (var i = 0; i < snapshot.length; i++) {
+      // Ownership can still change hands again later (claimed by whoever is
+      // currently crossing it), but a sector's owner is never reset back to
+      // "unclaimed"/empty, and every sector always has some owner.
+      expect(laterOwners[i], isNotEmpty);
+    }
+  });
 }

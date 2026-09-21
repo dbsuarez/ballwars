@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/utils/canvas_image_helper.dart';
+import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../domain/arena_physics_engine.dart';
@@ -32,7 +33,7 @@ class MatchSimulationController {
     final resolvedSeed = seed ?? DateTime.now().millisecondsSinceEpoch;
     _rng = SeededRandom(resolvedSeed);
     _physics = ArenaPhysicsEngine(arenaRadius, _rng);
-    _territory = TerritoryEngine(contestants.length, _rng);
+    _territory = TerritoryEngine();
     _territory.initializeSplit(contestants.map((c) => c.id).toList());
 
     final ballRadius = arenaRadius * 0.08;
@@ -97,10 +98,17 @@ class MatchSimulationController {
       for (var j = i + 1; j < _balls.length; j++) {
         final result = _physics.resolveBallCollision(_balls[i], _balls[j]);
         if (result != null) {
-          _handleCollision(_balls[i], _balls[j], result);
+          _particles.spawnBurst(
+            origin: result.contactPoint,
+            normal: result.normal,
+            color: _balls[i].config.primaryColor,
+            rng: _rng,
+          );
         }
       }
     }
+
+    _resolveLineCrossings();
 
     for (final ball in _balls) {
       ball.lineCount = _territory.countSectors(ball.config.id);
@@ -113,29 +121,46 @@ class MatchSimulationController {
     }
   }
 
-  void _handleCollision(SimulationBall a, SimulationBall b, CollisionResult result) {
-    final aFaster = a.velocity.distance >= b.velocity.distance;
-    final winner = aFaster ? a : b;
-    final loser = aFaster ? b : a;
+  /// Permanently claims any sector whose line a ball's body is currently
+  /// touching, for every ball that doesn't already own it -- this is the
+  /// core territory mechanic: cutting a line permanently transfers it.
+  void _resolveLineCrossings() {
+    final owners = _territory.sectorOwners;
+    const sectorAngleStep = 2 * math.pi / TerritoryEngine.totalSectors;
 
-    final stealResult = _territory.resolveSteal(
-      winnerId: winner.config.id,
-      loserId: loser.config.id,
-    );
+    for (final claimant in _balls) {
+      var claimedCount = 0;
 
-    if (stealResult.stolenCount > 0) {
-      _floatingTexts.spawn(
-        winner.position,
-        '+${stealResult.stolenCount} LINES',
-        winner.config.primaryColor,
-      );
+      for (var i = 0; i < TerritoryEngine.totalSectors; i++) {
+        final ownerId = owners[i];
+        if (ownerId.isEmpty || ownerId == claimant.config.id) continue;
+
+        final ownerBall = _balls.where((b) => b.config.id == ownerId);
+        if (ownerBall.isEmpty) continue;
+
+        final theta = i * sectorAngleStep;
+        final rimPoint = Offset(math.cos(theta), math.sin(theta)) * arenaRadius;
+
+        final overlap = MathUtils.segmentCircleOverlapRange(
+          ownerBall.first.position,
+          rimPoint,
+          claimant.position,
+          claimant.radius,
+        );
+        if (overlap == null) continue;
+
+        if (_territory.claimSector(claimant.config.id, i)) {
+          claimedCount++;
+        }
+      }
+
+      if (claimedCount > 0) {
+        _floatingTexts.spawn(
+          claimant.position,
+          '+$claimedCount LINES',
+          claimant.config.primaryColor,
+        );
+      }
     }
-
-    _particles.spawnBurst(
-      origin: result.contactPoint,
-      normal: result.normal,
-      color: winner.config.primaryColor,
-      rng: _rng,
-    );
   }
 }

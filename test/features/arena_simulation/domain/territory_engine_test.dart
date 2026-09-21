@@ -1,24 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ballwars/core/utils/seeded_random.dart';
 import 'package:ballwars/features/arena_simulation/domain/territory_engine.dart';
-
-/// A ball's owned sectors should always form a single contiguous circular
-/// arc (or own none/all of them) — never split into disconnected chunks.
-bool isSingleContiguousArc(List<String> owners, String id) {
-  final total = owners.length;
-  var transitions = 0;
-  for (var i = 0; i < total; i++) {
-    final current = owners[i] == id;
-    final next = owners[(i + 1) % total] == id;
-    if (current != next) transitions++;
-  }
-  return transitions <= 2;
-}
 
 void main() {
   group('initializeSplit', () {
     test('splits 360 sectors evenly among 2 balls', () {
-      final engine = TerritoryEngine(2, SeededRandom(1));
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
       expect(engine.countSectors('a'), 180);
       expect(engine.countSectors('b'), 180);
@@ -29,7 +15,7 @@ void main() {
     });
 
     test('splits 360 sectors evenly among 4 balls', () {
-      final engine = TerritoryEngine(4, SeededRandom(1));
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b', 'c', 'd']);
       expect(engine.countSectors('a'), 90);
       expect(engine.countSectors('b'), 90);
@@ -38,71 +24,67 @@ void main() {
     });
   });
 
-  group('resolveSteal', () {
-    test('reassigns a clamped amount of sectors from loser to winner', () {
-      final engine = TerritoryEngine(2, SeededRandom(5));
+  group('claimSector', () {
+    test('transfers ownership of a single sector to the claimant', () {
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
-      final before = engine.countSectors('b');
 
-      final result = engine.resolveSteal(winnerId: 'a', loserId: 'b');
+      final changed = engine.claimSector('a', 200);
 
-      expect(result.stolenCount, inInclusiveRange(10, 75));
-      expect(engine.countSectors('b'), before - result.stolenCount);
-      expect(engine.countSectors('a'), 180 + result.stolenCount);
+      expect(changed, isTrue);
+      expect(engine.sectorOwners[200], 'a');
+      expect(engine.countSectors('a'), 181);
+      expect(engine.countSectors('b'), 179);
     });
 
-    test('repeated steals with alternating winners keep each side contiguous', () {
-      final engine = TerritoryEngine(2, SeededRandom(11));
+    test('returns false and does nothing when already owned by the claimant', () {
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
 
-      engine.resolveSteal(winnerId: 'a', loserId: 'b');
-      engine.resolveSteal(winnerId: 'b', loserId: 'a');
-      engine.resolveSteal(winnerId: 'a', loserId: 'b');
-      engine.resolveSteal(winnerId: 'b', loserId: 'a');
-      engine.resolveSteal(winnerId: 'a', loserId: 'b');
+      final changed = engine.claimSector('a', 10);
 
-      expect(isSingleContiguousArc(engine.sectorOwners, 'a'), isTrue);
-      expect(isSingleContiguousArc(engine.sectorOwners, 'b'), isTrue);
+      expect(changed, isFalse);
+      expect(engine.countSectors('a'), 180);
     });
 
-    test('cannot steal more sectors than the loser owns', () {
-      final engine = TerritoryEngine(2, SeededRandom(2));
+    test('can claim non-contiguous sectors independently', () {
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
-      // Drain b down to 5 sectors via repeated steals.
-      while (engine.countSectors('b') > 5) {
-        engine.resolveSteal(winnerId: 'a', loserId: 'b');
-      }
-      final remaining = engine.countSectors('b');
-      final result = engine.resolveSteal(winnerId: 'a', loserId: 'b');
-      expect(result.stolenCount, remaining);
-      expect(engine.countSectors('b'), 0);
+
+      engine.claimSector('a', 200);
+      engine.claimSector('a', 350);
+
+      expect(engine.sectorOwners[200], 'a');
+      expect(engine.sectorOwners[350], 'a');
+      expect(engine.sectorOwners[201], 'b');
     });
   });
 
   group('win + slow motion detection', () {
     test('winnerId is null while match is contested', () {
-      final engine = TerritoryEngine(2, SeededRandom(1));
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
       expect(engine.winnerId, isNull);
     });
 
     test('winnerId is set once a ball reaches 360 sectors', () {
-      final engine = TerritoryEngine(2, SeededRandom(3));
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
-      while (engine.countSectors('b') > 0) {
-        engine.resolveSteal(winnerId: 'a', loserId: 'b');
+      for (var i = 180; i < 360; i++) {
+        engine.claimSector('a', i);
       }
       expect(engine.countSectors('a'), 360);
       expect(engine.winnerId, 'a');
     });
 
     test('isSlowMotion becomes true once a ball drops to 15 or fewer sectors', () {
-      final engine = TerritoryEngine(2, SeededRandom(4));
+      final engine = TerritoryEngine();
       engine.initializeSplit(['a', 'b']);
       expect(engine.isSlowMotion(), isFalse);
-      while (engine.countSectors('b') > 15) {
-        engine.resolveSteal(winnerId: 'a', loserId: 'b');
+      for (var i = 180; i < 345; i++) {
+        engine.claimSector('a', i);
       }
+      expect(engine.countSectors('b'), 15);
       expect(engine.isSlowMotion(), isTrue);
     });
   });

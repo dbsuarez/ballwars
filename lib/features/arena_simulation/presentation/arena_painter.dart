@@ -3,14 +3,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/simulation_state.dart';
-import 'ray_clipper.dart';
 
 class ArenaPainter extends CustomPainter {
   final SimulationState state;
   final double arenaRadius;
   final double rimAngle;
 
-  static const double _ballGlowPadding = RayClipper.ballGlowPadding;
+  static const double _ballGlowPadding = 4.0;
 
   ArenaPainter({
     required this.state,
@@ -58,13 +57,6 @@ class ArenaPainter extends CustomPainter {
 
   void _paintLaserRays(Canvas canvas) {
     final owners = state.territory.sectorOwners;
-    final wedges = RayClipper.computeWedges(
-      sectorOwners: owners,
-      balls: state.balls,
-      rimAngle: rimAngle,
-      arenaRadius: arenaRadius,
-    );
-
     for (var i = 0; i < owners.length; i++) {
       final ownerId = owners[i];
       if (ownerId.isEmpty) continue;
@@ -78,18 +70,7 @@ class ArenaPainter extends CustomPainter {
       final paint = Paint()
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
-
-      final segments = RayClipper.visibleRaySegments(
-        origin: ball.position,
-        target: rimPoint,
-        ownerId: ownerId,
-        ownerRadius: ball.radius,
-        balls: state.balls,
-        wedges: wedges,
-      );
-      for (final segment in segments) {
-        canvas.drawLine(segment[0], segment[1], paint);
-      }
+      canvas.drawLine(ball.position, rimPoint, paint);
     }
   }
 

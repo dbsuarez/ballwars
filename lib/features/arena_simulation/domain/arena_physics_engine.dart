@@ -23,10 +23,12 @@ class ArenaPhysicsEngine {
 
   ArenaPhysicsEngine(this.arenaRadius, this.rng);
 
-  void resolveWallCollision(SimulationBall ball) {
+  /// Reflects [ball] off the arena wall if it has reached the boundary.
+  /// Returns whether a bounce actually occurred.
+  bool resolveWallCollision(SimulationBall ball) {
     final d = ball.position.distance;
     final maxDist = arenaRadius - ball.radius;
-    if (d < maxDist || d == 0) return;
+    if (d < maxDist || d == 0) return false;
 
     final normal = ball.position / d;
     final dot = ball.velocity.dx * normal.dx + ball.velocity.dy * normal.dy;
@@ -42,6 +44,7 @@ class ArenaPhysicsEngine {
 
     ball.velocity = reflected;
     ball.position = normal * maxDist;
+    return true;
   }
 
   CollisionResult? resolveBallCollision(SimulationBall a, SimulationBall b) {

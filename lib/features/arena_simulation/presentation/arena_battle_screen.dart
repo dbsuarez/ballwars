@@ -25,6 +25,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   late MatchSimulationController _controller;
   late Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
+  // True right after (re)starting a match: the underlying Ticker's clock
+  // keeps running across a restart even though the match itself is fresh,
+  // so the next tick must just rebase _lastElapsed instead of computing a
+  // huge dt from the old elapsed time.
+  bool _skipNextDelta = true;
   double _rimAngle = 0.0;
   late SimulationState _state;
   bool _isPaused = false;
@@ -45,12 +50,19 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
+    _skipNextDelta = true;
     _controller.preloadImages().then((_) {
       if (mounted) setState(() {});
     });
   }
 
   void _onTick(Duration elapsed) {
+    if (_skipNextDelta) {
+      _lastElapsed = elapsed;
+      _skipNextDelta = false;
+      return;
+    }
+
     final dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
     _lastElapsed = elapsed;
     if (dt <= 0 || _isPaused) return;
@@ -69,7 +81,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   }
 
   void _replay() {
-    setState(_initMatch);
+    setState(() {
+      _isPaused = false;
+      _initMatch();
+    });
   }
 
   @override
@@ -94,6 +109,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
             tooltip: _isPaused ? 'Play' : 'Pause',
             onPressed: _togglePause,
+          ),
+          IconButton(
+            icon: const Icon(Icons.restart_alt),
+            tooltip: 'Restart',
+            onPressed: _replay,
           ),
         ],
       ),

@@ -28,15 +28,16 @@ SimulationBall _ball({
 
 void main() {
   group('resolveWallCollision', () {
-    test('reflects velocity and clamps position when past boundary', () {
+    test('reflects velocity, clamps position, and reports a bounce when past boundary', () {
       final engine = ArenaPhysicsEngine(100.0, SeededRandom(1));
       final ball = _ball(
         position: const Offset(95, 0),
         velocity: const Offset(10, 0),
         radius: 10.0,
       );
-      engine.resolveWallCollision(ball);
+      final bounced = engine.resolveWallCollision(ball);
 
+      expect(bounced, isTrue);
       // radius from center must not exceed (arenaRadius - ballRadius)
       final dist = ball.position.distance;
       expect(dist, lessThanOrEqualTo(90.0 + 1e-6));
@@ -44,14 +45,15 @@ void main() {
       expect(ball.velocity.dx, lessThan(0));
     });
 
-    test('does nothing when ball is well within boundary', () {
+    test('does nothing and reports no bounce when ball is well within boundary', () {
       final engine = ArenaPhysicsEngine(100.0, SeededRandom(1));
       final ball = _ball(
         position: const Offset(0, 0),
         velocity: const Offset(5, 5),
         radius: 10.0,
       );
-      engine.resolveWallCollision(ball);
+      final bounced = engine.resolveWallCollision(ball);
+      expect(bounced, isFalse);
       expect(ball.position, const Offset(0, 0));
       expect(ball.velocity, const Offset(5, 5));
     });

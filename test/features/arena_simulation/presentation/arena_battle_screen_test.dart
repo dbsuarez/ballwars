@@ -18,8 +18,9 @@ void main() {
     ));
     await tester.pump();
 
-    expect(find.text('A: 50%'), findsOneWidget);
-    expect(find.text('B: 50%'), findsOneWidget);
+    // Matches start fully neutral -- no territory claimed yet.
+    expect(find.text('A: 0%'), findsOneWidget);
+    expect(find.text('B: 0%'), findsOneWidget);
 
     // Stop the ticker cleanly before the test ends.
     await tester.pumpWidget(const SizedBox.shrink());
@@ -51,6 +52,32 @@ void main() {
     await tester.pump();
 
     expect(find.byIcon(Icons.pause), findsOneWidget);
+
+    // Stop the ticker cleanly before the test ends.
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('restart button resets the match back to neutral territory', (tester) async {
+    final config = MatchConfig(
+      contestants: const [
+        CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
+        CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: ArenaBattleScreen(config: config, seed: 3),
+    ));
+    await tester.pump();
+    // Let enough simulated time pass for bounces/territory changes to happen.
+    await tester.pump(const Duration(seconds: 5));
+
+    await tester.tap(find.byIcon(Icons.restart_alt));
+    await tester.pump();
+
+    // Restarting must bring the match back to its fully neutral starting state.
+    expect(find.text('A: 0%'), findsOneWidget);
+    expect(find.text('B: 0%'), findsOneWidget);
 
     // Stop the ticker cleanly before the test ends.
     await tester.pumpWidget(const SizedBox.shrink());

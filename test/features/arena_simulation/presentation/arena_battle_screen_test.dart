@@ -24,4 +24,35 @@ void main() {
     // Stop the ticker cleanly before the test ends.
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('pause button toggles between pause and play icons', (tester) async {
+    final config = MatchConfig(
+      contestants: const [
+        CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
+        CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: ArenaBattleScreen(config: config),
+    ));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.pause));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(find.byIcon(Icons.pause), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+
+    // Stop the ticker cleanly before the test ends.
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

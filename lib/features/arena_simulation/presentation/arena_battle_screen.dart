@@ -27,6 +27,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   Duration _lastElapsed = Duration.zero;
   double _rimAngle = 0.0;
   late SimulationState _state;
+  bool _isPaused = false;
 
   @override
   void initState() {
@@ -52,7 +53,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   void _onTick(Duration elapsed) {
     final dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
     _lastElapsed = elapsed;
-    if (dt <= 0) return;
+    if (dt <= 0 || _isPaused) return;
 
     _controller.tick(dt * widget.config.speedMultiplier);
     // Sector rim attachment points stay fixed (rimAngle is not incremented) —
@@ -61,6 +62,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     setState(() {
       _state = _controller.state;
     });
+  }
+
+  void _togglePause() {
+    setState(() => _isPaused = !_isPaused);
   }
 
   void _replay() {
@@ -84,6 +89,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       appBar: AppBar(
         title: MatchStatusHeader(isSlowMotion: _state.status == MatchStatus.slowMotion),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
+            tooltip: _isPaused ? 'Play' : 'Pause',
+            onPressed: _togglePause,
+          ),
+        ],
       ),
       body: SafeArea(
         child: LayoutBuilder(

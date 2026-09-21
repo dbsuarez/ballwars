@@ -98,8 +98,14 @@ class ArenaPainter extends CustomPainter {
   void _paintParticles(Canvas canvas) {
     for (final particle in state.particles.particles) {
       final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
-      final paint = Paint()..color = particle.color.withOpacity(lifeRatio);
-      canvas.drawCircle(particle.position, 3.0 * lifeRatio, paint);
+      // Young particles flash white-hot and cool into their collision color
+      // as they age, for a punchier spark burst.
+      final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
+      final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
+      final paint = Paint()
+        ..color = sparkColor.withOpacity(lifeRatio)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
+      canvas.drawCircle(particle.position, particle.baseRadius * lifeRatio, paint);
     }
   }
 

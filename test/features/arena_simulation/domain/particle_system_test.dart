@@ -6,7 +6,7 @@ import 'package:ballwars/features/arena_simulation/domain/floating_text.dart';
 
 void main() {
   group('ParticleSystem', () {
-    test('spawnBurst adds 20 to 30 particles', () {
+    test('spawnBurst adds 60 to 100 particles', () {
       final system = ParticleSystem();
       system.spawnBurst(
         origin: Offset.zero,
@@ -14,7 +14,7 @@ void main() {
         color: Colors.red,
         rng: SeededRandom(1),
       );
-      expect(system.particles.length, inInclusiveRange(20, 30));
+      expect(system.particles.length, inInclusiveRange(60, 100));
     });
 
     test('update ages particles and removes expired ones', () {

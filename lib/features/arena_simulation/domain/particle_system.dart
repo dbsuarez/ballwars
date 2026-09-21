@@ -8,12 +8,14 @@ class Particle {
   double age;
   final double lifespan;
   final Color color;
+  final double baseRadius;
 
   Particle({
     required this.position,
     required this.velocity,
     required this.lifespan,
     required this.color,
+    required this.baseRadius,
     this.age = 0.0,
   });
 
@@ -31,21 +33,23 @@ class ParticleSystem {
     required Color color,
     required SeededRandom rng,
   }) {
-    final count = 20 + rng.nextInt(11); // 20..30
+    final count = 60 + rng.nextInt(41); // 60..100
     final baseAngle = math.atan2(normal.dy, normal.dx);
 
     for (var i = 0; i < count; i++) {
-      final spread = rng.nextDoubleRange(-math.pi / 3, math.pi / 3);
+      final spread = rng.nextDoubleRange(-math.pi / 2, math.pi / 2);
       final angle = baseAngle + spread;
-      final speed = rng.nextDoubleRange(60.0, 180.0);
+      final speed = rng.nextDoubleRange(80.0, 320.0);
       final velocity = Offset(math.cos(angle), math.sin(angle)) * speed;
-      final lifespan = rng.nextDoubleRange(0.4, 0.9);
+      final lifespan = rng.nextDoubleRange(0.5, 1.1);
+      final baseRadius = rng.nextDoubleRange(2.0, 6.0);
 
       _particles.add(Particle(
         position: origin,
         velocity: velocity,
         lifespan: lifespan,
         color: color,
+        baseRadius: baseRadius,
       ));
     }
   }

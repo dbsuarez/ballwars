@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/utils/canvas_image_helper.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../domain/arena_physics_engine.dart';
@@ -52,6 +53,14 @@ class MatchSimulationController {
         lineCount: TerritoryEngine.totalSectors ~/ contestants.length,
       );
     });
+  }
+
+  Future<void> preloadImages() async {
+    for (final ball in _balls) {
+      final bytes = ball.config.imageBytes;
+      if (bytes == null) continue;
+      ball.cachedUiImage = await CanvasImageHelper.decode(bytes);
+    }
   }
 
   SimulationState get state => SimulationState(

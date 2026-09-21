@@ -43,6 +43,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
+    _controller.preloadImages().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _onTick(Duration elapsed) {

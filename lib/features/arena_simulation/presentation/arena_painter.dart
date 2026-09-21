@@ -70,7 +70,9 @@ class ArenaPainter extends CustomPainter {
       final paint = Paint()
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
-      canvas.drawLine(ball.position, rimPoint, paint);
+      // Each sector's line runs from the fixed arena center to its fixed
+      // rim point, so a ball's territory never sweeps/rotates as it moves.
+      canvas.drawLine(Offset.zero, rimPoint, paint);
     }
   }
 

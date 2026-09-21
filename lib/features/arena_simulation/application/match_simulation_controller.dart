@@ -124,42 +124,29 @@ class MatchSimulationController {
   /// Permanently claims any sector whose line a ball's body is currently
   /// touching, for every ball that doesn't already own it -- this is the
   /// core territory mechanic: cutting a line permanently transfers it.
+  /// Each sector's line runs from the fixed arena center to its fixed rim
+  /// point, so the line itself never moves regardless of where any ball is.
   void _resolveLineCrossings() {
     final owners = _territory.sectorOwners;
     const sectorAngleStep = 2 * math.pi / TerritoryEngine.totalSectors;
 
     for (final claimant in _balls) {
-      var claimedCount = 0;
-
       for (var i = 0; i < TerritoryEngine.totalSectors; i++) {
         final ownerId = owners[i];
         if (ownerId.isEmpty || ownerId == claimant.config.id) continue;
-
-        final ownerBall = _balls.where((b) => b.config.id == ownerId);
-        if (ownerBall.isEmpty) continue;
 
         final theta = i * sectorAngleStep;
         final rimPoint = Offset(math.cos(theta), math.sin(theta)) * arenaRadius;
 
         final overlap = MathUtils.segmentCircleOverlapRange(
-          ownerBall.first.position,
+          Offset.zero,
           rimPoint,
           claimant.position,
           claimant.radius,
         );
         if (overlap == null) continue;
 
-        if (_territory.claimSector(claimant.config.id, i)) {
-          claimedCount++;
-        }
-      }
-
-      if (claimedCount > 0) {
-        _floatingTexts.spawn(
-          claimant.position,
-          '+$claimedCount LINES',
-          claimant.config.primaryColor,
-        );
+        _territory.claimSector(claimant.config.id, i);
       }
     }
   }

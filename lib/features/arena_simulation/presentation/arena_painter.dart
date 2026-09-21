@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/math_utils.dart';
 import '../domain/simulation_state.dart';
 
 class ArenaPainter extends CustomPainter {
@@ -67,36 +66,16 @@ class ArenaPainter extends CustomPainter {
 
       final theta = rimAngle + (i * (2 * math.pi / 360));
       final rimPoint = Offset(math.cos(theta), math.sin(theta)) * arenaRadius;
-      final endPoint = _clipRayAgainstOtherBalls(ball.position, rimPoint, ownerId);
 
       final paint = Paint()
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
-      canvas.drawLine(ball.position, endPoint, paint);
+      // Rays are drawn full-length; ball tokens are painted on top afterward
+      // (see _paintBallTokens), so a ray is naturally hidden under whichever
+      // ball currently sits on top of it and reappears past it, matching the
+      // reference footage rather than being permanently truncated.
+      canvas.drawLine(ball.position, rimPoint, paint);
     }
-  }
-
-  /// Cuts a laser ray short at the point it first enters another ball's
-  /// full visual footprint (body + outer glow), so no sliver of the ray
-  /// remains visible poking out at the ball's rendered edge.
-  Offset _clipRayAgainstOtherBalls(Offset origin, Offset target, String ownerId) {
-    var closestPoint = target;
-    var closestDistanceSquared = (target - origin).distanceSquared;
-
-    for (final ball in state.balls) {
-      if (ball.config.id == ownerId) continue;
-      final visualRadius = ball.radius + _ballGlowPadding;
-      final hit = MathUtils.segmentCircleIntersection(origin, target, ball.position, visualRadius);
-      if (hit == null) continue;
-
-      final distanceSquared = (hit - origin).distanceSquared;
-      if (distanceSquared < closestDistanceSquared) {
-        closestDistanceSquared = distanceSquared;
-        closestPoint = hit;
-      }
-    }
-
-    return closestPoint;
   }
 
   void _paintParticles(Canvas canvas) {

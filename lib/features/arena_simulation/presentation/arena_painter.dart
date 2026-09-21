@@ -10,6 +10,8 @@ class ArenaPainter extends CustomPainter {
   final double arenaRadius;
   final double rimAngle;
 
+  static const double _ballGlowPadding = 4.0;
+
   ArenaPainter({
     required this.state,
     required this.arenaRadius,
@@ -75,14 +77,16 @@ class ArenaPainter extends CustomPainter {
   }
 
   /// Cuts a laser ray short at the point it first enters another ball's
-  /// body, so the ray appears blocked instead of drawing through it.
+  /// full visual footprint (body + outer glow), so no sliver of the ray
+  /// remains visible poking out at the ball's rendered edge.
   Offset _clipRayAgainstOtherBalls(Offset origin, Offset target, String ownerId) {
     var closestPoint = target;
     var closestDistanceSquared = (target - origin).distanceSquared;
 
     for (final ball in state.balls) {
       if (ball.config.id == ownerId) continue;
-      final hit = MathUtils.segmentCircleIntersection(origin, target, ball.position, ball.radius);
+      final visualRadius = ball.radius + _ballGlowPadding;
+      final hit = MathUtils.segmentCircleIntersection(origin, target, ball.position, visualRadius);
       if (hit == null) continue;
 
       final distanceSquared = (hit - origin).distanceSquared;
@@ -114,7 +118,7 @@ class ArenaPainter extends CustomPainter {
       final glowPaint = Paint()
         ..color = ball.config.glowColor.withOpacity(0.6)
         ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6.0);
-      canvas.drawCircle(ball.position, ball.radius + 4, glowPaint);
+      canvas.drawCircle(ball.position, ball.radius + _ballGlowPadding, glowPaint);
 
       final fillPaint = Paint()..color = ball.config.primaryColor;
       canvas.drawCircle(ball.position, ball.radius, fillPaint);

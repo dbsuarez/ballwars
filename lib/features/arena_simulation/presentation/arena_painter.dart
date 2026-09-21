@@ -74,7 +74,7 @@ class ArenaPainter extends CustomPainter {
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
 
-      for (final segment in _visibleRaySegments(ball.position, rimPoint, ownerId, wedges)) {
+      for (final segment in _visibleRaySegments(ball.position, rimPoint, ownerId, ball.radius, wedges)) {
         canvas.drawLine(segment[0], segment[1], paint);
       }
     }
@@ -129,6 +129,7 @@ class ArenaPainter extends CustomPainter {
     Offset origin,
     Offset target,
     String ownerId,
+    double ownerRadius,
     Map<String, _Wedge> wedges,
   ) {
     final blocked = <List<double>>[];
@@ -141,6 +142,22 @@ class ArenaPainter extends CustomPainter {
     for (final entry in wedges.entries) {
       if (entry.key == ownerId) continue;
       blocked.addAll(_blockedRangesForWedge(origin, target, entry.value));
+    }
+
+    // Never cut the ray right at its own owner ball, even if that ball
+    // happens to physically sit inside another ball's wedge -- the line
+    // should always visibly connect to the ball it originates from.
+    final rayLength = (target - origin).distance;
+    if (rayLength > 0 && blocked.isNotEmpty) {
+      final minVisibleT = ((ownerRadius + _ballGlowPadding) / rayLength).clamp(0.0, 1.0);
+      final trimmed = <List<double>>[];
+      for (final range in blocked) {
+        if (range[1] <= minVisibleT) continue;
+        trimmed.add([math.max(range[0], minVisibleT), range[1]]);
+      }
+      blocked
+        ..clear()
+        ..addAll(trimmed);
     }
 
     if (blocked.isEmpty) return [[origin, target]];

@@ -88,16 +88,31 @@ void main() {
       expect(engine.isSlowMotion(), isFalse);
     });
 
-    test('becomes true once a ball with territory drops to 15 or fewer sectors', () {
+    test('a small starting seed alone does not trigger slow motion', () {
+      final engine = TerritoryEngine();
+      // A brand new match: both balls just touched the rim for the first
+      // time and only own their tiny starting seed (e.g. 7 sectors).
+      for (var i = 0; i < 7; i++) {
+        engine.claimSector('a', i);
+      }
+      engine.updatePeaks(['a', 'b']);
+
+      expect(engine.isSlowMotion(), isFalse);
+    });
+
+    test('becomes true once a ball drops to 15 or fewer sectors after having exceeded that', () {
       final engine = TerritoryEngine();
       for (var i = 0; i < 20; i++) {
         engine.claimSector('a', i);
       }
+      engine.updatePeaks(['a', 'b']);
       expect(engine.isSlowMotion(), isFalse);
 
       for (var i = 0; i < 6; i++) {
         engine.claimSector('b', i);
       }
+      engine.updatePeaks(['a', 'b']);
+
       expect(engine.countSectors('a'), 14);
       expect(engine.isSlowMotion(), isTrue);
     });

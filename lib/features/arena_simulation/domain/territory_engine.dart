@@ -8,6 +8,13 @@ class TerritoryEngine {
 
   String? winnerId;
 
+  static const int _slowMotionThreshold = 15;
+
+  /// Each contestant's highest sector count ever seen, used by
+  /// [isSlowMotion] to detect a genuine drop from an established
+  /// territory rather than firing on a small starting seed.
+  final Map<String, int> _peakSectors = {};
+
   int countSectors(String ballId) =>
       sectorOwners.where((owner) => owner == ballId).length;
 
@@ -19,13 +26,26 @@ class TerritoryEngine {
     return true;
   }
 
-  bool isSlowMotion() {
-    final ownerCounts = <String, int>{};
-    for (final owner in sectorOwners) {
-      if (owner.isEmpty) continue;
-      ownerCounts[owner] = (ownerCounts[owner] ?? 0) + 1;
+  /// Records each contestant's highest sector count seen so far. Call this
+  /// once per tick before checking [isSlowMotion].
+  void updatePeaks(List<String> contestantIds) {
+    for (final id in contestantIds) {
+      final current = countSectors(id);
+      final peak = _peakSectors[id] ?? 0;
+      if (current > peak) _peakSectors[id] = current;
     }
-    return ownerCounts.values.any((count) => count > 0 && count <= 15);
+  }
+
+  /// True once a contestant that previously exceeded the slow-motion
+  /// threshold has dropped back to or below it -- a real drop from an
+  /// established position, not just a small starting/seed amount.
+  bool isSlowMotion() {
+    for (final entry in _peakSectors.entries) {
+      if (entry.value <= _slowMotionThreshold) continue;
+      final current = countSectors(entry.key);
+      if (current > 0 && current <= _slowMotionThreshold) return true;
+    }
+    return false;
   }
 
   /// Evaluates win conditions given every ball still in the match

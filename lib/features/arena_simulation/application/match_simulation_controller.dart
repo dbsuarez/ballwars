@@ -129,9 +129,12 @@ class MatchSimulationController {
       ball.lineCount = _territory.countSectors(ball.config.id);
     }
 
+    final contestantIds = _balls.map((b) => b.config.id).toList();
+    _territory.updatePeaks(contestantIds);
+
     final allContestantsStarted = _rimAnchor.values.every((anchor) => anchor != null);
     _territory.evaluateWinCondition(
-      _balls.map((b) => b.config.id).toList(),
+      contestantIds,
       allContestantsStarted: allContestantsStarted,
     );
 

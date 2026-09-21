@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import '../application/match_simulation_controller.dart';
+import '../domain/simulation_state.dart';
+import '../../match_setup/domain/match_config.dart';
+import 'arena_canvas.dart';
+import 'scoreboard_overlay.dart';
+import 'winner_modal.dart';
+
+class ArenaBattleScreen extends StatefulWidget {
+  final MatchConfig config;
+  final int? seed;
+
+  const ArenaBattleScreen({super.key, required this.config, this.seed});
+
+  @override
+  State<ArenaBattleScreen> createState() => _ArenaBattleScreenState();
+}
+
+class _ArenaBattleScreenState extends State<ArenaBattleScreen>
+    with SingleTickerProviderStateMixin {
+  static const double _arenaRadius = 260.0;
+
+  late MatchSimulationController _controller;
+  late Ticker _ticker;
+  Duration _lastElapsed = Duration.zero;
+  double _rimAngle = 0.0;
+  late SimulationState _state;
+
+  @override
+  void initState() {
+    super.initState();
+    _initMatch();
+    _ticker = createTicker(_onTick)..start();
+  }
+
+  void _initMatch() {
+    _controller = MatchSimulationController(
+      widget.config.contestants,
+      arenaRadius: _arenaRadius,
+      seed: widget.seed,
+    );
+    _state = _controller.state;
+    _rimAngle = 0.0;
+    _lastElapsed = Duration.zero;
+  }
+
+  void _onTick(Duration elapsed) {
+    final dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
+    _lastElapsed = elapsed;
+    if (dt <= 0) return;
+
+    _controller.tick(dt * widget.config.speedMultiplier);
+    _rimAngle += dt * 0.5;
+
+    setState(() {
+      _state = _controller.state;
+    });
+  }
+
+  void _replay() {
+    setState(_initMatch);
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFinished = _state.winnerId != null;
+    final winnerBall = isFinished
+        ? _state.balls.firstWhere((b) => b.config.id == _state.winnerId).config
+        : null;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ball Wars')),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isPortrait = constraints.maxHeight >= constraints.maxWidth;
+            final arena = ArenaCanvas(state: _state, arenaRadius: _arenaRadius, rimAngle: _rimAngle);
+            final scoreboard = Padding(
+              padding: const EdgeInsets.all(16),
+              child: ScoreboardOverlay(balls: _state.balls),
+            );
+
+            final content = isPortrait
+                ? Column(children: [Expanded(child: arena), scoreboard])
+                : Row(children: [
+                    Expanded(child: arena),
+                    SizedBox(width: 240, child: scoreboard),
+                  ]);
+
+            return Stack(
+              children: [
+                content,
+                if (isFinished && winnerBall != null)
+                  Positioned.fill(
+                    child: WinnerModal(
+                      winner: winnerBall,
+                      onReplay: _replay,
+                      onExit: () => Navigator.of(context).maybePop(),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

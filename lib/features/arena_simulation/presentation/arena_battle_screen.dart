@@ -5,6 +5,7 @@ import '../domain/simulation_state.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'arena_canvas.dart';
 import 'scoreboard_overlay.dart';
+import 'widgets/match_status_header.dart';
 import 'winner_modal.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
@@ -79,7 +80,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         : null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ball Wars')),
+      appBar: AppBar(
+        title: MatchStatusHeader(isSlowMotion: _state.status == MatchStatus.slowMotion),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

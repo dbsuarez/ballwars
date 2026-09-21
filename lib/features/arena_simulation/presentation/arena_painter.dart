@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/math_utils.dart';
 import '../domain/simulation_state.dart';
 
 class ArenaPainter extends CustomPainter {
@@ -70,12 +71,49 @@ class ArenaPainter extends CustomPainter {
       final paint = Paint()
         ..color = ball.config.primaryColor.withOpacity(0.85)
         ..strokeWidth = 1.2;
-      // Rays are drawn full-length; ball tokens are painted on top afterward
-      // (see _paintBallTokens), so a ray is naturally hidden under whichever
-      // ball currently sits on top of it and reappears past it, matching the
-      // reference footage rather than being permanently truncated.
-      canvas.drawLine(ball.position, rimPoint, paint);
+
+      for (final segment in _visibleRaySegments(ball.position, rimPoint, ownerId)) {
+        canvas.drawLine(segment[0], segment[1], paint);
+      }
     }
+  }
+
+  /// Splits a ray into the sub-segments that are NOT covered by any other
+  /// ball's body, so the ray visibly cuts wherever an opposing ball's path
+  /// crosses it, while staying visible before and after that crossing.
+  List<List<Offset>> _visibleRaySegments(Offset origin, Offset target, String ownerId) {
+    final blocked = <List<double>>[];
+    for (final ball in state.balls) {
+      if (ball.config.id == ownerId) continue;
+      final range = MathUtils.segmentCircleOverlapRange(origin, target, ball.position, ball.radius);
+      if (range != null) blocked.add(range);
+    }
+
+    if (blocked.isEmpty) return [[origin, target]];
+
+    blocked.sort((a, b) => a[0].compareTo(b[0]));
+    final merged = <List<double>>[];
+    for (final range in blocked) {
+      if (merged.isNotEmpty && range[0] <= merged.last[1]) {
+        merged.last[1] = math.max(merged.last[1], range[1]);
+      } else {
+        merged.add([range[0], range[1]]);
+      }
+    }
+
+    final segments = <List<Offset>>[];
+    final delta = target - origin;
+    var cursor = 0.0;
+    for (final range in merged) {
+      if (range[0] > cursor) {
+        segments.add([origin + delta * cursor, origin + delta * range[0]]);
+      }
+      cursor = range[1];
+    }
+    if (cursor < 1.0) {
+      segments.add([origin + delta * cursor, origin + delta * 1.0]);
+    }
+    return segments;
   }
 
   void _paintParticles(Canvas canvas) {

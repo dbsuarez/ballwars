@@ -43,6 +43,21 @@ class TerritoryEngine {
         ? loserSectorIndices.length
         : clamped;
 
+    final winnerSectorIndices = <int>[
+      for (var i = 0; i < totalSectors; i++)
+        if (sectorOwners[i] == winnerId) i,
+    ];
+
+    // Steal sectors nearest the winner's existing territory first, so the
+    // winner's arc always grows outward from its current boundary instead
+    // of picking up disconnected chunks elsewhere on the rim.
+    if (winnerSectorIndices.isNotEmpty) {
+      loserSectorIndices.sort(
+        (a, b) => _nearestCircularDistance(a, winnerSectorIndices)
+            .compareTo(_nearestCircularDistance(b, winnerSectorIndices)),
+      );
+    }
+
     for (var i = 0; i < stealAmount; i++) {
       sectorOwners[loserSectorIndices[i]] = winnerId;
     }
@@ -50,6 +65,16 @@ class TerritoryEngine {
     _checkWinCondition();
 
     return StealResult(stealAmount);
+  }
+
+  int _nearestCircularDistance(int index, List<int> targets) {
+    var best = totalSectors;
+    for (final target in targets) {
+      final diff = (index - target).abs();
+      final circular = diff > totalSectors ~/ 2 ? totalSectors - diff : diff;
+      if (circular < best) best = circular;
+    }
+    return best;
   }
 
   bool isSlowMotion() {

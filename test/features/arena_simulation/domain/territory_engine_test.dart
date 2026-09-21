@@ -2,6 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/utils/seeded_random.dart';
 import 'package:ballwars/features/arena_simulation/domain/territory_engine.dart';
 
+/// A ball's owned sectors should always form a single contiguous circular
+/// arc (or own none/all of them) — never split into disconnected chunks.
+bool isSingleContiguousArc(List<String> owners, String id) {
+  final total = owners.length;
+  var transitions = 0;
+  for (var i = 0; i < total; i++) {
+    final current = owners[i] == id;
+    final next = owners[(i + 1) % total] == id;
+    if (current != next) transitions++;
+  }
+  return transitions <= 2;
+}
+
 void main() {
   group('initializeSplit', () {
     test('splits 360 sectors evenly among 2 balls', () {
@@ -36,6 +49,20 @@ void main() {
       expect(result.stolenCount, inInclusiveRange(10, 75));
       expect(engine.countSectors('b'), before - result.stolenCount);
       expect(engine.countSectors('a'), 180 + result.stolenCount);
+    });
+
+    test('repeated steals with alternating winners keep each side contiguous', () {
+      final engine = TerritoryEngine(2, SeededRandom(11));
+      engine.initializeSplit(['a', 'b']);
+
+      engine.resolveSteal(winnerId: 'a', loserId: 'b');
+      engine.resolveSteal(winnerId: 'b', loserId: 'a');
+      engine.resolveSteal(winnerId: 'a', loserId: 'b');
+      engine.resolveSteal(winnerId: 'b', loserId: 'a');
+      engine.resolveSteal(winnerId: 'a', loserId: 'b');
+
+      expect(isSingleContiguousArc(engine.sectorOwners, 'a'), isTrue);
+      expect(isSingleContiguousArc(engine.sectorOwners, 'b'), isTrue);
     });
 
     test('cannot steal more sectors than the loser owns', () {

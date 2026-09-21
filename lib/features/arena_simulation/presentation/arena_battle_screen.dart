@@ -55,7 +55,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     if (dt <= 0) return;
 
     _controller.tick(dt * widget.config.speedMultiplier);
-    _rimAngle += dt * 0.5;
+    // Sector rim attachment points stay fixed (rimAngle is not incremented) —
+    // only the balls move; the rim itself does not rotate.
 
     setState(() {
       _state = _controller.state;

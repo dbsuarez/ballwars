@@ -1,0 +1,149 @@
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
+import '../domain/simulation_state.dart';
+
+class ArenaPainter extends CustomPainter {
+  final SimulationState state;
+  final double arenaRadius;
+  final double rimAngle;
+
+  static const double _ballGlowPadding = 4.0;
+
+  ArenaPainter({
+    required this.state,
+    required this.arenaRadius,
+    required this.rimAngle,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final scale = size.shortestSide / (2 * arenaRadius);
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(scale, scale);
+
+    _paintBackground(canvas);
+    _paintRim(canvas);
+    _paintThreads(canvas);
+    _paintParticles(canvas);
+    _paintBallTokens(canvas);
+    _paintFloatingText(canvas);
+
+    canvas.restore();
+  }
+
+  void _paintBackground(Canvas canvas) {
+    final paint = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset.zero,
+        arenaRadius,
+        [AppColors.arenaDiscStart, AppColors.arenaDiscEnd],
+      );
+    canvas.drawCircle(Offset.zero, arenaRadius, paint);
+  }
+
+  void _paintRim(Canvas canvas) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..color = AppColors.rimGlow
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4.0);
+    canvas.drawCircle(Offset.zero, arenaRadius, paint);
+  }
+
+  void _paintThreads(Canvas canvas) {
+    // Batch all active threads into a single Path
+    final path = Path();
+    for (final thread in state.threads) {
+      if (!thread.isActive) continue;
+      path.moveTo(thread.startPoint.dx, thread.startPoint.dy);
+      path.lineTo(thread.endPoint.dx, thread.endPoint.dy);
+    }
+
+    if (path.getBounds().isEmpty) return;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..color = AppColors.rimGlow.withValues(alpha: 0.9)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+    canvas.drawPath(path, paint);
+  }
+
+  void _paintParticles(Canvas canvas) {
+    for (final particle in state.particles.particles) {
+      final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
+      final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
+      final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
+      final paint = Paint()
+        ..color = sparkColor.withValues(alpha: lifeRatio)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
+      canvas.drawCircle(particle.position, particle.baseRadius * lifeRatio, paint);
+    }
+  }
+
+  void _paintBallTokens(Canvas canvas) {
+    for (final ball in state.balls) {
+      if (ball.isEliminated) continue;
+
+      final glowPaint = Paint()
+        ..color = ball.config.glowColor.withValues(alpha: 0.6)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6.0);
+      canvas.drawCircle(ball.position, ball.radius + _ballGlowPadding, glowPaint);
+
+      final fillPaint = Paint()..color = ball.config.primaryColor;
+      canvas.drawCircle(ball.position, ball.radius, fillPaint);
+
+      final image = ball.cachedUiImage;
+      if (image != null) {
+        canvas.save();
+        canvas.clipPath(Path()..addOval(Rect.fromCircle(center: ball.position, radius: ball.radius)));
+        final srcRect = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+        final dstRect = Rect.fromCircle(center: ball.position, radius: ball.radius);
+        canvas.drawImageRect(image, srcRect, dstRect, Paint());
+        canvas.restore();
+      } else {
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: ball.config.name.isNotEmpty ? ball.config.name.substring(0, 1).toUpperCase() : '?',
+            style: TextStyle(color: Colors.white, fontSize: ball.radius, fontWeight: FontWeight.bold),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        textPainter.paint(
+          canvas,
+          ball.position - Offset(textPainter.width / 2, textPainter.height / 2),
+        );
+      }
+
+      final borderPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..color = Colors.white;
+      canvas.drawCircle(ball.position, ball.radius, borderPaint);
+    }
+  }
+
+  void _paintFloatingText(Canvas canvas) {
+    for (final text in state.floatingTexts.items) {
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: text.text,
+          style: TextStyle(
+            color: text.color.withValues(alpha: text.opacity),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(canvas, text.position);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ArenaPainter oldDelegate) => true;
+}

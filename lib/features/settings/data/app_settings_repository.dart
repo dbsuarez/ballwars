@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/offline/offline_store.dart';
 import '../domain/app_settings.dart';
 
 /// Reads the app-wide settings (anyone) and changes them (admin only; the
@@ -35,7 +37,24 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 
   @override
   Future<AppSettings> load() async {
-    final row = await _client.from('app_settings').select().eq('id', 1).maybeSingle();
+    // Offline, the settings last loaded are used (theme, headline, ...).
+    const key = 'settings';
+    Map<String, dynamic>? row;
+    try {
+      // No retries: offline, fall back to the saved copy right away.
+      row = await _client
+          .from('app_settings')
+          .select()
+          .eq('id', 1)
+          .maybeSingle()
+          .retry(enabled: false)
+          .timeout(const Duration(seconds: 8));
+      if (row != null) await OfflineStore.instance.write(key, utf8.encode(jsonEncode(row)));
+    } catch (_) {
+      final saved = await OfflineStore.instance.read(key);
+      if (saved == null) rethrow;
+      row = jsonDecode(utf8.decode(saved)) as Map<String, dynamic>;
+    }
     if (row == null) return AppSettings.defaults;
     _hasWatermarkColumns = row.containsKey('watermark_enabled');
     return AppSettings(

@@ -3,20 +3,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import '../../features/ball_management/domain/custom_ball.dart';
+import '../offline/offline_store.dart';
 import 'canvas_image_helper.dart';
 
 /// Loads a ball's picture as a square [ui.Image] for the canvas painters and
 /// widgets: uploaded bytes, or an online PNG/JPEG/SVG (built-in pack logos and
-/// flags). SVGs are drawn at [size] px with flutter_svg. Results are cached
-/// for the app's lifetime, so each image downloads once.
+/// flags). SVGs are drawn at [size] px with flutter_svg. Downloads are kept in
+/// [OfflineStore] (the startup sync fills it in advance), and decoded images
+/// are cached for the app's lifetime.
 class BallImageLoader {
   BallImageLoader._();
 
   static const int size = 256;
   static final Map<String, Future<ui.Image?>> _cache = {};
 
-  /// Overridable for tests.
-  @visibleForTesting
+  /// Downloads one image (also used by OfflineSync); overridable for tests.
   static Future<Uint8List> Function(Uri url) fetch = _httpFetch;
 
   /// The ball's image, or null when it has none or it can't be loaded (the
@@ -45,7 +46,12 @@ class BallImageLoader {
   }
 
   static Future<ui.Image> _loadUrl(Uri url) async {
-    final bytes = await fetch(url);
+    final store = OfflineStore.instance;
+    var bytes = await store.read(url.toString());
+    if (bytes == null) {
+      bytes = await fetch(url);
+      await store.write(url.toString(), bytes);
+    }
     if (!url.path.toLowerCase().endsWith('.svg')) return CanvasImageHelper.decode(bytes);
     return renderSvg(bytes);
   }

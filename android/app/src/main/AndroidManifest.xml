@@ -3,7 +3,7 @@
          groups (Supabase); Flutter only adds it to debug/profile builds. -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="ballwars"
+        android:label="Ball Wars"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

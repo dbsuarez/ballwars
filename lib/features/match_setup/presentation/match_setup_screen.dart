@@ -6,7 +6,7 @@ import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
 import '../../ball_packs/domain/ball_pack.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
-import '../../settings/presentation/app_settings_scope.dart';
+import '../../custom_groups/domain/custom_group.dart';
 import '../domain/match_config.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
@@ -86,23 +86,33 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     }
   }
 
-  /// Groups that fail to load (offline, not set up) just don't show. The
-  /// signed-in admin gets every user's groups.
+  /// The user's own groups (tagged Mine) and the ones they added from other
+  /// players (Shared). Groups that fail to load (offline, not set up) just
+  /// don't show.
   Future<void> _loadGroups() async {
     final repo = widget.customGroups;
     if (repo == null) return;
-    final adminAuth = context.getInheritedWidgetOfExactType<AppSettingsScope>()?.adminAuth;
-    try {
-      final admin = adminAuth != null && await adminAuth.isAdmin();
-      final groups = admin ? await repo.allGroups() : await repo.myGroups();
-      if (!mounted) return;
-      setState(
-        () => _groups = [
-          for (final g in groups)
-            if (g.balls.isNotEmpty) BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls),
-        ],
-      );
-    } catch (_) {}
+    Future<List<CustomGroup>> orNone(Future<List<CustomGroup>> Function() load) async {
+      try {
+        return await load();
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    final mine = await orNone(repo.myGroups);
+    final saved = await orNone(repo.savedGroups);
+    if (!mounted) return;
+    final mineIds = {for (final g in mine) g.id};
+    setState(
+      () => _groups = [
+        for (final g in mine)
+          if (g.balls.isNotEmpty) BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls, tag: 'Mine'),
+        for (final g in saved)
+          if (g.balls.isNotEmpty && !mineIds.contains(g.id))
+            BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls, tag: 'Shared'),
+      ],
+    );
   }
 
   List<CustomBall> get _categoryBalls => _categories
@@ -237,7 +247,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               DropdownMenuEntry(
                 value: pack.id,
                 label: pack.name,
-                trailingIcon: Text('${pack.balls.length}', style: AppText.mono(12, color: c.muted)),
+                trailingIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (pack.tag != null) ...[_Tag(pack.tag!), const SizedBox(width: 10)],
+                    Text('${pack.balls.length}', style: AppText.mono(12, color: c.muted)),
+                  ],
+                ),
               ),
           ],
         ),
@@ -458,6 +474,23 @@ class _Cycle<T> extends StatelessWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       child: Text(label(value), style: AppText.ui(14, FontWeight.w700, color: c.text)),
+    );
+  }
+}
+
+/// "Mine" / "Shared" next to a user group in the category list.
+class _Tag extends StatelessWidget {
+  final String label;
+
+  const _Tag(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: c.border)),
+      child: Text(label, style: AppText.ui(10, FontWeight.w700, color: c.muted, letterSpacing: 0.4)),
     );
   }
 }

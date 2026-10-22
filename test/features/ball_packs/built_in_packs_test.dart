@@ -21,6 +21,7 @@ void main() {
       for (final b in balls) {
         expect(File('${packsDir.path}/${b['image']}').existsSync(), isTrue, reason: b['image'] as String);
         expect(b['color'], matches(RegExp(r'^#[0-9A-F]{6}$')));
+        expect(b['hash'], matches(RegExp(r'^[0-9a-f]{10}$')), reason: 'rerun tool/build_packs.mjs');
       }
     }
   });
@@ -35,7 +36,7 @@ void main() {
     expect(packs.length, groups.length);
     final netflix = packs.firstWhere((p) => p.id == 'streaming').balls.firstWhere((b) => b.name == 'Netflix');
     expect(netflix.id, 'pack:streaming/netflix');
-    expect(netflix.imageUrl, 'https://example.com/app/packs/streaming/netflix.svg');
+    expect(netflix.imageUrl, matches(RegExp(r'^https://example\.com/app/packs/streaming/netflix\.svg\?v=[0-9a-f]{10}$')));
     expect(netflix.imageStyle, BallImageStyle.logo);
     expect(netflix.primaryColor, const Color(0xFFE50914));
 

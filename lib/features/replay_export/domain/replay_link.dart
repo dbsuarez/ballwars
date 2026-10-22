@@ -79,6 +79,17 @@ class ReplayLink {
     return code != null && RegExp(r'^[A-Za-z0-9]{7}$').hasMatch(code) ? code : null;
   }
 
+  /// A link that lets anyone add the group [groupId] to their categories:
+  /// `<app>?g=<group uuid>`.
+  static Uri groupUri(String groupId, {String? appUrl}) =>
+      Uri.parse('${Uri.parse(appUrl ?? defaultAppUrl).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?g=$groupId');
+
+  /// The group id in a group share link, if [uri] is one.
+  static String? sharedGroupId(Uri uri) {
+    final id = uri.queryParameters['g'];
+    return id != null && RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id) ? id.toLowerCase() : null;
+  }
+
   /// The running page's address on web (so local builds link to themselves).
   static String get defaultAppUrl {
     if (!kIsWeb) return kWebAppUrl;

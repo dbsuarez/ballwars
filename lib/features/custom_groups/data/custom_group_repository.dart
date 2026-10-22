@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/painting.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
+import '../../../core/offline/offline_store.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../domain/custom_group.dart';
 
@@ -13,6 +15,22 @@ abstract class CustomGroupRepository {
 
   /// Every user's groups (admin only; others get just the public ones).
   Future<List<CustomGroup>> allGroups();
+
+  /// Other players' groups this user added to their categories (from a
+  /// share link, or the admin's pick in Everyone's groups).
+  Future<List<CustomGroup>> savedGroups();
+
+  /// One group by id (for a share link), or null when it doesn't exist.
+  Future<CustomGroup?> group(String groupId);
+
+  /// Adds another player's group to this user's categories.
+  Future<void> saveGroup(String groupId);
+
+  /// Takes it out again (the group itself stays).
+  Future<void> unsaveGroup(String groupId);
+
+  /// This device's user id, once signed in (null before).
+  String? get userId;
 
   Future<CustomGroup> createGroup(String name);
 
@@ -53,6 +71,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   SupabaseCustomGroupRepository(this._client);
 
   static const String _ballColumns = 'id, name, image_path, image_style, color, position';
+  static const String _groupColumns = 'id, name, is_public, owner, group_balls($_ballColumns)';
 
   StorageFileApi get _images => _client.storage.from(SupabaseConfig.imageBucket);
 
@@ -65,25 +84,92 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   Future<List<CustomGroup>> myGroups() async {
-    final uid = await _userId();
-    final rows = await _client
-        .from('ball_groups')
-        .select('id, name, is_public, group_balls($_ballColumns)')
-        .eq('owner', uid)
-        .order('created_at')
-        .order('position', referencedTable: 'group_balls');
+    final rows = await _offline('groups:mine', () async {
+      final uid = await _userId();
+      return _client
+          .from('ball_groups')
+          .select(_groupColumns)
+          .eq('owner', uid)
+          .order('created_at')
+          .order('position', referencedTable: 'group_balls')
+          .retry(enabled: false);
+    });
     return [for (final row in rows) _group(row)];
   }
 
   @override
   Future<List<CustomGroup>> allGroups() async {
-    await _userId();
-    final rows = await _client
-        .from('ball_groups')
-        .select('id, name, is_public, group_balls($_ballColumns)')
-        .order('created_at', ascending: false)
-        .order('position', referencedTable: 'group_balls');
+    final rows = await _offline('groups:all', () async {
+      await _userId();
+      return _client
+          .from('ball_groups')
+          .select(_groupColumns)
+          .order('created_at', ascending: false)
+          .order('position', referencedTable: 'group_balls')
+          .retry(enabled: false);
+    });
     return [for (final row in rows) _group(row)];
+  }
+
+  @override
+  Future<List<CustomGroup>> savedGroups() async {
+    final rows = await _offline('groups:saved', () async {
+      await _userId();
+      // RLS limits saved_groups to this user's rows; !inner keeps only the
+      // groups that have one.
+      return _client
+          .from('ball_groups')
+          .select('$_groupColumns, saved_groups!inner(group_id)')
+          .order('name')
+          .order('position', referencedTable: 'group_balls')
+          .retry(enabled: false);
+    });
+    return [for (final row in rows) _group(row)];
+  }
+
+  @override
+  Future<CustomGroup?> group(String groupId) async {
+    await _userId();
+    final row = await _client
+        .from('ball_groups')
+        .select(_groupColumns)
+        .eq('id', groupId)
+        .order('position', referencedTable: 'group_balls')
+        .maybeSingle();
+    return row == null ? null : _group(row);
+  }
+
+  @override
+  Future<void> saveGroup(String groupId) async {
+    await _userId();
+    await _client.from('saved_groups').upsert({'group_id': groupId}, ignoreDuplicates: true);
+  }
+
+  @override
+  Future<void> unsaveGroup(String groupId) async {
+    await _userId();
+    await _client.from('saved_groups').delete().eq('group_id', groupId);
+  }
+
+  @override
+  String? get userId => _client.auth.currentUser?.id;
+
+  /// Runs [query] (without retries) and keeps its rows in [OfflineStore]
+  /// under [key]; offline, the rows from the last successful run are
+  /// returned instead.
+  static Future<List<Map<String, dynamic>>> _offline(
+    String key,
+    Future<List<Map<String, dynamic>>> Function() query,
+  ) async {
+    try {
+      final rows = await query().timeout(const Duration(seconds: 10));
+      await OfflineStore.instance.write(key, utf8.encode(jsonEncode(rows)));
+      return rows;
+    } catch (_) {
+      final saved = await OfflineStore.instance.read(key);
+      if (saved == null) rethrow;
+      return (jsonDecode(utf8.decode(saved)) as List).cast<Map<String, dynamic>>();
+    }
   }
 
   @override
@@ -200,6 +286,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
         id: row['id'] as String,
         name: row['name'] as String,
         isPublic: row['is_public'] as bool? ?? true,
+        ownerId: row['owner'] as String?,
         balls: [for (final b in (row['group_balls'] as List? ?? const [])) _ball(b as Map<String, dynamic>)],
       );
 

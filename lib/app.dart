@@ -1,11 +1,16 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'core/offline/offline_sync.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/ball_wars_logo.dart';
 import 'features/arena_simulation/presentation/arena_battle_screen.dart';
 import 'features/ball_management/data/local_ball_repository.dart';
 import 'features/ball_management/domain/custom_ball.dart';
+import 'features/ball_management/presentation/widgets/circular_ball_preview.dart';
 import 'features/ball_packs/data/ball_pack_repository.dart';
 import 'features/custom_groups/data/custom_group_repository.dart';
+import 'features/custom_groups/domain/custom_group.dart';
 import 'features/custom_groups/presentation/my_groups_screen.dart';
 import 'features/match_setup/domain/match_config.dart';
 import 'features/match_setup/presentation/match_setup_screen.dart';
@@ -27,7 +32,18 @@ class BallWarsApp extends StatefulWidget {
   /// Short share links; null shares long links only.
   final ShortLinkRepository? shortLinks;
 
-  const BallWarsApp({super.key, this.customGroups, this.settingsRepository, this.adminAuth, this.shortLinks});
+  /// Download every ball image at startup (behind a loading screen) so the
+  /// app works offline; off in tests.
+  final bool syncOffline;
+
+  const BallWarsApp({
+    super.key,
+    this.customGroups,
+    this.settingsRepository,
+    this.adminAuth,
+    this.shortLinks,
+    this.syncOffline = false,
+  });
 
   @override
   State<BallWarsApp> createState() => _BallWarsAppState();
@@ -36,10 +52,20 @@ class BallWarsApp extends StatefulWidget {
 class _BallWarsAppState extends State<BallWarsApp> {
   final ValueNotifier<AppSettings> _settings = ValueNotifier(AppSettings.defaults);
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
+  // Built-in packs (Streaming, Countries, ...), loaded once and shared.
+  final BallPackRepository _packs = BallPackRepository();
+
+  /// (downloaded, to download) while the startup sync runs.
+  final ValueNotifier<(int, int)?> _progress = ValueNotifier(null);
+  late final Future<void> _ready = _prepare();
+
+  Future<void> _prepare() async {
+    await _loadSettings();
+    if (!widget.syncOffline) return;
+    await OfflineSync(
+      packs: _packs,
+      groups: widget.customGroups,
+    ).run(onProgress: (done, total) => _progress.value = (done, total));
   }
 
   Future<void> _loadSettings() async {
@@ -55,6 +81,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
   @override
   void dispose() {
     _settings.dispose();
+    _progress.dispose();
     super.dispose();
   }
 
@@ -71,32 +98,168 @@ class _BallWarsAppState extends State<BallWarsApp> {
           title: 'Ball Wars',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(AppPalettes.byId(settings.themeId)),
-          home: _HomeScreen(customGroups: widget.customGroups, shortLinks: widget.shortLinks),
+          home: FutureBuilder<void>(
+            future: _ready,
+            builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done
+                ? _HomeScreen(packs: _packs, customGroups: widget.customGroups, shortLinks: widget.shortLinks)
+                : _LoadingScreen(progress: _progress),
+          ),
         ),
       ),
     );
   }
 }
 
+/// Shown at startup while the settings load and ball images download. The
+/// logo sits where the native splash screen has it, so one follows the other.
+class _LoadingScreen extends StatelessWidget {
+  final ValueListenable<(int, int)?> progress;
+
+  const _LoadingScreen({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return Scaffold(
+      body: Stack(
+        children: [
+          Center(
+            child: SizedBox.square(
+              dimension: 116,
+              child: CustomPaint(painter: BallWarsLogoPainter(background: c.background, rim: c.text)),
+            ),
+          ),
+          Positioned(
+            left: 48,
+            right: 48,
+            bottom: 72,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: ValueListenableBuilder<(int, int)?>(
+                  valueListenable: progress,
+                  builder: (context, p, _) {
+                    final downloading = p != null && p.$2 > 0;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          downloading ? 'Saving balls for offline play' : 'Loading',
+                          style: AppText.ui(13, FontWeight.w600, color: c.muted),
+                        ),
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: downloading ? p.$1 / p.$2 : null,
+                            minHeight: 4,
+                            color: c.text,
+                            backgroundColor: c.surfaceHigh,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          downloading ? '${p.$1} / ${p.$2}' : '',
+                          style: AppText.mono(12, color: c.muted),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HomeScreen extends StatefulWidget {
+  final BallPackRepository packs;
   final CustomGroupRepository? customGroups;
   final ShortLinkRepository? shortLinks;
 
-  const _HomeScreen({this.customGroups, this.shortLinks});
+  const _HomeScreen({required this.packs, this.customGroups, this.shortLinks});
 
   @override
   State<_HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  // Built-in packs (Streaming, Countries, ...), loaded once and shared.
-  final BallPackRepository _packs = BallPackRepository();
+  BallPackRepository get _packs => widget.packs;
 
   @override
   void initState() {
     super.initState();
     // Opened from a shared replay link (web): go straight to that match.
     _openReplayLink(Uri.base);
+    // Or from a group share link: offer to add that group.
+    _openGroupLink(Uri.base);
+  }
+
+  Future<void> _openGroupLink(Uri uri) async {
+    final id = ReplayLink.sharedGroupId(uri);
+    final repo = widget.customGroups;
+    if (id == null || repo == null) return;
+    CustomGroup? group;
+    var alreadySaved = false;
+    String? problem;
+    try {
+      group = await repo.group(id);
+      if (group == null) {
+        problem = 'That shared group no longer exists.';
+      } else if (group.ownerId == repo.userId) {
+        problem = 'That link is for one of your own groups.';
+      } else {
+        alreadySaved = (await repo.savedGroups()).any((g) => g.id == id);
+      }
+    } catch (_) {
+      problem = "Couldn't open the shared group. Check your connection.";
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (problem != null || alreadySaved) {
+      messenger.showSnackBar(SnackBar(content: Text(problem ?? '"${group!.name}" is already in your categories.')));
+      return;
+    }
+    final add = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final c = BallWarsColors.of(context);
+        return AlertDialog(
+          title: Text('Add "${group!.name}"?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [for (final b in group.balls.take(10)) CircularBallPreview(ball: b, size: 40)],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                '${group.balls.length} balls from another player. The group shows up in your categories, marked Shared.',
+                style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.4),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Add')),
+          ],
+        );
+      },
+    );
+    if (add != true) return;
+    try {
+      await repo.saveGroup(id);
+      messenger.showSnackBar(SnackBar(content: Text('Added "${group!.name}" to your categories.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text("Couldn't add the group: $e")));
+    }
   }
 
   Future<void> _openReplayLink(Uri uri) async {

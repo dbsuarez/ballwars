@@ -12,6 +12,11 @@
 // Logos remain trademarks of their owners; they are used to identify them.
 
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+
+// Short content hash per image: the app re-downloads an image for offline use
+// only when its hash changes.
+const hashOf = (svg) => createHash('sha1').update(svg).digest('hex').slice(0, 10);
 
 const SIMPLE_ICONS = '16.35.0';
 const FLAG_ICONS = '7.6.0';
@@ -207,7 +212,7 @@ for (const [groupId, groupName, balls] of GROUPS) {
       const { svg, credit, brandHex } = await resolve(source);
       writeFileSync(`${OUT}/${groupId}/${id}.svg`, svg);
       const brand = brandHex ?? (siByTitle.get(name) ? hex(siByTitle.get(name).hex) : dominantColor(svg));
-      group.balls.push({ id, name, image: `${groupId}/${id}.svg`, color: brand });
+      group.balls.push({ id, name, image: `${groupId}/${id}.svg`, hash: hashOf(svg), color: brand });
       credits.push(`| ${groupName} | ${name} | ${credit} |`);
     } catch (e) {
       problems.push(`${groupName}/${name}: ${e.message}`);
@@ -226,7 +231,7 @@ for (const c of countries) {
   try {
     const svg = await fetchText(`https://cdn.jsdelivr.net/npm/flag-icons@${FLAG_ICONS}/flags/1x1/${c.code}.svg`);
     writeFileSync(`${OUT}/countries/${c.code}.svg`, svg);
-    countryGroup.balls.push({ id: c.code, name: c.name, image: `countries/${c.code}.svg`, color: dominantColor(svg) });
+    countryGroup.balls.push({ id: c.code, name: c.name, image: `countries/${c.code}.svg`, hash: hashOf(svg), color: dominantColor(svg) });
   } catch (e) {
     problems.push(`Countries/${c.name}: ${e.message}`);
   }

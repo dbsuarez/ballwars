@@ -10,60 +10,70 @@
      "id": "netflix",
      "name": "Netflix",
      "image": "streaming/netflix.svg",
+     "hash": "a559584d5b",
      "color": "#E50914"
     },
     {
      "id": "youtube",
      "name": "YouTube",
      "image": "streaming/youtube.svg",
+     "hash": "a3557d6878",
      "color": "#FF0000"
     },
     {
      "id": "disney-plus",
      "name": "Disney+",
      "image": "streaming/disney-plus.svg",
+     "hash": "6f0bee4640",
      "color": "#01147B"
     },
     {
      "id": "prime-video",
      "name": "Prime Video",
      "image": "streaming/prime-video.svg",
+     "hash": "5712175303",
      "color": "#00A8E1"
     },
     {
      "id": "hulu",
      "name": "Hulu",
      "image": "streaming/hulu.svg",
+     "hash": "5c205baa43",
      "color": "#1CE783"
     },
     {
      "id": "hbo-max",
      "name": "HBO Max",
      "image": "streaming/hbo-max.svg",
+     "hash": "69870b3611",
      "color": "#000000"
     },
     {
      "id": "crunchyroll",
      "name": "Crunchyroll",
      "image": "streaming/crunchyroll.svg",
+     "hash": "e6f355776e",
      "color": "#FF5E00"
     },
     {
      "id": "paramount-plus",
      "name": "Paramount+",
      "image": "streaming/paramount-plus.svg",
+     "hash": "4cd0f952a6",
      "color": "#0064FF"
     },
     {
      "id": "twitch",
      "name": "Twitch",
      "image": "streaming/twitch.svg",
+     "hash": "1aac426865",
      "color": "#9146FF"
     },
     {
      "id": "apple-tv",
      "name": "Apple TV",
      "image": "streaming/apple-tv.svg",
+     "hash": "748dd84563",
      "color": "#000000"
     }
    ]
@@ -77,48 +87,56 @@
      "id": "nike",
      "name": "Nike",
      "image": "shoes/nike.svg",
+     "hash": "e95b810a5f",
      "color": "#111111"
     },
     {
      "id": "adidas",
      "name": "Adidas",
      "image": "shoes/adidas.svg",
+     "hash": "58ddbc493b",
      "color": "#000000"
     },
     {
      "id": "puma",
      "name": "Puma",
      "image": "shoes/puma.svg",
+     "hash": "2d14f4398f",
      "color": "#242B2F"
     },
     {
      "id": "new-balance",
      "name": "New Balance",
      "image": "shoes/new-balance.svg",
+     "hash": "49a43230ea",
      "color": "#CF0A2C"
     },
     {
      "id": "reebok",
      "name": "Reebok",
      "image": "shoes/reebok.svg",
+     "hash": "66336c4316",
      "color": "#E41D1B"
     },
     {
      "id": "under-armour",
      "name": "Under Armour",
      "image": "shoes/under-armour.svg",
+     "hash": "8686191dd9",
      "color": "#1D1D1D"
     },
     {
      "id": "fila",
      "name": "Fila",
      "image": "shoes/fila.svg",
+     "hash": "2867862bcb",
      "color": "#002D62"
     },
     {
      "id": "jordan",
      "name": "Jordan",
      "image": "shoes/jordan.svg",
+     "hash": "1c725433df",
      "color": "#000000"
     }
    ]
@@ -132,72 +150,84 @@
      "id": "asus",
      "name": "ASUS",
      "image": "laptops/asus.svg",
+     "hash": "3d27b1e247",
      "color": "#000000"
     },
     {
      "id": "acer",
      "name": "Acer",
      "image": "laptops/acer.svg",
+     "hash": "f655e68114",
      "color": "#83B81A"
     },
     {
      "id": "dell",
      "name": "Dell",
      "image": "laptops/dell.svg",
+     "hash": "1c74e5dcd1",
      "color": "#007DB8"
     },
     {
      "id": "hp",
      "name": "HP",
      "image": "laptops/hp.svg",
+     "hash": "4fca15130e",
      "color": "#0096D6"
     },
     {
      "id": "lenovo",
      "name": "Lenovo",
      "image": "laptops/lenovo.svg",
+     "hash": "f8097a19ac",
      "color": "#E2231A"
     },
     {
      "id": "apple",
      "name": "Apple",
      "image": "laptops/apple.svg",
+     "hash": "c0ace60a40",
      "color": "#000000"
     },
     {
      "id": "msi",
      "name": "MSI",
      "image": "laptops/msi.svg",
+     "hash": "208745646a",
      "color": "#FF0000"
     },
     {
      "id": "razer",
      "name": "Razer",
      "image": "laptops/razer.svg",
+     "hash": "949ab396a6",
      "color": "#00FF00"
     },
     {
      "id": "microsoft",
      "name": "Microsoft",
      "image": "laptops/microsoft.svg",
+     "hash": "a8a5d2fd9c",
      "color": "#F1511B"
     },
     {
      "id": "samsung",
      "name": "Samsung",
      "image": "laptops/samsung.svg",
+     "hash": "6b249faf18",
      "color": "#1428A0"
     },
     {
      "id": "huawei",
      "name": "Huawei",
      "image": "laptops/huawei.svg",
+     "hash": "2d4eefcee0",
      "color": "#FF0000"
     },
     {
      "id": "toshiba",
      "name": "Toshiba",
      "image": "laptops/toshiba.svg",
+     "hash": "bfc2a13a19",
      "color": "#FF0000"
     }
    ]
@@ -211,1494 +241,1743 @@
      "id": "af",
      "name": "Afghanistan",
      "image": "countries/af.svg",
+     "hash": "ad0d6c24cf",
      "color": "#009900"
     },
     {
      "id": "ax",
      "name": "Aland Islands",
      "image": "countries/ax.svg",
+     "hash": "55d9e548c8",
      "color": "#0053A5"
     },
     {
      "id": "al",
      "name": "Albania",
      "image": "countries/al.svg",
+     "hash": "e75cfa8195",
      "color": "#000001"
     },
     {
      "id": "dz",
      "name": "Algeria",
      "image": "countries/dz.svg",
+     "hash": "eb62c9b07a",
      "color": "#006233"
     },
     {
      "id": "as",
      "name": "American Samoa",
      "image": "countries/as.svg",
+     "hash": "10244180c2",
      "color": "#000066"
     },
     {
      "id": "ad",
      "name": "Andorra",
      "image": "countries/ad.svg",
+     "hash": "02ca6eb4ca",
      "color": "#D0103A"
     },
     {
      "id": "ao",
      "name": "Angola",
      "image": "countries/ao.svg",
+     "hash": "d155b546e7",
      "color": "#FFEC00"
     },
     {
      "id": "ai",
      "name": "Anguilla",
      "image": "countries/ai.svg",
+     "hash": "8e4cfde293",
      "color": "#FF9900"
     },
     {
      "id": "aq",
      "name": "Antarctica",
      "image": "countries/aq.svg",
+     "hash": "8661f8a5f9",
      "color": "#3A7DCE"
     },
     {
      "id": "ag",
      "name": "Antigua and Barbuda",
      "image": "countries/ag.svg",
+     "hash": "bc7376cf8a",
      "color": "#25FF01"
     },
     {
      "id": "ar",
      "name": "Argentina",
      "image": "countries/ar.svg",
+     "hash": "b3377d77d6",
      "color": "#74ACDF"
     },
     {
      "id": "am",
      "name": "Armenia",
      "image": "countries/am.svg",
+     "hash": "c504a7fba6",
      "color": "#D90012"
     },
     {
      "id": "aw",
      "name": "Aruba",
      "image": "countries/aw.svg",
+     "hash": "e24aed11f7",
      "color": "#3399CC"
     },
     {
      "id": "au",
      "name": "Australia",
      "image": "countries/au.svg",
+     "hash": "6d3089143f",
      "color": "#00008B"
     },
     {
      "id": "at",
      "name": "Austria",
      "image": "countries/at.svg",
+     "hash": "714628f501",
      "color": "#C8102E"
     },
     {
      "id": "az",
      "name": "Azerbaijan",
      "image": "countries/az.svg",
+     "hash": "803090b236",
      "color": "#3F9C35"
     },
     {
      "id": "bs",
      "name": "Bahamas",
      "image": "countries/bs.svg",
+     "hash": "3c0468157c",
      "color": "#FFE900"
     },
     {
      "id": "bh",
      "name": "Bahrain",
      "image": "countries/bh.svg",
+     "hash": "991b1e1352",
      "color": "#CE1126"
     },
     {
      "id": "bd",
      "name": "Bangladesh",
      "image": "countries/bd.svg",
+     "hash": "a82c77f753",
      "color": "#006A4E"
     },
     {
      "id": "bb",
      "name": "Barbados",
      "image": "countries/bb.svg",
+     "hash": "5117928a2b",
      "color": "#00267F"
     },
     {
      "id": "by",
      "name": "Belarus",
      "image": "countries/by.svg",
+     "hash": "82e486bff9",
      "color": "#CE1720"
     },
     {
      "id": "be",
      "name": "Belgium",
      "image": "countries/be.svg",
+     "hash": "d7697f8dc9",
      "color": "#FFD90C"
     },
     {
      "id": "bz",
      "name": "Belize",
      "image": "countries/bz.svg",
+     "hash": "e6b598d9c5",
      "color": "#FFEF5D"
     },
     {
      "id": "bj",
      "name": "Benin",
      "image": "countries/bj.svg",
+     "hash": "5dd5a7a1fb",
      "color": "#319400"
     },
     {
      "id": "bm",
      "name": "Bermuda",
      "image": "countries/bm.svg",
+     "hash": "f847c1ccc0",
      "color": "#CF142B"
     },
     {
      "id": "bt",
      "name": "Bhutan",
      "image": "countries/bt.svg",
+     "hash": "dccae56c62",
      "color": "#FFD520"
     },
     {
      "id": "bo",
      "name": "Bolivia",
      "image": "countries/bo.svg",
+     "hash": "06163d5d36",
      "color": "#007934"
     },
     {
      "id": "bq",
      "name": "Bonaire, Sint Eustatius and Saba",
      "image": "countries/bq.svg",
+     "hash": "db91adc64c",
      "color": "#21468B"
     },
     {
      "id": "ba",
      "name": "Bosnia and Herzegovina",
      "image": "countries/ba.svg",
+     "hash": "1184c6c486",
      "color": "#000099"
     },
     {
      "id": "bw",
      "name": "Botswana",
      "image": "countries/bw.svg",
+     "hash": "602afb0466",
      "color": "#00CBFF"
     },
     {
      "id": "bv",
      "name": "Bouvet Island",
      "image": "countries/bv.svg",
+     "hash": "2e89aae67f",
      "color": "#D72828"
     },
     {
      "id": "br",
      "name": "Brazil",
      "image": "countries/br.svg",
+     "hash": "d15960d63f",
      "color": "#229E45"
     },
     {
      "id": "io",
      "name": "British Indian Ocean Territory",
      "image": "countries/io.svg",
+     "hash": "99bd42c304",
      "color": "#000063"
     },
     {
      "id": "bn",
      "name": "Brunei Darussalam",
      "image": "countries/bn.svg",
+     "hash": "b8ed1a2b5e",
      "color": "#F7E017"
     },
     {
      "id": "bg",
      "name": "Bulgaria",
      "image": "countries/bg.svg",
+     "hash": "c24eebefe7",
      "color": "#00966E"
     },
     {
      "id": "bf",
      "name": "Burkina Faso",
      "image": "countries/bf.svg",
+     "hash": "d4b7c88e4d",
      "color": "#DE0000"
     },
     {
      "id": "bi",
      "name": "Burundi",
      "image": "countries/bi.svg",
+     "hash": "4b26e8c764",
      "color": "#18B637"
     },
     {
      "id": "cv",
      "name": "Cabo Verde",
      "image": "countries/cv.svg",
+     "hash": "25f88235f6",
      "color": "#081873"
     },
     {
      "id": "kh",
      "name": "Cambodia",
      "image": "countries/kh.svg",
+     "hash": "9e0c788c06",
      "color": "#032EA1"
     },
     {
      "id": "cm",
      "name": "Cameroon",
      "image": "countries/cm.svg",
+     "hash": "e4cfa04c17",
      "color": "#007A5E"
     },
     {
      "id": "ca",
      "name": "Canada",
      "image": "countries/ca.svg",
+     "hash": "1ec9b7244e",
      "color": "#D52B1E"
     },
     {
      "id": "ky",
      "name": "Cayman Islands",
      "image": "countries/ky.svg",
+     "hash": "f21b87296d",
      "color": "#000066"
     },
     {
      "id": "cf",
      "name": "Central African Republic",
      "image": "countries/cf.svg",
+     "hash": "87fc778fa3",
      "color": "#0000FF"
     },
     {
      "id": "td",
      "name": "Chad",
      "image": "countries/td.svg",
+     "hash": "26e2f4fb53",
      "color": "#002664"
     },
     {
      "id": "cl",
      "name": "Chile",
      "image": "countries/cl.svg",
+     "hash": "c0a1493f30",
      "color": "#0039A6"
     },
     {
      "id": "cn",
      "name": "China",
      "image": "countries/cn.svg",
+     "hash": "e0c41d8691",
      "color": "#FFFF00"
     },
     {
      "id": "cx",
      "name": "Christmas Island",
      "image": "countries/cx.svg",
+     "hash": "576f65ca9f",
      "color": "#0021AD"
     },
     {
      "id": "cc",
      "name": "Cocos (Keeling) Islands",
      "image": "countries/cc.svg",
+     "hash": "10c3d4363f",
      "color": "#FFE000"
     },
     {
      "id": "co",
      "name": "Colombia",
      "image": "countries/co.svg",
+     "hash": "e38fc2b99d",
      "color": "#FFE800"
     },
     {
      "id": "km",
      "name": "Comoros",
      "image": "countries/km.svg",
+     "hash": "fd0a09675e",
      "color": "#FFFF00"
     },
     {
      "id": "ck",
      "name": "Cook Islands",
      "image": "countries/ck.svg",
+     "hash": "d54ec8115d",
      "color": "#000066"
     },
     {
      "id": "cr",
      "name": "Costa Rica",
      "image": "countries/cr.svg",
+     "hash": "ebb835a1f9",
      "color": "#0000B4"
     },
     {
      "id": "ci",
      "name": "Côte d'Ivoire",
      "image": "countries/ci.svg",
+     "hash": "33f8be275c",
      "color": "#009A44"
     },
     {
      "id": "hr",
      "name": "Croatia",
      "image": "countries/hr.svg",
+     "hash": "316a82211b",
      "color": "#171796"
     },
     {
      "id": "cu",
      "name": "Cuba",
      "image": "countries/cu.svg",
+     "hash": "74df71d19d",
      "color": "#002A8F"
     },
     {
      "id": "cw",
      "name": "Curaçao",
      "image": "countries/cw.svg",
+     "hash": "55c0d111b6",
      "color": "#002B7F"
     },
     {
      "id": "cy",
      "name": "Cyprus",
      "image": "countries/cy.svg",
+     "hash": "85b015c5e5",
      "color": "#D47600"
     },
     {
      "id": "cz",
      "name": "Czech Republic",
      "image": "countries/cz.svg",
+     "hash": "3b076a59a7",
      "color": "#D7141A"
     },
     {
      "id": "cd",
      "name": "Democratic Republic of the Congo",
      "image": "countries/cd.svg",
+     "hash": "8bf95303e3",
      "color": "#007FFF"
     },
     {
      "id": "dk",
      "name": "Denmark",
      "image": "countries/dk.svg",
+     "hash": "f0673aefd9",
      "color": "#C8102E"
     },
     {
      "id": "dj",
      "name": "Djibouti",
      "image": "countries/dj.svg",
+     "hash": "5d2da28054",
      "color": "#00CC00"
     },
     {
      "id": "dm",
      "name": "Dominica",
      "image": "countries/dm.svg",
+     "hash": "df437665b7",
      "color": "#108C00"
     },
     {
      "id": "do",
      "name": "Dominican Republic",
      "image": "countries/do.svg",
+     "hash": "2108a36e0b",
      "color": "#002D62"
     },
     {
      "id": "ec",
      "name": "Ecuador",
      "image": "countries/ec.svg",
+     "hash": "e7f298af9f",
      "color": "#FFE800"
     },
     {
      "id": "eg",
      "name": "Egypt",
      "image": "countries/eg.svg",
+     "hash": "0f5064373f",
      "color": "#CE1126"
     },
     {
      "id": "sv",
      "name": "El Salvador",
      "image": "countries/sv.svg",
+     "hash": "61cf2c3b44",
      "color": "#0F47AF"
     },
     {
      "id": "gq",
      "name": "Equatorial Guinea",
      "image": "countries/gq.svg",
+     "hash": "553602ca55",
      "color": "#E32118"
     },
     {
      "id": "er",
      "name": "Eritrea",
      "image": "countries/er.svg",
+     "hash": "9d04bcf421",
      "color": "#BE0027"
     },
     {
      "id": "ee",
      "name": "Estonia",
      "image": "countries/ee.svg",
+     "hash": "3c8a633ec7",
      "color": "#1791FF"
     },
     {
      "id": "sz",
      "name": "Eswatini",
      "image": "countries/sz.svg",
+     "hash": "e13f740655",
      "color": "#3E5EB9"
     },
     {
      "id": "et",
      "name": "Ethiopia",
      "image": "countries/et.svg",
+     "hash": "f8a2936c8a",
      "color": "#298C08"
     },
     {
      "id": "fk",
      "name": "Falkland Islands",
      "image": "countries/fk.svg",
+     "hash": "0faa9a35e0",
      "color": "#A43907"
     },
     {
      "id": "fo",
      "name": "Faroe Islands",
      "image": "countries/fo.svg",
+     "hash": "cddb7042fd",
      "color": "#003897"
     },
     {
      "id": "fm",
      "name": "Federated States of Micronesia",
      "image": "countries/fm.svg",
+     "hash": "17f43895cc",
      "color": "#6797D6"
     },
     {
      "id": "fj",
      "name": "Fiji",
      "image": "countries/fj.svg",
+     "hash": "2ab6e73a5c",
      "color": "#68BFE5"
     },
     {
      "id": "fi",
      "name": "Finland",
      "image": "countries/fi.svg",
+     "hash": "2d41bbe53a",
      "color": "#002F6C"
     },
     {
      "id": "fr",
      "name": "France",
      "image": "countries/fr.svg",
+     "hash": "4c55380202",
      "color": "#000091"
     },
     {
      "id": "gf",
      "name": "French Guiana",
      "image": "countries/gf.svg",
+     "hash": "8ce0ad9970",
      "color": "#000091"
     },
     {
      "id": "pf",
      "name": "French Polynesia",
      "image": "countries/pf.svg",
+     "hash": "b1a381ac14",
      "color": "#083D9C"
     },
     {
      "id": "tf",
      "name": "French Southern Territories",
      "image": "countries/tf.svg",
+     "hash": "58aa107899",
      "color": "#002395"
     },
     {
      "id": "ga",
      "name": "Gabon",
      "image": "countries/ga.svg",
+     "hash": "17d2f1cc16",
      "color": "#FFE700"
     },
     {
      "id": "gm",
      "name": "Gambia",
      "image": "countries/gm.svg",
+     "hash": "1192530abd",
      "color": "#000099"
     },
     {
      "id": "ge",
      "name": "Georgia",
      "image": "countries/ge.svg",
+     "hash": "2d88fd30e6",
      "color": "#FFFFFF"
     },
     {
      "id": "de",
      "name": "Germany",
      "image": "countries/de.svg",
+     "hash": "13c7f640e5",
      "color": "#FFCC00"
     },
     {
      "id": "gh",
      "name": "Ghana",
      "image": "countries/gh.svg",
+     "hash": "e90d2316d2",
      "color": "#006B3F"
     },
     {
      "id": "gi",
      "name": "Gibraltar",
      "image": "countries/gi.svg",
+     "hash": "398f38b6b4",
      "color": "#DA000C"
     },
     {
      "id": "gr",
      "name": "Greece",
      "image": "countries/gr.svg",
+     "hash": "82c61b55de",
      "color": "#0D5EAF"
     },
     {
      "id": "gl",
      "name": "Greenland",
      "image": "countries/gl.svg",
+     "hash": "eb38ad82c9",
      "color": "#D00C33"
     },
     {
      "id": "gd",
      "name": "Grenada",
      "image": "countries/gd.svg",
+     "hash": "b23ee69dbb",
      "color": "#FCD116"
     },
     {
      "id": "gp",
      "name": "Guadeloupe",
      "image": "countries/gp.svg",
+     "hash": "639cc39199",
      "color": "#000091"
     },
     {
      "id": "gu",
      "name": "Guam",
      "image": "countries/gu.svg",
+     "hash": "028cb4bd41",
      "color": "#BE0027"
     },
     {
      "id": "gt",
      "name": "Guatemala",
      "image": "countries/gt.svg",
+     "hash": "628edfe005",
      "color": "#F9F0AA"
     },
     {
      "id": "gg",
      "name": "Guernsey",
      "image": "countries/gg.svg",
+     "hash": "3f04392dcb",
      "color": "#E8112D"
     },
     {
      "id": "gn",
      "name": "Guinea",
      "image": "countries/gn.svg",
+     "hash": "3b7c7c8e1a",
      "color": "#FFFF00"
     },
     {
      "id": "gw",
      "name": "Guinea-Bissau",
      "image": "countries/gw.svg",
+     "hash": "8b66829950",
      "color": "#CE1126"
     },
     {
      "id": "gy",
      "name": "Guyana",
      "image": "countries/gy.svg",
+     "hash": "36c590d8a9",
      "color": "#399408"
     },
     {
      "id": "ht",
      "name": "Haiti",
      "image": "countries/ht.svg",
+     "hash": "be604596ed",
      "color": "#D21034"
     },
     {
      "id": "hm",
      "name": "Heard Island and McDonald Islands",
      "image": "countries/hm.svg",
+     "hash": "ca2f559845",
      "color": "#00008B"
     },
     {
      "id": "va",
      "name": "Holy See",
      "image": "countries/va.svg",
+     "hash": "5d96ade9bc",
      "color": "#FFE000"
     },
     {
      "id": "hn",
      "name": "Honduras",
      "image": "countries/hn.svg",
+     "hash": "3dfc6ae8c3",
      "color": "#18C3DF"
     },
     {
      "id": "hk",
      "name": "Hong Kong",
      "image": "countries/hk.svg",
+     "hash": "c6e7da7ce6",
      "color": "#EC1B2E"
     },
     {
      "id": "hu",
      "name": "Hungary",
      "image": "countries/hu.svg",
+     "hash": "e3294e42da",
      "color": "#388D00"
     },
     {
      "id": "is",
      "name": "Iceland",
      "image": "countries/is.svg",
+     "hash": "495242a47f",
      "color": "#003897"
     },
     {
      "id": "in",
      "name": "India",
      "image": "countries/in.svg",
+     "hash": "b985a8f0b4",
      "color": "#FF9933"
     },
     {
      "id": "id",
      "name": "Indonesia",
      "image": "countries/id.svg",
+     "hash": "67c088a27a",
      "color": "#E70011"
     },
     {
      "id": "ir",
      "name": "Iran",
      "image": "countries/ir.svg",
+     "hash": "3c1d1afe56",
      "color": "#DA0000"
     },
     {
      "id": "iq",
      "name": "Iraq",
      "image": "countries/iq.svg",
+     "hash": "a0840e9f86",
      "color": "#CE1126"
     },
     {
      "id": "ie",
      "name": "Ireland",
      "image": "countries/ie.svg",
+     "hash": "6e3dc631e5",
      "color": "#009A49"
     },
     {
      "id": "im",
      "name": "Isle of Man",
      "image": "countries/im.svg",
+     "hash": "d80ce469f1",
      "color": "#BA0000"
     },
     {
      "id": "il",
      "name": "Israel",
      "image": "countries/il.svg",
+     "hash": "1da5c9cf45",
      "color": "#0038B8"
     },
     {
      "id": "it",
      "name": "Italy",
      "image": "countries/it.svg",
+     "hash": "2c61915494",
      "color": "#009246"
     },
     {
      "id": "jm",
      "name": "Jamaica",
      "image": "countries/jm.svg",
+     "hash": "99dd968300",
      "color": "#009900"
     },
     {
      "id": "jp",
      "name": "Japan",
      "image": "countries/jp.svg",
+     "hash": "131323645c",
      "color": "#BC002D"
     },
     {
      "id": "je",
      "name": "Jersey",
      "image": "countries/je.svg",
+     "hash": "2647c5d6c1",
      "color": "#CF142B"
     },
     {
      "id": "jo",
      "name": "Jordan",
      "image": "countries/jo.svg",
+     "hash": "2178fbfa83",
      "color": "#009900"
     },
     {
      "id": "kz",
      "name": "Kazakhstan",
      "image": "countries/kz.svg",
+     "hash": "013eaaa32f",
      "color": "#00ABC2"
     },
     {
      "id": "ke",
      "name": "Kenya",
      "image": "countries/ke.svg",
+     "hash": "a608aadd4b",
      "color": "#006600"
     },
     {
      "id": "ki",
      "name": "Kiribati",
      "image": "countries/ki.svg",
+     "hash": "e322757c5c",
      "color": "#E73E2D"
     },
     {
      "id": "kw",
      "name": "Kuwait",
      "image": "countries/kw.svg",
+     "hash": "4db9e57c9a",
      "color": "#F31830"
     },
     {
      "id": "kg",
      "name": "Kyrgyzstan",
      "image": "countries/kg.svg",
+     "hash": "21780cd129",
      "color": "#FFFF00"
     },
     {
      "id": "la",
      "name": "Laos",
      "image": "countries/la.svg",
+     "hash": "5d6f91e99b",
      "color": "#CE1126"
     },
     {
      "id": "lv",
      "name": "Latvia",
      "image": "countries/lv.svg",
+     "hash": "7d7f0fd906",
      "color": "#981E32"
     },
     {
      "id": "lb",
      "name": "Lebanon",
      "image": "countries/lb.svg",
+     "hash": "07b4861944",
      "color": "#EE161F"
     },
     {
      "id": "ls",
      "name": "Lesotho",
      "image": "countries/ls.svg",
+     "hash": "4bde77ecfb",
      "color": "#009543"
     },
     {
      "id": "lr",
      "name": "Liberia",
      "image": "countries/lr.svg",
+     "hash": "a38af15cab",
      "color": "#000066"
     },
     {
      "id": "ly",
      "name": "Libya",
      "image": "countries/ly.svg",
+     "hash": "a7308daf2d",
      "color": "#239E46"
     },
     {
      "id": "li",
      "name": "Liechtenstein",
      "image": "countries/li.svg",
+     "hash": "87494d2863",
      "color": "#002B7F"
     },
     {
      "id": "lt",
      "name": "Lithuania",
      "image": "countries/lt.svg",
+     "hash": "81917eb710",
      "color": "#006A44"
     },
     {
      "id": "lu",
      "name": "Luxembourg",
      "image": "countries/lu.svg",
+     "hash": "745f3ab679",
      "color": "#ED2939"
     },
     {
      "id": "mo",
      "name": "Macau",
      "image": "countries/mo.svg",
+     "hash": "1b7fdee9c5",
      "color": "#00785E"
     },
     {
      "id": "mg",
      "name": "Madagascar",
      "image": "countries/mg.svg",
+     "hash": "9365387b50",
      "color": "#FC3D32"
     },
     {
      "id": "mw",
      "name": "Malawi",
      "image": "countries/mw.svg",
+     "hash": "bcbd0308a4",
      "color": "#F41408"
     },
     {
      "id": "my",
      "name": "Malaysia",
      "image": "countries/my.svg",
+     "hash": "b78ab8ec44",
      "color": "#CC0000"
     },
     {
      "id": "mv",
      "name": "Maldives",
      "image": "countries/mv.svg",
+     "hash": "cbcd049823",
      "color": "#D21034"
     },
     {
      "id": "ml",
      "name": "Mali",
      "image": "countries/ml.svg",
+     "hash": "9993fe7b33",
      "color": "#009A00"
     },
     {
      "id": "mt",
      "name": "Malta",
      "image": "countries/mt.svg",
+     "hash": "7293bce79e",
      "color": "#CF142B"
     },
     {
      "id": "mh",
      "name": "Marshall Islands",
      "image": "countries/mh.svg",
+     "hash": "6bb474d699",
      "color": "#3B5AA3"
     },
     {
      "id": "mq",
      "name": "Martinique",
      "image": "countries/mq.svg",
+     "hash": "389796c6f1",
      "color": "#00A650"
     },
     {
      "id": "mr",
      "name": "Mauritania",
      "image": "countries/mr.svg",
+     "hash": "8f306a02df",
      "color": "#CD2A3E"
     },
     {
      "id": "mu",
      "name": "Mauritius",
      "image": "countries/mu.svg",
+     "hash": "d18a8f1922",
      "color": "#009F4D"
     },
     {
      "id": "yt",
      "name": "Mayotte",
      "image": "countries/yt.svg",
+     "hash": "f579f4e3d7",
      "color": "#000091"
     },
     {
      "id": "mx",
      "name": "Mexico",
      "image": "countries/mx.svg",
+     "hash": "5b88e9ef48",
      "color": "#F15770"
     },
     {
      "id": "md",
      "name": "Moldova",
      "image": "countries/md.svg",
+     "hash": "ba98aaa053",
      "color": "#00319C"
     },
     {
      "id": "mc",
      "name": "Monaco",
      "image": "countries/mc.svg",
+     "hash": "a1f5a5ce8e",
      "color": "#F31830"
     },
     {
      "id": "mn",
      "name": "Mongolia",
      "image": "countries/mn.svg",
+     "hash": "7e83c68fb1",
      "color": "#FFD900"
     },
     {
      "id": "me",
      "name": "Montenegro",
      "image": "countries/me.svg",
+     "hash": "2d1e8747cd",
      "color": "#D3AE3B"
     },
     {
      "id": "ms",
      "name": "Montserrat",
      "image": "countries/ms.svg",
+     "hash": "70231ee06d",
      "color": "#012169"
     },
     {
      "id": "ma",
      "name": "Morocco",
      "image": "countries/ma.svg",
+     "hash": "bdf56c51e4",
      "color": "#C1272D"
     },
     {
      "id": "mz",
      "name": "Mozambique",
      "image": "countries/mz.svg",
+     "hash": "452dc216ab",
      "color": "#009A00"
     },
     {
      "id": "mm",
      "name": "Myanmar",
      "image": "countries/mm.svg",
+     "hash": "21d1820c08",
      "color": "#FECB00"
     },
     {
      "id": "na",
      "name": "Namibia",
      "image": "countries/na.svg",
+     "hash": "ddee0daddc",
      "color": "#3662A2"
     },
     {
      "id": "nr",
      "name": "Nauru",
      "image": "countries/nr.svg",
+     "hash": "2603654c66",
      "color": "#002170"
     },
     {
      "id": "np",
      "name": "Nepal",
      "image": "countries/np.svg",
+     "hash": "ee18a071fc",
      "color": "#CE0000"
     },
     {
      "id": "nl",
      "name": "Netherlands",
      "image": "countries/nl.svg",
+     "hash": "39f1647f67",
      "color": "#AE1C28"
     },
     {
      "id": "nc",
      "name": "New Caledonia",
      "image": "countries/nc.svg",
+     "hash": "1a1b8eae0e",
      "color": "#009639"
     },
     {
      "id": "nz",
      "name": "New Zealand",
      "image": "countries/nz.svg",
+     "hash": "1bd540dfec",
      "color": "#00247D"
     },
     {
      "id": "ni",
      "name": "Nicaragua",
      "image": "countries/ni.svg",
+     "hash": "09683c7e1b",
      "color": "#510000"
     },
     {
      "id": "ne",
      "name": "Niger",
      "image": "countries/ne.svg",
+     "hash": "a0afa5d8f3",
      "color": "#0DB02B"
     },
     {
      "id": "ng",
      "name": "Nigeria",
      "image": "countries/ng.svg",
+     "hash": "535c75b0f5",
      "color": "#008753"
     },
     {
      "id": "nu",
      "name": "Niue",
      "image": "countries/nu.svg",
+     "hash": "ee154310ba",
      "color": "#FEDD00"
     },
     {
      "id": "nf",
      "name": "Norfolk Island",
      "image": "countries/nf.svg",
+     "hash": "cddf22dfb4",
      "color": "#198200"
     },
     {
      "id": "kp",
      "name": "North Korea",
      "image": "countries/kp.svg",
+     "hash": "8e530e0b80",
      "color": "#3E5698"
     },
     {
      "id": "mk",
      "name": "North Macedonia",
      "image": "countries/mk.svg",
+     "hash": "b5bbab02e9",
      "color": "#D20000"
     },
     {
      "id": "mp",
      "name": "Northern Mariana Islands",
      "image": "countries/mp.svg",
+     "hash": "b3a6fbdf84",
      "color": "#0071BC"
     },
     {
      "id": "no",
      "name": "Norway",
      "image": "countries/no.svg",
+     "hash": "3f18e1c901",
      "color": "#ED2939"
     },
     {
      "id": "om",
      "name": "Oman",
      "image": "countries/om.svg",
+     "hash": "b974d68b79",
      "color": "#EF2D29"
     },
     {
      "id": "pk",
      "name": "Pakistan",
      "image": "countries/pk.svg",
+     "hash": "b1fb703d72",
      "color": "#0C590B"
     },
     {
      "id": "pw",
      "name": "Palau",
      "image": "countries/pw.svg",
+     "hash": "306cf5fb42",
      "color": "#4AADD6"
     },
     {
      "id": "pa",
      "name": "Panama",
      "image": "countries/pa.svg",
+     "hash": "4183e2d881",
      "color": "#DB0000"
     },
     {
      "id": "pg",
      "name": "Papua New Guinea",
      "image": "countries/pg.svg",
+     "hash": "95b0a9b41b",
      "color": "#FFCC00"
     },
     {
      "id": "py",
      "name": "Paraguay",
      "image": "countries/py.svg",
+     "hash": "8e98eb20b2",
      "color": "#0038A8"
     },
     {
      "id": "pe",
      "name": "Peru",
      "image": "countries/pe.svg",
+     "hash": "f70f85e667",
      "color": "#D91023"
     },
     {
      "id": "ph",
      "name": "Philippines",
      "image": "countries/ph.svg",
+     "hash": "fd47429f7b",
      "color": "#0038A8"
     },
     {
      "id": "pn",
      "name": "Pitcairn",
      "image": "countries/pn.svg",
+     "hash": "516451a539",
      "color": "#00247D"
     },
     {
      "id": "pl",
      "name": "Poland",
      "image": "countries/pl.svg",
+     "hash": "d4d5e6dad9",
      "color": "#DC143C"
     },
     {
      "id": "pt",
      "name": "Portugal",
      "image": "countries/pt.svg",
+     "hash": "e368ae7d3b",
      "color": "#006600"
     },
     {
      "id": "pr",
      "name": "Puerto Rico",
      "image": "countries/pr.svg",
+     "hash": "2a40c55b5e",
      "color": "#ED0000"
     },
     {
      "id": "qa",
      "name": "Qatar",
      "image": "countries/qa.svg",
+     "hash": "271440267d",
      "color": "#8D1B3D"
     },
     {
      "id": "cg",
      "name": "Republic of the Congo",
      "image": "countries/cg.svg",
+     "hash": "038b48f120",
      "color": "#FFFF00"
     },
     {
      "id": "re",
      "name": "Réunion",
      "image": "countries/re.svg",
+     "hash": "75c1111426",
      "color": "#00267F"
     },
     {
      "id": "ro",
      "name": "Romania",
      "image": "countries/ro.svg",
+     "hash": "e4e46f8a97",
      "color": "#00319C"
     },
     {
      "id": "ru",
      "name": "Russia",
      "image": "countries/ru.svg",
+     "hash": "08a23c8160",
      "color": "#0039A6"
     },
     {
      "id": "rw",
      "name": "Rwanda",
      "image": "countries/rw.svg",
+     "hash": "11d50c51c5",
      "color": "#20603D"
     },
     {
      "id": "bl",
      "name": "Saint Barthélemy",
      "image": "countries/bl.svg",
+     "hash": "0586f5caaf",
      "color": "#00267F"
     },
     {
      "id": "sh",
      "name": "Saint Helena, Ascension and Tristan da Cunha",
      "image": "countries/sh.svg",
+     "hash": "0e718d2670",
      "color": "#012169"
     },
     {
      "id": "kn",
      "name": "Saint Kitts and Nevis",
      "image": "countries/kn.svg",
+     "hash": "6522e69b3b",
      "color": "#FFE900"
     },
     {
      "id": "lc",
      "name": "Saint Lucia",
      "image": "countries/lc.svg",
+     "hash": "220385edbd",
      "color": "#65CFFF"
     },
     {
      "id": "mf",
      "name": "Saint Martin",
      "image": "countries/mf.svg",
+     "hash": "677bb2dd1b",
      "color": "#000091"
     },
     {
      "id": "pm",
      "name": "Saint Pierre and Miquelon",
      "image": "countries/pm.svg",
+     "hash": "c4b353cd42",
      "color": "#000091"
     },
     {
      "id": "vc",
      "name": "Saint Vincent and the Grenadines",
      "image": "countries/vc.svg",
+     "hash": "2bd1ce7183",
      "color": "#F4F100"
     },
     {
      "id": "ws",
      "name": "Samoa",
      "image": "countries/ws.svg",
+     "hash": "a6dc02c53b",
      "color": "#CE1126"
     },
     {
      "id": "sm",
      "name": "San Marino",
      "image": "countries/sm.svg",
+     "hash": "26fbb01d88",
      "color": "#19B6EF"
     },
     {
      "id": "st",
      "name": "Sao Tome and Principe",
      "image": "countries/st.svg",
+     "hash": "e2ffe8cbf0",
      "color": "#12AD2B"
     },
     {
      "id": "sa",
      "name": "Saudi Arabia",
      "image": "countries/sa.svg",
+     "hash": "fb71ea40b8",
      "color": "#165D31"
     },
     {
      "id": "sn",
      "name": "Senegal",
      "image": "countries/sn.svg",
+     "hash": "c4a4256358",
      "color": "#0B7226"
     },
     {
      "id": "rs",
      "name": "Serbia",
      "image": "countries/rs.svg",
+     "hash": "8822601066",
      "color": "#0C4076"
     },
     {
      "id": "sc",
      "name": "Seychelles",
      "image": "countries/sc.svg",
+     "hash": "d52d2cddb6",
      "color": "#D92223"
     },
     {
      "id": "sl",
      "name": "Sierra Leone",
      "image": "countries/sl.svg",
+     "hash": "a08eb9d8e5",
      "color": "#0000CD"
     },
     {
      "id": "sg",
      "name": "Singapore",
      "image": "countries/sg.svg",
+     "hash": "0c7ac533bc",
      "color": "#DF0000"
     },
     {
      "id": "sx",
      "name": "Sint Maarten",
      "image": "countries/sx.svg",
+     "hash": "1744966427",
      "color": "#ED2939"
     },
     {
      "id": "sk",
      "name": "Slovakia",
      "image": "countries/sk.svg",
+     "hash": "d1e23e6dc1",
      "color": "#EE1C25"
     },
     {
      "id": "si",
      "name": "Slovenia",
      "image": "countries/si.svg",
+     "hash": "d216438951",
      "color": "#D50000"
     },
     {
      "id": "sb",
      "name": "Solomon Islands",
      "image": "countries/sb.svg",
+     "hash": "4bc7b1003b",
      "color": "#0000D6"
     },
     {
      "id": "so",
      "name": "Somalia",
      "image": "countries/so.svg",
+     "hash": "9a63388343",
      "color": "#40A6FF"
     },
     {
      "id": "za",
      "name": "South Africa",
      "image": "countries/za.svg",
+     "hash": "8fe80c8320",
      "color": "#000C8A"
     },
     {
      "id": "gs",
      "name": "South Georgia and the South Sandwich Islands",
      "image": "countries/gs.svg",
+     "hash": "0a66106eeb",
      "color": "#FF5500"
     },
     {
      "id": "kr",
      "name": "South Korea",
      "image": "countries/kr.svg",
+     "hash": "6586e9e7ce",
      "color": "#CD2E3A"
     },
     {
      "id": "ss",
      "name": "South Sudan",
      "image": "countries/ss.svg",
+     "hash": "82465650fa",
      "color": "#078930"
     },
     {
      "id": "es",
      "name": "Spain",
      "image": "countries/es.svg",
+     "hash": "41d3cf2c7c",
      "color": "#AA151B"
     },
     {
      "id": "lk",
      "name": "Sri Lanka",
      "image": "countries/lk.svg",
+     "hash": "cb974d6b3b",
      "color": "#FFB700"
     },
     {
      "id": "ps",
      "name": "State of Palestine",
      "image": "countries/ps.svg",
+     "hash": "6b01594477",
      "color": "#009639"
     },
     {
      "id": "sd",
      "name": "Sudan",
      "image": "countries/sd.svg",
+     "hash": "9cf534d816",
      "color": "#009A00"
     },
     {
      "id": "sr",
      "name": "Suriname",
      "image": "countries/sr.svg",
+     "hash": "78f7ade72b",
      "color": "#377E3F"
     },
     {
      "id": "sj",
      "name": "Svalbard and Jan Mayen",
      "image": "countries/sj.svg",
+     "hash": "3a7b7bfbd2",
      "color": "#EF2B2D"
     },
     {
      "id": "se",
      "name": "Sweden",
      "image": "countries/se.svg",
+     "hash": "1c0fc639b9",
      "color": "#005293"
     },
     {
      "id": "ch",
      "name": "Switzerland",
      "image": "countries/ch.svg",
+     "hash": "28ce5d1eef",
      "color": "#FFFFFF"
     },
     {
      "id": "sy",
      "name": "Syria",
      "image": "countries/sy.svg",
+     "hash": "01edcc593c",
      "color": "#007A3D"
     },
     {
      "id": "tw",
      "name": "Taiwan",
      "image": "countries/tw.svg",
+     "hash": "71eb8204f6",
      "color": "#000095"
     },
     {
      "id": "tj",
      "name": "Tajikistan",
      "image": "countries/tj.svg",
+     "hash": "54b37e98f7",
      "color": "#006600"
     },
     {
      "id": "tz",
      "name": "Tanzania",
      "image": "countries/tz.svg",
+     "hash": "62ef93fed8",
      "color": "#0099FF"
     },
     {
      "id": "th",
      "name": "Thailand",
      "image": "countries/th.svg",
+     "hash": "3202bdb0c9",
      "color": "#A51931"
     },
     {
      "id": "tl",
      "name": "Timor-Leste",
      "image": "countries/tl.svg",
+     "hash": "e07fb49920",
      "color": "#CB000F"
     },
     {
      "id": "tg",
      "name": "Togo",
      "image": "countries/tg.svg",
+     "hash": "7632b1f8e0",
      "color": "#FFE300"
     },
     {
      "id": "tk",
      "name": "Tokelau",
      "image": "countries/tk.svg",
+     "hash": "f3e2b73fa9",
      "color": "#00247D"
     },
     {
      "id": "to",
      "name": "Tonga",
      "image": "countries/to.svg",
+     "hash": "bf0f2e19a5",
      "color": "#C10000"
     },
     {
      "id": "tt",
      "name": "Trinidad and Tobago",
      "image": "countries/tt.svg",
+     "hash": "04dc2bb1cd",
      "color": "#E00000"
     },
     {
      "id": "tn",
      "name": "Tunisia",
      "image": "countries/tn.svg",
+     "hash": "a85167b9c1",
      "color": "#E70013"
     },
     {
      "id": "tr",
      "name": "Türkiye",
      "image": "countries/tr.svg",
+     "hash": "814c4a185a",
      "color": "#E30A17"
     },
     {
      "id": "tm",
      "name": "Turkmenistan",
      "image": "countries/tm.svg",
+     "hash": "bf76811fa3",
      "color": "#00843D"
     },
     {
      "id": "tc",
      "name": "Turks and Caicos Islands",
      "image": "countries/tc.svg",
+     "hash": "2980efe61f",
      "color": "#002868"
     },
     {
      "id": "tv",
      "name": "Tuvalu",
      "image": "countries/tv.svg",
+     "hash": "844b87f3ab",
      "color": "#009FCA"
     },
     {
      "id": "ug",
      "name": "Uganda",
      "image": "countries/ug.svg",
+     "hash": "55b91655ee",
      "color": "#FFE700"
     },
     {
      "id": "ua",
      "name": "Ukraine",
      "image": "countries/ua.svg",
+     "hash": "5b11b5b469",
      "color": "#0057B8"
     },
     {
      "id": "ae",
      "name": "United Arab Emirates",
      "image": "countries/ae.svg",
+     "hash": "f893d492ae",
      "color": "#00732F"
     },
     {
      "id": "gb",
      "name": "United Kingdom",
      "image": "countries/gb.svg",
+     "hash": "fa0bed014d",
      "color": "#012169"
     },
     {
      "id": "um",
      "name": "United States Minor Outlying Islands",
      "image": "countries/um.svg",
+     "hash": "51eea5d6c1",
      "color": "#BD3D44"
     },
     {
      "id": "us",
      "name": "United States of America",
      "image": "countries/us.svg",
+     "hash": "8bda8cf145",
      "color": "#BD3D44"
     },
     {
      "id": "uy",
      "name": "Uruguay",
      "image": "countries/uy.svg",
+     "hash": "d690f647e4",
      "color": "#0038A8"
     },
     {
      "id": "uz",
      "name": "Uzbekistan",
      "image": "countries/uz.svg",
+     "hash": "140e525211",
      "color": "#1EB53A"
     },
     {
      "id": "vu",
      "name": "Vanuatu",
      "image": "countries/vu.svg",
+     "hash": "b8bbe8b07b",
      "color": "#D21034"
     },
     {
      "id": "ve",
      "name": "Venezuela",
      "image": "countries/ve.svg",
+     "hash": "841266b60d",
      "color": "#CF142B"
     },
     {
      "id": "vn",
      "name": "Vietnam",
      "image": "countries/vn.svg",
+     "hash": "13d1288cab",
      "color": "#DA251D"
     },
     {
      "id": "vg",
      "name": "Virgin Islands (British)",
      "image": "countries/vg.svg",
+     "hash": "88e182c1f1",
      "color": "#FFFF00"
     },
     {
      "id": "vi",
      "name": "Virgin Islands (U.S.)",
      "image": "countries/vi.svg",
+     "hash": "00fac79c7d",
      "color": "#369443"
     },
     {
      "id": "wf",
      "name": "Wallis and Futuna",
      "image": "countries/wf.svg",
+     "hash": "f52034e882",
      "color": "#000091"
     },
     {
      "id": "eh",
      "name": "Western Sahara",
      "image": "countries/eh.svg",
+     "hash": "d5997b1d9c",
      "color": "#007A3D"
     },
     {
      "id": "ye",
      "name": "Yemen",
      "image": "countries/ye.svg",
+     "hash": "1eca9da341",
      "color": "#F10600"
     },
     {
      "id": "zm",
      "name": "Zambia",
      "image": "countries/zm.svg",
+     "hash": "e80ea86561",
      "color": "#198A00"
     },
     {
      "id": "zw",
      "name": "Zimbabwe",
      "image": "countries/zw.svg",
+     "hash": "7a343a1a7c",
      "color": "#0000FF"
     }
    ]
@@ -1712,72 +1991,84 @@
      "id": "samsung",
      "name": "Samsung",
      "image": "phones/samsung.svg",
+     "hash": "6b249faf18",
      "color": "#1428A0"
     },
     {
      "id": "apple",
      "name": "Apple",
      "image": "phones/apple.svg",
+     "hash": "c0ace60a40",
      "color": "#000000"
     },
     {
      "id": "xiaomi",
      "name": "Xiaomi",
      "image": "phones/xiaomi.svg",
+     "hash": "7c128a350c",
      "color": "#FF6900"
     },
     {
      "id": "oppo",
      "name": "OPPO",
      "image": "phones/oppo.svg",
+     "hash": "4c5d3b779b",
      "color": "#2D683D"
     },
     {
      "id": "vivo",
      "name": "vivo",
      "image": "phones/vivo.svg",
+     "hash": "83e636bfb8",
      "color": "#415FFF"
     },
     {
      "id": "huawei",
      "name": "Huawei",
      "image": "phones/huawei.svg",
+     "hash": "2d4eefcee0",
      "color": "#FF0000"
     },
     {
      "id": "google",
      "name": "Google",
      "image": "phones/google.svg",
+     "hash": "2b76a6c190",
      "color": "#4285F4"
     },
     {
      "id": "oneplus",
      "name": "OnePlus",
      "image": "phones/oneplus.svg",
+     "hash": "74451d1170",
      "color": "#F5010C"
     },
     {
      "id": "nokia",
      "name": "Nokia",
      "image": "phones/nokia.svg",
+     "hash": "bb0a30fbcd",
      "color": "#005AFF"
     },
     {
      "id": "motorola",
      "name": "Motorola",
      "image": "phones/motorola.svg",
+     "hash": "03da0788db",
      "color": "#E1140A"
     },
     {
      "id": "honor",
      "name": "Honor",
      "image": "phones/honor.svg",
+     "hash": "42abff0cad",
      "color": "#000000"
     },
     {
      "id": "sony",
      "name": "Sony",
      "image": "phones/sony.svg",
+     "hash": "c5da09f1d0",
      "color": "#FFFFFF"
     }
    ]
@@ -1791,60 +2082,70 @@
      "id": "chatgpt",
      "name": "ChatGPT",
      "image": "ai/chatgpt.svg",
+     "hash": "8e897591f7",
      "color": "#000000"
     },
     {
      "id": "gemini",
      "name": "Gemini",
      "image": "ai/gemini.svg",
+     "hash": "99cf68acd2",
      "color": "#3186FF"
     },
     {
      "id": "grok",
      "name": "Grok",
      "image": "ai/grok.svg",
+     "hash": "5a2779ed0f",
      "color": "#0A0A0A"
     },
     {
      "id": "claude",
      "name": "Claude",
      "image": "ai/claude.svg",
+     "hash": "be7e2bfa69",
      "color": "#D97757"
     },
     {
      "id": "copilot",
      "name": "Copilot",
      "image": "ai/copilot.svg",
+     "hash": "2860c6eba8",
      "color": "#00AEFF"
     },
     {
      "id": "meta-ai",
      "name": "Meta AI",
      "image": "ai/meta-ai.svg",
+     "hash": "edf0e460f3",
      "color": "#9844FF"
     },
     {
      "id": "perplexity",
      "name": "Perplexity",
      "image": "ai/perplexity.svg",
+     "hash": "22d77a282d",
      "color": "#1FB8CD"
     },
     {
      "id": "deepseek",
      "name": "DeepSeek",
      "image": "ai/deepseek.svg",
+     "hash": "cf57e595e4",
      "color": "#5786FE"
     },
     {
      "id": "mistral",
      "name": "Mistral",
      "image": "ai/mistral.svg",
+     "hash": "487c641d58",
      "color": "#F7D046"
     },
     {
      "id": "midjourney",
      "name": "Midjourney",
      "image": "ai/midjourney.svg",
+     "hash": "8175c7e25f",
      "color": "#1A222D"
     }
    ]
@@ -1858,66 +2159,77 @@
      "id": "facebook",
      "name": "Facebook",
      "image": "social/facebook.svg",
+     "hash": "6c1191f4b8",
      "color": "#0866FF"
     },
     {
      "id": "instagram",
      "name": "Instagram",
      "image": "social/instagram.svg",
+     "hash": "e9acf6e544",
      "color": "#FF0069"
     },
     {
      "id": "tiktok",
      "name": "TikTok",
      "image": "social/tiktok.svg",
+     "hash": "1e3d430f42",
      "color": "#000000"
     },
     {
      "id": "x",
      "name": "X",
      "image": "social/x.svg",
+     "hash": "cfa4904e0b",
      "color": "#000000"
     },
     {
      "id": "youtube",
      "name": "YouTube",
      "image": "social/youtube.svg",
+     "hash": "a3557d6878",
      "color": "#FF0000"
     },
     {
      "id": "snapchat",
      "name": "Snapchat",
      "image": "social/snapchat.svg",
+     "hash": "2951774502",
      "color": "#FFFC00"
     },
     {
      "id": "reddit",
      "name": "Reddit",
      "image": "social/reddit.svg",
+     "hash": "47b77e1b13",
      "color": "#FF4500"
     },
     {
      "id": "pinterest",
      "name": "Pinterest",
      "image": "social/pinterest.svg",
+     "hash": "48ef51f4c9",
      "color": "#BD081C"
     },
     {
      "id": "threads",
      "name": "Threads",
      "image": "social/threads.svg",
+     "hash": "1ecfd60298",
      "color": "#000000"
     },
     {
      "id": "linkedin",
      "name": "LinkedIn",
      "image": "social/linkedin.svg",
+     "hash": "1bec810d7f",
      "color": "#0A66C2"
     },
     {
      "id": "discord",
      "name": "Discord",
      "image": "social/discord.svg",
+     "hash": "37d363a8df",
      "color": "#5865F2"
     }
    ]
@@ -1931,48 +2243,56 @@
      "id": "whatsapp",
      "name": "WhatsApp",
      "image": "messaging/whatsapp.svg",
+     "hash": "d76328daa7",
      "color": "#25D366"
     },
     {
      "id": "messenger",
      "name": "Messenger",
      "image": "messaging/messenger.svg",
+     "hash": "e03096798e",
      "color": "#0866FF"
     },
     {
      "id": "telegram",
      "name": "Telegram",
      "image": "messaging/telegram.svg",
+     "hash": "a07e1a84c1",
      "color": "#26A5E4"
     },
     {
      "id": "viber",
      "name": "Viber",
      "image": "messaging/viber.svg",
+     "hash": "28141f632b",
      "color": "#7360F2"
     },
     {
      "id": "signal",
      "name": "Signal",
      "image": "messaging/signal.svg",
+     "hash": "76bde902fb",
      "color": "#3B45FD"
     },
     {
      "id": "wechat",
      "name": "WeChat",
      "image": "messaging/wechat.svg",
+     "hash": "d801371339",
      "color": "#07C160"
     },
     {
      "id": "line",
      "name": "LINE",
      "image": "messaging/line.svg",
+     "hash": "cc4c479f99",
      "color": "#00C300"
     },
     {
      "id": "discord",
      "name": "Discord",
      "image": "messaging/discord.svg",
+     "hash": "37d363a8df",
      "color": "#5865F2"
     }
    ]
@@ -1986,42 +2306,49 @@
      "id": "chrome",
      "name": "Chrome",
      "image": "browsers/chrome.svg",
+     "hash": "7ad213cd26",
      "color": "#229342"
     },
     {
      "id": "firefox",
      "name": "Firefox",
      "image": "browsers/firefox.svg",
+     "hash": "8714c1440b",
      "color": "#FF7139"
     },
     {
      "id": "safari",
      "name": "Safari",
      "image": "browsers/safari.svg",
+     "hash": "2fb6ccd469",
      "color": "#006CFF"
     },
     {
      "id": "edge",
      "name": "Edge",
      "image": "browsers/edge.svg",
+     "hash": "6776710454",
      "color": "#0C59A4"
     },
     {
      "id": "opera",
      "name": "Opera",
      "image": "browsers/opera.svg",
+     "hash": "ea9380b610",
      "color": "#FF1B2D"
     },
     {
      "id": "brave",
      "name": "Brave",
      "image": "browsers/brave.svg",
+     "hash": "4b07abc824",
      "color": "#FB542B"
     },
     {
      "id": "vivaldi",
      "name": "Vivaldi",
      "image": "browsers/vivaldi.svg",
+     "hash": "f0645328e3",
      "color": "#EF3939"
     }
    ]
@@ -2035,24 +2362,28 @@
      "id": "playstation",
      "name": "PlayStation",
      "image": "consoles/playstation.svg",
+     "hash": "fc5a1ed801",
      "color": "#0070D1"
     },
     {
      "id": "xbox",
      "name": "Xbox",
      "image": "consoles/xbox.svg",
+     "hash": "be997f28aa",
      "color": "#107C10"
     },
     {
      "id": "steam",
      "name": "Steam",
      "image": "consoles/steam.svg",
+     "hash": "92fcdcbfa5",
      "color": "#000000"
     },
     {
      "id": "steam-deck",
      "name": "Steam Deck",
      "image": "consoles/steam-deck.svg",
+     "hash": "a98aa13292",
      "color": "#1A9FFF"
     }
    ]
@@ -2066,36 +2397,42 @@
      "id": "spotify",
      "name": "Spotify",
      "image": "music/spotify.svg",
+     "hash": "ad08a90437",
      "color": "#1ED760"
     },
     {
      "id": "apple-music",
      "name": "Apple Music",
      "image": "music/apple-music.svg",
+     "hash": "27342fb9a0",
      "color": "#FA243C"
     },
     {
      "id": "youtube-music",
      "name": "YouTube Music",
      "image": "music/youtube-music.svg",
+     "hash": "f2ef407c00",
      "color": "#FF0000"
     },
     {
      "id": "soundcloud",
      "name": "SoundCloud",
      "image": "music/soundcloud.svg",
+     "hash": "108f99af6a",
      "color": "#FF5500"
     },
     {
      "id": "deezer",
      "name": "Deezer",
      "image": "music/deezer.svg",
+     "hash": "d218b8238f",
      "color": "#A238FF"
     },
     {
      "id": "tidal",
      "name": "TIDAL",
      "image": "music/tidal.svg",
+     "hash": "61e8b80c3a",
      "color": "#000000"
     }
    ]
@@ -2109,102 +2446,119 @@
      "id": "toyota",
      "name": "Toyota",
      "image": "cars/toyota.svg",
+     "hash": "0718cb4aa4",
      "color": "#EB0A1E"
     },
     {
      "id": "honda",
      "name": "Honda",
      "image": "cars/honda.svg",
+     "hash": "1b1b694f20",
      "color": "#E40521"
     },
     {
      "id": "bmw",
      "name": "BMW",
      "image": "cars/bmw.svg",
+     "hash": "7e64a4ac01",
      "color": "#0066B1"
     },
     {
      "id": "tesla",
      "name": "Tesla",
      "image": "cars/tesla.svg",
+     "hash": "0d60e75e67",
      "color": "#CC0000"
     },
     {
      "id": "ford",
      "name": "Ford",
      "image": "cars/ford.svg",
+     "hash": "2dd477f928",
      "color": "#00274E"
     },
     {
      "id": "audi",
      "name": "Audi",
      "image": "cars/audi.svg",
+     "hash": "3b2c7dd659",
      "color": "#BB0A30"
     },
     {
      "id": "porsche",
      "name": "Porsche",
      "image": "cars/porsche.svg",
+     "hash": "c97da9d45a",
      "color": "#B12B28"
     },
     {
      "id": "ferrari",
      "name": "Ferrari",
      "image": "cars/ferrari.svg",
+     "hash": "90bbe3ea2c",
      "color": "#D40000"
     },
     {
      "id": "lamborghini",
      "name": "Lamborghini",
      "image": "cars/lamborghini.svg",
+     "hash": "c3177fa735",
      "color": "#B6A272"
     },
     {
      "id": "hyundai",
      "name": "Hyundai",
      "image": "cars/hyundai.svg",
+     "hash": "d3f4f7c6b1",
      "color": "#002C5E"
     },
     {
      "id": "mitsubishi",
      "name": "Mitsubishi",
      "image": "cars/mitsubishi.svg",
+     "hash": "4ff152cc37",
      "color": "#E60012"
     },
     {
      "id": "nissan",
      "name": "Nissan",
      "image": "cars/nissan.svg",
+     "hash": "9b6cb7f70a",
      "color": "#C3002F"
     },
     {
      "id": "volkswagen",
      "name": "Volkswagen",
      "image": "cars/volkswagen.svg",
+     "hash": "00162bdcb1",
      "color": "#151F5D"
     },
     {
      "id": "kia",
      "name": "Kia",
      "image": "cars/kia.svg",
+     "hash": "a53a3e7b79",
      "color": "#05141F"
     },
     {
      "id": "chevrolet",
      "name": "Chevrolet",
      "image": "cars/chevrolet.svg",
+     "hash": "290ea036db",
      "color": "#CD9834"
     },
     {
      "id": "subaru",
      "name": "Subaru",
      "image": "cars/subaru.svg",
+     "hash": "f1f3181ea8",
      "color": "#013C74"
     },
     {
      "id": "mazda",
      "name": "Mazda",
      "image": "cars/mazda.svg",
+     "hash": "378d7f24cf",
      "color": "#101010"
     }
    ]
@@ -2218,30 +2572,35 @@
      "id": "mcdonalds",
      "name": "McDonald's",
      "image": "fast-food/mcdonalds.svg",
+     "hash": "5b0641d3c5",
      "color": "#FBC817"
     },
     {
      "id": "kfc",
      "name": "KFC",
      "image": "fast-food/kfc.svg",
+     "hash": "88eda78771",
      "color": "#F40027"
     },
     {
      "id": "burger-king",
      "name": "Burger King",
      "image": "fast-food/burger-king.svg",
+     "hash": "9d632bdfc0",
      "color": "#D62300"
     },
     {
      "id": "starbucks",
      "name": "Starbucks",
      "image": "fast-food/starbucks.svg",
+     "hash": "cd278e3e1c",
      "color": "#006241"
     },
     {
      "id": "taco-bell",
      "name": "Taco Bell",
      "image": "fast-food/taco-bell.svg",
+     "hash": "a1ac16687c",
      "color": "#38096C"
     }
    ]

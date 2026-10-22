@@ -8,7 +8,10 @@ class CustomGroup {
   final bool isPublic;
   final List<CustomBall> balls;
 
-  const CustomGroup({required this.id, required this.name, required this.isPublic, required this.balls});
+  /// The user who made it (null where unknown, e.g. in tests).
+  final String? ownerId;
+
+  const CustomGroup({required this.id, required this.name, required this.isPublic, required this.balls, this.ownerId});
 
   static const String ballIdPrefix = 'group:';
 

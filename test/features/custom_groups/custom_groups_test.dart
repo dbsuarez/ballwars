@@ -22,8 +22,19 @@ CustomBall _groupBall(String uuid, String name) => CustomBall(
 
 class _FakeGroups implements CustomGroupRepository {
   final List<CustomGroup> groups;
+  final List<CustomGroup> saved;
   final List<Map<String, Object?>> updates = [];
-  _FakeGroups(this.groups);
+  final List<String> unsaved = [];
+  _FakeGroups(this.groups, {this.saved = const []});
+
+  @override
+  Future<List<CustomGroup>> savedGroups() async => saved;
+
+  @override
+  Future<void> unsaveGroup(String groupId) async => unsaved.add(groupId);
+
+  @override
+  String? get userId => 'me';
 
   @override
   Future<CustomBall> updateBall(CustomBall ball,
@@ -72,6 +83,61 @@ void main() {
     expect((color.r * 255).round(), closeTo(200, 16));
     expect((color.g * 255).round(), closeTo(30, 16));
     expect((color.b * 255).round(), closeTo(40, 16));
+  });
+
+  test('group share links carry the group id', () {
+    const id = '0b7c2d4e-1f2a-4b3c-8d9e-0a1b2c3d4e5f';
+    final uri = ReplayLink.groupUri(id, appUrl: kWebAppUrl);
+    expect(uri.toString(), '$kWebAppUrl?g=$id');
+    expect(ReplayLink.sharedGroupId(uri), id);
+    expect(ReplayLink.sharedGroupId(Uri.parse('$kWebAppUrl?g=nope')), isNull);
+    expect(ReplayLink.sharedGroupId(Uri.parse(kWebAppUrl)), isNull);
+  });
+
+  testWidgets('own groups are tagged Mine and added ones Shared in the category list', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: MatchSetupScreen(
+        customGroups: _FakeGroups(
+          [CustomGroup(id: 'g1', name: 'Anime', isPublic: true, balls: [_groupBall('a', 'Goku'), _groupBall('b', 'Luffy')])],
+          saved: [CustomGroup(id: 'g9', name: 'Barkada', isPublic: true, balls: [_groupBall('c', 'Juan'), _groupBall('d', 'Maria')])],
+        ),
+        onStartBattle: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownMenu<String>));
+    await tester.pumpAndSettle();
+    // (The menu also lays its entries out off-screen to size itself.)
+    expect(find.text('Mine'), findsWidgets);
+    expect(find.text('Shared'), findsWidgets);
+    await tester.tap(find.text('Barkada').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Juan'), findsOneWidget);
+  });
+
+  testWidgets('My Groups lists added groups read-only, with a way to remove them', (tester) async {
+    final repo = _FakeGroups(
+      const [],
+      saved: [CustomGroup(id: 'g9', name: 'Barkada', isPublic: true, balls: [_groupBall('c', 'Juan')])],
+    );
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo)));
+    await tester.pumpAndSettle();
+    expect(find.text('ADDED FROM OTHERS'), findsOneWidget);
+    expect(find.text('Add'), findsNothing); // no adding balls to someone else's group
+
+    await tester.tap(find.byTooltip('Group options'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copy share link'), findsOneWidget);
+    expect(find.text('Rename'), findsNothing);
+    await tester.tap(find.text('Remove from my categories'));
+    await tester.pumpAndSettle();
+    expect(repo.unsaved, ['g9']);
   });
 
   testWidgets('my groups show up as categories in Match Setup', (tester) async {

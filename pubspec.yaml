@@ -64,6 +64,17 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Bundled fonts (SIL Open Font License, see assets/fonts/*-OFL.txt).
+  # Manrope is a variable font: weights are set with FontVariation('wght').
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-Variable.ttf
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

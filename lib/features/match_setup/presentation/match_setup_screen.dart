@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../../core/widgets/neon_button.dart';
-import '../../ball_management/domain/ball_repository.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
@@ -9,11 +8,9 @@ import '../../ball_packs/domain/ball_pack.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../domain/match_config.dart';
 
-/// Pick 2-4 balls from your own balls or the built-in packs (Streaming,
-/// Countries, ...), mixing categories freely, then start the battle.
+/// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
+/// your own groups, mixing categories freely, then start the battle.
 class MatchSetupScreen extends StatefulWidget {
-  final BallRepository repository;
-
   /// Built-in packs; null hides them (e.g. in tests or offline builds).
   final BallPackRepository? packRepository;
 
@@ -21,64 +18,69 @@ class MatchSetupScreen extends StatefulWidget {
   final CustomGroupRepository? customGroups;
   final void Function(MatchConfig) onStartBattle;
 
-  const MatchSetupScreen({
-    super.key,
-    required this.repository,
-    this.packRepository,
-    this.customGroups,
-    required this.onStartBattle,
-  });
+  const MatchSetupScreen({super.key, this.packRepository, this.customGroups, required this.onStartBattle});
 
   @override
   State<MatchSetupScreen> createState() => _MatchSetupScreenState();
 }
 
 class _MatchSetupScreenState extends State<MatchSetupScreen> {
-  static const String _myBalls = 'mine';
   static const int _maxBalls = 4;
   static const int _searchFrom = 20;
+  static const List<double> _speeds = [0.5, 1, 2];
 
   // Insertion-ordered: contestants keep the order they were picked in.
   final Map<String, CustomBall> _selected = {};
   final TextEditingController _search = TextEditingController();
+  // The category box's text: selected on focus so typing replaces it.
+  final TextEditingController _categoryText = TextEditingController();
   final math.Random _random = math.Random();
   double _speedMultiplier = 1.0;
   bool _showEffects = true;
   int _winsNeeded = 1;
-  String _category = _myBalls;
+  String? _category;
   List<BallPack> _packs = const [];
-  // The user's groups, shown as categories after "My Balls".
+  // The user's groups, listed before the built-in packs.
   List<BallPack> _groups = const [];
-  bool _packsLoading = false;
+  bool _loading = false;
   bool _packsFailed = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPacks();
+    _load();
   }
 
   @override
   void dispose() {
     _search.dispose();
+    _categoryText.dispose();
     super.dispose();
   }
 
-  Future<void> _loadPacks() async {
-    _loadGroups();
-    final repo = widget.packRepository;
-    if (repo == null) return;
+  List<BallPack> get _categories => [..._groups, ..._packs];
+
+  Future<void> _load() async {
     setState(() {
-      _packsLoading = true;
+      _loading = true;
       _packsFailed = false;
     });
+    await Future.wait([_loadGroups(), _loadPacks()]);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _category ??= _categories.isEmpty ? null : _categories.first.id;
+    });
+  }
+
+  Future<void> _loadPacks() async {
+    final repo = widget.packRepository;
+    if (repo == null) return;
     try {
       final packs = await repo.load();
       if (mounted) setState(() => _packs = packs);
     } catch (_) {
       if (mounted) setState(() => _packsFailed = true);
-    } finally {
-      if (mounted) setState(() => _packsLoading = false);
     }
   }
 
@@ -89,18 +91,21 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     try {
       final groups = await repo.myGroups();
       if (!mounted) return;
-      setState(() => _groups = [
-            for (final g in groups)
-              if (g.balls.isNotEmpty) BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls),
-          ]);
+      setState(
+        () => _groups = [
+          for (final g in groups)
+            if (g.balls.isNotEmpty) BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls),
+        ],
+      );
     } catch (_) {}
   }
 
-  List<CustomBall> get _categoryBalls => _category == _myBalls
-      ? widget.repository.getAll()
-      : [..._groups, ..._packs]
-          .firstWhere((p) => p.id == _category, orElse: () => const BallPack(id: '', name: '', balls: []))
-          .balls;
+  List<CustomBall> get _categoryBalls => _categories
+      .firstWhere(
+        (p) => p.id == _category,
+        orElse: () => const BallPack(id: '', name: '', balls: []),
+      )
+      .balls;
 
   List<CustomBall> get _visibleBalls {
     final query = _search.text.trim().toLowerCase();
@@ -130,218 +135,324 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   void _start() {
     if (!_canStart) return;
-    widget.onStartBattle(MatchConfig(
-      contestants: _selected.values.toList(),
-      speedMultiplier: _speedMultiplier,
-      showEffects: _showEffects,
-      winsNeeded: _winsNeeded,
-    ));
-  }
-
-  void _selectCategory(String id) {
-    setState(() {
-      _category = id;
-      _search.clear();
-    });
+    widget.onStartBattle(
+      MatchConfig(
+        contestants: _selected.values.toList(),
+        speedMultiplier: _speedMultiplier,
+        showEffects: _showEffects,
+        winsNeeded: _winsNeeded,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
     final balls = _visibleBalls;
-    final showSearch = _categoryBalls.length > _searchFrom;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Match Setup')),
+      appBar: AppBar(title: const Text('New match')),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('Select 2-4 Balls'),
-              const SizedBox(height: 8),
-              _categoryBar(),
-              if (showSearch) ...[
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _search,
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Search',
-                    isDense: true,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(padding: const EdgeInsets.fromLTRB(20, 4, 20, 12), child: _categoryPicker(c)),
+                if (_categoryBalls.length > _searchFrom)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: TextField(
+                      controller: _search,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Search',
+                        isDense: true,
+                      ),
+                    ),
                   ),
-                ),
+                Expanded(child: _ballGrid(c, balls)),
+                _footer(c),
               ],
-              const SizedBox(height: 12),
-              Expanded(child: _ballGrid(balls)),
-              const SizedBox(height: 8),
-              _selectionBar(),
-              Row(
-                children: [
-                  const Text('Speed'),
-                  Expanded(
-                    child: Slider(
-                      value: _speedMultiplier,
-                      min: 0.5,
-                      max: 4.0,
-                      divisions: 3,
-                      label: '${_speedMultiplier}x',
-                      onChanged: (v) => setState(() => _speedMultiplier = v),
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  const Text('Rounds'),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SegmentedButton<int>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: 1, label: Text('1 round')),
-                        ButtonSegment(value: 2, label: Text('First to 2')),
-                        ButtonSegment(value: 3, label: Text('First to 3')),
-                      ],
-                      selected: {_winsNeeded},
-                      onSelectionChanged: (s) => setState(() => _winsNeeded = s.first),
-                    ),
-                  ),
-                ],
-              ),
-              SwitchListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Sparks & particles'),
-                value: _showEffects,
-                onChanged: (v) => setState(() => _showEffects = v),
-              ),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
-                    icon: const Icon(Icons.casino),
-                    label: const Text('RANDOM MATCHUP'),
-                  ),
-                  NeonButton(label: 'START BATTLE', onPressed: _start),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _categoryBar() {
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+  Widget _categoryPicker(BallWarsColors c) {
+    final categories = _categories;
+    if (categories.isEmpty) {
+      if (_loading) return const LinearProgressIndicator();
+      return Row(
         children: [
-          _categoryChip(_myBalls, 'My Balls'),
-          for (final group in _groups) _categoryChip(group.id, group.name),
-          for (final pack in _packs) _categoryChip(pack.id, pack.name),
-          if (_packsLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+          Expanded(
+            child: Text(
+              _packsFailed ? "Couldn't load the categories." : 'No categories yet.',
+              style: AppText.ui(14, FontWeight.w500, color: c.muted),
             ),
-          if (_packsFailed)
-            TextButton.icon(
-              onPressed: _loadPacks,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Load categories'),
-            ),
+          ),
+          if (_packsFailed) TextButton(onPressed: _load, child: const Text('Retry')),
         ],
+      );
+    }
+    final selectedName = categories.where((p) => p.id == _category).firstOrNull?.name ?? '';
+    return LayoutBuilder(
+      builder: (context, constraints) => Focus(
+        onFocusChange: (focused) {
+          if (focused) {
+            // After the tap that focused it has placed the caret.
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _categoryText.selection = TextSelection(baseOffset: 0, extentOffset: _categoryText.text.length),
+            );
+          } else {
+            _categoryText.text = selectedName; // left without picking: show the current one again
+          }
+        },
+        child: DropdownMenu<String>(
+          key: ValueKey(categories.length),
+          controller: _categoryText,
+          width: constraints.maxWidth,
+          initialSelection: _category,
+          enableFilter: true,
+          requestFocusOnTap: true,
+          menuHeight: 360,
+          leadingIcon: const Icon(Icons.search),
+          label: const Text('Category'),
+          textStyle: AppText.ui(15, FontWeight.w600, color: c.text),
+          onSelected: (id) => setState(() {
+            _category = id;
+            _search.clear();
+          }),
+          dropdownMenuEntries: [
+            for (final pack in categories)
+              DropdownMenuEntry(
+                value: pack.id,
+                label: pack.name,
+                trailingIcon: Text('${pack.balls.length}', style: AppText.mono(12, color: c.muted)),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _categoryChip(String id, String label) => Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: ChoiceChip(
-          label: Text(label),
-          selected: _category == id,
-          onSelected: (_) => _selectCategory(id),
-        ),
+  Widget _ballGrid(BallWarsColors c, List<CustomBall> balls) {
+    if (_loading && balls.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (balls.isEmpty) {
+      return Center(
+        child: Text('No balls here yet.', style: AppText.ui(14, FontWeight.w500, color: c.muted)),
       );
-
-  Widget _ballGrid(List<CustomBall> balls) {
-    if (balls.isEmpty) return const Center(child: Text('No balls here yet.'));
+    }
     return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 96,
-        mainAxisExtent: 104,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        maxCrossAxisExtent: 92,
+        mainAxisExtent: 112,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 14,
       ),
       itemCount: balls.length,
       itemBuilder: (context, index) {
         final ball = balls[index];
         final selected = _selected.containsKey(ball.id);
-        return GestureDetector(
-          onTap: () => _toggle(ball),
-          child: Column(
-            children: [
-              Stack(
+        final full = !selected && _selected.length >= _maxBalls;
+        return Semantics(
+          button: true,
+          selected: selected,
+          label: ball.name,
+          child: InkWell(
+            onTap: () => _toggle(ball),
+            borderRadius: BorderRadius.circular(14),
+            child: Opacity(
+              opacity: full ? 0.35 : 1,
+              child: Column(
                 children: [
-                  Opacity(
-                    opacity: selected || _selected.length < _maxBalls ? 1.0 : 0.35,
-                    child: CircularBallPreview(ball: ball, size: 64),
-                  ),
-                  if (selected)
-                    const Positioned(
-                      right: 0,
-                      top: 0,
-                      child: CircleAvatar(radius: 11, child: Icon(Icons.check, size: 15)),
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: selected ? c.text : Colors.transparent, width: 2),
                     ),
+                    child: CircularBallPreview(ball: ball, size: 56),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    ball.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppText.ui(
+                      12,
+                      selected ? FontWeight.w700 : FontWeight.w600,
+                      color: selected ? c.text : c.muted,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                ball.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _selectionBar() {
-    return SizedBox(
-      height: 40,
-      child: Row(
+  Widget _footer(BallWarsColors c) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${_selected.length}/$_maxBalls'),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ListView(
-              scrollDirection: Axis.horizontal,
+          SizedBox(
+            height: 36,
+            child: Row(
               children: [
-                for (final ball in _selected.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: InputChip(
-                      avatar: CircularBallPreview(ball: ball, size: 22),
-                      label: Text(ball.name),
-                      onDeleted: () => _toggle(ball),
-                    ),
-                  ),
+                Text('${_selected.length}/$_maxBalls', style: AppText.mono(12, color: c.muted)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _selected.isEmpty
+                      ? Text('Pick 2 to 4 balls', style: AppText.ui(13, FontWeight.w500, color: c.muted))
+                      : ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            for (final ball in _selected.values)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: InputChip(
+                                  avatar: CircularBallPreview(ball: ball, size: 22),
+                                  label: Text(ball.name, style: AppText.ui(13, FontWeight.w600, color: c.text)),
+                                  onDeleted: () => _toggle(ball),
+                                  backgroundColor: c.surfaceHigh,
+                                  side: BorderSide.none,
+                                  shape: const StadiumBorder(),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _Setting(
+                  label: 'ROUNDS',
+                  child: _Cycle<int>(
+                    values: const [1, 2, 3],
+                    value: _winsNeeded,
+                    label: (v) => v == 1 ? '1 round' : 'First to $v',
+                    onChanged: (v) => setState(() => _winsNeeded = v),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Setting(
+                  label: 'SPEED',
+                  child: _Cycle<double>(
+                    values: _speeds,
+                    value: _speedMultiplier,
+                    label: (v) => '${v == v.roundToDouble() ? v.toInt() : v}×',
+                    onChanged: (v) => setState(() => _speedMultiplier = v),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Setting(
+                  label: 'EFFECTS',
+                  child: _Cycle<bool>(
+                    values: const [true, false],
+                    value: _showEffects,
+                    label: (v) => v ? 'On' : 'Off',
+                    onChanged: (v) => setState(() => _showEffects = v),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              SizedBox(
+                width: 56,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
+                  style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(56, 52)),
+                  child: const Icon(Icons.shuffle, semanticLabel: 'Random matchup'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(onPressed: _canStart ? _start : null, child: const Text('Start')),
+              ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// A compact labelled setting tile.
+class _Setting extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _Setting({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppText.ui(10, FontWeight.w700, color: c.muted, letterSpacing: 0.8)),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Tap to step through [values] (keeps the settings row to one line).
+class _Cycle<T> extends StatelessWidget {
+  final List<T> values;
+  final T value;
+  final String Function(T) label;
+  final ValueChanged<T> onChanged;
+
+  const _Cycle({required this.values, required this.value, required this.label, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    final next = values[(values.indexOf(value) + 1) % values.length];
+    return TextButton(
+      onPressed: () => onChanged(next),
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(0, 36),
+        alignment: Alignment.centerLeft,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(label(value), style: AppText.ui(14, FontWeight.w700, color: c.text)),
     );
   }
 }

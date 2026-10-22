@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../application/replay_video_exporter.dart';
 import '../data/video_encoder.dart';
+import 'replay_frame_painter.dart';
 
 /// Exports a finished match as a video, saves it to the gallery and offers
 /// to share it. Shows progress and can be cancelled.
@@ -11,6 +13,7 @@ class ExportVideoDialog extends StatefulWidget {
   final double arenaRadius;
   final double speedMultiplier;
   final bool showEffects;
+  final ReplayStyle style;
   final VideoEncoder encoder;
   final VideoSaver saver;
 
@@ -21,6 +24,7 @@ class ExportVideoDialog extends StatefulWidget {
     required this.arenaRadius,
     required this.speedMultiplier,
     this.showEffects = true,
+    this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
   });
@@ -32,6 +36,8 @@ class ExportVideoDialog extends StatefulWidget {
     required double arenaRadius,
     required double speedMultiplier,
     bool showEffects = true,
+    String headline = 'WHO WINS?',
+    BallWarsColors? colors,
     required VideoExportBackend backend,
   }) {
     return showDialog<void>(
@@ -43,6 +49,12 @@ class ExportVideoDialog extends StatefulWidget {
         arenaRadius: arenaRadius,
         speedMultiplier: speedMultiplier,
         showEffects: showEffects,
+        style: ReplayStyle(
+          headline: headline,
+          background: colors?.background ?? const ReplayStyle().background,
+          text: colors?.text ?? const ReplayStyle().text,
+          muted: colors?.muted ?? const ReplayStyle().muted,
+        ),
         encoder: backend,
         saver: backend,
       ),
@@ -76,6 +88,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         arenaRadius: widget.arenaRadius,
         speedMultiplier: widget.speedMultiplier,
         showEffects: widget.showEffects,
+        style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);

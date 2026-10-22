@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/ball_image_loader.dart';
 import '../../domain/custom_ball.dart';
 
+/// A ball as shown in lists and cards: logos on a white ball ringed in the
+/// ball's color, photos and flags filling it, otherwise its color and
+/// initials.
 class CircularBallPreview extends StatelessWidget {
   final CustomBall ball;
   final double size;
@@ -25,10 +28,7 @@ class CircularBallPreview extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: _isLogo ? ball.primaryColor : ball.glowColor, width: 3),
-        boxShadow: [
-          BoxShadow(color: ball.glowColor.withValues(alpha: 0.7), blurRadius: size * 0.25, spreadRadius: 2),
-        ],
+        border: Border.all(color: ball.primaryColor, width: (size * 0.05).clamp(1.5, 6)),
       ),
       child: ClipOval(child: _face()),
     );
@@ -39,7 +39,7 @@ class CircularBallPreview extends StatelessWidget {
       if (!_isLogo) return Image.memory(ball.imageBytes!, fit: BoxFit.cover);
       return Container(
         color: Colors.white,
-        padding: EdgeInsets.all(size * 0.16),
+        padding: EdgeInsets.all(size * 0.14),
         child: Image.memory(ball.imageBytes!, fit: BoxFit.contain),
       );
     }
@@ -52,7 +52,7 @@ class CircularBallPreview extends StatelessWidget {
         if (!_isLogo) return RawImage(image: image, fit: BoxFit.cover);
         return Container(
           color: Colors.white,
-          padding: EdgeInsets.all(size * 0.16),
+          padding: EdgeInsets.all(size * 0.14),
           child: RawImage(image: image, fit: BoxFit.contain),
         );
       },
@@ -60,13 +60,15 @@ class CircularBallPreview extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        color: ball.primaryColor,
+        color: Colors.white,
         alignment: Alignment.center,
         child: Text(
           _initials,
           style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            fontFamily: 'Manrope',
+            fontVariations: const [FontVariation('wght', 800)],
+            color: ball.primaryColor,
+            fontWeight: FontWeight.w800,
             fontSize: size * 0.32,
           ),
         ),

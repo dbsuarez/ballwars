@@ -51,11 +51,12 @@ class ReplayVideoExporter {
     required double arenaRadius,
     double speedMultiplier = 1.0,
     bool showEffects = true,
+    ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
   }) async {
     MatchSimulationController newMatch() =>
-        MatchSimulationController(contestants, arenaRadius: arenaRadius, seed: seed);
+        MatchSimulationController(contestants, arenaRadius: arenaRadius, seed: seed, arenaBackground: style.background);
     final frameDelta = speedMultiplier / fps;
 
     // Dry run (no rendering) to know the total frame count for progress.
@@ -102,6 +103,7 @@ class ReplayVideoExporter {
             arenaRadius,
             videoTime: videoTime(),
             showEffects: showEffects,
+            style: style,
           ),
         );
         if (frame < matchFrames) match.tick(frameDelta);
@@ -118,6 +120,7 @@ class ReplayVideoExporter {
             arenaRadius,
             videoTime: videoTime(),
             showEffects: showEffects,
+            style: style,
           ),
         );
       }
@@ -135,6 +138,7 @@ class ReplayVideoExporter {
             i / loserFrames,
             videoTime: videoTime(),
             showEffects: showEffects,
+            style: style,
           ),
         );
       }
@@ -144,7 +148,14 @@ class ReplayVideoExporter {
         await emit(
           (canvas, size) =>
               // Same number the in-app timer and winner card show.
-              ReplayFramePainter.paintWinnerCard(canvas, size, winner, match.elapsedSeconds, videoTime: videoTime()),
+              ReplayFramePainter.paintWinnerCard(
+                canvas,
+                size,
+                winner,
+                match.elapsedSeconds,
+                videoTime: videoTime(),
+                style: style,
+              ),
         );
       }
 

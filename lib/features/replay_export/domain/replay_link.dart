@@ -69,6 +69,16 @@ class ReplayLink {
     return ReplayLink(seed: seed, speedMultiplier: speed, contestants: contestants, showEffects: params['fx'] != '0');
   }
 
+  /// A short link `<app>?r=<code>` (see ShortLinkRepository).
+  static Uri shortUri(String code, {String? appUrl}) =>
+      Uri.parse('${Uri.parse(appUrl ?? defaultAppUrl).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?r=$code');
+
+  /// The short-link code in [uri], if it is one.
+  static String? shortCode(Uri uri) {
+    final code = uri.queryParameters['r'];
+    return code != null && RegExp(r'^[A-Za-z0-9]{7}$').hasMatch(code) ? code : null;
+  }
+
   /// The running page's address on web (so local builds link to themselves).
   static String get defaultAppUrl {
     if (!kIsWeb) return kWebAppUrl;

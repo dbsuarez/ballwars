@@ -11,6 +11,9 @@ abstract class CustomGroupRepository {
   /// Groups created on this device (its anonymous account), balls included.
   Future<List<CustomGroup>> myGroups();
 
+  /// Every user's groups (admin only; others get just the public ones).
+  Future<List<CustomGroup>> allGroups();
+
   Future<CustomGroup> createGroup(String name);
 
   Future<void> renameGroup(String groupId, String name);
@@ -73,6 +76,17 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   }
 
   @override
+  Future<List<CustomGroup>> allGroups() async {
+    await _userId();
+    final rows = await _client
+        .from('ball_groups')
+        .select('id, name, is_public, group_balls($_ballColumns)')
+        .order('created_at', ascending: false)
+        .order('position', referencedTable: 'group_balls');
+    return [for (final row in rows) _group(row)];
+  }
+
+  @override
   Future<CustomGroup> createGroup(String name) async {
     await _userId();
     final row = await _client.from('ball_groups').insert({'name': name.trim()}).select('id, name, is_public').single();
@@ -127,7 +141,13 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     Uint8List? png,
   }) async {
     final oldPath = _pathOf(ball);
-    final newPath = png == null ? null : await _upload(png);
+    // The picture goes in the ball owner's folder (the admin may be editing
+    // someone else's ball).
+    String? newPath;
+    if (png != null) {
+      final row = await _client.from('group_balls').select('owner').eq('id', CustomGroup.uuidOf(ball)).single();
+      newPath = await _upload(png, folder: row['owner'] as String);
+    }
     try {
       final row = await _client
           .from('group_balls')
@@ -149,9 +169,10 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
         'color': '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
       };
 
-  /// Uploads a prepared PNG into this user's folder and returns its path.
-  Future<String> _upload(Uint8List png) async {
-    final uid = await _userId();
+  /// Uploads a prepared PNG into [folder] (default: this user's) and
+  /// returns its path.
+  Future<String> _upload(Uint8List png, {String? folder}) async {
+    final uid = folder ?? await _userId();
     // 0x7FFFFFFF, not 1 << 32: on web 1 << 32 is 0 and nextInt(0) throws.
     final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
     await _images.uploadBinary(path, png, fileOptions: const FileOptions(contentType: 'image/png'));

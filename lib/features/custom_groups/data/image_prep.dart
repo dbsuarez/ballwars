@@ -18,15 +18,45 @@ class ImagePrep {
 
   static const int size = 256;
 
-  /// Logos are fitted whole into a transparent square; cover images (photos,
-  /// flags) are center-cropped to fill it.
-  static Future<PreparedImage> prepare(Uint8List bytes, BallImageStyle style) async {
+  /// [crop] (in the image's pixels, from the cropper) is the square the user
+  /// framed; it fills the output. Without it, logos are fitted whole into a
+  /// transparent square and cover images (photos, flags) are center-cropped.
+  static Future<PreparedImage> prepare(Uint8List bytes, BallImageStyle style, {Rect? crop}) async {
     final source = await CanvasImageHelper.decode(bytes);
     try {
+      return await fromImage(source, style, crop: crop);
+    } finally {
+      source.dispose();
+    }
+  }
+
+  /// Decodes a picked picture for framing, scaled down so its longer side is
+  /// at most [maxSide] (big photos would otherwise use a lot of memory).
+  static Future<ui.Image> decodeForCropping(Uint8List bytes, {int maxSide = 1024}) async {
+    final full = await ui.ImmutableBuffer.fromUint8List(bytes);
+    final descriptor = await ui.ImageDescriptor.encoded(full);
+    final w = descriptor.width, h = descriptor.height;
+    final codec = await descriptor.instantiateCodec(
+      targetWidth: w >= h && w > maxSide ? maxSide : null,
+      targetHeight: h > w && h > maxSide ? maxSide : null,
+    );
+    final frame = await codec.getNextFrame();
+    codec.dispose();
+    descriptor.dispose();
+    full.dispose();
+    return frame.image;
+  }
+
+  /// Same as [prepare], from an already decoded [source] (not disposed).
+  static Future<PreparedImage> fromImage(ui.Image source, BallImageStyle style, {Rect? crop}) async {
+    {
       final w = source.width.toDouble(), h = source.height.toDouble();
       final Rect src;
       final Rect dst;
-      if (style == BallImageStyle.cover) {
+      if (crop != null) {
+        src = crop;
+        dst = const Rect.fromLTWH(0, 0, size + 0.0, size + 0.0);
+      } else if (style == BallImageStyle.cover) {
         final side = w < h ? w : h;
         src = Rect.fromLTWH((w - side) / 2, (h - side) / 2, side, side);
         dst = const Rect.fromLTWH(0, 0, size + 0.0, size + 0.0);
@@ -48,8 +78,6 @@ class ImagePrep {
       } finally {
         image.dispose();
       }
-    } finally {
-      source.dispose();
     }
   }
 

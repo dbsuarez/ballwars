@@ -1,17 +1,20 @@
 import 'dart:math' as math;
 import 'package:flutter/painting.dart';
 
-/// Line colors for one match. Brand colors are often black or very dark
-/// (invisible on the dark arena) and two contestants can share a color
-/// (Nike vs Adidas), so each color is brightened if needed and, if it is
-/// still too close to an earlier contestant's, swapped for the most distinct
-/// color from [_fallbacks]. The logos themselves are never recolored.
+/// Line colors for one match. Brand colors can vanish against the arena
+/// (black on a dark theme, yellow on a light one) and two contestants can
+/// share a color (Nike vs Adidas), so each color is brightened or darkened
+/// as needed and, if it is still too close to an earlier contestant's,
+/// swapped for the most distinct of [_fallbacks]. Logos keep their colors.
 class MatchColors {
   MatchColors._();
 
-  // Relative luminance (0 black .. 1 white) a line color needs on the arena.
+  // Relative luminance (0 black .. 1 white) a line color needs on a dark
+  // arena, and may not exceed on a light one.
   static const double _minLuminance = 0.1;
+  static const double _maxLuminance = 0.4;
   static const double _minDistance = 110;
+  static const Color _darkArena = Color(0xFF0A0A0B);
 
   static const List<Color> _fallbacks = [
     Color(0xFFFF3B30), // red
@@ -25,30 +28,38 @@ class MatchColors {
     Color(0xFFE0E0E0), // light gray
   ];
 
-  /// One visible, mutually distinct color per input, in the same order.
-  static List<Color> resolve(List<Color> colors) {
+  /// One visible, mutually distinct color per input, in the same order,
+  /// for an arena drawn on [background].
+  static List<Color> resolve(List<Color> colors, {Color background = _darkArena}) {
+    final dark = background.computeLuminance() < 0.4;
     final used = <Color>[];
     for (final color in colors) {
-      var c = visible(color);
+      var c = visible(color, darkArena: dark);
       if (used.any((u) => distance(u, c) < _minDistance)) {
-        c = _fallbacks.reduce((best, f) => _closestUsed(used, f) > _closestUsed(used, best) ? f : best);
+        c = visible(
+          _fallbacks.reduce((best, f) => _closestUsed(used, f) > _closestUsed(used, best) ? f : best),
+          darkArena: dark,
+        );
       }
       used.add(c);
     }
     return used;
   }
 
-  /// [color] brightened (hue kept) until it shows on the dark arena; grays
-  /// become light gray. Judged by perceived brightness, so deep but vivid
-  /// colors like Netflix red stay as they are.
-  static Color visible(Color color) {
-    if (color.computeLuminance() >= _minLuminance) return color;
+  /// [color] adjusted (hue kept) until it shows on the arena: brightened on
+  /// a dark one, darkened on a light one; grays become a light or dark gray.
+  /// Judged by perceived brightness, so vivid colors like Netflix red stay.
+  static Color visible(Color color, {bool darkArena = true}) {
+    final lum = color.computeLuminance();
+    if (darkArena ? lum >= _minLuminance : lum <= _maxLuminance) return color;
     final hsl = HSLColor.fromColor(color);
-    if (hsl.saturation < 0.15) return const Color(0xFFD0D4D8);
+    if (hsl.saturation < 0.15) return darkArena ? const Color(0xFFD0D4D8) : const Color(0xFF3A3A3F);
     var lightness = hsl.lightness;
     var c = color;
-    while (c.computeLuminance() < _minLuminance && lightness < 0.9) {
-      lightness += 0.04;
+    final step = darkArena ? 0.04 : -0.04;
+    bool ok(Color c) => darkArena ? c.computeLuminance() >= _minLuminance : c.computeLuminance() <= _maxLuminance;
+    while (!ok(c) && lightness > 0.1 && lightness < 0.9) {
+      lightness += step;
       c = hsl.withLightness(lightness).toColor();
     }
     return c;

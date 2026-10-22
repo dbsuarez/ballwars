@@ -16,7 +16,8 @@ class ReplayFramePainter {
   static const Size designSize = Size(720, 1280);
   static const double _arenaSide = 680;
   static const double _arenaTop = 330;
-  static const Color _background = Color(0xFF000000);
+  /// Look of the frames being drawn; set by each public paint call.
+  static ReplayStyle _style = const ReplayStyle();
   static const Color _gold = Color(0xFFFFD700);
 
   static const String watermark = 'dbsuarez.github.io';
@@ -32,7 +33,9 @@ class ReplayFramePainter {
     double arenaRadius, {
     required double videoTime,
     bool showEffects = true,
+    ReplayStyle style = const ReplayStyle(),
   }) {
+    _style = style;
     _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: false);
       if (state.status == MatchStatus.slowMotion) _paintSlowMotionBadge(canvas);
@@ -44,6 +47,8 @@ class ReplayFramePainter {
         arenaRadius: arenaRadius,
         rimAngle: 0,
         showEffects: showEffects,
+        background: _style.background,
+        rimColor: _style.text,
       ).paint(canvas, const Size(_arenaSide, _arenaSide));
       canvas.restore();
     });
@@ -56,7 +61,9 @@ class ReplayFramePainter {
     SimulationBall winner,
     double matchSeconds, {
     required double videoTime,
+    ReplayStyle style = const ReplayStyle(),
   }) {
+    _style = style;
     _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: true);
       ConfettiPainter(videoTime).paint(canvas, designSize);
@@ -77,7 +84,7 @@ class ReplayFramePainter {
         winner.config.name.toUpperCase(),
         64,
         FontWeight.w900,
-        Colors.white,
+        _style.text,
         y: 760,
         letterSpacing: 2,
         maxWidth: 680,
@@ -97,7 +104,7 @@ class ReplayFramePainter {
         'MATCH TIME ${matchSeconds.toStringAsFixed(1)}s',
         28,
         FontWeight.w600,
-        Colors.white70,
+        _style.muted,
         y: 1010,
         letterSpacing: 1.5,
       );
@@ -115,8 +122,9 @@ class ReplayFramePainter {
     double progress, {
     required double videoTime,
     bool showEffects = true,
+    ReplayStyle style = const ReplayStyle(),
   }) {
-    paintMatch(canvas, size, state, arenaRadius, videoTime: videoTime, showEffects: showEffects);
+    paintMatch(canvas, size, state, arenaRadius, videoTime: videoTime, showEffects: showEffects, style: style);
     final double opacity;
     final double scale;
     if (progress < 0.2) {
@@ -139,7 +147,7 @@ class ReplayFramePainter {
   }
 
   static void _withDesignSpace(Canvas canvas, Size size, double videoTime, VoidCallback paint) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = _background);
+    canvas.drawRect(Offset.zero & size, Paint()..color = _style.background);
     canvas.save();
     canvas.scale(size.width / designSize.width, size.height / designSize.height);
     paint();
@@ -148,7 +156,7 @@ class ReplayFramePainter {
   }
 
   static TextPainter _watermarkText() =>
-      _layout(watermark, 32, FontWeight.w800, Colors.white.withValues(alpha: 0.35), letterSpacing: 2);
+      _layout(watermark, 32, FontWeight.w800, _style.text.withValues(alpha: 0.35), letterSpacing: 2);
 
   static void _paintWatermark(Canvas canvas, double videoTime) {
     final text = _watermarkText();
@@ -170,20 +178,20 @@ class ReplayFramePainter {
   }
 
   static void _paintHeader(Canvas canvas, {required bool dimmed}) {
-    _paintText(canvas, 'WHO WINS?', 64, FontWeight.w900, Colors.white, y: 130, letterSpacing: 1);
+    _paintText(canvas, _style.headline, 64, FontWeight.w800, _style.text, y: 130, letterSpacing: 1, maxWidth: 680);
     _paintText(
       canvas,
       'ROUND 1',
       30,
       FontWeight.bold,
-      Colors.redAccent.withValues(alpha: dimmed ? 0.4 : 1),
+      _style.muted.withValues(alpha: dimmed ? 0.4 : 1),
       y: 210,
       letterSpacing: 1,
     );
   }
 
   static void _paintSlowMotionBadge(Canvas canvas) {
-    final label = _layout('SLOW MOTION', 22, FontWeight.bold, Colors.white, letterSpacing: 2);
+    final label = _layout('SLOW MOTION', 22, FontWeight.w700, _style.text, letterSpacing: 2);
     const dotGap = 22.0;
     final width = label.width + dotGap + 32;
     final rect = RRect.fromRectAndRadius(
@@ -192,13 +200,10 @@ class ReplayFramePainter {
     );
     canvas.drawRRect(
       rect,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = Colors.redAccent,
+      Paint()..color = Color.lerp(_style.background, _style.text, 0.09)!,
     );
     final left = rect.left + 16;
-    canvas.drawCircle(Offset(left + 6, 275), 6, Paint()..color = Colors.redAccent);
+    canvas.drawCircle(Offset(left + 6, 275), 6, Paint()..color = const Color(0xFFFF7A59));
     label.paint(canvas, Offset(left + dotGap, 275 - label.height / 2));
   }
 
@@ -221,9 +226,11 @@ class ReplayFramePainter {
         style: TextStyle(
           fontSize: fontSize,
           fontWeight: weight,
+          // Manrope is a variable font: the weight goes on its wght axis.
+          fontVariations: fontFamily == null ? [FontVariation('wght', weight.value.toDouble())] : null,
           color: color,
           letterSpacing: letterSpacing,
-          fontFamily: fontFamily,
+          fontFamily: fontFamily ?? 'Manrope',
         ),
       ),
       textAlign: TextAlign.center,
@@ -256,4 +263,19 @@ class ReplayFramePainter {
     );
     painter.paint(canvas, Offset(math.max(0, (designSize.width - painter.width) / 2), y));
   }
+}
+
+/// The exported video's look: the app's headline and theme colors.
+class ReplayStyle {
+  final String headline;
+  final Color background;
+  final Color text;
+  final Color muted;
+
+  const ReplayStyle({
+    this.headline = 'WHO WINS?',
+    this.background = const Color(0xFF0A0A0B),
+    this.text = const Color(0xFFF2F2F0),
+    this.muted = const Color(0xFF959596),
+  });
 }

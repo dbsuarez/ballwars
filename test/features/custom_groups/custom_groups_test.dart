@@ -81,7 +81,6 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       home: MatchSetupScreen(
-        repository: LocalBallRepository(),
         customGroups: _FakeGroups([
           CustomGroup(id: 'g1', name: 'Anime', isPublic: true, balls: [_groupBall('a', 'Goku'), _groupBall('b', 'Luffy')]),
           const CustomGroup(id: 'g2', name: 'Empty group', isPublic: true, balls: []),
@@ -91,13 +90,16 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Anime'), findsOneWidget);
-    expect(find.text('Empty group'), findsNothing); // nothing to pick from
-    await tester.tap(find.text('Anime'));
+    // The first group with balls opens by default.
+    expect(find.text('Goku'), findsOneWidget);
+    await tester.tap(find.byType(DropdownMenu<String>));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('RANDOM MATCHUP'));
+    expect(find.text('Empty group'), findsNothing); // nothing to pick from
+    await tester.tapAt(const Offset(5, 5)); // close the menu
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.shuffle));
     await tester.pump();
-    await tester.tap(find.text('START BATTLE'));
+    await tester.tap(find.text('Start'));
     expect(started!.contestants.map((b) => b.name).toSet(), {'Goku', 'Luffy'});
   });
 
@@ -117,9 +119,9 @@ void main() {
     expect(find.widgetWithText(TextField, 'Goku'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Son Goku');
-    await tester.tap(find.text('Fill'));
+    await tester.tap(find.text('Fill the ball'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('SAVE'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(repo.updates, hasLength(1));

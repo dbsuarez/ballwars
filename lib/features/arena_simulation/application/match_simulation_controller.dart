@@ -91,6 +91,7 @@ class MatchSimulationController {
     double restitution = 1.0,
     this.rimSlotCount = kRimSlotCount,
     double? layoutRotation,
+    Color arenaBackground = const Color(0xFF0A0A0B),
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     _rng = SeededRandom(this.seed);
     _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution);
@@ -108,7 +109,9 @@ class MatchSimulationController {
     final ballRadius = arenaRadius * ballRadiusRatio;
     // Line colors that are visible on the arena and distinct per contestant
     // (cosmetic only: ids and physics settings are untouched).
-    final lineColors = MatchColors.resolve([for (final c in contestants) c.primaryColor]);
+    final lineColors = MatchColors.resolve([
+      for (final c in contestants) c.primaryColor,
+    ], background: arenaBackground);
 
     _balls = List.generate(count, (i) {
       final angle = _startAngle(i, count);

@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
 import '../domain/simulation_state.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/particle_system.dart';
@@ -16,6 +15,10 @@ class ArenaPainter extends CustomPainter {
   /// so the match plays out the same either way.
   final bool showEffects;
 
+  /// The theme's background (inside the arena) and text color (the rim).
+  final Color background;
+  final Color rimColor;
+
   static const double _ballGlowPadding = 4.0;
   static const double _rimMargin = 10.0;
 
@@ -24,6 +27,8 @@ class ArenaPainter extends CustomPainter {
     required this.arenaRadius,
     required this.rimAngle,
     this.showEffects = true,
+    this.background = const Color(0xFF0A0A0B),
+    this.rimColor = const Color(0xFFF2F2F0),
   });
 
   @override
@@ -54,45 +59,21 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintBackground(Canvas canvas) {
+    // A barely-there lift toward the center, in the theme's colors.
     final paint = Paint()
-      ..shader = ui.Gradient.radial(
-        Offset.zero,
-        arenaRadius,
-        [AppColors.arenaDiscStart, AppColors.arenaDiscEnd],
-      );
+      ..shader = ui.Gradient.radial(Offset.zero, arenaRadius, [
+        Color.lerp(background, rimColor, 0.05)!,
+        background,
+      ]);
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
-
-    // Halftone dot field (faint dots inside arena, visible under lit areas)
-    _paintHalftoneDots(canvas);
-  }
-
-  void _paintHalftoneDots(Canvas canvas) {
-    const double dotRadius = 0.8;
-    const double spacing = 8.0;
-    const int gridSize = 80; // Covers ~80x80 = 6400 dots
-
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.03)
-      ..style = PaintingStyle.fill;
-
-    for (int gx = -gridSize ~/ 2; gx < gridSize ~/ 2; gx++) {
-      for (int gy = -gridSize ~/ 2; gy < gridSize ~/ 2; gy++) {
-        final x = gx * spacing;
-        final y = gy * spacing;
-        // Only draw dots inside arena radius
-        if (x * x + y * y <= arenaRadius * arenaRadius) {
-          canvas.drawCircle(Offset(x.toDouble(), y.toDouble()), dotRadius, paint);
-        }
-      }
-    }
   }
 
   void _paintRim(Canvas canvas) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0
-      ..color = AppColors.rimGlow
-      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4.0);
+      ..strokeWidth = 2.5
+      ..color = rimColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
   }
 

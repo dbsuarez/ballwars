@@ -1,41 +1,67 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 import '../domain/fan_line.dart';
 import '../domain/simulation_ball.dart';
 
+/// One row per ball: name, lines held (and round wins in a series), and a
+/// thin bar of its share of the rim in the ball's line color.
 class ScoreboardOverlay extends StatelessWidget {
   final List<SimulationBall> balls;
 
-  const ScoreboardOverlay({super.key, required this.balls});
+  /// Round wins by ball id; null for a single-round match.
+  final Map<String, int>? wins;
+
+  const ScoreboardOverlay({super.key, required this.balls, this.wins});
 
   @override
   Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: balls.map((ball) {
-        // Share of the rim this ball holds (one line per owned slot)
-        const totalLines = kRimSlotCount;
-        final activeLines = ball.lineCount.clamp(0, totalLines);
-
-        final percent = ((activeLines / totalLines) * 100).round();
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${ball.config.name}: $percent%', style: TextStyle(color: ball.config.primaryColor)),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: activeLines / totalLines,
-                  color: ball.config.primaryColor,
-                  backgroundColor: Colors.white12,
-                  minHeight: 8,
+      children: [
+        for (final ball in balls)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ball.config.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.ui(14, FontWeight.w700, color: ball.isEliminated ? c.muted : c.text),
+                      ),
+                    ),
+                    Text(_detail(ball), style: AppText.mono(12, color: c.muted)),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: ball.lineCount.clamp(0, kRimSlotCount) / kRimSlotCount,
+                    color: ball.config.primaryColor,
+                    backgroundColor: c.border,
+                    minHeight: 4,
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      }).toList(),
+      ],
     );
+  }
+
+  String _detail(SimulationBall ball) {
+    final lines = ball.isEliminated ? 'out' : '${ball.lineCount} lines';
+    final w = wins;
+    if (w == null) return lines;
+    final n = w[ball.config.id] ?? 0;
+    return '$lines · $n ${n == 1 ? 'win' : 'wins'}';
   }
 }

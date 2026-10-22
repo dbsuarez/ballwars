@@ -100,22 +100,6 @@ class _HomeScreenState extends State<_HomeScreen> {
             const Text('Ball Wars', style: TextStyle(fontSize: 32, color: Colors.white)),
             const SizedBox(height: 32),
             NeonButton(
-              label: 'BALL LIBRARY',
-              onPressed: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => BallLibraryScreen(repository: repository))),
-            ),
-            if (customGroups != null) ...[
-              const SizedBox(height: 16),
-              NeonButton(
-                label: 'MY GROUPS',
-                onPressed: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => MyGroupsScreen(repository: customGroups))),
-              ),
-            ],
-            const SizedBox(height: 16),
-            NeonButton(
               label: 'MATCH SETUP',
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(
@@ -130,6 +114,22 @@ class _HomeScreenState extends State<_HomeScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            NeonButton(
+              label: 'BALL LIBRARY',
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => BallLibraryScreen(repository: repository))),
+            ),
+            if (customGroups != null) ...[
+              const SizedBox(height: 16),
+              NeonButton(
+                label: 'MY GROUPS',
+                onPressed: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => MyGroupsScreen(repository: customGroups))),
+              ),
+            ],
           ],
         ),
       ),

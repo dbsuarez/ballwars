@@ -17,6 +17,7 @@ import '../../replay_export/data/video_encoder.dart';
 import '../../replay_export/data/video_export_backend.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../../replay_export/presentation/export_video_dialog.dart';
+import '../../replay_export/presentation/replay_frame_painter.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
   final MatchConfig config;
@@ -241,7 +242,15 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
             opacity: opacity,
             child: Transform.scale(
               scale: scale,
-              child: Center(child: CircularBallPreview(ball: _loserBall!, size: 200)),
+              child: Center(
+                child: SizedBox.square(
+                  dimension: 200,
+                  child: CustomPaint(
+                    foregroundPainter: _LoserCrossPainter(t),
+                    child: CircularBallPreview(ball: _loserBall!, size: 200),
+                  ),
+                ),
+              ),
             ),
           ),
         );
@@ -425,4 +434,18 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     final s = seconds - m * 60;
     return '$m:${s.toStringAsFixed(1).padLeft(4, '0')}';
   }
+}
+
+/// The red X over the eliminated ball while it flashes (same as the video).
+class _LoserCrossPainter extends CustomPainter {
+  _LoserCrossPainter(this.progress);
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) =>
+      ReplayFramePainter.paintLoserCross(canvas, size.center(Offset.zero), size.shortestSide / 2, progress);
+
+  @override
+  bool shouldRepaint(_LoserCrossPainter old) => old.progress != progress;
 }

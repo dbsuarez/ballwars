@@ -6,6 +6,7 @@ import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
 import '../../ball_packs/domain/ball_pack.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
+import '../../settings/presentation/app_settings_scope.dart';
 import '../domain/match_config.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
@@ -84,12 +85,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     }
   }
 
-  /// Groups that fail to load (offline, not set up) just don't show.
+  /// Groups that fail to load (offline, not set up) just don't show. The
+  /// signed-in admin gets every user's groups.
   Future<void> _loadGroups() async {
     final repo = widget.customGroups;
     if (repo == null) return;
+    final adminAuth = context.getInheritedWidgetOfExactType<AppSettingsScope>()?.adminAuth;
     try {
-      final groups = await repo.myGroups();
+      final admin = adminAuth != null && await adminAuth.isAdmin();
+      final groups = admin ? await repo.allGroups() : await repo.myGroups();
       if (!mounted) return;
       setState(
         () => _groups = [

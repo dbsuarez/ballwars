@@ -142,8 +142,31 @@ class ReplayFramePainter {
     final center = Offset(designSize.width / 2, _arenaTop + _arenaSide / 2);
     canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)));
     _paintBallFace(canvas, loser, center, 150 * scale);
+    paintLoserCross(canvas, center, 150 * scale, progress);
     canvas.restore();
     canvas.restore();
+  }
+
+  /// A red X stamped over the eliminated ball (radius [radius] at [center]),
+  /// so the big ball reads as the loser, not the winner. It slams in just
+  /// after the ball pops in ([progress] as in [paintLoser]).
+  static void paintLoserCross(Canvas canvas, Offset center, double radius, double progress) {
+    final t = ((progress - 0.12) / 0.12).clamp(0.0, 1.0);
+    if (t <= 0) return;
+    final arm = radius * 0.62 * (1.5 - 0.5 * Curves.easeOut.transform(t));
+    final path = Path()
+      ..moveTo(center.dx - arm, center.dy - arm)
+      ..lineTo(center.dx + arm, center.dy + arm)
+      ..moveTo(center.dx + arm, center.dy - arm)
+      ..lineTo(center.dx - arm, center.dy + arm);
+    Paint stroke(Color color, double width) => Paint()
+      ..color = color.withValues(alpha: color.a * t)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = width;
+    canvas.drawCircle(center, radius, Paint()..color = Color.fromRGBO(0, 0, 0, 0.35 * t));
+    canvas.drawPath(path, stroke(Colors.white, radius * 0.26));
+    canvas.drawPath(path, stroke(const Color(0xFFE5484D), radius * 0.17));
   }
 
   static void _withDesignSpace(Canvas canvas, Size size, double videoTime, VoidCallback paint) {

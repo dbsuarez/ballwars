@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import '../application/match_simulation_controller.dart';
 import '../domain/simulation_state.dart';
 import '../../match_setup/domain/match_config.dart';
@@ -9,7 +10,10 @@ import 'widgets/match_status_header.dart';
 import 'winner_modal.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
+import '../../ball_management/data/local_ball_repository.dart';
 import '../../replay_export/data/video_encoder.dart';
+import '../../replay_export/data/video_export_backend.dart';
+import '../../replay_export/domain/replay_link.dart';
 import '../../replay_export/presentation/export_video_dialog.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
@@ -37,6 +41,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   double _rimAngle = 0.0;
   late SimulationState _state;
   bool _isPaused = false;
+
+  // Null where this platform can't export video yet (hides SAVE VIDEO).
+  final VideoExportBackend? _videoExport = createVideoExportBackend();
 
   // Lose-out dissolution animation
   late AnimationController _dissolveController;
@@ -104,6 +111,20 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     setState(() {
       _state = _controller.state;
     });
+  }
+
+  /// Copies a link that replays this exact match in the web app.
+  Future<void> _copyReplayLink() async {
+    final link = ReplayLink(
+      seed: _controller.seed,
+      speedMultiplier: widget.config.speedMultiplier,
+      contestants: widget.config.contestants,
+    ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
+    await Clipboard.setData(ClipboardData(text: link.toString()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Replay link copied. Anyone who opens it watches this match.')),
+    );
   }
 
   void _togglePause() {
@@ -233,15 +254,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     child: WinnerModal(
                       winner: _winnerBall!,
                       durationSeconds: _controller.elapsedSeconds,
-                      onSaveVideo: PlatformVideoEncoder.isSupported
-                          ? () => ExportVideoDialog.show(
+                      onSaveVideo: _videoExport == null
+                          ? null
+                          : () => ExportVideoDialog.show(
                                 context,
                                 contestants: widget.config.contestants,
                                 seed: _controller.seed,
                                 arenaRadius: _arenaRadius,
                                 speedMultiplier: widget.config.speedMultiplier,
-                              )
-                          : null,
+                                backend: _videoExport,
+                              ),
+                      onShareLink: _copyReplayLink,
                       onReplay: _replay,
                       onExit: () => Navigator.of(context).maybePop(),
                     ),

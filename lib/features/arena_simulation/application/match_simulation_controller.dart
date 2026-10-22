@@ -32,7 +32,8 @@ class MatchSimulationController {
   // video frame; the video plays at 30fps, so that is ~0.025 per 60Hz step.
   // Collisions are fully elastic there (speed swaps between balls on contact,
   // and the average never decays). Ball radius is ~0.107 of the arena radius.
-  static const double cruiseRadiiPerStep = 0.025;
+  // Played back about 20% slower than that, which looked better in the app.
+  static const double cruiseRadiiPerStep = 0.02;
   static const double ballRadiusRatio = 0.107;
   // Reference start: balls ~0.47 arena radii from the center, launched at
   // ~45 degrees between "inward" and a shared sideways direction.

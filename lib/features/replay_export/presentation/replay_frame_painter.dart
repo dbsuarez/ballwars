@@ -6,8 +6,10 @@ import '../../arena_simulation/presentation/arena_painter.dart';
 
 /// Draws one frame of the exported 9:16 replay video, laid out like the
 /// reference: "WHO WINS?" / "ROUND 1" header, the arena, a slow-motion badge,
-/// and a winner card at the end. Coordinates are in a 720x1280 design space
-/// scaled to the frame size.
+/// and a winner card at the end, with a moving [watermark] over everything.
+/// Coordinates are in a 720x1280 design space scaled to the frame size.
+/// [videoTime] is seconds since the start of the video; it drives the
+/// watermark so the same replay always renders the same frames.
 class ReplayFramePainter {
   static const Size designSize = Size(720, 1280);
   static const double _arenaSide = 680;
@@ -15,9 +17,20 @@ class ReplayFramePainter {
   static const Color _background = Color(0xFF000000);
   static const Color _gold = Color(0xFFFFD700);
 
+  static const String watermark = 'dbsuarez';
+  // Drifts diagonally and bounces off the frame edges (design px per second).
+  static const Offset _watermarkVelocity = Offset(95, 70);
+  static const Offset _watermarkStart = Offset(40, 300);
+
   /// A frame of the match in progress.
-  static void paintMatch(Canvas canvas, Size size, SimulationState state, double arenaRadius) {
-    _withDesignSpace(canvas, size, () {
+  static void paintMatch(
+    Canvas canvas,
+    Size size,
+    SimulationState state,
+    double arenaRadius, {
+    required double videoTime,
+  }) {
+    _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: false);
       if (state.status == MatchStatus.slowMotion) _paintSlowMotionBadge(canvas);
 
@@ -30,8 +43,14 @@ class ReplayFramePainter {
   }
 
   /// The closing winner card.
-  static void paintWinnerCard(Canvas canvas, Size size, SimulationBall winner, double matchSeconds) {
-    _withDesignSpace(canvas, size, () {
+  static void paintWinnerCard(
+    Canvas canvas,
+    Size size,
+    SimulationBall winner,
+    double matchSeconds, {
+    required double videoTime,
+  }) {
+    _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: true);
 
       const center = Offset(360, 560);
@@ -54,12 +73,35 @@ class ReplayFramePainter {
     });
   }
 
-  static void _withDesignSpace(Canvas canvas, Size size, VoidCallback paint) {
+  static void _withDesignSpace(Canvas canvas, Size size, double videoTime, VoidCallback paint) {
     canvas.drawRect(Offset.zero & size, Paint()..color = _background);
     canvas.save();
     canvas.scale(size.width / designSize.width, size.height / designSize.height);
     paint();
+    _paintWatermark(canvas, videoTime);
     canvas.restore();
+  }
+
+  static TextPainter _watermarkText() =>
+      _layout(watermark, 32, FontWeight.w800, Colors.white.withValues(alpha: 0.35), letterSpacing: 2);
+
+  static void _paintWatermark(Canvas canvas, double videoTime) {
+    final text = _watermarkText();
+    text.paint(canvas, watermarkPosition(videoTime, text.size));
+  }
+
+  /// Top-left of the watermark at [videoTime], bouncing inside the frame.
+  static Offset watermarkPosition(double videoTime, Size textSize) {
+    double bounce(double travelled, double range) {
+      if (range <= 0) return 0;
+      final p = travelled % (2 * range);
+      return p <= range ? p : 2 * range - p;
+    }
+
+    return Offset(
+      bounce(_watermarkStart.dx + videoTime * _watermarkVelocity.dx, designSize.width - textSize.width),
+      bounce(_watermarkStart.dy + videoTime * _watermarkVelocity.dy, designSize.height - textSize.height),
+    );
   }
 
   static void _paintHeader(Canvas canvas, {required bool dimmed}) {

@@ -3,32 +3,36 @@ import '../domain/custom_ball.dart';
 import '../../../core/theme/app_colors.dart';
 
 class LocalBallRepository implements BallRepository {
-  final List<CustomBall> _balls = [
-    const CustomBall(
+  /// Balls every copy of the app ships with. Replay links refer to these by
+  /// id, so they must stay stable even if a user removes them locally.
+  static const List<CustomBall> presets = [
+    CustomBall(
       id: 'preset-usa',
       name: 'United States',
       primaryColor: AppColors.usaPrimary,
       glowColor: AppColors.usaGlow,
     ),
-    const CustomBall(
+    CustomBall(
       id: 'preset-russia',
       name: 'Russia',
       primaryColor: AppColors.russiaPrimary,
       glowColor: AppColors.russiaGlow,
     ),
-    const CustomBall(
+    CustomBall(
       id: 'preset-japan',
       name: 'Japan',
       primaryColor: AppColors.japanPrimary,
       glowColor: AppColors.japanGlow,
     ),
-    const CustomBall(
+    CustomBall(
       id: 'preset-brazil',
       name: 'Brazil',
       primaryColor: AppColors.brazilPrimary,
       glowColor: AppColors.brazilGlow,
     ),
   ];
+
+  final List<CustomBall> _balls = [...presets];
 
   @override
   List<CustomBall> getAll() => List.unmodifiable(_balls);

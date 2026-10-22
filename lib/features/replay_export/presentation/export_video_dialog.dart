@@ -29,8 +29,8 @@ class ExportVideoDialog extends StatefulWidget {
     required int seed,
     required double arenaRadius,
     required double speedMultiplier,
+    required VideoExportBackend backend,
   }) {
-    final platform = PlatformVideoEncoder();
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -39,8 +39,8 @@ class ExportVideoDialog extends StatefulWidget {
         seed: seed,
         arenaRadius: arenaRadius,
         speedMultiplier: speedMultiplier,
-        encoder: platform,
-        saver: platform,
+        encoder: backend,
+        saver: backend,
       ),
     );
   }
@@ -76,7 +76,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
           if (mounted) setState(() => _progress = p);
         },
       );
-      final saved = await widget.saver.saveToGallery(path);
+      final saved = await widget.saver.save(path);
       if (mounted) {
         setState(() {
           _savedVideo = saved;
@@ -123,7 +123,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
       case _Phase.saved:
         return AlertDialog(
           title: const Text('VIDEO SAVED'),
-          content: const Text('Saved to Movies/BallWars.'),
+          content: Text(widget.saver.savedMessage),
           actions: [
             TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CLOSE')),
             FilledButton.icon(

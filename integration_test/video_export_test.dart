@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/replay_export/application/replay_video_exporter.dart';
-import 'package:ballwars/features/replay_export/data/video_encoder.dart';
+import 'package:ballwars/features/replay_export/data/android_video_export.dart';
 
 /// Runs on a real Android device: `flutter test integration_test -d <device>`.
 /// Encodes a full replay with the device's encoder and checks the MP4.
@@ -16,7 +16,7 @@ void main() {
     final stopwatch = Stopwatch()..start();
     late String path;
     await tester.runAsync(() async {
-      path = await ReplayVideoExporter(encoder: PlatformVideoEncoder()).export(
+      path = await ReplayVideoExporter(encoder: AndroidVideoExport()).export(
         contestants: const [
           CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
           CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
@@ -38,7 +38,7 @@ void main() {
     // --dart-define=KEEP_VIDEO=true saves it to the gallery (Movies/BallWars)
     // instead, so it survives the test uninstalling the app.
     if (const bool.fromEnvironment('KEEP_VIDEO')) {
-      final saved = await PlatformVideoEncoder().saveToGallery(path);
+      final saved = await AndroidVideoExport().save(path);
       // ignore: avoid_print
       print('VIDEO_SAVED: $saved');
     } else {

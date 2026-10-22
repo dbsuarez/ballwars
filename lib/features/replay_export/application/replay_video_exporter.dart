@@ -70,6 +70,8 @@ class ReplayVideoExporter {
     await encoder.start(width: width, height: height, fps: fps);
 
     var written = 0;
+    // Seconds into the video for the frame being drawn (moves the watermark).
+    double videoTime() => written / fps;
     Future<void> emit(void Function(ui.Canvas canvas, ui.Size size) paint) async {
       if (isCancelled?.call() ?? false) throw const ExportCancelled();
       final recorder = ui.PictureRecorder();
@@ -87,20 +89,23 @@ class ReplayVideoExporter {
     try {
       for (var frame = 0; frame <= matchFrames; frame++) {
         final state = match.state;
-        await emit((canvas, size) => ReplayFramePainter.paintMatch(canvas, size, state, arenaRadius));
+        await emit((canvas, size) =>
+            ReplayFramePainter.paintMatch(canvas, size, state, arenaRadius, videoTime: videoTime()));
         if (frame < matchFrames) match.tick(frameDelta);
       }
 
       final finalState = match.state;
       for (var i = 0; i < holdFrames; i++) {
-        await emit((canvas, size) => ReplayFramePainter.paintMatch(canvas, size, finalState, arenaRadius));
+        await emit((canvas, size) =>
+            ReplayFramePainter.paintMatch(canvas, size, finalState, arenaRadius, videoTime: videoTime()));
       }
 
       final winner = finalState.balls.where((b) => b.config.id == finalState.winnerId).firstOrNull;
       for (var i = 0; i < cardFrames && winner != null; i++) {
         await emit((canvas, size) =>
             // Same number the in-app timer and winner card show.
-            ReplayFramePainter.paintWinnerCard(canvas, size, winner, match.elapsedSeconds));
+            ReplayFramePainter.paintWinnerCard(canvas, size, winner, match.elapsedSeconds,
+                videoTime: videoTime()));
       }
 
       return await encoder.finish();

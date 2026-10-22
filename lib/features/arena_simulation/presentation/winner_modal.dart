@@ -12,6 +12,9 @@ class WinnerModal extends StatefulWidget {
   /// Shows a SAVE VIDEO button when set (only where video export works).
   final VoidCallback? onSaveVideo;
 
+  /// Shows a SHARE LINK button when set.
+  final VoidCallback? onShareLink;
+
   const WinnerModal({
     super.key,
     required this.winner,
@@ -19,6 +22,7 @@ class WinnerModal extends StatefulWidget {
     required this.onReplay,
     required this.onExit,
     this.onSaveVideo,
+    this.onShareLink,
   });
 
   @override
@@ -145,12 +149,26 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
                           ),
                         ],
                       ),
-                      if (widget.onSaveVideo != null) ...[
+                      if (widget.onSaveVideo != null || widget.onShareLink != null) ...[
                         const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: widget.onSaveVideo,
-                          icon: const Icon(Icons.movie),
-                          label: const Text('SAVE VIDEO'),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            if (widget.onSaveVideo != null)
+                              OutlinedButton.icon(
+                                onPressed: widget.onSaveVideo,
+                                icon: const Icon(Icons.movie),
+                                label: const Text('SAVE VIDEO'),
+                              ),
+                            if (widget.onShareLink != null)
+                              OutlinedButton.icon(
+                                onPressed: widget.onShareLink,
+                                icon: const Icon(Icons.link),
+                                label: const Text('SHARE LINK'),
+                              ),
+                          ],
                         ),
                       ],
                     ],

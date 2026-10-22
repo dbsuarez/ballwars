@@ -4,7 +4,9 @@ import 'core/widgets/neon_button.dart';
 import 'features/ball_management/data/local_ball_repository.dart';
 import 'features/ball_management/presentation/ball_library_screen.dart';
 import 'features/arena_simulation/presentation/arena_battle_screen.dart';
+import 'features/match_setup/domain/match_config.dart';
 import 'features/match_setup/presentation/match_setup_screen.dart';
+import 'features/replay_export/domain/replay_link.dart';
 
 class BallWarsApp extends StatelessWidget {
   const BallWarsApp({super.key});
@@ -22,13 +24,37 @@ class BallWarsApp extends StatelessWidget {
   }
 }
 
-class _HomeScreen extends StatelessWidget {
+class _HomeScreen extends StatefulWidget {
   final LocalBallRepository repository;
 
   const _HomeScreen({required this.repository});
 
   @override
+  State<_HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<_HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Opened from a shared replay link (web): go straight to that match.
+    final link = ReplayLink.fromUri(Uri.base, presets: LocalBallRepository.presets);
+    if (link != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ArenaBattleScreen(
+            config: MatchConfig(contestants: link.contestants, speedMultiplier: link.speedMultiplier),
+            seed: link.seed,
+          ),
+        ));
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final repository = widget.repository;
     return Scaffold(
       body: Center(
         child: Column(

@@ -59,7 +59,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     super.dispose();
   }
 
-  List<BallPack> get _categories => [..._groups, ..._packs];
+  List<BallPack> get _categories =>
+      [..._groups, ..._packs]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   Future<void> _load() async {
     setState(() {

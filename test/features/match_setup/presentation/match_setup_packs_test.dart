@@ -9,13 +9,13 @@ import 'package:ballwars/features/match_setup/presentation/match_setup_screen.da
 final _catalog =
     '''
 {"version": 1, "groups": [
- {"id": "shoes", "name": "Shoes", "style": "logo", "balls": [
-  {"id": "nike", "name": "Nike", "image": "shoes/nike.svg", "color": "#111111"},
-  {"id": "adidas", "name": "Adidas", "image": "shoes/adidas.svg", "color": "#000000"},
-  {"id": "puma", "name": "Puma", "image": "shoes/puma.svg", "color": "#242B2F"}]},
  {"id": "countries", "name": "Countries", "style": "flag", "balls": [
   {"id": "c0", "name": "Philippines", "image": "countries/ph.svg", "color": "#0038A8"},
-  ${List.generate(24, (i) => '{"id": "x$i", "name": "Country $i", "image": "countries/x$i.svg", "color": "#123456"}').join(',')}]}
+  ${List.generate(24, (i) => '{"id": "x$i", "name": "Country $i", "image": "countries/x$i.svg", "color": "#123456"}').join(',')}]},
+ {"id": "shoes", "name": "Apparel", "style": "logo", "balls": [
+  {"id": "nike", "name": "Nike", "image": "shoes/nike.svg", "color": "#111111"},
+  {"id": "adidas", "name": "Adidas", "image": "shoes/adidas.svg", "color": "#000000"},
+  {"id": "puma", "name": "Puma", "image": "shoes/puma.svg", "color": "#242B2F"}]}
 ]}
 ''';
 
@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the first category opens by default and Start needs two balls', (tester) async {
+  testWidgets('categories are sorted by name; the first opens by default and Start needs two balls', (tester) async {
     await pumpSetup(tester);
     expect(find.text('Nike'), findsOneWidget);
 

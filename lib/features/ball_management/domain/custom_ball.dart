@@ -11,6 +11,8 @@ class CustomBall {
   final double baseSpeed;
   final double mass;
 
+  static const double defaultBaseSpeed = 320.0;
+
   const CustomBall({
     required this.id,
     required this.name,
@@ -18,7 +20,7 @@ class CustomBall {
     this.assetPath,
     required this.primaryColor,
     required this.glowColor,
-    this.baseSpeed = 320.0,
+    this.baseSpeed = defaultBaseSpeed,
     this.mass = 1.0,
   });
 

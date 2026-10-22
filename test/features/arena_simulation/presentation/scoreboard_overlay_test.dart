@@ -12,14 +12,14 @@ void main() {
         position: Offset.zero,
         velocity: Offset.zero,
         radius: 20,
-        lineCount: 180,
+        lineCount: 90,
       ),
       SimulationBall(
         config: const CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
         position: Offset.zero,
         velocity: Offset.zero,
         radius: 20,
-        lineCount: 90,
+        lineCount: 45,
       ),
     ];
 

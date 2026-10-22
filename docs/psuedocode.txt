@@ -1,0 +1,83 @@
+// --- DATA MODELS ---
+
+Class Vector2 { x, y }
+
+Class Ball {
+    id: String
+    position: Vector2
+    velocity: Vector2
+    radius: Float
+    color: Color
+    isEliminated: Boolean
+}
+
+Class Thread {
+    ownerBallId: String
+    startPoint: Vector2  // Wall anchor
+    endPoint: Vector2    // Ball center anchor
+    isActive: Boolean
+}
+
+// --- GAME LOOP (60 FPS) ---
+
+Function UpdateGame(deltaTime):
+    For each ball in Balls:
+        If ball.isEliminated continue
+
+        // 1. Physics update & Wall collision
+        ball.position += ball.velocity * deltaTime
+        If DistanceSquared(ball.position, ArenaCenter) >= Square(ArenaRadius - ball.radius):
+            ReflectVelocity(ball)
+            PlayBounceSound()
+
+        // 2. Update thread endpoints
+        For each thread in Threads:
+            If thread.ownerBallId == ball.id and thread.isActive:
+                thread.endPoint = ball.position
+
+    // 3. OPTIMIZED COLLISION & THREAD CUTTING LOOP
+    For each ball in Balls:
+        If ball.isEliminated continue
+        
+        For each thread in Threads:
+            // Skip inactive threads instantly (saves massive CPU overhead)
+            If not thread.isActive continue
+            
+            // Enemy balls cut threads they don't own
+            If thread.ownerBallId != ball.id:
+                
+                Float distSq = DistancePointToLineSegmentSquared(ball.position, thread.startPoint, thread.endPoint)
+                Float thresholdSq = Square(ball.radius + CuttingTolerance)
+                
+                If distSq <= thresholdSq:
+                    thread.isActive = false
+                    SpawnParticleEffect(thread.endPoint)
+                    PlaySnapAudio()
+
+    // 4. ELIMINATION CHECK
+    For each ball in Balls:
+        activeCount = Count(Threads where ownerBallId == ball.id and isActive == true)
+        If activeCount == 0 and not ball.isEliminated:
+            ball.isEliminated = true
+            TriggerVictoryAnimation(ball.id)
+
+// --- RENDERING OPTIMIZATION ---
+
+Function RenderFrame(Canvas):
+    DrawCircularArenaWall(ArenaRadius)
+    
+    // Batch all active threads into a SINGLE Path object 
+    // to prevent hundreds of individual canvas draw calls.
+    Path activeThreadsPath = Path()
+    For each thread in Threads:
+        If thread.isActive:
+            activeThreadsPath.moveTo(thread.startPoint.x, thread.startPoint.y)
+            activeThreadsPath.lineTo(thread.endPoint.x, thread.endPoint.y)
+            
+    Canvas.drawPath(activeThreadsPath, linePaint)
+    
+    // Draw remaining active balls on top
+    For each ball in Balls:
+        If not ball.isEliminated:
+            Canvas.drawCircle(ball.position, ball.radius, ball.color)
+            Canvas.drawImage(ball.textureLogo, ball.position)

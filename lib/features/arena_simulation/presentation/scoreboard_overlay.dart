@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../domain/fan_line.dart';
 import '../domain/simulation_ball.dart';
 
 class ScoreboardOverlay extends StatelessWidget {
@@ -11,7 +12,11 @@ class ScoreboardOverlay extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: balls.map((ball) {
-        final percent = ((ball.lineCount / 360) * 100).round();
+        // Share of the rim this ball holds (one line per owned slot)
+        const totalLines = kRimSlotCount;
+        final activeLines = ball.lineCount.clamp(0, totalLines);
+
+        final percent = ((activeLines / totalLines) * 100).round();
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
@@ -21,7 +26,7 @@ class ScoreboardOverlay extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: ball.lineCount / 360,
+                  value: activeLines / totalLines,
                   color: ball.config.primaryColor,
                   backgroundColor: Colors.white12,
                   minHeight: 8,

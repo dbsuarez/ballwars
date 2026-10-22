@@ -21,7 +21,7 @@ class NeonButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(color: color.withOpacity(0.6), blurRadius: 16, spreadRadius: 1),
+            BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 16, spreadRadius: 1),
           ],
         ),
         child: ElevatedButton(

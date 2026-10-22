@@ -7,6 +7,10 @@ import 'arena_canvas.dart';
 import 'scoreboard_overlay.dart';
 import 'widgets/match_status_header.dart';
 import 'winner_modal.dart';
+import '../../ball_management/domain/custom_ball.dart';
+import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
+import '../../replay_export/data/video_encoder.dart';
+import '../../replay_export/presentation/export_video_dialog.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
   final MatchConfig config;
@@ -19,7 +23,7 @@ class ArenaBattleScreen extends StatefulWidget {
 }
 
 class _ArenaBattleScreenState extends State<ArenaBattleScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const double _arenaRadius = 260.0;
 
   late MatchSimulationController _controller;
@@ -34,11 +38,22 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   late SimulationState _state;
   bool _isPaused = false;
 
+  // Lose-out dissolution animation
+  late AnimationController _dissolveController;
+  bool _showDissolve = false;
+  CustomBall? _loserBall;
+  CustomBall? _winnerBall;
+  bool _dissolveComplete = false;
+
   @override
   void initState() {
     super.initState();
     _initMatch();
     _ticker = createTicker(_onTick)..start();
+    _dissolveController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
   }
 
   void _initMatch() {
@@ -51,6 +66,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
     _skipNextDelta = true;
+    _showDissolve = false;
+    _loserBall = null;
+    _winnerBall = null;
+    _dissolveComplete = false;
     _controller.preloadImages().then((_) {
       if (mounted) setState(() {});
     });
@@ -68,8 +87,19 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     if (dt <= 0 || _isPaused) return;
 
     _controller.tick(dt * widget.config.speedMultiplier);
-    // Sector rim attachment points stay fixed (rimAngle is not incremented) —
-    // only the balls move; the rim itself does not rotate.
+
+    // Check for win condition and start dissolve animation
+    final isFinished = _state.winnerId != null;
+    if (isFinished && !_showDissolve && !_dissolveComplete) {
+      _winnerBall = _state.balls.firstWhere((b) => b.config.id == _state.winnerId).config;
+      _loserBall = _state.balls.firstWhere((b) => b.config.id != _state.winnerId).config;
+      _showDissolve = true;
+      _dissolveController.forward().then((_) {
+        setState(() {
+          _dissolveComplete = true;
+        });
+      });
+    }
 
     setState(() {
       _state = _controller.state;
@@ -90,19 +120,46 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   @override
   void dispose() {
     _ticker.dispose();
+    _dissolveController.dispose();
     super.dispose();
+  }
+
+  Widget _buildDissolveAnimation() {
+    return AnimatedBuilder(
+      animation: _dissolveController,
+      builder: (context, child) {
+        final progress = _dissolveController.value;
+        final opacity = 1.0 - progress;
+        final scale = 1.0 + progress * 0.5; // Slight expansion as it dissolves
+
+        return Positioned.fill(
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.scale(
+              scale: scale,
+              child: Center(
+                child: CircularBallPreview(
+                  ball: _loserBall!,
+                  size: 220,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isFinished = _state.winnerId != null;
-    final winnerBall = isFinished
-        ? _state.balls.firstWhere((b) => b.config.id == _state.winnerId).config
-        : null;
-
     return Scaffold(
       appBar: AppBar(
-        title: MatchStatusHeader(isSlowMotion: _state.status == MatchStatus.slowMotion),
+        title: MatchStatusHeader(
+          isSlowMotion: _state.status == MatchStatus.slowMotion,
+          round: 'ROUND 1',
+          showIntro: true,
+          isWinScreen: _state.winnerId != null,
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -124,7 +181,37 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             final arena = ArenaCanvas(state: _state, arenaRadius: _arenaRadius, rimAngle: _rimAngle);
             final scoreboard = Padding(
               padding: const EdgeInsets.all(16),
-              child: ScoreboardOverlay(balls: _state.balls),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ScoreboardOverlay(balls: _state.balls),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Text(
+                        '${_controller.elapsedSeconds.toStringAsFixed(1)}s',
+                        key: const Key('match-timer'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _replay,
+                        icon: const Icon(Icons.replay),
+                        label: const Text('RETRY'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
 
             final content = isPortrait
@@ -137,10 +224,24 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             return Stack(
               children: [
                 content,
-                if (isFinished && winnerBall != null)
+                // Lose-out dissolution animation
+                if (_showDissolve && !_dissolveComplete && _loserBall != null)
+                  _buildDissolveAnimation(),
+                // Winner modal after dissolve completes
+                if (_dissolveComplete && _winnerBall != null)
                   Positioned.fill(
                     child: WinnerModal(
-                      winner: winnerBall,
+                      winner: _winnerBall!,
+                      durationSeconds: _controller.elapsedSeconds,
+                      onSaveVideo: PlatformVideoEncoder.isSupported
+                          ? () => ExportVideoDialog.show(
+                                context,
+                                contestants: widget.config.contestants,
+                                seed: _controller.seed,
+                                arenaRadius: _arenaRadius,
+                                speedMultiplier: widget.config.speedMultiplier,
+                              )
+                          : null,
                       onReplay: _replay,
                       onExit: () => Navigator.of(context).maybePop(),
                     ),

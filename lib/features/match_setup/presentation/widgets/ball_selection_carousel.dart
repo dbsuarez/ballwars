@@ -21,7 +21,7 @@ class BallSelectionCarousel extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: availableBalls.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final ball = availableBalls[index];
           final isSelected = selectedIds.contains(ball.id);

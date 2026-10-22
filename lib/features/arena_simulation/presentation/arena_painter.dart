@@ -1,7 +1,10 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/simulation_state.dart';
+import '../domain/simulation_ball.dart';
+import '../domain/particle_system.dart';
 
 class ArenaPainter extends CustomPainter {
   final SimulationState state;
@@ -27,10 +30,18 @@ class ArenaPainter extends CustomPainter {
 
     _paintBackground(canvas);
     _paintRim(canvas);
-    _paintThreads(canvas);
+    _paintFanLines(canvas);
+    _paintBeamAttack(canvas);
     _paintParticles(canvas);
-    _paintBallTokens(canvas);
+    // Depth order: sort balls by distance from center (farthest drawn first = behind)
+    final sortedBalls = List<SimulationBall>.from(state.balls)
+      ..sort((a, b) => b.position.distance.compareTo(a.position.distance));
+    for (final ball in sortedBalls) {
+      if (ball.isEliminated) continue;
+      _paintSingleBall(canvas, ball);
+    }
     _paintFloatingText(canvas);
+    _paintHudElements(canvas);
 
     canvas.restore();
   }
@@ -43,6 +54,30 @@ class ArenaPainter extends CustomPainter {
         [AppColors.arenaDiscStart, AppColors.arenaDiscEnd],
       );
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
+
+    // Halftone dot field (faint dots inside arena, visible under lit areas)
+    _paintHalftoneDots(canvas);
+  }
+
+  void _paintHalftoneDots(Canvas canvas) {
+    const double dotRadius = 0.8;
+    const double spacing = 8.0;
+    const int gridSize = 80; // Covers ~80x80 = 6400 dots
+
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.03)
+      ..style = PaintingStyle.fill;
+
+    for (int gx = -gridSize ~/ 2; gx < gridSize ~/ 2; gx++) {
+      for (int gy = -gridSize ~/ 2; gy < gridSize ~/ 2; gy++) {
+        final x = gx * spacing;
+        final y = gy * spacing;
+        // Only draw dots inside arena radius
+        if (x * x + y * y <= arenaRadius * arenaRadius) {
+          canvas.drawCircle(Offset(x.toDouble(), y.toDouble()), dotRadius, paint);
+        }
+      }
+    }
   }
 
   void _paintRim(Canvas canvas) {
@@ -54,76 +89,268 @@ class ArenaPainter extends CustomPainter {
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
   }
 
-  void _paintThreads(Canvas canvas) {
-    // Batch all active threads into a single Path
-    final path = Path();
-    for (final thread in state.threads) {
-      if (!thread.isActive) continue;
-      path.moveTo(thread.startPoint.dx, thread.startPoint.dy);
-      path.lineTo(thread.endPoint.dx, thread.endPoint.dy);
-    }
+  /// Paints every ball's lines: rim anchor to the owner's center.
+  /// Plain strokes for now; glow/haze effects come later.
+  void _paintFanLines(Canvas canvas) {
+    for (final ball in state.balls) {
+      if (ball.isEliminated || ball.fanLines.isEmpty) continue;
 
-    if (path.getBounds().isEmpty) return;
+      final path = Path();
+      for (final line in ball.fanLines) {
+        if (!line.isActive) continue;
+        path.moveTo(line.startPoint.dx, line.startPoint.dy);
+        path.lineTo(ball.position.dx, ball.position.dy);
+      }
+
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = ball.config.primaryColor.withValues(alpha: 0.85);
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  void _paintBeamAttack(Canvas canvas) {
+    if (state.beamPhase == 0 || state.beamFirer == null || state.beamTarget == null) return;
+
+    final firer = state.beamFirer!;
+    final target = state.beamTarget!;
+
+    // Beam direction from firer to target
+    final beamAngle = math.atan2(
+      target.position.dy - firer.position.dy,
+      target.position.dx - firer.position.dx,
+    );
+
+    // Extend ray past target to arena rim
+    final endPt = Offset(math.cos(beamAngle) * arenaRadius, math.sin(beamAngle) * arenaRadius);
+
+    Color beamColor;
+    double alpha;
+    double strokeWidth;
+
+    switch (state.beamPhase) {
+      case 1: // Solid ray
+        beamColor = firer.config.primaryColor;
+        alpha = 1.0;
+        strokeWidth = 1.0;
+        break;
+      case 2: // Dotted ray
+        beamColor = firer.config.primaryColor;
+        alpha = 0.7;
+        strokeWidth = 1.0;
+        break;
+      case 3: // Haze
+        beamColor = firer.config.primaryColor;
+        alpha = 0.3;
+        strokeWidth = 2.0;
+        break;
+      default:
+        return;
+    }
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..color = AppColors.rimGlow.withValues(alpha: 0.9)
+      ..strokeWidth = strokeWidth
+      ..color = beamColor.withValues(alpha: alpha)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0);
+
+    if (state.beamPhase == 2) {
+      // Dotted line - draw segments
+      const segmentLength = 8.0;
+      const gapLength = 8.0;
+      double distance = 0.0;
+      final totalLength = (endPt - firer.position).distance;
+
+      while (distance < totalLength) {
+        final startRatio = distance / totalLength;
+        final endRatio = (distance + segmentLength) / totalLength;
+        if (endRatio > 1.0) break;
+
+        final startPt = Offset.lerp(firer.position, endPt, startRatio)!;
+        final endPtSeg = Offset.lerp(firer.position, endPt, endRatio)!;
+        canvas.drawLine(startPt, endPtSeg, paint);
+
+        distance += segmentLength + gapLength;
+      }
+    } else {
+      // Solid or haze - draw full line
+      canvas.drawLine(firer.position, endPt, paint);
+    }
+
+    // Target keeps small cone while pinned (phase 1-3)
+    if (state.beamPhase <= 3 && state.beamPhase > 0) {
+      _paintTargetCone(canvas, target, beamAngle);
+    }
+  }
+
+  void _paintTargetCone(Canvas canvas, SimulationBall target, double beamAngle) {
+    // Small cone at target (opposite direction of beam)
+    final coneAngle = beamAngle + math.pi;
+    final halfWidth = 0.15; // Small fixed width
+
+    final path = Path();
+    path.moveTo(target.position.dx, target.position.dy);
+    final rimAngle1 = coneAngle - halfWidth;
+    final rimPt1 = Offset(math.cos(rimAngle1) * arenaRadius, math.sin(rimAngle1) * arenaRadius);
+    path.lineTo(rimPt1.dx, rimPt1.dy);
+    path.arcTo(Rect.fromCircle(center: Offset.zero, radius: arenaRadius), rimAngle1, halfWidth * 2, false);
+    path.lineTo(target.position.dx, target.position.dy);
+    path.close();
+
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = target.config.primaryColor.withValues(alpha: 0.4)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
     canvas.drawPath(path, paint);
   }
 
   void _paintParticles(Canvas canvas) {
     for (final particle in state.particles.particles) {
-      final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
-      final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
-      final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
-      final paint = Paint()
-        ..color = sparkColor.withValues(alpha: lifeRatio)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
-      canvas.drawCircle(particle.position, particle.baseRadius * lifeRatio, paint);
+      if (particle is Particle) {
+        final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
+        final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
+        final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
+        final paint = Paint()
+          ..color = sparkColor.withValues(alpha: lifeRatio)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
+        canvas.drawCircle(particle.position, particle.baseRadius * lifeRatio, paint);
+      } else if (particle is RimArcParticle) {
+        // Render thin white arc along rim
+        final (startPt, endPt) = particle.getArcSegment();
+        final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
+        final paint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0
+          ..color = Colors.white.withValues(alpha: lifeRatio)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
+        canvas.drawLine(startPt, endPt, paint);
+      }
     }
   }
 
-  void _paintBallTokens(Canvas canvas) {
+  void _paintSingleBall(Canvas canvas, SimulationBall ball) {
+    if (ball.isEliminated) return;
+
+    // Glow with edge compression (glow compresses against arena edge instead of clipping)
+    final distToCenter = ball.position.distance;
+    final edgeDist = arenaRadius - distToCenter;
+    final glowRadius = ball.radius + _ballGlowPadding;
+    final effectiveGlowRadius = edgeDist < glowRadius ? glowRadius * (edgeDist / glowRadius).clamp(0.0, 1.0) : glowRadius;
+
+    final glowPaint = Paint()
+      ..color = ball.config.glowColor.withValues(alpha: 0.6)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6.0);
+    canvas.drawCircle(ball.position, effectiveGlowRadius, glowPaint);
+
+    // === BANDED SPHERE RENDERING ===
+    // Base colored body
+    final bodyPaint = Paint()..color = ball.config.primaryColor;
+    canvas.drawCircle(ball.position, ball.radius, bodyPaint);
+
+    // White equator band (horizontal band around middle)
+    final equatorPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ball.radius * 0.15
+      ..color = Colors.white.withValues(alpha: 0.8);
+    canvas.drawCircle(ball.position, ball.radius * 0.92, equatorPaint);
+
+    // Red core band (inner vertical band)
+    final corePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ball.radius * 0.1
+      ..color = Colors.red.withValues(alpha: 0.9);
+    canvas.drawCircle(ball.position, ball.radius * 0.6, corePaint);
+
+    // Ball texture/image if available (clipped to ball circle)
+    final image = ball.cachedUiImage;
+    if (image != null) {
+      canvas.save();
+      canvas.clipPath(Path()..addOval(Rect.fromCircle(center: ball.position, radius: ball.radius)));
+      final srcRect = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+      final dstRect = Rect.fromCircle(center: ball.position, radius: ball.radius);
+      canvas.drawImageRect(image, srcRect, dstRect, Paint());
+      canvas.restore();
+    } else {
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: ball.config.name.isNotEmpty ? ball.config.name.substring(0, 1).toUpperCase() : '?',
+          style: TextStyle(color: Colors.white, fontSize: ball.radius, fontWeight: FontWeight.bold),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        ball.position - Offset(textPainter.width / 2, textPainter.height / 2),
+      );
+    }
+
+    // Bright rim ring (tight white outline)
+    final rimPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = Colors.white;
+    canvas.drawCircle(ball.position, ball.radius, rimPaint);
+  }
+
+  void _paintHudElements(Canvas canvas) {
+    // Pip rows under each ball (7 dashes)
     for (final ball in state.balls) {
       if (ball.isEliminated) continue;
+      _drawPipRow(canvas, ball);
+    }
 
-      final glowPaint = Paint()
-        ..color = ball.config.glowColor.withValues(alpha: 0.6)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6.0);
-      canvas.drawCircle(ball.position, ball.radius + _ballGlowPadding, glowPaint);
+    // Centered dash strip at bottom (appears intermittently based on game state)
+    if (state.status == MatchStatus.running || state.status == MatchStatus.slowMotion) {
+      // Show dash strip for visual variety - can be toggled based on time
+      _drawBottomDashStrip(canvas);
+    }
+  }
 
-      final fillPaint = Paint()..color = ball.config.primaryColor;
-      canvas.drawCircle(ball.position, ball.radius, fillPaint);
+  void _drawPipRow(Canvas canvas, SimulationBall ball) {
+    const int pipCount = 7;
+    const double pipLength = 4.0;
+    const double pipGap = 3.0;
+    const double yOffset = 22.0; // Below ball
 
-      final image = ball.cachedUiImage;
-      if (image != null) {
-        canvas.save();
-        canvas.clipPath(Path()..addOval(Rect.fromCircle(center: ball.position, radius: ball.radius)));
-        final srcRect = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
-        final dstRect = Rect.fromCircle(center: ball.position, radius: ball.radius);
-        canvas.drawImageRect(image, srcRect, dstRect, Paint());
-        canvas.restore();
-      } else {
-        final textPainter = TextPainter(
-          text: TextSpan(
-            text: ball.config.name.isNotEmpty ? ball.config.name.substring(0, 1).toUpperCase() : '?',
-            style: TextStyle(color: Colors.white, fontSize: ball.radius, fontWeight: FontWeight.bold),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        textPainter.paint(
-          canvas,
-          ball.position - Offset(textPainter.width / 2, textPainter.height / 2),
-        );
-      }
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = Colors.white.withValues(alpha: 0.5);
 
-      final borderPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0
-        ..color = Colors.white;
-      canvas.drawCircle(ball.position, ball.radius, borderPaint);
+    final startX = ball.position.dx - (pipCount * pipLength + (pipCount - 1) * pipGap) / 2;
+
+    for (int i = 0; i < pipCount; i++) {
+      final x = startX + i * (pipLength + pipGap);
+      canvas.drawLine(
+        Offset(x, ball.position.dy + yOffset),
+        Offset(x + pipLength, ball.position.dy + yOffset),
+        paint,
+      );
+    }
+  }
+
+  void _drawBottomDashStrip(Canvas canvas) {
+    const int dashCount = 12;
+    const double dashLength = 6.0;
+    const double dashGap = 4.0;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..color = Colors.white.withValues(alpha: 0.3);
+
+    final totalWidth = dashCount * dashLength + (dashCount - 1) * dashGap;
+    final startX = -totalWidth / 2;
+    final y = arenaRadius + 18.0; // Below arena rim
+
+    for (int i = 0; i < dashCount; i++) {
+      final x = startX + i * (dashLength + dashGap);
+      canvas.drawLine(
+        Offset(x, y),
+        Offset(x + dashLength, y),
+        paint,
+      );
     }
   }
 

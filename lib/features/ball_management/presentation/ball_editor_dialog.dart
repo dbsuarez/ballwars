@@ -62,7 +62,7 @@ class _BallEditorDialogState extends State<BallEditorDialog> {
     return Wrap(
       spacing: 8,
       children: kNeonColorPresets.map((c) {
-        final isSelected = c.value == selected.value;
+        final isSelected = c.toARGB32() == selected.toARGB32();
         return GestureDetector(
           onTap: () => onSelect(c),
           child: Container(

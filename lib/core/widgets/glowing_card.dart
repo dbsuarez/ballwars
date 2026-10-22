@@ -16,11 +16,11 @@ class GlowingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: glowColor.withOpacity(0.7), width: 1.5),
+        border: Border.all(color: glowColor.withValues(alpha: 0.7), width: 1.5),
         boxShadow: [
-          BoxShadow(color: glowColor.withOpacity(0.35), blurRadius: 20, spreadRadius: 2),
+          BoxShadow(color: glowColor.withValues(alpha: 0.35), blurRadius: 20, spreadRadius: 2),
         ],
       ),
       child: child,

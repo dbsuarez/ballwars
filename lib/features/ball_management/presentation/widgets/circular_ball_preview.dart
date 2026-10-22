@@ -23,7 +23,7 @@ class CircularBallPreview extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: ball.glowColor, width: 3),
         boxShadow: [
-          BoxShadow(color: ball.glowColor.withOpacity(0.7), blurRadius: size * 0.25, spreadRadius: 2),
+          BoxShadow(color: ball.glowColor.withValues(alpha: 0.7), blurRadius: size * 0.25, spreadRadius: 2),
         ],
       ),
       child: ClipOval(

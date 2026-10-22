@@ -47,7 +47,6 @@ class ArenaPainter extends CustomPainter {
       _paintSingleBall(canvas, ball);
     }
     _paintFloatingText(canvas);
-    _paintHudElements(canvas);
 
     canvas.restore();
   }
@@ -250,67 +249,6 @@ class ArenaPainter extends CustomPainter {
     canvas.drawCircle(ball.position, effectiveGlowRadius, glowPaint);
 
     BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
-  }
-
-  void _paintHudElements(Canvas canvas) {
-    // Pip rows under each ball (7 dashes)
-    for (final ball in state.balls) {
-      if (ball.isEliminated) continue;
-      _drawPipRow(canvas, ball);
-    }
-
-    // Centered dash strip at bottom (appears intermittently based on game state)
-    if (state.status == MatchStatus.running || state.status == MatchStatus.slowMotion) {
-      // Show dash strip for visual variety - can be toggled based on time
-      _drawBottomDashStrip(canvas);
-    }
-  }
-
-  void _drawPipRow(Canvas canvas, SimulationBall ball) {
-    const int pipCount = 7;
-    const double pipLength = 4.0;
-    const double pipGap = 3.0;
-    const double yOffset = 22.0; // Below ball
-
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = Colors.white.withValues(alpha: 0.5);
-
-    final startX = ball.position.dx - (pipCount * pipLength + (pipCount - 1) * pipGap) / 2;
-
-    for (int i = 0; i < pipCount; i++) {
-      final x = startX + i * (pipLength + pipGap);
-      canvas.drawLine(
-        Offset(x, ball.position.dy + yOffset),
-        Offset(x + pipLength, ball.position.dy + yOffset),
-        paint,
-      );
-    }
-  }
-
-  void _drawBottomDashStrip(Canvas canvas) {
-    const int dashCount = 12;
-    const double dashLength = 6.0;
-    const double dashGap = 4.0;
-
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..color = Colors.white.withValues(alpha: 0.3);
-
-    final totalWidth = dashCount * dashLength + (dashCount - 1) * dashGap;
-    final startX = -totalWidth / 2;
-    final y = arenaRadius + 18.0; // Below arena rim
-
-    for (int i = 0; i < dashCount; i++) {
-      final x = startX + i * (dashLength + dashGap);
-      canvas.drawLine(
-        Offset(x, y),
-        Offset(x + dashLength, y),
-        paint,
-      );
-    }
   }
 
   void _paintFloatingText(Canvas canvas) {

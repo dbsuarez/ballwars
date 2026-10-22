@@ -32,6 +32,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   // The watermark columns come with migration 003; until it has been run
   // they are missing and are neither read nor written.
   bool _hasWatermarkColumns = false;
+  // Likewise the music column (migration 005).
+  bool _hasMusicColumn = false;
 
   SupabaseAppSettingsRepository(this._client);
 
@@ -57,11 +59,13 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     }
     if (row == null) return AppSettings.defaults;
     _hasWatermarkColumns = row.containsKey('watermark_enabled');
+    _hasMusicColumn = row.containsKey('music');
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
       watermarkText: row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
+      musicId: row['music'] as String? ?? AppSettings.defaultMusic,
     );
   }
 
@@ -74,6 +78,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           'theme': settings.themeId,
           if (_hasWatermarkColumns) 'watermark_enabled': settings.watermarkEnabled,
           if (_hasWatermarkColumns) 'watermark_text': settings.watermarkText.trim(),
+          if (_hasMusicColumn) 'music': settings.musicId,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)

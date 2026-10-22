@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import '../application/match_simulation_controller.dart';
+import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'arena_canvas.dart';
@@ -464,6 +465,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                           children: [
                             Align(alignment: Alignment.centerLeft, child: leave),
                             const SizedBox(height: 8),
+                            _VersusHeader(balls: _state.balls),
+                            const SizedBox(height: 28),
                             MatchStatusHeader(
                               headline: headline,
                               subtitle: roundLabel,
@@ -492,6 +495,51 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     final m = seconds ~/ 60;
     final s = seconds - m * 60;
     return '$m:${s.toStringAsFixed(1).padLeft(4, '0')}';
+  }
+}
+
+/// Wide screens: the contestants side by side, "A VS B (VS C ...)", at the
+/// top of the right panel. Knocked-out balls fade.
+class _VersusHeader extends StatelessWidget {
+  final List<SimulationBall> balls;
+
+  const _VersusHeader({required this.balls});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    final size = balls.length <= 2 ? 96.0 : 64.0;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < balls.length; i++) ...[
+          if (i > 0)
+            Padding(
+              padding: EdgeInsets.only(top: size / 2 - 10),
+              child: Text('VS', style: AppText.mono(16, color: c.muted, letterSpacing: 1.5)),
+            ),
+          Expanded(
+            child: AnimatedOpacity(
+              opacity: balls[i].isEliminated ? 0.3 : 1,
+              duration: const Duration(milliseconds: 300),
+              child: Column(
+                children: [
+                  CircularBallPreview(ball: balls[i].config, size: size),
+                  const SizedBox(height: 10),
+                  Text(
+                    balls[i].config.name,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.ui(balls.length <= 2 ? 16 : 13, FontWeight.w700, color: c.text, height: 1.2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }
 

@@ -4,6 +4,28 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import '../offline/offline_store.dart';
 
+/// A background track (`assets/sounds/bgm_<id>.wav`, composed in
+/// tool/sounds/music.py). The admin picks one for everyone.
+class MusicTrack {
+  final String id;
+  final String name;
+  final String mood;
+
+  const MusicTrack(this.id, this.name, this.mood);
+
+  String get asset => 'sounds/bgm_$id.wav';
+
+  static const List<MusicTrack> all = [
+    MusicTrack('arena', 'Arena', 'The classic theme · A minor, 140 bpm'),
+    MusicTrack('turbo', 'Turbo', 'Fast and driving · 168 bpm'),
+    MusicTrack('sunny', 'Sunny Day', 'Bouncy and bright · C major'),
+    MusicTrack('boss', 'Boss Fight', 'Tense, dark and heavy'),
+    MusicTrack('chill', 'Chill Out', 'Laid back · 96 bpm'),
+  ];
+
+  static MusicTrack byId(String id) => all.firstWhere((t) => t.id == id, orElse: () => all.first);
+}
+
 /// The game's 8-bit sounds (assets/sounds, made by tool/sounds/make_sounds.py):
 /// button clicks, wall bounces, ball hits, the knock-out, the winner jingle
 /// and the background loop during matches. In slow motion the hits switch to
@@ -26,11 +48,49 @@ class GameAudio {
 
   final Map<String, _Voices> _voices = {};
   AudioPlayer? _music;
+  AudioPlayer? _preview;
+  String? _previewing;
+  MusicTrack _track = MusicTrack.all.first;
   bool _musicWanted = false; // A match is on screen.
   bool _slow = false;
   final Map<String, DateTime> _lastPlayed = {};
 
   bool get musicOn => _musicOn;
+
+  MusicTrack get track => _track;
+
+  /// The match music (from the admin's setting); a playing loop switches.
+  set track(MusicTrack track) {
+    if (track.id == _track.id) return;
+    _track = track;
+    if (_playMusic && _musicWanted && _music?.state == PlayerState.playing) _startMusic(restart: true);
+  }
+
+  /// The track [id] being previewed, if any.
+  String? get previewing => _previewing;
+
+  /// Plays [track] once for the admin's track picker, whatever the music
+  /// switch says; [onDone] runs when it stops by itself.
+  void preview(MusicTrack track, {VoidCallback? onDone}) {
+    if (!enabled) return;
+    _previewing = track.id;
+    _guard(() async {
+      final player = _preview ??= AudioPlayer();
+      await player.stop();
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.play(AssetSource(track.asset), volume: 0.6);
+      await player.onPlayerComplete.first;
+      if (_previewing == track.id) {
+        _previewing = null;
+        onDone?.call();
+      }
+    });
+  }
+
+  void stopPreview() {
+    _previewing = null;
+    _guard(() async => _preview?.stop());
+  }
 
   bool get effectsOn => _effectsOn;
 
@@ -130,7 +190,7 @@ class GameAudio {
         return;
       }
       await music.setVolume(_slow ? _musicVolume * 0.45 : _musicVolume);
-      await music.play(AssetSource('sounds/bgm.wav'));
+      await music.play(AssetSource(_track.asset));
     });
   }
 

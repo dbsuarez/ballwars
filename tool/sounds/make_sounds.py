@@ -5,7 +5,7 @@ a stepped triangle for bass and a noise channel for drums.
     python tool/sounds/make_sounds.py
 
 Needs numpy. Output: 22.05 kHz mono 16-bit WAV (WAV loops without gaps,
-unlike MP3).
+unlike MP3). The background tracks are composed in music.py.
 """
 import os
 import wave
@@ -142,77 +142,6 @@ def slowed(x, factor=2.0):
     return np.convolve(y, np.ones(k) / k, mode='same')
 
 
-# --- Background music: a 16-bar chiptune loop in A minor, 140 bpm ------------
-
-def bgm():
-    s = 60 / 140 / 4  # one sixteenth
-    bar = 16
-    chords = ['Am', 'F', 'C', 'G', 'Am', 'F', 'C', 'G', 'F', 'G', 'Em', 'Am', 'F', 'G', 'E', 'E']
-    tones = {
-        'Am': ['A', 'C', 'E'], 'F': ['F', 'A', 'C'], 'C': ['C', 'E', 'G'], 'G': ['G', 'B', 'D'],
-        'Em': ['E', 'G', 'B'], 'E': ['E', 'G#', 'B'],
-    }
-    melody = [
-        [('E5', 4), ('D5', 2), ('C5', 2), ('B4', 4), ('C5', 4)],
-        [('A4', 6), ('C5', 2), ('F5', 4), ('E5', 4)],
-        [('G4', 4), ('C5', 4), ('E5', 4), ('G5', 4)],
-        [('D5', 6), ('B4', 2), ('G4', 4), (None, 4)],
-        [('E5', 4), ('D5', 2), ('C5', 2), ('B4', 4), ('C5', 4)],
-        [('A4', 6), ('C5', 2), ('F5', 4), ('A5', 4)],
-        [('G5', 4), ('E5', 4), ('C5', 4), ('E5', 4)],
-        [('D5', 8), ('B4', 4), ('D5', 4)],
-        [('A5', 2), ('G5', 2), ('F5', 4), ('C5', 4), ('F5', 4)],
-        [('B5', 2), ('A5', 2), ('G5', 4), ('D5', 4), ('G5', 4)],
-        [('G5', 4), ('E5', 4), ('B4', 4), ('E5', 4)],
-        [('A5', 8), ('E5', 4), ('C5', 4)],
-        [('A5', 2), ('G5', 2), ('F5', 4), ('C5', 4), ('A5', 4)],
-        [('B5', 4), ('D6', 4), ('B5', 4), ('G5', 4)],
-        [('G#5', 8), ('E5', 4), ('B4', 4)],
-        [('G#4', 4), ('B4', 4), ('E5', 4), (None, 4)],
-    ]
-    total = samples(s * bar * len(chords))
-    mix = np.zeros(total)
-
-    def at(sixteenth):
-        return samples(s * sixteenth)
-
-    def add(start, x, gain):
-        end = min(total, start + len(x))
-        mix[start:end] += x[:end - start] * gain
-
-    for b, chord in enumerate(chords):
-        base = b * bar
-        root = tones[chord][0]
-        # Lead (pulse 25%).
-        pos = base
-        for note, length in melody[b]:
-            if note:
-                n = at(length) - 40
-                add(at(pos), pulse(freq(note), n, 0.25) * env(n, release=0.03, decay=0.25, sustain=0.6), 0.22)
-            pos += length
-        # Arpeggio (pulse 12.5%), sixteenths up the chord.
-        for i in range(bar):
-            pitch = tones[chord][i % 3] + ('5' if i % 6 >= 3 else '4')
-            n = at(1) - 30
-            add(at(base + i), pulse(freq(pitch), n, 0.125) * env(n, release=0.01, decay=0.05, sustain=0.3), 0.08)
-        # Bass (triangle), eighths: root, octave.
-        for i in range(0, bar, 2):
-            pitch = root + ('2' if i % 4 == 0 else '3')
-            n = at(2) - 60
-            add(at(base + i), triangle(freq(pitch), n) * env(n, release=0.02), 0.32)
-        # Drums: kick on 1 and 3, snare on 2 and 4, hats on the off-beats.
-        for i in (0, 8):
-            n = samples(0.09)
-            add(at(base + i), triangle(np.geomspace(150, 45, n), n) * env(n, release=0.02, decay=0.04, sustain=0), 0.4)
-        for i in (4, 12):
-            n = samples(0.12)
-            add(at(base + i), noise(n, rate=9000, seed=b * 2 + i) * env(n, release=0.03, decay=0.04, sustain=0), 0.16)
-        for i in (2, 6, 10, 14):
-            n = samples(0.03)
-            add(at(base + i), noise(n, rate=20000, seed=b + i) * env(n, release=0.01, decay=0.01, sustain=0), 0.06)
-    return mix
-
-
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     save('click.wav', click(), 0.5)
@@ -222,4 +151,7 @@ if __name__ == '__main__':
     save('collide_slow.wav', slowed(collide()), 0.45)
     save('out.wav', out(), 0.6)
     save('win.wav', win(), 0.8)
-    save('bgm.wav', bgm(), 0.75)
+    from music import TRACKS  # noqa: E402 (music.py reuses the helpers above)
+
+    for track_id, track in TRACKS:
+        save(f'bgm_{track_id}.wav', track(), 0.75)

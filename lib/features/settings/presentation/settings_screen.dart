@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/presentation/my_groups_screen.dart';
@@ -38,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _headline.dispose();
     _watermark.dispose();
+    GameAudio.instance.stopPreview();
     super.dispose();
   }
 
@@ -77,6 +79,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await _scope!.adminAuth!.signOut();
         if (mounted) setState(() => _isAdmin = false);
       });
+
+  void _togglePreview(MusicTrack track) {
+    final audio = GameAudio.instance;
+    if (audio.previewing == track.id) {
+      audio.stopPreview();
+    } else {
+      audio.preview(track, onDone: () {
+        if (mounted) setState(() {});
+      });
+    }
+    setState(() {});
+  }
 
   /// Applies [settings] right away (live preview) and saves it for everyone.
   Future<void> _save(AppSettings settings, {String? done}) {
@@ -123,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'The headline and theme are set by the admin for everyone.',
+                    'The headline, theme and match music are set by the admin for everyone.',
                     style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
                   ),
                   const SizedBox(height: 16),
@@ -163,6 +177,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       preset: preset,
                       selected: preset.id == settings.themeId,
                       onTap: _busy ? null : () => _save(settings.copyWith(themeId: preset.id), done: 'Theme set for everyone.'),
+                    ),
+                ],
+              ),
+            ),
+            _Section(
+              title: 'MUSIC',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final track in MusicTrack.all)
+                    _TrackRow(
+                      track: track,
+                      selected: track.id == settings.musicId,
+                      playing: GameAudio.instance.previewing == track.id,
+                      onPlay: () => _togglePreview(track),
+                      onSelect: _busy || track.id == settings.musicId
+                          ? null
+                          : () => _save(
+                                settings.copyWith(musicId: track.id),
+                                done: '"${track.name}" is now the match music for everyone.',
+                              ),
                     ),
                 ],
               ),
@@ -219,6 +254,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// One music track: tap to make it the match music, ▶ to listen first.
+class _TrackRow extends StatelessWidget {
+  final MusicTrack track;
+  final bool selected;
+  final bool playing;
+  final VoidCallback onPlay;
+  final VoidCallback? onSelect;
+
+  const _TrackRow({
+    required this.track,
+    required this.selected,
+    required this.playing,
+    required this.onPlay,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: selected ? c.surfaceHigh : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: selected ? c.text : c.border),
+        ),
+        child: InkWell(
+          onTap: onSelect,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+            child: Row(
+              children: [
+                Icon(
+                  selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  size: 20,
+                  color: selected ? c.text : c.muted,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(track.name, style: AppText.ui(14, FontWeight.w700, color: c.text)),
+                      const SizedBox(height: 2),
+                      Text(track.mood, style: AppText.ui(12, FontWeight.w500, color: c.muted)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: playing ? 'Stop' : 'Play ${track.name}',
+                  onPressed: onPlay,
+                  icon: Icon(playing ? Icons.stop_rounded : Icons.play_arrow_rounded),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

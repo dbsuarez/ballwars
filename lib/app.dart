@@ -60,6 +60,15 @@ class _BallWarsAppState extends State<BallWarsApp> {
   final ValueNotifier<(int, int)?> _progress = ValueNotifier(null);
   late final Future<void> _ready = _prepare();
 
+  @override
+  void initState() {
+    super.initState();
+    // The admin's music choice applies to every player's matches.
+    _settings.addListener(_applyMusic);
+  }
+
+  void _applyMusic() => GameAudio.instance.track = MusicTrack.byId(_settings.value.musicId);
+
   Future<void> _prepare() async {
     await _loadSettings();
     if (!widget.syncOffline) return;

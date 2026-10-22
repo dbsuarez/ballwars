@@ -77,6 +77,11 @@ class MatchSimulationController {
 
   double _accumulator = 0.0;
   int _stepCount = 0;
+
+  /// Running totals of rim bounces and ball-ball hits, for sound effects
+  /// (the screen plays one when they go up). They draw nothing from the RNG.
+  int wallHits = 0;
+  int ballHits = 0;
   double _elapsedSeconds = 0.0;
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
@@ -278,6 +283,7 @@ class MatchSimulationController {
       ball.position += ball.velocity * dt;
       final collision = _physics.resolveWallCollision(ball, previousPosition: previousPosition);
       if (collision != null) {
+        wallHits++;
         _particles.spawnBurst(
           origin: collision.contactPoint,
           normal: collision.normal,
@@ -306,6 +312,7 @@ class MatchSimulationController {
         final velocityB = b.velocity;
         final result = _physics.resolveBallCollision(a, b);
         if (result != null) {
+          ballHits++;
           _dampSpeedTransfer(a, b, velocityA, velocityB, result.normal);
           _particles.spawnBurst(
             origin: result.contactPoint,

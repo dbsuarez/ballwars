@@ -18,6 +18,7 @@ import '../../replay_export/data/video_export_backend.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../../replay_export/presentation/export_video_dialog.dart';
 import '../../replay_export/presentation/replay_frame_painter.dart';
+import '../../../core/audio/game_audio.dart';
 import '../../settings/data/effects_prefs.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
@@ -49,6 +50,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   // turn them off for the rest of the series ("Game running slow?").
   late bool _showEffects = widget.config.showEffects;
   bool _askSlow = false;
+
+  final GameAudio _audio = GameAudio.instance;
+  // Hit counts already played as sounds.
+  int _heardWallHits = 0;
+  int _heardBallHits = 0;
 
   // Null where this platform can't export video yet (hides SAVE VIDEO).
   final VideoExportBackend? _videoExport = createVideoExportBackend();
@@ -126,6 +132,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     _winnerBall = null;
     _dissolveComplete = false;
     _endPending = false;
+    _heardWallHits = 0;
+    _heardBallHits = 0;
+    _audio.startMusic();
     _matchGeneration++;
     _controller.preloadImages().then((_) {
       if (mounted) setState(() {});
@@ -145,10 +154,21 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
 
     _controller.tick(dt * widget.config.speedMultiplier);
 
+    if (_controller.wallHits > _heardWallHits) {
+      _heardWallHits = _controller.wallHits;
+      _audio.bounce();
+    }
+    if (_controller.ballHits > _heardBallHits) {
+      _heardBallHits = _controller.ballHits;
+      _audio.collide();
+    }
+    _audio.slowMotion = _state.status == MatchStatus.slowMotion;
+
     // Check for win condition and start dissolve animation
     final isFinished = _state.winnerId != null;
     if (isFinished && !_endPending && !_showDissolve && !_dissolveComplete) {
       _endPending = true;
+      _audio.stopMusic();
       final generation = _matchGeneration;
       bool current() => mounted && generation == _matchGeneration;
       Future.delayed(_endPause, () {
@@ -162,9 +182,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
               .config;
           _showDissolve = true;
         });
+        _audio.out();
         // from: 0, so the dissolve plays again after a RETRY.
         _dissolveController.forward(from: 0).then((_) {
           if (!current()) return;
+          _audio.win();
           setState(() {
             _dissolveComplete = true;
             if (!_roundCounted && _winnerBall != null) {
@@ -206,11 +228,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   }
 
   void _togglePause() {
+    _audio.click();
     setState(() => _isPaused = !_isPaused);
+    _isPaused ? _audio.pauseMusic() : _audio.resumeMusic();
   }
 
   /// RETRY: start the whole series over.
   void _replay() {
+    _audio.click();
     setState(() {
       _isPaused = false;
       _round = 1;
@@ -220,6 +245,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   }
 
   void _nextRound() {
+    _audio.click();
     setState(() {
       _isPaused = false;
       _round++;
@@ -231,6 +257,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   void dispose() {
     _ticker.dispose();
     _dissolveController.dispose();
+    _audio.stopMusic();
     super.dispose();
   }
 
@@ -344,18 +371,24 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                     durationSeconds: _controller.elapsedSeconds,
                     onSaveVideo: _videoExport == null
                         ? null
-                        : () => ExportVideoDialog.show(
-                            context,
-                            contestants: widget.config.contestants,
-                            seed: _controller.seed,
-                            arenaRadius: _arenaRadius,
-                            speedMultiplier: widget.config.speedMultiplier,
-                            showEffects: _showEffects,
-                            headline: headline,
-                            colors: c,
-                            backend: _videoExport,
-                          ),
-                    onShareLink: _copyReplayLink,
+                        : () {
+                            _audio.click();
+                            ExportVideoDialog.show(
+                              context,
+                              contestants: widget.config.contestants,
+                              seed: _controller.seed,
+                              arenaRadius: _arenaRadius,
+                              speedMultiplier: widget.config.speedMultiplier,
+                              showEffects: _showEffects,
+                              headline: headline,
+                              colors: c,
+                              backend: _videoExport,
+                            );
+                          },
+                    onShareLink: () {
+                      _audio.click();
+                      _copyReplayLink();
+                    },
                     onReplay: _replay,
                     round: widget.config.winsNeeded > 1 ? _round : null,
                     seriesOver: _seriesOver,
@@ -363,7 +396,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                     score: widget.config.winsNeeded > 1
                         ? [for (final b in widget.config.contestants) (b.name, _roundWins[b.id] ?? 0)]
                         : null,
-                    onExit: () => Navigator.of(context).maybePop(),
+                    onExit: () {
+                      _audio.click();
+                      Navigator.of(context).maybePop();
+                    },
                     showEffects: _showEffects,
                     onSlowAnswer: _showEffects && _askSlow ? _answerSlow : null,
                   ),
@@ -373,7 +409,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
             final leave = IconButton(
               icon: const Icon(Icons.close_rounded),
               tooltip: 'Leave match',
-              onPressed: () => Navigator.of(context).maybePop(),
+              onPressed: () {
+                _audio.click();
+                Navigator.of(context).maybePop();
+              },
             );
 
             if (isPortrait) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/core/offline/offline_store.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
@@ -21,6 +22,9 @@ final _catalog =
 
 void main() {
   late MatchConfig? started;
+
+  // Setup choices are remembered on the device: start each test fresh.
+  setUp(() => OfflineStore.instance = MemoryOfflineStore());
 
   Future<void> pumpSetup(WidgetTester tester) async {
     started = null;
@@ -101,5 +105,17 @@ void main() {
     expect(started!.winsNeeded, 2);
     expect(started!.speedMultiplier, 2);
     expect(started!.showEffects, isFalse);
+  });
+
+  testWidgets('rounds and speed are remembered for the next match setup', (tester) async {
+    await pumpSetup(tester);
+    await tester.tap(find.text('1 round'));
+    await tester.tap(find.text('1×'));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester);
+    expect(find.text('First to 2'), findsOneWidget);
+    expect(find.text('2×'), findsOneWidget);
   });
 }

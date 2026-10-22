@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'core/audio/game_audio.dart';
 import 'core/offline/offline_sync.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/ball_wars_logo.dart';
@@ -310,6 +311,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   }
 
   void _openMatchSetup() {
+    GameAudio.instance.click();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => MatchSetupScreen(
@@ -344,8 +346,10 @@ class _HomeScreenState extends State<_HomeScreen> {
                       IconButton(
                         tooltip: 'Settings',
                         icon: const Icon(Icons.tune),
-                        onPressed: () =>
-                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => SettingsScreen(customGroups: customGroups))),
+                        onPressed: () {
+                          GameAudio.instance.click();
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => SettingsScreen(customGroups: customGroups)));
+                        },
                       ),
                     ],
                   ),
@@ -371,9 +375,10 @@ class _HomeScreenState extends State<_HomeScreen> {
                     _HomeTile(
                       title: 'My groups',
                       subtitle: 'Your own categories of balls',
-                      onTap: () => Navigator.of(
-                        context,
-                      ).push(MaterialPageRoute(builder: (_) => MyGroupsScreen(repository: customGroups))),
+                      onTap: () {
+                        GameAudio.instance.click();
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyGroupsScreen(repository: customGroups)));
+                      },
                     ),
                   ],
                 ],

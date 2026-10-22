@@ -7,6 +7,8 @@ import '../../ball_packs/data/ball_pack_repository.dart';
 import '../../ball_packs/domain/ball_pack.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/domain/custom_group.dart';
+import '../../../core/audio/game_audio.dart';
+import '../../../core/offline/device_prefs.dart';
 import '../../settings/data/effects_prefs.dart';
 import '../domain/match_config.dart';
 
@@ -51,9 +53,19 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   void initState() {
     super.initState();
     _load();
-    // Effects start the way this device last left them.
-    EffectsPrefs.effectsOn().then((on) {
-      if (mounted) setState(() => _showEffects = on);
+    _loadPrefs();
+  }
+
+  /// Rounds, speed and effects start the way this device last left them.
+  Future<void> _loadPrefs() async {
+    final effects = await EffectsPrefs.effectsOn();
+    final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
+    final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
+    if (!mounted) return;
+    setState(() {
+      _showEffects = effects;
+      if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
+      if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
     });
   }
 
@@ -134,6 +146,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   void _toggle(CustomBall ball) {
+    GameAudio.instance.click();
     setState(() {
       if (_selected.remove(ball.id) == null && _selected.length < _maxBalls) {
         _selected[ball.id] = ball;
@@ -144,6 +157,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   void _randomMatchup() {
     final pool = [..._categoryBalls]..shuffle(_random);
     if (pool.length < 2) return;
+    GameAudio.instance.click();
     setState(() {
       _selected
         ..clear()
@@ -155,6 +169,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   void _start() {
     if (!_canStart) return;
+    GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
         contestants: _selected.values.toList(),
@@ -376,7 +391,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     values: const [1, 2, 3],
                     value: _winsNeeded,
                     label: (v) => v == 1 ? '1 round' : 'First to $v',
-                    onChanged: (v) => setState(() => _winsNeeded = v),
+                    onChanged: (v) {
+                      GameAudio.instance.click();
+                      setState(() => _winsNeeded = v);
+                      DevicePrefs.write('rounds', v);
+                    },
                   ),
                 ),
               ),
@@ -388,7 +407,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     values: _speeds,
                     value: _speedMultiplier,
                     label: (v) => '${v == v.roundToDouble() ? v.toInt() : v}×',
-                    onChanged: (v) => setState(() => _speedMultiplier = v),
+                    onChanged: (v) {
+                      GameAudio.instance.click();
+                      setState(() => _speedMultiplier = v);
+                      DevicePrefs.write('speed', v);
+                    },
                   ),
                 ),
               ),
@@ -401,6 +424,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     value: _showEffects,
                     label: (v) => v ? 'On' : 'Off',
                     onChanged: (v) {
+                      GameAudio.instance.click();
                       setState(() => _showEffects = v);
                       EffectsPrefs.setEffectsOn(v);
                     },
@@ -412,6 +436,30 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
+              _SoundToggle(
+                on: GameAudio.instance.musicOn,
+                icon: Icons.music_note_rounded,
+                offIcon: Icons.music_off_rounded,
+                tooltip: 'Music',
+                onChanged: (on) async {
+                  await GameAudio.instance.setMusicOn(on);
+                  GameAudio.instance.click();
+                  setState(() {});
+                },
+              ),
+              const SizedBox(width: 8),
+              _SoundToggle(
+                on: GameAudio.instance.effectsOn,
+                icon: Icons.volume_up_rounded,
+                offIcon: Icons.volume_off_rounded,
+                tooltip: 'Sound effects',
+                onChanged: (on) async {
+                  await GameAudio.instance.setEffectsOn(on);
+                  GameAudio.instance.click();
+                  setState(() {});
+                },
+              ),
+              const SizedBox(width: 8),
               SizedBox(
                 width: 56,
                 height: 52,
@@ -499,6 +547,40 @@ class _Tag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: c.border)),
       child: Text(label, style: AppText.ui(10, FontWeight.w700, color: c.muted, letterSpacing: 0.4)),
+    );
+  }
+}
+
+/// Music / sound effects on-off button; crossed-out icon when off.
+class _SoundToggle extends StatelessWidget {
+  final bool on;
+  final IconData icon;
+  final IconData offIcon;
+  final String tooltip;
+  final ValueChanged<bool> onChanged;
+
+  const _SoundToggle({
+    required this.on,
+    required this.icon,
+    required this.offIcon,
+    required this.tooltip,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return SizedBox(
+      width: 48,
+      height: 52,
+      child: Tooltip(
+        message: '$tooltip: ${on ? 'on' : 'off'}',
+        child: OutlinedButton(
+          onPressed: () => onChanged(!on),
+          style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(48, 52)),
+          child: Icon(on ? icon : offIcon, color: on ? c.text : c.muted, semanticLabel: tooltip),
+        ),
+      ),
     );
   }
 }

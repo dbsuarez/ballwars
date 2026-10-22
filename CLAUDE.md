@@ -27,6 +27,8 @@ flutter test integration_test/video_export_test.dart -d <android-device-id>   # 
 #   add --dart-define=KEEP_VIDEO=true to save the result to the phone's Movies/BallWars
 ```
 
+Android releases: pushing a tag `v*` runs `.github/workflows/release-apk.yml`. It builds an APK signed with the release key from the `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` repository secrets, and attaches it to a GitHub Release. Locally the key lives in `android/upload-keystore.jks` plus `android/key.properties` (both git-ignored; without them release builds fall back to the debug key). Never change or lose that key, or installed copies can't be updated.
+
 Deployment: `.github/workflows/deploy-pages.yml` runs the tests, builds web with `--base-href /<repo>/` and publishes to GitHub Pages on every push to `master`. Under Git Bash, building locally with a base href needs `MSYS_NO_PATHCONV=1`, otherwise `/ballwars/` gets rewritten into a Windows path.
 
 ## Architecture

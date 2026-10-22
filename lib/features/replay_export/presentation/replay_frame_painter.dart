@@ -17,7 +17,7 @@ class ReplayFramePainter {
   static const Color _background = Color(0xFF000000);
   static const Color _gold = Color(0xFFFFD700);
 
-  static const String watermark = 'dbsuarez';
+  static const String watermark = 'dbsuarez.github.io';
   // Drifts diagonally and bounces off the frame edges (design px per second).
   static const Offset _watermarkVelocity = Offset(95, 70);
   static const Offset _watermarkStart = Offset(40, 300);

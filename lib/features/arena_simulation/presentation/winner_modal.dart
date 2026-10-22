@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
+import 'confetti_painter.dart';
 
 class WinnerModal extends StatefulWidget {
   final CustomBall winner;
@@ -15,6 +16,14 @@ class WinnerModal extends StatefulWidget {
   /// Shows a SHARE LINK button when set.
   final VoidCallback? onShareLink;
 
+  /// Multi-round series: the round just played, the score so far (name,
+  /// wins) and whether a ball has now won the series. While it isn't over,
+  /// [onNextRound] shows NEXT ROUND as the main button.
+  final int? round;
+  final List<(String, int)>? score;
+  final bool seriesOver;
+  final VoidCallback? onNextRound;
+
   const WinnerModal({
     super.key,
     required this.winner,
@@ -23,14 +32,20 @@ class WinnerModal extends StatefulWidget {
     required this.onExit,
     this.onSaveVideo,
     this.onShareLink,
+    this.round,
+    this.score,
+    this.seriesOver = true,
+    this.onNextRound,
   });
 
   @override
   State<WinnerModal> createState() => _WinnerModalState();
 }
 
-class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStateMixin {
+class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin {
   late final AnimationController _controller;
+  // Drives the confetti clock (seconds = value * 600); long enough to never end.
+  late final AnimationController _confetti;
   late final Animation<double> _scaleAnim;
   late final Animation<double> _opacityAnim;
 
@@ -44,10 +59,12 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
       curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
     );
     _controller.forward();
+    _confetti = AnimationController(duration: const Duration(minutes: 10), vsync: this)..forward();
   }
 
   @override
   void dispose() {
+    _confetti.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -66,6 +83,15 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(painter: _WatermarkPainter(text: 'BALLWARS')),
+          ),
+        ),
+        // Confetti falling behind the card
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _confetti,
+              builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value * 600)),
+            ),
           ),
         ),
         // Winner card centered; shrinks to fit small areas (e.g. the left half
@@ -88,7 +114,7 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
                           // Winner ball scaled up, keeps physics-stripe look
                           CircularBallPreview(ball: widget.winner, size: 220),
                           const SizedBox(height: 24),
-                          // Country name in heavy white caps
+                          // "<Name>" then "WINS!" on the next line
                           Text(
                             widget.winner.name.toUpperCase(),
                             style: const TextStyle(
@@ -99,6 +125,21 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
                               height: 1.0,
                             ),
                             textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.round == null
+                                ? 'WINS!'
+                                : widget.seriesOver
+                                ? 'WINS THE SERIES!'
+                                : 'WINS ROUND ${widget.round}!',
+                            style: const TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFFFD700),
+                              letterSpacing: 3.0,
+                              height: 1.0,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           // Small gold trophy/star glyph
@@ -126,15 +167,36 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
                               ),
                             ),
                           ],
+                          if (widget.score != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.score!.map((e) => '${e.$1}  ${e.$2}').join('   ·   '),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ],
                           const SizedBox(height: 24),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              FilledButton.icon(
-                                onPressed: widget.onReplay,
-                                icon: const Icon(Icons.replay),
-                                label: const Text('RETRY'),
-                              ),
+                              if (widget.onNextRound != null) ...[
+                                FilledButton.icon(
+                                  onPressed: widget.onNextRound,
+                                  icon: const Icon(Icons.skip_next),
+                                  label: const Text('NEXT ROUND'),
+                                ),
+                                const SizedBox(width: 12),
+                                OutlinedButton.icon(
+                                  onPressed: widget.onReplay,
+                                  icon: const Icon(Icons.replay),
+                                  label: const Text('RETRY'),
+                                ),
+                              ] else
+                                FilledButton.icon(
+                                  onPressed: widget.onReplay,
+                                  icon: const Icon(Icons.replay),
+                                  label: const Text('RETRY'),
+                                ),
                               const SizedBox(width: 12),
                               OutlinedButton(onPressed: widget.onExit, child: const Text('EXIT')),
                             ],

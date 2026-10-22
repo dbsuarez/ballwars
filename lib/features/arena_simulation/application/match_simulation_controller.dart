@@ -80,6 +80,7 @@ class MatchSimulationController {
   double _elapsedSeconds = 0.0;
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
+  String? _lastEliminatedId;
 
   /// [layoutRotation] fixes where ball 0 starts (radians); by default the
   /// whole starting layout is rotated by a seeded random angle.
@@ -192,6 +193,9 @@ class MatchSimulationController {
   }
 
   /// Simulated match time so far; stops advancing once the match is finished.
+  /// The last ball knocked out (the runner-up), once a match is decided.
+  String? get lastEliminatedId => _lastEliminatedId;
+
   /// How long the match has been playing, in the time passed to [tick]
   /// (so slow motion counts at the speed it is watched). Stops at the finish.
   double get elapsedSeconds => _elapsedSeconds;
@@ -381,6 +385,8 @@ class MatchSimulationController {
       survivor.isEliminated = false;
       activeBalls = [survivor];
     }
+    final knockedOut = eliminatedNow.where((b) => b.isEliminated);
+    if (knockedOut.isNotEmpty) _lastEliminatedId = knockedOut.last.config.id;
     if (activeBalls.length == 1 && _balls.length > 1) {
       _winnerId = activeBalls.first.config.id;
       _status = MatchStatus.finished;

@@ -4,6 +4,7 @@ import '../../arena_simulation/domain/simulation_ball.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_painter.dart';
 import '../../arena_simulation/presentation/ball_face_painter.dart';
+import '../../arena_simulation/presentation/confetti_painter.dart';
 
 /// Draws one frame of the exported 9:16 replay video, laid out like the
 /// reference: "WHO WINS?" / "ROUND 1" header, the arena, a slow-motion badge,
@@ -58,6 +59,7 @@ class ReplayFramePainter {
   }) {
     _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: true);
+      ConfettiPainter(videoTime).paint(canvas, designSize);
 
       const center = Offset(360, 560);
       const radius = 150.0;
@@ -80,13 +82,14 @@ class ReplayFramePainter {
         letterSpacing: 2,
         maxWidth: 680,
       );
+      _paintText(canvas, 'WINS!', 52, FontWeight.w900, _gold, y: 840, letterSpacing: 4);
       _paintText(
         canvas,
         String.fromCharCode(Icons.emoji_events.codePoint),
         72,
         FontWeight.normal,
         _gold,
-        y: 850,
+        y: 915,
         fontFamily: Icons.emoji_events.fontFamily,
       );
       _paintText(
@@ -95,10 +98,44 @@ class ReplayFramePainter {
         28,
         FontWeight.w600,
         Colors.white70,
-        y: 950,
+        y: 1010,
         letterSpacing: 1.5,
       );
     });
+  }
+
+  /// The final arena with the runner-up shown big at its center; [progress]
+  /// 0..1 pops it in, holds it, then fades it out (as in the app).
+  static void paintLoser(
+    Canvas canvas,
+    Size size,
+    SimulationState state,
+    double arenaRadius,
+    SimulationBall loser,
+    double progress, {
+    required double videoTime,
+    bool showEffects = true,
+  }) {
+    paintMatch(canvas, size, state, arenaRadius, videoTime: videoTime, showEffects: showEffects);
+    final double opacity;
+    final double scale;
+    if (progress < 0.2) {
+      opacity = progress / 0.2;
+      scale = 0.6 + 0.4 * Curves.easeOutBack.transform(progress / 0.2);
+    } else if (progress < 0.7) {
+      opacity = 1;
+      scale = 1;
+    } else {
+      opacity = 1 - (progress - 0.7) / 0.3;
+      scale = 1 + 0.3 * (progress - 0.7) / 0.3;
+    }
+    canvas.save();
+    canvas.scale(size.width / designSize.width, size.height / designSize.height);
+    final center = Offset(designSize.width / 2, _arenaTop + _arenaSide / 2);
+    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)));
+    _paintBallFace(canvas, loser, center, 150 * scale);
+    canvas.restore();
+    canvas.restore();
   }
 
   static void _withDesignSpace(Canvas canvas, Size size, double videoTime, VoidCallback paint) {

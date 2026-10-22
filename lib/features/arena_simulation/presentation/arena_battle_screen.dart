@@ -54,6 +54,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   // A beat after the last line is cut before the loser dissolves and the
   // winner banner shows. [_matchGeneration] cancels it if RETRY is pressed.
   static const Duration _endPause = Duration(milliseconds: 1200);
+  // The runner-up shown big in the arena before the winner card.
+  static const Duration _loserShowDuration = Duration(milliseconds: 1800);
   bool _endPending = false;
   int _matchGeneration = 0;
 
@@ -62,11 +64,21 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     super.initState();
     _initMatch();
     _ticker = createTicker(_onTick)..start();
-    _dissolveController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this);
+    _dissolveController = AnimationController(duration: _loserShowDuration, vsync: this);
   }
 
+  // Series of rounds (MatchConfig.winsNeeded): round number and wins so far.
+  int _round = 1;
+  final Map<String, int> _roundWins = {};
+  bool _roundCounted = false;
+
+  bool get _seriesOver => _roundWins.values.any((w) => w >= widget.config.winsNeeded);
+
   void _initMatch() {
-    _controller = MatchSimulationController(widget.config.contestants, arenaRadius: _arenaRadius, seed: widget.seed);
+    // A fixed seed (replay link) gives each round its own fixed seed.
+    final seed = widget.seed == null ? null : widget.seed! + _round - 1;
+    _controller = MatchSimulationController(widget.config.contestants, arenaRadius: _arenaRadius, seed: seed);
+    _roundCounted = false;
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
@@ -105,12 +117,23 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
         if (!current()) return;
         setState(() {
           _winnerBall = _state.balls.firstWhere((b) => b.config.id == _state.winnerId).config;
-          _loserBall = _state.balls.firstWhere((b) => b.config.id != _state.winnerId).config;
+          // The last ball knocked out (the runner-up in 3-4 ball matches).
+          final loserId = _controller.lastEliminatedId;
+          _loserBall = _state.balls
+              .firstWhere((b) => loserId != null ? b.config.id == loserId : b.config.id != _state.winnerId)
+              .config;
           _showDissolve = true;
         });
         // from: 0, so the dissolve plays again after a RETRY.
         _dissolveController.forward(from: 0).then((_) {
-          if (current()) setState(() => _dissolveComplete = true);
+          if (!current()) return;
+          setState(() {
+            _dissolveComplete = true;
+            if (!_roundCounted && _winnerBall != null) {
+              _roundCounted = true;
+              _roundWins.update(_winnerBall!.id, (w) => w + 1, ifAbsent: () => 1);
+            }
+          });
         });
       });
     }
@@ -139,9 +162,20 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     setState(() => _isPaused = !_isPaused);
   }
 
+  /// RETRY: start the whole series over.
   void _replay() {
     setState(() {
       _isPaused = false;
+      _round = 1;
+      _roundWins.clear();
+      _initMatch();
+    });
+  }
+
+  void _nextRound() {
+    setState(() {
+      _isPaused = false;
+      _round++;
       _initMatch();
     });
   }
@@ -157,9 +191,22 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     return AnimatedBuilder(
       animation: _dissolveController,
       builder: (context, child) {
-        final progress = _dissolveController.value;
-        final opacity = 1.0 - progress;
-        final scale = 1.0 + progress * 0.5; // Slight expansion as it dissolves
+        // Pops in (first 20%), holds, then fades out growing (last 30%).
+        final t = _dissolveController.value;
+        final double opacity;
+        final double scale;
+        if (t < 0.2) {
+          final p = Curves.easeOutBack.transform(t / 0.2);
+          opacity = (t / 0.2).clamp(0.0, 1.0);
+          scale = 0.6 + 0.4 * p;
+        } else if (t < 0.7) {
+          opacity = 1;
+          scale = 1;
+        } else {
+          final p = (t - 0.7) / 0.3;
+          opacity = 1 - p;
+          scale = 1 + 0.3 * p;
+        }
 
         return Positioned.fill(
           child: Opacity(
@@ -179,8 +226,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     return Scaffold(
       appBar: AppBar(
         title: MatchStatusHeader(
-          isSlowMotion: _state.status == MatchStatus.slowMotion,
-          round: 'ROUND 1',
+          // Shown on the arena instead; in the header it overflowed.
+          isSlowMotion: false,
+          round: 'ROUND $_round',
           showIntro: true,
           isWinScreen: _state.winnerId != null,
         ),
@@ -198,11 +246,24 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isPortrait = constraints.maxHeight >= constraints.maxWidth;
-            final arena = ArenaCanvas(
-              state: _state,
-              arenaRadius: _arenaRadius,
-              rimAngle: _rimAngle,
-              showEffects: widget.config.showEffects,
+            // Side margins keep the arena off the screen edges on phones;
+            // the slow-motion badge sits at the top of the arena.
+            final arena = Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ArenaCanvas(
+                      state: _state,
+                      arenaRadius: _arenaRadius,
+                      rimAngle: _rimAngle,
+                      showEffects: widget.config.showEffects,
+                    ),
+                  ),
+                  if (_state.status == MatchStatus.slowMotion)
+                    const Align(alignment: Alignment.topCenter, child: SlowMotionBadge()),
+                ],
+              ),
             );
             final scoreboard = Padding(
               padding: const EdgeInsets.all(16),
@@ -261,6 +322,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                           ),
                     onShareLink: _copyReplayLink,
                     onReplay: _replay,
+                    round: widget.config.winsNeeded > 1 ? _round : null,
+                    seriesOver: _seriesOver,
+                    onNextRound: _seriesOver ? null : _nextRound,
+                    score: widget.config.winsNeeded > 1
+                        ? [for (final b in widget.config.contestants) (b.name, _roundWins[b.id] ?? 0)]
+                        : null,
                     onExit: () => Navigator.of(context).maybePop(),
                   ),
                 ),

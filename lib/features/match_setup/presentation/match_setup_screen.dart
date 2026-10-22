@@ -44,6 +44,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   final math.Random _random = math.Random();
   double _speedMultiplier = 1.0;
   bool _showEffects = true;
+  int _winsNeeded = 1;
   String _category = _myBalls;
   List<BallPack> _packs = const [];
   // The user's groups, shown as categories after "My Balls".
@@ -133,6 +134,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       contestants: _selected.values.toList(),
       speedMultiplier: _speedMultiplier,
       showEffects: _showEffects,
+      winsNeeded: _winsNeeded,
     ));
   }
 
@@ -186,6 +188,24 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                       divisions: 3,
                       label: '${_speedMultiplier}x',
                       onChanged: (v) => setState(() => _speedMultiplier = v),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Text('Rounds'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SegmentedButton<int>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: 1, label: Text('1 round')),
+                        ButtonSegment(value: 2, label: Text('First to 2')),
+                        ButtonSegment(value: 3, label: Text('First to 3')),
+                      ],
+                      selected: {_winsNeeded},
+                      onSelectionChanged: (s) => setState(() => _winsNeeded = s.first),
                     ),
                   ),
                 ],

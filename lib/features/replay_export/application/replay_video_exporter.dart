@@ -33,6 +33,8 @@ class ReplayVideoExporter {
   // Same beat the app pauses for after the last line is cut.
   static const double finalHoldSeconds = 1.2;
   static const double winnerCardSeconds = 2.5;
+  // The runner-up shown big before the winner card (as in the app).
+  static const double loserSeconds = 1.8;
   // Guard against a match that never ends (none do in practice).
   static const int maxMatchFrames = fps * 60 * 10;
 
@@ -65,7 +67,8 @@ class ReplayVideoExporter {
     }
     final holdFrames = (finalHoldSeconds * fps).round();
     final cardFrames = (winnerCardSeconds * fps).round();
-    final totalFrames = matchFrames + 1 + holdFrames + cardFrames;
+    final loserFrames = (loserSeconds * fps).round();
+    final totalFrames = matchFrames + 1 + holdFrames + loserFrames + cardFrames;
 
     final match = newMatch();
     await match.preloadImages();
@@ -106,12 +109,30 @@ class ReplayVideoExporter {
 
       final finalState = match.state;
       for (var i = 0; i < holdFrames; i++) {
+        match.tick(frameDelta); // the match is over; only the last sparks move
         await emit(
           (canvas, size) => ReplayFramePainter.paintMatch(
             canvas,
             size,
             finalState,
             arenaRadius,
+            videoTime: videoTime(),
+            showEffects: showEffects,
+          ),
+        );
+      }
+
+      final loser = finalState.balls.where((b) => b.config.id == match.lastEliminatedId).firstOrNull;
+      for (var i = 0; i < loserFrames && loser != null; i++) {
+        match.tick(frameDelta);
+        await emit(
+          (canvas, size) => ReplayFramePainter.paintLoser(
+            canvas,
+            size,
+            finalState,
+            arenaRadius,
+            loser,
+            i / loserFrames,
             videoTime: videoTime(),
             showEffects: showEffects,
           ),

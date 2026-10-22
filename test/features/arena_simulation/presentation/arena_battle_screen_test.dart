@@ -148,4 +148,32 @@ void main() {
     // Stop the ticker cleanly before the test ends.
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('first-to-2 series: round result, NEXT ROUND, round counter', (tester) async {
+    final config = MatchConfig(
+      winsNeeded: 2,
+      contestants: const [
+        CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
+        CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp(home: ArenaBattleScreen(config: config, seed: 3)));
+    await tester.pump();
+    expect(find.text('ROUND 1'), findsOneWidget);
+
+    for (var i = 0; i < 600 && find.text('EXIT').evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('WINS ROUND 1!'), findsOneWidget);
+    expect(find.textContaining('A  '), findsOneWidget); // score line, e.g. "A  1   ·   B  0"
+
+    await tester.tap(find.text('NEXT ROUND'));
+    await tester.pump();
+    expect(find.text('ROUND 2'), findsOneWidget);
+    expect(find.text('EXIT'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }
+

@@ -17,6 +17,7 @@ class ArenaPainter extends CustomPainter {
   final bool showEffects;
 
   static const double _ballGlowPadding = 4.0;
+  static const double _rimMargin = 10.0;
 
   ArenaPainter({
     required this.state,
@@ -28,7 +29,8 @@ class ArenaPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final scale = size.shortestSide / (2 * arenaRadius);
+    // Leave room for the rim's stroke and glow so they aren't clipped at the edges.
+    final scale = size.shortestSide / (2 * (arenaRadius + _rimMargin));
 
     canvas.save();
     canvas.translate(center.dx, center.dy);

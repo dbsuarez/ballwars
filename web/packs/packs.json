@@ -1,0 +1,2250 @@
+{
+ "version": 1,
+ "groups": [
+  {
+   "id": "streaming",
+   "name": "Streaming",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "netflix",
+     "name": "Netflix",
+     "image": "streaming/netflix.svg",
+     "color": "#E50914"
+    },
+    {
+     "id": "youtube",
+     "name": "YouTube",
+     "image": "streaming/youtube.svg",
+     "color": "#FF0000"
+    },
+    {
+     "id": "disney-plus",
+     "name": "Disney+",
+     "image": "streaming/disney-plus.svg",
+     "color": "#01147B"
+    },
+    {
+     "id": "prime-video",
+     "name": "Prime Video",
+     "image": "streaming/prime-video.svg",
+     "color": "#00A8E1"
+    },
+    {
+     "id": "hulu",
+     "name": "Hulu",
+     "image": "streaming/hulu.svg",
+     "color": "#1CE783"
+    },
+    {
+     "id": "hbo-max",
+     "name": "HBO Max",
+     "image": "streaming/hbo-max.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "crunchyroll",
+     "name": "Crunchyroll",
+     "image": "streaming/crunchyroll.svg",
+     "color": "#FF5E00"
+    },
+    {
+     "id": "paramount-plus",
+     "name": "Paramount+",
+     "image": "streaming/paramount-plus.svg",
+     "color": "#0064FF"
+    },
+    {
+     "id": "twitch",
+     "name": "Twitch",
+     "image": "streaming/twitch.svg",
+     "color": "#9146FF"
+    },
+    {
+     "id": "apple-tv",
+     "name": "Apple TV",
+     "image": "streaming/apple-tv.svg",
+     "color": "#000000"
+    }
+   ]
+  },
+  {
+   "id": "shoes",
+   "name": "Shoes",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "nike",
+     "name": "Nike",
+     "image": "shoes/nike.svg",
+     "color": "#111111"
+    },
+    {
+     "id": "adidas",
+     "name": "Adidas",
+     "image": "shoes/adidas.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "puma",
+     "name": "Puma",
+     "image": "shoes/puma.svg",
+     "color": "#242B2F"
+    },
+    {
+     "id": "new-balance",
+     "name": "New Balance",
+     "image": "shoes/new-balance.svg",
+     "color": "#CF0A2C"
+    },
+    {
+     "id": "reebok",
+     "name": "Reebok",
+     "image": "shoes/reebok.svg",
+     "color": "#E41D1B"
+    },
+    {
+     "id": "under-armour",
+     "name": "Under Armour",
+     "image": "shoes/under-armour.svg",
+     "color": "#1D1D1D"
+    },
+    {
+     "id": "fila",
+     "name": "Fila",
+     "image": "shoes/fila.svg",
+     "color": "#002D62"
+    },
+    {
+     "id": "jordan",
+     "name": "Jordan",
+     "image": "shoes/jordan.svg",
+     "color": "#000000"
+    }
+   ]
+  },
+  {
+   "id": "laptops",
+   "name": "Laptops",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "asus",
+     "name": "ASUS",
+     "image": "laptops/asus.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "acer",
+     "name": "Acer",
+     "image": "laptops/acer.svg",
+     "color": "#83B81A"
+    },
+    {
+     "id": "dell",
+     "name": "Dell",
+     "image": "laptops/dell.svg",
+     "color": "#007DB8"
+    },
+    {
+     "id": "hp",
+     "name": "HP",
+     "image": "laptops/hp.svg",
+     "color": "#0096D6"
+    },
+    {
+     "id": "lenovo",
+     "name": "Lenovo",
+     "image": "laptops/lenovo.svg",
+     "color": "#E2231A"
+    },
+    {
+     "id": "apple",
+     "name": "Apple",
+     "image": "laptops/apple.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "msi",
+     "name": "MSI",
+     "image": "laptops/msi.svg",
+     "color": "#FF0000"
+    },
+    {
+     "id": "razer",
+     "name": "Razer",
+     "image": "laptops/razer.svg",
+     "color": "#00FF00"
+    },
+    {
+     "id": "microsoft",
+     "name": "Microsoft",
+     "image": "laptops/microsoft.svg",
+     "color": "#F1511B"
+    },
+    {
+     "id": "samsung",
+     "name": "Samsung",
+     "image": "laptops/samsung.svg",
+     "color": "#1428A0"
+    },
+    {
+     "id": "huawei",
+     "name": "Huawei",
+     "image": "laptops/huawei.svg",
+     "color": "#FF0000"
+    },
+    {
+     "id": "toshiba",
+     "name": "Toshiba",
+     "image": "laptops/toshiba.svg",
+     "color": "#FF0000"
+    }
+   ]
+  },
+  {
+   "id": "countries",
+   "name": "Countries",
+   "style": "flag",
+   "balls": [
+    {
+     "id": "af",
+     "name": "Afghanistan",
+     "image": "countries/af.svg",
+     "color": "#009900"
+    },
+    {
+     "id": "ax",
+     "name": "Aland Islands",
+     "image": "countries/ax.svg",
+     "color": "#0053A5"
+    },
+    {
+     "id": "al",
+     "name": "Albania",
+     "image": "countries/al.svg",
+     "color": "#000001"
+    },
+    {
+     "id": "dz",
+     "name": "Algeria",
+     "image": "countries/dz.svg",
+     "color": "#006233"
+    },
+    {
+     "id": "as",
+     "name": "American Samoa",
+     "image": "countries/as.svg",
+     "color": "#000066"
+    },
+    {
+     "id": "ad",
+     "name": "Andorra",
+     "image": "countries/ad.svg",
+     "color": "#D0103A"
+    },
+    {
+     "id": "ao",
+     "name": "Angola",
+     "image": "countries/ao.svg",
+     "color": "#FFEC00"
+    },
+    {
+     "id": "ai",
+     "name": "Anguilla",
+     "image": "countries/ai.svg",
+     "color": "#FF9900"
+    },
+    {
+     "id": "aq",
+     "name": "Antarctica",
+     "image": "countries/aq.svg",
+     "color": "#3A7DCE"
+    },
+    {
+     "id": "ag",
+     "name": "Antigua and Barbuda",
+     "image": "countries/ag.svg",
+     "color": "#25FF01"
+    },
+    {
+     "id": "ar",
+     "name": "Argentina",
+     "image": "countries/ar.svg",
+     "color": "#74ACDF"
+    },
+    {
+     "id": "am",
+     "name": "Armenia",
+     "image": "countries/am.svg",
+     "color": "#D90012"
+    },
+    {
+     "id": "aw",
+     "name": "Aruba",
+     "image": "countries/aw.svg",
+     "color": "#3399CC"
+    },
+    {
+     "id": "au",
+     "name": "Australia",
+     "image": "countries/au.svg",
+     "color": "#00008B"
+    },
+    {
+     "id": "at",
+     "name": "Austria",
+     "image": "countries/at.svg",
+     "color": "#C8102E"
+    },
+    {
+     "id": "az",
+     "name": "Azerbaijan",
+     "image": "countries/az.svg",
+     "color": "#3F9C35"
+    },
+    {
+     "id": "bs",
+     "name": "Bahamas",
+     "image": "countries/bs.svg",
+     "color": "#FFE900"
+    },
+    {
+     "id": "bh",
+     "name": "Bahrain",
+     "image": "countries/bh.svg",
+     "color": "#CE1126"
+    },
+    {
+     "id": "bd",
+     "name": "Bangladesh",
+     "image": "countries/bd.svg",
+     "color": "#006A4E"
+    },
+    {
+     "id": "bb",
+     "name": "Barbados",
+     "image": "countries/bb.svg",
+     "color": "#00267F"
+    },
+    {
+     "id": "by",
+     "name": "Belarus",
+     "image": "countries/by.svg",
+     "color": "#CE1720"
+    },
+    {
+     "id": "be",
+     "name": "Belgium",
+     "image": "countries/be.svg",
+     "color": "#FFD90C"
+    },
+    {
+     "id": "bz",
+     "name": "Belize",
+     "image": "countries/bz.svg",
+     "color": "#FFEF5D"
+    },
+    {
+     "id": "bj",
+     "name": "Benin",
+     "image": "countries/bj.svg",
+     "color": "#319400"
+    },
+    {
+     "id": "bm",
+     "name": "Bermuda",
+     "image": "countries/bm.svg",
+     "color": "#CF142B"
+    },
+    {
+     "id": "bt",
+     "name": "Bhutan",
+     "image": "countries/bt.svg",
+     "color": "#FFD520"
+    },
+    {
+     "id": "bo",
+     "name": "Bolivia",
+     "image": "countries/bo.svg",
+     "color": "#007934"
+    },
+    {
+     "id": "bq",
+     "name": "Bonaire, Sint Eustatius and Saba",
+     "image": "countries/bq.svg",
+     "color": "#21468B"
+    },
+    {
+     "id": "ba",
+     "name": "Bosnia and Herzegovina",
+     "image": "countries/ba.svg",
+     "color": "#000099"
+    },
+    {
+     "id": "bw",
+     "name": "Botswana",
+     "image": "countries/bw.svg",
+     "color": "#00CBFF"
+    },
+    {
+     "id": "bv",
+     "name": "Bouvet Island",
+     "image": "countries/bv.svg",
+     "color": "#D72828"
+    },
+    {
+     "id": "br",
+     "name": "Brazil",
+     "image": "countries/br.svg",
+     "color": "#229E45"
+    },
+    {
+     "id": "io",
+     "name": "British Indian Ocean Territory",
+     "image": "countries/io.svg",
+     "color": "#000063"
+    },
+    {
+     "id": "bn",
+     "name": "Brunei Darussalam",
+     "image": "countries/bn.svg",
+     "color": "#F7E017"
+    },
+    {
+     "id": "bg",
+     "name": "Bulgaria",
+     "image": "countries/bg.svg",
+     "color": "#00966E"
+    },
+    {
+     "id": "bf",
+     "name": "Burkina Faso",
+     "image": "countries/bf.svg",
+     "color": "#DE0000"
+    },
+    {
+     "id": "bi",
+     "name": "Burundi",
+     "image": "countries/bi.svg",
+     "color": "#18B637"
+    },
+    {
+     "id": "cv",
+     "name": "Cabo Verde",
+     "image": "countries/cv.svg",
+     "color": "#081873"
+    },
+    {
+     "id": "kh",
+     "name": "Cambodia",
+     "image": "countries/kh.svg",
+     "color": "#032EA1"
+    },
+    {
+     "id": "cm",
+     "name": "Cameroon",
+     "image": "countries/cm.svg",
+     "color": "#007A5E"
+    },
+    {
+     "id": "ca",
+     "name": "Canada",
+     "image": "countries/ca.svg",
+     "color": "#D52B1E"
+    },
+    {
+     "id": "ky",
+     "name": "Cayman Islands",
+     "image": "countries/ky.svg",
+     "color": "#000066"
+    },
+    {
+     "id": "cf",
+     "name": "Central African Republic",
+     "image": "countries/cf.svg",
+     "color": "#0000FF"
+    },
+    {
+     "id": "td",
+     "name": "Chad",
+     "image": "countries/td.svg",
+     "color": "#002664"
+    },
+    {
+     "id": "cl",
+     "name": "Chile",
+     "image": "countries/cl.svg",
+     "color": "#0039A6"
+    },
+    {
+     "id": "cn",
+     "name": "China",
+     "image": "countries/cn.svg",
+     "color": "#FFFF00"
+    },
+    {
+     "id": "cx",
+     "name": "Christmas Island",
+     "image": "countries/cx.svg",
+     "color": "#0021AD"
+    },
+    {
+     "id": "cc",
+     "name": "Cocos (Keeling) Islands",
+     "image": "countries/cc.svg",
+     "color": "#FFE000"
+    },
+    {
+     "id": "co",
+     "name": "Colombia",
+     "image": "countries/co.svg",
+     "color": "#FFE800"
+    },
+    {
+     "id": "km",
+     "name": "Comoros",
+     "image": "countries/km.svg",
+     "color": "#FFFF00"
+    },
+    {
+     "id": "ck",
+     "name": "Cook Islands",
+     "image": "countries/ck.svg",
+     "color": "#000066"
+    },
+    {
+     "id": "cr",
+     "name": "Costa Rica",
+     "image": "countries/cr.svg",
+     "color": "#0000B4"
+    },
+    {
+     "id": "ci",
+     "name": "Côte d'Ivoire",
+     "image": "countries/ci.svg",
+     "color": "#009A44"
+    },
+    {
+     "id": "hr",
+     "name": "Croatia",
+     "image": "countries/hr.svg",
+     "color": "#171796"
+    },
+    {
+     "id": "cu",
+     "name": "Cuba",
+     "image": "countries/cu.svg",
+     "color": "#002A8F"
+    },
+    {
+     "id": "cw",
+     "name": "Curaçao",
+     "image": "countries/cw.svg",
+     "color": "#002B7F"
+    },
+    {
+     "id": "cy",
+     "name": "Cyprus",
+     "image": "countries/cy.svg",
+     "color": "#D47600"
+    },
+    {
+     "id": "cz",
+     "name": "Czech Republic",
+     "image": "countries/cz.svg",
+     "color": "#D7141A"
+    },
+    {
+     "id": "cd",
+     "name": "Democratic Republic of the Congo",
+     "image": "countries/cd.svg",
+     "color": "#007FFF"
+    },
+    {
+     "id": "dk",
+     "name": "Denmark",
+     "image": "countries/dk.svg",
+     "color": "#C8102E"
+    },
+    {
+     "id": "dj",
+     "name": "Djibouti",
+     "image": "countries/dj.svg",
+     "color": "#00CC00"
+    },
+    {
+     "id": "dm",
+     "name": "Dominica",
+     "image": "countries/dm.svg",
+     "color": "#108C00"
+    },
+    {
+     "id": "do",
+     "name": "Dominican Republic",
+     "image": "countries/do.svg",
+     "color": "#002D62"
+    },
+    {
+     "id": "ec",
+     "name": "Ecuador",
+     "image": "countries/ec.svg",
+     "color": "#FFE800"
+    },
+    {
+     "id": "eg",
+     "name": "Egypt",
+     "image": "countries/eg.svg",
+     "color": "#CE1126"
+    },
+    {
+     "id": "sv",
+     "name": "El Salvador",
+     "image": "countries/sv.svg",
+     "color": "#0F47AF"
+    },
+    {
+     "id": "gq",
+     "name": "Equatorial Guinea",
+     "image": "countries/gq.svg",
+     "color": "#E32118"
+    },
+    {
+     "id": "er",
+     "name": "Eritrea",
+     "image": "countries/er.svg",
+     "color": "#BE0027"
+    },
+    {
+     "id": "ee",
+     "name": "Estonia",
+     "image": "countries/ee.svg",
+     "color": "#1791FF"
+    },
+    {
+     "id": "sz",
+     "name": "Eswatini",
+     "image": "countries/sz.svg",
+     "color": "#3E5EB9"
+    },
+    {
+     "id": "et",
+     "name": "Ethiopia",
+     "image": "countries/et.svg",
+     "color": "#298C08"
+    },
+    {
+     "id": "fk",
+     "name": "Falkland Islands",
+     "image": "countries/fk.svg",
+     "color": "#A43907"
+    },
+    {
+     "id": "fo",
+     "name": "Faroe Islands",
+     "image": "countries/fo.svg",
+     "color": "#003897"
+    },
+    {
+     "id": "fm",
+     "name": "Federated States of Micronesia",
+     "image": "countries/fm.svg",
+     "color": "#6797D6"
+    },
+    {
+     "id": "fj",
+     "name": "Fiji",
+     "image": "countries/fj.svg",
+     "color": "#68BFE5"
+    },
+    {
+     "id": "fi",
+     "name": "Finland",
+     "image": "countries/fi.svg",
+     "color": "#002F6C"
+    },
+    {
+     "id": "fr",
+     "name": "France",
+     "image": "countries/fr.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "gf",
+     "name": "French Guiana",
+     "image": "countries/gf.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "pf",
+     "name": "French Polynesia",
+     "image": "countries/pf.svg",
+     "color": "#083D9C"
+    },
+    {
+     "id": "tf",
+     "name": "French Southern Territories",
+     "image": "countries/tf.svg",
+     "color": "#002395"
+    },
+    {
+     "id": "ga",
+     "name": "Gabon",
+     "image": "countries/ga.svg",
+     "color": "#FFE700"
+    },
+    {
+     "id": "gm",
+     "name": "Gambia",
+     "image": "countries/gm.svg",
+     "color": "#000099"
+    },
+    {
+     "id": "ge",
+     "name": "Georgia",
+     "image": "countries/ge.svg",
+     "color": "#FFFFFF"
+    },
+    {
+     "id": "de",
+     "name": "Germany",
+     "image": "countries/de.svg",
+     "color": "#FFCC00"
+    },
+    {
+     "id": "gh",
+     "name": "Ghana",
+     "image": "countries/gh.svg",
+     "color": "#006B3F"
+    },
+    {
+     "id": "gi",
+     "name": "Gibraltar",
+     "image": "countries/gi.svg",
+     "color": "#DA000C"
+    },
+    {
+     "id": "gr",
+     "name": "Greece",
+     "image": "countries/gr.svg",
+     "color": "#0D5EAF"
+    },
+    {
+     "id": "gl",
+     "name": "Greenland",
+     "image": "countries/gl.svg",
+     "color": "#D00C33"
+    },
+    {
+     "id": "gd",
+     "name": "Grenada",
+     "image": "countries/gd.svg",
+     "color": "#FCD116"
+    },
+    {
+     "id": "gp",
+     "name": "Guadeloupe",
+     "image": "countries/gp.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "gu",
+     "name": "Guam",
+     "image": "countries/gu.svg",
+     "color": "#BE0027"
+    },
+    {
+     "id": "gt",
+     "name": "Guatemala",
+     "image": "countries/gt.svg",
+     "color": "#F9F0AA"
+    },
+    {
+     "id": "gg",
+     "name": "Guernsey",
+     "image": "countries/gg.svg",
+     "color": "#E8112D"
+    },
+    {
+     "id": "gn",
+     "name": "Guinea",
+     "image": "countries/gn.svg",
+     "color": "#FFFF00"
+    },
+    {
+     "id": "gw",
+     "name": "Guinea-Bissau",
+     "image": "countries/gw.svg",
+     "color": "#CE1126"
+    },
+    {
+     "id": "gy",
+     "name": "Guyana",
+     "image": "countries/gy.svg",
+     "color": "#399408"
+    },
+    {
+     "id": "ht",
+     "name": "Haiti",
+     "image": "countries/ht.svg",
+     "color": "#D21034"
+    },
+    {
+     "id": "hm",
+     "name": "Heard Island and McDonald Islands",
+     "image": "countries/hm.svg",
+     "color": "#00008B"
+    },
+    {
+     "id": "va",
+     "name": "Holy See",
+     "image": "countries/va.svg",
+     "color": "#FFE000"
+    },
+    {
+     "id": "hn",
+     "name": "Honduras",
+     "image": "countries/hn.svg",
+     "color": "#18C3DF"
+    },
+    {
+     "id": "hk",
+     "name": "Hong Kong",
+     "image": "countries/hk.svg",
+     "color": "#EC1B2E"
+    },
+    {
+     "id": "hu",
+     "name": "Hungary",
+     "image": "countries/hu.svg",
+     "color": "#388D00"
+    },
+    {
+     "id": "is",
+     "name": "Iceland",
+     "image": "countries/is.svg",
+     "color": "#003897"
+    },
+    {
+     "id": "in",
+     "name": "India",
+     "image": "countries/in.svg",
+     "color": "#FF9933"
+    },
+    {
+     "id": "id",
+     "name": "Indonesia",
+     "image": "countries/id.svg",
+     "color": "#E70011"
+    },
+    {
+     "id": "ir",
+     "name": "Iran",
+     "image": "countries/ir.svg",
+     "color": "#DA0000"
+    },
+    {
+     "id": "iq",
+     "name": "Iraq",
+     "image": "countries/iq.svg",
+     "color": "#CE1126"
+    },
+    {
+     "id": "ie",
+     "name": "Ireland",
+     "image": "countries/ie.svg",
+     "color": "#009A49"
+    },
+    {
+     "id": "im",
+     "name": "Isle of Man",
+     "image": "countries/im.svg",
+     "color": "#BA0000"
+    },
+    {
+     "id": "il",
+     "name": "Israel",
+     "image": "countries/il.svg",
+     "color": "#0038B8"
+    },
+    {
+     "id": "it",
+     "name": "Italy",
+     "image": "countries/it.svg",
+     "color": "#009246"
+    },
+    {
+     "id": "jm",
+     "name": "Jamaica",
+     "image": "countries/jm.svg",
+     "color": "#009900"
+    },
+    {
+     "id": "jp",
+     "name": "Japan",
+     "image": "countries/jp.svg",
+     "color": "#BC002D"
+    },
+    {
+     "id": "je",
+     "name": "Jersey",
+     "image": "countries/je.svg",
+     "color": "#CF142B"
+    },
+    {
+     "id": "jo",
+     "name": "Jordan",
+     "image": "countries/jo.svg",
+     "color": "#009900"
+    },
+    {
+     "id": "kz",
+     "name": "Kazakhstan",
+     "image": "countries/kz.svg",
+     "color": "#00ABC2"
+    },
+    {
+     "id": "ke",
+     "name": "Kenya",
+     "image": "countries/ke.svg",
+     "color": "#006600"
+    },
+    {
+     "id": "ki",
+     "name": "Kiribati",
+     "image": "countries/ki.svg",
+     "color": "#E73E2D"
+    },
+    {
+     "id": "kw",
+     "name": "Kuwait",
+     "image": "countries/kw.svg",
+     "color": "#F31830"
+    },
+    {
+     "id": "kg",
+     "name": "Kyrgyzstan",
+     "image": "countries/kg.svg",
+     "color": "#FFFF00"
+    },
+    {
+     "id": "la",
+     "name": "Laos",
+     "image": "countries/la.svg",
+     "color": "#CE1126"
+    },
+    {
+     "id": "lv",
+     "name": "Latvia",
+     "image": "countries/lv.svg",
+     "color": "#981E32"
+    },
+    {
+     "id": "lb",
+     "name": "Lebanon",
+     "image": "countries/lb.svg",
+     "color": "#EE161F"
+    },
+    {
+     "id": "ls",
+     "name": "Lesotho",
+     "image": "countries/ls.svg",
+     "color": "#009543"
+    },
+    {
+     "id": "lr",
+     "name": "Liberia",
+     "image": "countries/lr.svg",
+     "color": "#000066"
+    },
+    {
+     "id": "ly",
+     "name": "Libya",
+     "image": "countries/ly.svg",
+     "color": "#239E46"
+    },
+    {
+     "id": "li",
+     "name": "Liechtenstein",
+     "image": "countries/li.svg",
+     "color": "#002B7F"
+    },
+    {
+     "id": "lt",
+     "name": "Lithuania",
+     "image": "countries/lt.svg",
+     "color": "#006A44"
+    },
+    {
+     "id": "lu",
+     "name": "Luxembourg",
+     "image": "countries/lu.svg",
+     "color": "#ED2939"
+    },
+    {
+     "id": "mo",
+     "name": "Macau",
+     "image": "countries/mo.svg",
+     "color": "#00785E"
+    },
+    {
+     "id": "mg",
+     "name": "Madagascar",
+     "image": "countries/mg.svg",
+     "color": "#FC3D32"
+    },
+    {
+     "id": "mw",
+     "name": "Malawi",
+     "image": "countries/mw.svg",
+     "color": "#F41408"
+    },
+    {
+     "id": "my",
+     "name": "Malaysia",
+     "image": "countries/my.svg",
+     "color": "#CC0000"
+    },
+    {
+     "id": "mv",
+     "name": "Maldives",
+     "image": "countries/mv.svg",
+     "color": "#D21034"
+    },
+    {
+     "id": "ml",
+     "name": "Mali",
+     "image": "countries/ml.svg",
+     "color": "#009A00"
+    },
+    {
+     "id": "mt",
+     "name": "Malta",
+     "image": "countries/mt.svg",
+     "color": "#CF142B"
+    },
+    {
+     "id": "mh",
+     "name": "Marshall Islands",
+     "image": "countries/mh.svg",
+     "color": "#3B5AA3"
+    },
+    {
+     "id": "mq",
+     "name": "Martinique",
+     "image": "countries/mq.svg",
+     "color": "#00A650"
+    },
+    {
+     "id": "mr",
+     "name": "Mauritania",
+     "image": "countries/mr.svg",
+     "color": "#CD2A3E"
+    },
+    {
+     "id": "mu",
+     "name": "Mauritius",
+     "image": "countries/mu.svg",
+     "color": "#009F4D"
+    },
+    {
+     "id": "yt",
+     "name": "Mayotte",
+     "image": "countries/yt.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "mx",
+     "name": "Mexico",
+     "image": "countries/mx.svg",
+     "color": "#F15770"
+    },
+    {
+     "id": "md",
+     "name": "Moldova",
+     "image": "countries/md.svg",
+     "color": "#00319C"
+    },
+    {
+     "id": "mc",
+     "name": "Monaco",
+     "image": "countries/mc.svg",
+     "color": "#F31830"
+    },
+    {
+     "id": "mn",
+     "name": "Mongolia",
+     "image": "countries/mn.svg",
+     "color": "#FFD900"
+    },
+    {
+     "id": "me",
+     "name": "Montenegro",
+     "image": "countries/me.svg",
+     "color": "#D3AE3B"
+    },
+    {
+     "id": "ms",
+     "name": "Montserrat",
+     "image": "countries/ms.svg",
+     "color": "#012169"
+    },
+    {
+     "id": "ma",
+     "name": "Morocco",
+     "image": "countries/ma.svg",
+     "color": "#C1272D"
+    },
+    {
+     "id": "mz",
+     "name": "Mozambique",
+     "image": "countries/mz.svg",
+     "color": "#009A00"
+    },
+    {
+     "id": "mm",
+     "name": "Myanmar",
+     "image": "countries/mm.svg",
+     "color": "#FECB00"
+    },
+    {
+     "id": "na",
+     "name": "Namibia",
+     "image": "countries/na.svg",
+     "color": "#3662A2"
+    },
+    {
+     "id": "nr",
+     "name": "Nauru",
+     "image": "countries/nr.svg",
+     "color": "#002170"
+    },
+    {
+     "id": "np",
+     "name": "Nepal",
+     "image": "countries/np.svg",
+     "color": "#CE0000"
+    },
+    {
+     "id": "nl",
+     "name": "Netherlands",
+     "image": "countries/nl.svg",
+     "color": "#AE1C28"
+    },
+    {
+     "id": "nc",
+     "name": "New Caledonia",
+     "image": "countries/nc.svg",
+     "color": "#009639"
+    },
+    {
+     "id": "nz",
+     "name": "New Zealand",
+     "image": "countries/nz.svg",
+     "color": "#00247D"
+    },
+    {
+     "id": "ni",
+     "name": "Nicaragua",
+     "image": "countries/ni.svg",
+     "color": "#510000"
+    },
+    {
+     "id": "ne",
+     "name": "Niger",
+     "image": "countries/ne.svg",
+     "color": "#0DB02B"
+    },
+    {
+     "id": "ng",
+     "name": "Nigeria",
+     "image": "countries/ng.svg",
+     "color": "#008753"
+    },
+    {
+     "id": "nu",
+     "name": "Niue",
+     "image": "countries/nu.svg",
+     "color": "#FEDD00"
+    },
+    {
+     "id": "nf",
+     "name": "Norfolk Island",
+     "image": "countries/nf.svg",
+     "color": "#198200"
+    },
+    {
+     "id": "kp",
+     "name": "North Korea",
+     "image": "countries/kp.svg",
+     "color": "#3E5698"
+    },
+    {
+     "id": "mk",
+     "name": "North Macedonia",
+     "image": "countries/mk.svg",
+     "color": "#D20000"
+    },
+    {
+     "id": "mp",
+     "name": "Northern Mariana Islands",
+     "image": "countries/mp.svg",
+     "color": "#0071BC"
+    },
+    {
+     "id": "no",
+     "name": "Norway",
+     "image": "countries/no.svg",
+     "color": "#ED2939"
+    },
+    {
+     "id": "om",
+     "name": "Oman",
+     "image": "countries/om.svg",
+     "color": "#EF2D29"
+    },
+    {
+     "id": "pk",
+     "name": "Pakistan",
+     "image": "countries/pk.svg",
+     "color": "#0C590B"
+    },
+    {
+     "id": "pw",
+     "name": "Palau",
+     "image": "countries/pw.svg",
+     "color": "#4AADD6"
+    },
+    {
+     "id": "pa",
+     "name": "Panama",
+     "image": "countries/pa.svg",
+     "color": "#DB0000"
+    },
+    {
+     "id": "pg",
+     "name": "Papua New Guinea",
+     "image": "countries/pg.svg",
+     "color": "#FFCC00"
+    },
+    {
+     "id": "py",
+     "name": "Paraguay",
+     "image": "countries/py.svg",
+     "color": "#0038A8"
+    },
+    {
+     "id": "pe",
+     "name": "Peru",
+     "image": "countries/pe.svg",
+     "color": "#D91023"
+    },
+    {
+     "id": "ph",
+     "name": "Philippines",
+     "image": "countries/ph.svg",
+     "color": "#0038A8"
+    },
+    {
+     "id": "pn",
+     "name": "Pitcairn",
+     "image": "countries/pn.svg",
+     "color": "#00247D"
+    },
+    {
+     "id": "pl",
+     "name": "Poland",
+     "image": "countries/pl.svg",
+     "color": "#DC143C"
+    },
+    {
+     "id": "pt",
+     "name": "Portugal",
+     "image": "countries/pt.svg",
+     "color": "#006600"
+    },
+    {
+     "id": "pr",
+     "name": "Puerto Rico",
+     "image": "countries/pr.svg",
+     "color": "#ED0000"
+    },
+    {
+     "id": "qa",
+     "name": "Qatar",
+     "image": "countries/qa.svg",
+     "color": "#8D1B3D"
+    },
+    {
+     "id": "cg",
+     "name": "Republic of the Congo",
+     "image": "countries/cg.svg",
+     "color": "#FFFF00"
+    },
+    {
+     "id": "re",
+     "name": "Réunion",
+     "image": "countries/re.svg",
+     "color": "#00267F"
+    },
+    {
+     "id": "ro",
+     "name": "Romania",
+     "image": "countries/ro.svg",
+     "color": "#00319C"
+    },
+    {
+     "id": "ru",
+     "name": "Russia",
+     "image": "countries/ru.svg",
+     "color": "#0039A6"
+    },
+    {
+     "id": "rw",
+     "name": "Rwanda",
+     "image": "countries/rw.svg",
+     "color": "#20603D"
+    },
+    {
+     "id": "bl",
+     "name": "Saint Barthélemy",
+     "image": "countries/bl.svg",
+     "color": "#00267F"
+    },
+    {
+     "id": "sh",
+     "name": "Saint Helena, Ascension and Tristan da Cunha",
+     "image": "countries/sh.svg",
+     "color": "#012169"
+    },
+    {
+     "id": "kn",
+     "name": "Saint Kitts and Nevis",
+     "image": "countries/kn.svg",
+     "color": "#FFE900"
+    },
+    {
+     "id": "lc",
+     "name": "Saint Lucia",
+     "image": "countries/lc.svg",
+     "color": "#65CFFF"
+    },
+    {
+     "id": "mf",
+     "name": "Saint Martin",
+     "image": "countries/mf.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "pm",
+     "name": "Saint Pierre and Miquelon",
+     "image": "countries/pm.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "vc",
+     "name": "Saint Vincent and the Grenadines",
+     "image": "countries/vc.svg",
+     "color": "#F4F100"
+    },
+    {
+     "id": "ws",
+     "name": "Samoa",
+     "image": "countries/ws.svg",
+     "color": "#CE1126"
+    },
+    {
+     "id": "sm",
+     "name": "San Marino",
+     "image": "countries/sm.svg",
+     "color": "#19B6EF"
+    },
+    {
+     "id": "st",
+     "name": "Sao Tome and Principe",
+     "image": "countries/st.svg",
+     "color": "#12AD2B"
+    },
+    {
+     "id": "sa",
+     "name": "Saudi Arabia",
+     "image": "countries/sa.svg",
+     "color": "#165D31"
+    },
+    {
+     "id": "sn",
+     "name": "Senegal",
+     "image": "countries/sn.svg",
+     "color": "#0B7226"
+    },
+    {
+     "id": "rs",
+     "name": "Serbia",
+     "image": "countries/rs.svg",
+     "color": "#0C4076"
+    },
+    {
+     "id": "sc",
+     "name": "Seychelles",
+     "image": "countries/sc.svg",
+     "color": "#D92223"
+    },
+    {
+     "id": "sl",
+     "name": "Sierra Leone",
+     "image": "countries/sl.svg",
+     "color": "#0000CD"
+    },
+    {
+     "id": "sg",
+     "name": "Singapore",
+     "image": "countries/sg.svg",
+     "color": "#DF0000"
+    },
+    {
+     "id": "sx",
+     "name": "Sint Maarten",
+     "image": "countries/sx.svg",
+     "color": "#ED2939"
+    },
+    {
+     "id": "sk",
+     "name": "Slovakia",
+     "image": "countries/sk.svg",
+     "color": "#EE1C25"
+    },
+    {
+     "id": "si",
+     "name": "Slovenia",
+     "image": "countries/si.svg",
+     "color": "#D50000"
+    },
+    {
+     "id": "sb",
+     "name": "Solomon Islands",
+     "image": "countries/sb.svg",
+     "color": "#0000D6"
+    },
+    {
+     "id": "so",
+     "name": "Somalia",
+     "image": "countries/so.svg",
+     "color": "#40A6FF"
+    },
+    {
+     "id": "za",
+     "name": "South Africa",
+     "image": "countries/za.svg",
+     "color": "#000C8A"
+    },
+    {
+     "id": "gs",
+     "name": "South Georgia and the South Sandwich Islands",
+     "image": "countries/gs.svg",
+     "color": "#FF5500"
+    },
+    {
+     "id": "kr",
+     "name": "South Korea",
+     "image": "countries/kr.svg",
+     "color": "#CD2E3A"
+    },
+    {
+     "id": "ss",
+     "name": "South Sudan",
+     "image": "countries/ss.svg",
+     "color": "#078930"
+    },
+    {
+     "id": "es",
+     "name": "Spain",
+     "image": "countries/es.svg",
+     "color": "#AA151B"
+    },
+    {
+     "id": "lk",
+     "name": "Sri Lanka",
+     "image": "countries/lk.svg",
+     "color": "#FFB700"
+    },
+    {
+     "id": "ps",
+     "name": "State of Palestine",
+     "image": "countries/ps.svg",
+     "color": "#009639"
+    },
+    {
+     "id": "sd",
+     "name": "Sudan",
+     "image": "countries/sd.svg",
+     "color": "#009A00"
+    },
+    {
+     "id": "sr",
+     "name": "Suriname",
+     "image": "countries/sr.svg",
+     "color": "#377E3F"
+    },
+    {
+     "id": "sj",
+     "name": "Svalbard and Jan Mayen",
+     "image": "countries/sj.svg",
+     "color": "#EF2B2D"
+    },
+    {
+     "id": "se",
+     "name": "Sweden",
+     "image": "countries/se.svg",
+     "color": "#005293"
+    },
+    {
+     "id": "ch",
+     "name": "Switzerland",
+     "image": "countries/ch.svg",
+     "color": "#FFFFFF"
+    },
+    {
+     "id": "sy",
+     "name": "Syria",
+     "image": "countries/sy.svg",
+     "color": "#007A3D"
+    },
+    {
+     "id": "tw",
+     "name": "Taiwan",
+     "image": "countries/tw.svg",
+     "color": "#000095"
+    },
+    {
+     "id": "tj",
+     "name": "Tajikistan",
+     "image": "countries/tj.svg",
+     "color": "#006600"
+    },
+    {
+     "id": "tz",
+     "name": "Tanzania",
+     "image": "countries/tz.svg",
+     "color": "#0099FF"
+    },
+    {
+     "id": "th",
+     "name": "Thailand",
+     "image": "countries/th.svg",
+     "color": "#A51931"
+    },
+    {
+     "id": "tl",
+     "name": "Timor-Leste",
+     "image": "countries/tl.svg",
+     "color": "#CB000F"
+    },
+    {
+     "id": "tg",
+     "name": "Togo",
+     "image": "countries/tg.svg",
+     "color": "#FFE300"
+    },
+    {
+     "id": "tk",
+     "name": "Tokelau",
+     "image": "countries/tk.svg",
+     "color": "#00247D"
+    },
+    {
+     "id": "to",
+     "name": "Tonga",
+     "image": "countries/to.svg",
+     "color": "#C10000"
+    },
+    {
+     "id": "tt",
+     "name": "Trinidad and Tobago",
+     "image": "countries/tt.svg",
+     "color": "#E00000"
+    },
+    {
+     "id": "tn",
+     "name": "Tunisia",
+     "image": "countries/tn.svg",
+     "color": "#E70013"
+    },
+    {
+     "id": "tr",
+     "name": "Türkiye",
+     "image": "countries/tr.svg",
+     "color": "#E30A17"
+    },
+    {
+     "id": "tm",
+     "name": "Turkmenistan",
+     "image": "countries/tm.svg",
+     "color": "#00843D"
+    },
+    {
+     "id": "tc",
+     "name": "Turks and Caicos Islands",
+     "image": "countries/tc.svg",
+     "color": "#002868"
+    },
+    {
+     "id": "tv",
+     "name": "Tuvalu",
+     "image": "countries/tv.svg",
+     "color": "#009FCA"
+    },
+    {
+     "id": "ug",
+     "name": "Uganda",
+     "image": "countries/ug.svg",
+     "color": "#FFE700"
+    },
+    {
+     "id": "ua",
+     "name": "Ukraine",
+     "image": "countries/ua.svg",
+     "color": "#0057B8"
+    },
+    {
+     "id": "ae",
+     "name": "United Arab Emirates",
+     "image": "countries/ae.svg",
+     "color": "#00732F"
+    },
+    {
+     "id": "gb",
+     "name": "United Kingdom",
+     "image": "countries/gb.svg",
+     "color": "#012169"
+    },
+    {
+     "id": "um",
+     "name": "United States Minor Outlying Islands",
+     "image": "countries/um.svg",
+     "color": "#BD3D44"
+    },
+    {
+     "id": "us",
+     "name": "United States of America",
+     "image": "countries/us.svg",
+     "color": "#BD3D44"
+    },
+    {
+     "id": "uy",
+     "name": "Uruguay",
+     "image": "countries/uy.svg",
+     "color": "#0038A8"
+    },
+    {
+     "id": "uz",
+     "name": "Uzbekistan",
+     "image": "countries/uz.svg",
+     "color": "#1EB53A"
+    },
+    {
+     "id": "vu",
+     "name": "Vanuatu",
+     "image": "countries/vu.svg",
+     "color": "#D21034"
+    },
+    {
+     "id": "ve",
+     "name": "Venezuela",
+     "image": "countries/ve.svg",
+     "color": "#CF142B"
+    },
+    {
+     "id": "vn",
+     "name": "Vietnam",
+     "image": "countries/vn.svg",
+     "color": "#DA251D"
+    },
+    {
+     "id": "vg",
+     "name": "Virgin Islands (British)",
+     "image": "countries/vg.svg",
+     "color": "#FFFF00"
+    },
+    {
+     "id": "vi",
+     "name": "Virgin Islands (U.S.)",
+     "image": "countries/vi.svg",
+     "color": "#369443"
+    },
+    {
+     "id": "wf",
+     "name": "Wallis and Futuna",
+     "image": "countries/wf.svg",
+     "color": "#000091"
+    },
+    {
+     "id": "eh",
+     "name": "Western Sahara",
+     "image": "countries/eh.svg",
+     "color": "#007A3D"
+    },
+    {
+     "id": "ye",
+     "name": "Yemen",
+     "image": "countries/ye.svg",
+     "color": "#F10600"
+    },
+    {
+     "id": "zm",
+     "name": "Zambia",
+     "image": "countries/zm.svg",
+     "color": "#198A00"
+    },
+    {
+     "id": "zw",
+     "name": "Zimbabwe",
+     "image": "countries/zw.svg",
+     "color": "#0000FF"
+    }
+   ]
+  },
+  {
+   "id": "phones",
+   "name": "Phones",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "samsung",
+     "name": "Samsung",
+     "image": "phones/samsung.svg",
+     "color": "#1428A0"
+    },
+    {
+     "id": "apple",
+     "name": "Apple",
+     "image": "phones/apple.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "xiaomi",
+     "name": "Xiaomi",
+     "image": "phones/xiaomi.svg",
+     "color": "#FF6900"
+    },
+    {
+     "id": "oppo",
+     "name": "OPPO",
+     "image": "phones/oppo.svg",
+     "color": "#2D683D"
+    },
+    {
+     "id": "vivo",
+     "name": "vivo",
+     "image": "phones/vivo.svg",
+     "color": "#415FFF"
+    },
+    {
+     "id": "huawei",
+     "name": "Huawei",
+     "image": "phones/huawei.svg",
+     "color": "#FF0000"
+    },
+    {
+     "id": "google",
+     "name": "Google",
+     "image": "phones/google.svg",
+     "color": "#4285F4"
+    },
+    {
+     "id": "oneplus",
+     "name": "OnePlus",
+     "image": "phones/oneplus.svg",
+     "color": "#F5010C"
+    },
+    {
+     "id": "nokia",
+     "name": "Nokia",
+     "image": "phones/nokia.svg",
+     "color": "#005AFF"
+    },
+    {
+     "id": "motorola",
+     "name": "Motorola",
+     "image": "phones/motorola.svg",
+     "color": "#E1140A"
+    },
+    {
+     "id": "honor",
+     "name": "Honor",
+     "image": "phones/honor.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "sony",
+     "name": "Sony",
+     "image": "phones/sony.svg",
+     "color": "#FFFFFF"
+    }
+   ]
+  },
+  {
+   "id": "ai",
+   "name": "AI",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "chatgpt",
+     "name": "ChatGPT",
+     "image": "ai/chatgpt.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "gemini",
+     "name": "Gemini",
+     "image": "ai/gemini.svg",
+     "color": "#3186FF"
+    },
+    {
+     "id": "grok",
+     "name": "Grok",
+     "image": "ai/grok.svg",
+     "color": "#0A0A0A"
+    },
+    {
+     "id": "claude",
+     "name": "Claude",
+     "image": "ai/claude.svg",
+     "color": "#D97757"
+    },
+    {
+     "id": "copilot",
+     "name": "Copilot",
+     "image": "ai/copilot.svg",
+     "color": "#00AEFF"
+    },
+    {
+     "id": "meta-ai",
+     "name": "Meta AI",
+     "image": "ai/meta-ai.svg",
+     "color": "#9844FF"
+    },
+    {
+     "id": "perplexity",
+     "name": "Perplexity",
+     "image": "ai/perplexity.svg",
+     "color": "#1FB8CD"
+    },
+    {
+     "id": "deepseek",
+     "name": "DeepSeek",
+     "image": "ai/deepseek.svg",
+     "color": "#5786FE"
+    },
+    {
+     "id": "mistral",
+     "name": "Mistral",
+     "image": "ai/mistral.svg",
+     "color": "#F7D046"
+    },
+    {
+     "id": "midjourney",
+     "name": "Midjourney",
+     "image": "ai/midjourney.svg",
+     "color": "#1A222D"
+    }
+   ]
+  },
+  {
+   "id": "social",
+   "name": "Social Media",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "facebook",
+     "name": "Facebook",
+     "image": "social/facebook.svg",
+     "color": "#0866FF"
+    },
+    {
+     "id": "instagram",
+     "name": "Instagram",
+     "image": "social/instagram.svg",
+     "color": "#FF0069"
+    },
+    {
+     "id": "tiktok",
+     "name": "TikTok",
+     "image": "social/tiktok.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "x",
+     "name": "X",
+     "image": "social/x.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "youtube",
+     "name": "YouTube",
+     "image": "social/youtube.svg",
+     "color": "#FF0000"
+    },
+    {
+     "id": "snapchat",
+     "name": "Snapchat",
+     "image": "social/snapchat.svg",
+     "color": "#FFFC00"
+    },
+    {
+     "id": "reddit",
+     "name": "Reddit",
+     "image": "social/reddit.svg",
+     "color": "#FF4500"
+    },
+    {
+     "id": "pinterest",
+     "name": "Pinterest",
+     "image": "social/pinterest.svg",
+     "color": "#BD081C"
+    },
+    {
+     "id": "threads",
+     "name": "Threads",
+     "image": "social/threads.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "linkedin",
+     "name": "LinkedIn",
+     "image": "social/linkedin.svg",
+     "color": "#0A66C2"
+    },
+    {
+     "id": "discord",
+     "name": "Discord",
+     "image": "social/discord.svg",
+     "color": "#5865F2"
+    }
+   ]
+  },
+  {
+   "id": "messaging",
+   "name": "Messaging",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "whatsapp",
+     "name": "WhatsApp",
+     "image": "messaging/whatsapp.svg",
+     "color": "#25D366"
+    },
+    {
+     "id": "messenger",
+     "name": "Messenger",
+     "image": "messaging/messenger.svg",
+     "color": "#0866FF"
+    },
+    {
+     "id": "telegram",
+     "name": "Telegram",
+     "image": "messaging/telegram.svg",
+     "color": "#26A5E4"
+    },
+    {
+     "id": "viber",
+     "name": "Viber",
+     "image": "messaging/viber.svg",
+     "color": "#7360F2"
+    },
+    {
+     "id": "signal",
+     "name": "Signal",
+     "image": "messaging/signal.svg",
+     "color": "#3B45FD"
+    },
+    {
+     "id": "wechat",
+     "name": "WeChat",
+     "image": "messaging/wechat.svg",
+     "color": "#07C160"
+    },
+    {
+     "id": "line",
+     "name": "LINE",
+     "image": "messaging/line.svg",
+     "color": "#00C300"
+    },
+    {
+     "id": "discord",
+     "name": "Discord",
+     "image": "messaging/discord.svg",
+     "color": "#5865F2"
+    }
+   ]
+  },
+  {
+   "id": "browsers",
+   "name": "Browsers",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "chrome",
+     "name": "Chrome",
+     "image": "browsers/chrome.svg",
+     "color": "#229342"
+    },
+    {
+     "id": "firefox",
+     "name": "Firefox",
+     "image": "browsers/firefox.svg",
+     "color": "#FF7139"
+    },
+    {
+     "id": "safari",
+     "name": "Safari",
+     "image": "browsers/safari.svg",
+     "color": "#006CFF"
+    },
+    {
+     "id": "edge",
+     "name": "Edge",
+     "image": "browsers/edge.svg",
+     "color": "#0C59A4"
+    },
+    {
+     "id": "opera",
+     "name": "Opera",
+     "image": "browsers/opera.svg",
+     "color": "#FF1B2D"
+    },
+    {
+     "id": "brave",
+     "name": "Brave",
+     "image": "browsers/brave.svg",
+     "color": "#FB542B"
+    },
+    {
+     "id": "vivaldi",
+     "name": "Vivaldi",
+     "image": "browsers/vivaldi.svg",
+     "color": "#EF3939"
+    }
+   ]
+  },
+  {
+   "id": "consoles",
+   "name": "Gaming",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "playstation",
+     "name": "PlayStation",
+     "image": "consoles/playstation.svg",
+     "color": "#0070D1"
+    },
+    {
+     "id": "xbox",
+     "name": "Xbox",
+     "image": "consoles/xbox.svg",
+     "color": "#107C10"
+    },
+    {
+     "id": "steam",
+     "name": "Steam",
+     "image": "consoles/steam.svg",
+     "color": "#000000"
+    },
+    {
+     "id": "steam-deck",
+     "name": "Steam Deck",
+     "image": "consoles/steam-deck.svg",
+     "color": "#1A9FFF"
+    }
+   ]
+  },
+  {
+   "id": "music",
+   "name": "Music",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "spotify",
+     "name": "Spotify",
+     "image": "music/spotify.svg",
+     "color": "#1ED760"
+    },
+    {
+     "id": "apple-music",
+     "name": "Apple Music",
+     "image": "music/apple-music.svg",
+     "color": "#FA243C"
+    },
+    {
+     "id": "youtube-music",
+     "name": "YouTube Music",
+     "image": "music/youtube-music.svg",
+     "color": "#FF0000"
+    },
+    {
+     "id": "soundcloud",
+     "name": "SoundCloud",
+     "image": "music/soundcloud.svg",
+     "color": "#FF5500"
+    },
+    {
+     "id": "deezer",
+     "name": "Deezer",
+     "image": "music/deezer.svg",
+     "color": "#A238FF"
+    },
+    {
+     "id": "tidal",
+     "name": "TIDAL",
+     "image": "music/tidal.svg",
+     "color": "#000000"
+    }
+   ]
+  },
+  {
+   "id": "cars",
+   "name": "Cars",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "toyota",
+     "name": "Toyota",
+     "image": "cars/toyota.svg",
+     "color": "#EB0A1E"
+    },
+    {
+     "id": "honda",
+     "name": "Honda",
+     "image": "cars/honda.svg",
+     "color": "#E40521"
+    },
+    {
+     "id": "bmw",
+     "name": "BMW",
+     "image": "cars/bmw.svg",
+     "color": "#0066B1"
+    },
+    {
+     "id": "tesla",
+     "name": "Tesla",
+     "image": "cars/tesla.svg",
+     "color": "#CC0000"
+    },
+    {
+     "id": "ford",
+     "name": "Ford",
+     "image": "cars/ford.svg",
+     "color": "#00274E"
+    },
+    {
+     "id": "audi",
+     "name": "Audi",
+     "image": "cars/audi.svg",
+     "color": "#BB0A30"
+    },
+    {
+     "id": "porsche",
+     "name": "Porsche",
+     "image": "cars/porsche.svg",
+     "color": "#B12B28"
+    },
+    {
+     "id": "ferrari",
+     "name": "Ferrari",
+     "image": "cars/ferrari.svg",
+     "color": "#D40000"
+    },
+    {
+     "id": "lamborghini",
+     "name": "Lamborghini",
+     "image": "cars/lamborghini.svg",
+     "color": "#B6A272"
+    },
+    {
+     "id": "hyundai",
+     "name": "Hyundai",
+     "image": "cars/hyundai.svg",
+     "color": "#002C5E"
+    },
+    {
+     "id": "mitsubishi",
+     "name": "Mitsubishi",
+     "image": "cars/mitsubishi.svg",
+     "color": "#E60012"
+    },
+    {
+     "id": "nissan",
+     "name": "Nissan",
+     "image": "cars/nissan.svg",
+     "color": "#C3002F"
+    },
+    {
+     "id": "volkswagen",
+     "name": "Volkswagen",
+     "image": "cars/volkswagen.svg",
+     "color": "#151F5D"
+    },
+    {
+     "id": "kia",
+     "name": "Kia",
+     "image": "cars/kia.svg",
+     "color": "#05141F"
+    },
+    {
+     "id": "chevrolet",
+     "name": "Chevrolet",
+     "image": "cars/chevrolet.svg",
+     "color": "#CD9834"
+    },
+    {
+     "id": "subaru",
+     "name": "Subaru",
+     "image": "cars/subaru.svg",
+     "color": "#013C74"
+    },
+    {
+     "id": "mazda",
+     "name": "Mazda",
+     "image": "cars/mazda.svg",
+     "color": "#101010"
+    }
+   ]
+  },
+  {
+   "id": "fast-food",
+   "name": "Fast Food",
+   "style": "logo",
+   "balls": [
+    {
+     "id": "mcdonalds",
+     "name": "McDonald's",
+     "image": "fast-food/mcdonalds.svg",
+     "color": "#FBC817"
+    },
+    {
+     "id": "kfc",
+     "name": "KFC",
+     "image": "fast-food/kfc.svg",
+     "color": "#F40027"
+    },
+    {
+     "id": "burger-king",
+     "name": "Burger King",
+     "image": "fast-food/burger-king.svg",
+     "color": "#D62300"
+    },
+    {
+     "id": "starbucks",
+     "name": "Starbucks",
+     "image": "fast-food/starbucks.svg",
+     "color": "#006241"
+    },
+    {
+     "id": "taco-bell",
+     "name": "Taco Bell",
+     "image": "fast-food/taco-bell.svg",
+     "color": "#38096C"
+    }
+   ]
+  }
+ ]
+}

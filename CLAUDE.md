@@ -55,3 +55,8 @@ All simulation randomness must come from the match's `SeededRandom` (`core/utils
 - **Elsewhere** it returns null, which hides SAVE VIDEO.
 
 `ReplayLink` builds and parses share links: `<app>?seed=..&speed=..&balls=p.<presetId>,c.<base64 json>`. These are plain query strings, so there's no `#` and no server routing to set up on GitHub Pages; legacy `#/replay?..` links still parse. The home screen opens a link found in `Uri.base` at startup. Presets are referenced by id from `LocalBallRepository.presets`, so keep those ids stable. Uploaded ball images don't travel in links.
+
+### Built-in ball packs (ball_packs)
+
+`tool/build_packs.mjs` (run with `node tool/build_packs.mjs`) downloads brand logos and flags into `web/packs/<group>/<ball>.svg`. It also writes `web/packs/packs.json` (the catalog with brand colors) and `web/packs/LICENSES.md`. Sources, in order of preference: gilbarbara/logos (CC0, full-color), svgl, simple-icons (CC0, drawn in the brand color), and flag-icons (MIT) for countries. The packs deploy with the web app on GitHub Pages; Android reads them from `kWebAppUrl`. `BallPackRepository` loads the catalog, and pack balls get ids `pack:<group>/<ball>` and an `imageUrl`. `BallImageLoader` (core/utils) loads and caches ball images, drawing SVGs with flutter_svg. `BallFacePainter` draws logo balls (white ball, logo fitted inside) and cover/flag balls for both the arena and the video. `MatchColors` adjusts line colors per match so they're visible and distinct; the logos keep their real colors. `test/features/ball_packs/built_in_packs_test.dart` renders every pack SVG, so rerun it after rebuilding packs.
+

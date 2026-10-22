@@ -13,8 +13,11 @@ const String kWebAppUrl = 'https://dbsuarez.github.io/ballwars/';
 /// GitHub Pages). Older `<app>#/replay?..` links are still understood.
 ///
 /// Matches are deterministic, so the seed, the contestants (in order) and
-/// their physics settings are enough to reproduce it. Uploaded ball images
-/// can't fit in a link; custom balls replay with their colors and initial.
+/// their physics settings are enough to reproduce it. Ball tokens:
+/// - `p.<id>`: a preset ball;
+/// - `k.<pack>/<ball>`: a built-in pack ball (logo/flag included);
+/// - `c.<base64 json>`: a custom ball. Uploaded images can't fit in a link,
+///   so these replay with their colors and initial.
 class ReplayLink {
   final int seed;
   final double speedMultiplier;
@@ -24,7 +27,11 @@ class ReplayLink {
 
   /// [presets] are balls every copy of the app has; they are linked by id.
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
-    final balls = contestants.map((b) => presetIds.contains(b.id) ? 'p.${b.id}' : 'c.${_encodeCustom(b)}');
+    final balls = contestants.map((b) {
+      if (presetIds.contains(b.id)) return 'p.${b.id}';
+      if (b.id.startsWith(_packPrefix)) return 'k.${b.id.substring(_packPrefix.length)}';
+      return 'c.${_encodeCustom(b)}';
+    });
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final query = 'seed=$seed&speed=$speedMultiplier&balls=${balls.join(',')}';
@@ -32,10 +39,13 @@ class ReplayLink {
   }
 
   /// The replay in [uri], or null if it isn't a valid replay link.
-  static ReplayLink? fromUri(Uri uri, {required List<CustomBall> presets}) {
-    final params = uri.fragment.startsWith('/replay')
-        ? Uri.parse(uri.fragment).queryParameters
-        : uri.queryParameters;
+  /// [packBalls] maps pack ball ids (`pack:streaming/netflix`) to balls.
+  static ReplayLink? fromUri(
+    Uri uri, {
+    required List<CustomBall> presets,
+    Map<String, CustomBall> packBalls = const {},
+  }) {
+    final params = _params(uri);
     final seed = int.tryParse(params['seed'] ?? '');
     final speed = double.tryParse(params['speed'] ?? '1') ?? 1.0;
     final tokens = (params['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
@@ -43,7 +53,7 @@ class ReplayLink {
 
     final contestants = <CustomBall>[];
     for (var i = 0; i < tokens.length; i++) {
-      final ball = _decodeBall(tokens[i], i, presets);
+      final ball = _decodeBall(tokens[i], i, presets, packBalls);
       if (ball == null) return null;
       contestants.add(ball);
     }
@@ -66,11 +76,25 @@ class ReplayLink {
       })))
       .replaceAll('=', '');
 
-  static CustomBall? _decodeBall(String token, int index, List<CustomBall> presets) {
+  /// Whether [uri] is a replay link that needs the built-in packs loaded.
+  static bool usesPacks(Uri uri) => (_params(uri)['balls'] ?? '').split(',').any((t) => t.startsWith('k.'));
+
+  static const String _packPrefix = 'pack:';
+
+  static Map<String, String> _params(Uri uri) =>
+      uri.fragment.startsWith('/replay') ? Uri.parse(uri.fragment).queryParameters : uri.queryParameters;
+
+  static CustomBall? _decodeBall(
+    String token,
+    int index,
+    List<CustomBall> presets,
+    Map<String, CustomBall> packBalls,
+  ) {
     if (token.startsWith('p.')) {
       final id = token.substring(2);
       return presets.where((b) => b.id == id).firstOrNull;
     }
+    if (token.startsWith('k.')) return packBalls['$_packPrefix${token.substring(2)}'];
     if (!token.startsWith('c.')) return null;
     try {
       final raw = token.substring(2);

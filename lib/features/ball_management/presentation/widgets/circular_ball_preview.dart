@@ -1,4 +1,6 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../../../core/utils/ball_image_loader.dart';
 import '../../domain/custom_ball.dart';
 
 class CircularBallPreview extends StatelessWidget {
@@ -14,6 +16,8 @@ class CircularBallPreview extends StatelessWidget {
     return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
   }
 
+  bool get _isLogo => ball.imageStyle == BallImageStyle.logo;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -21,27 +25,43 @@ class CircularBallPreview extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: ball.glowColor, width: 3),
+        border: Border.all(color: _isLogo ? ball.primaryColor : ball.glowColor, width: 3),
         boxShadow: [
           BoxShadow(color: ball.glowColor.withValues(alpha: 0.7), blurRadius: size * 0.25, spreadRadius: 2),
         ],
       ),
-      child: ClipOval(
-        child: ball.imageBytes != null
-            ? Image.memory(ball.imageBytes!, fit: BoxFit.cover)
-            : Container(
-                color: ball.primaryColor,
-                alignment: Alignment.center,
-                child: Text(
-                  _initials,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: size * 0.32,
-                  ),
-                ),
-              ),
-      ),
+      child: ClipOval(child: _face()),
     );
   }
+
+  Widget _face() {
+    if (ball.imageBytes != null) return Image.memory(ball.imageBytes!, fit: BoxFit.cover);
+    if (ball.imageUrl == null) return _placeholder();
+    return FutureBuilder<ui.Image?>(
+      future: BallImageLoader.load(ball),
+      builder: (context, snapshot) {
+        final image = snapshot.data;
+        if (image == null) return _isLogo ? Container(color: Colors.white) : _placeholder();
+        if (!_isLogo) return RawImage(image: image, fit: BoxFit.cover);
+        return Container(
+          color: Colors.white,
+          padding: EdgeInsets.all(size * 0.16),
+          child: RawImage(image: image, fit: BoxFit.contain),
+        );
+      },
+    );
+  }
+
+  Widget _placeholder() => Container(
+        color: ball.primaryColor,
+        alignment: Alignment.center,
+        child: Text(
+          _initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.32,
+          ),
+        ),
+      );
 }

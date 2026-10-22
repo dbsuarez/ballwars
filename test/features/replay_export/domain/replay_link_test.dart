@@ -77,4 +77,25 @@ void main() {
     // Links made before the '#' was dropped still work.
     expect(parse('https://x/#/replay?seed=1&balls=p.preset-usa,p.preset-russia'), isNotNull);
   });
+
+  test('pack balls travel by id and come back with their logo', () {
+    const netflix = CustomBall(
+      id: 'pack:streaming/netflix',
+      name: 'Netflix',
+      imageUrl: 'https://dbsuarez.github.io/ballwars/packs/streaming/netflix.svg',
+      imageStyle: BallImageStyle.logo,
+      primaryColor: Color(0xFFE50914),
+      glowColor: Color(0xFFFF6B6B),
+    );
+    final uri = ReplayLink(seed: 3, speedMultiplier: 1, contestants: [netflix, _presets[0]])
+        .toUri(presetIds: _presetIds, appUrl: kWebAppUrl);
+
+    expect(uri.toString(), contains('balls=k.streaming/netflix,p.preset-usa'));
+    expect(ReplayLink.usesPacks(uri), isTrue);
+    // Without the packs loaded the link can't be resolved...
+    expect(ReplayLink.fromUri(uri, presets: _presets), isNull);
+    // ...with them it resolves to the same ball, image included.
+    final parsed = ReplayLink.fromUri(uri, presets: _presets, packBalls: {netflix.id: netflix})!;
+    expect(parsed.contestants.first, same(netflix));
+  });
 }

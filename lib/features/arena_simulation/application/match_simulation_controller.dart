@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../../core/utils/canvas_image_helper.dart';
+import '../../../core/utils/ball_image_loader.dart';
 import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../domain/arena_physics_engine.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
+import '../domain/match_colors.dart';
 import '../domain/particle_system.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
@@ -104,6 +105,10 @@ class MatchSimulationController {
     final count = contestants.length;
 
     final ballRadius = arenaRadius * ballRadiusRatio;
+    // Line colors that are visible on the arena and distinct per contestant
+    // (cosmetic only: ids and physics settings are untouched).
+    final lineColors = MatchColors.resolve([for (final c in contestants) c.primaryColor]);
+
     _balls = List.generate(count, (i) {
       final angle = _startAngle(i, count);
       final radial = Offset(math.cos(angle), math.sin(angle));
@@ -122,7 +127,12 @@ class MatchSimulationController {
       final heading = math.atan2(direction.dy, direction.dx) + tilt;
       final velocity = Offset(math.cos(heading), math.sin(heading)) * speed;
       return SimulationBall(
-        config: contestants[i],
+        config: lineColors[i] == contestants[i].primaryColor
+            ? contestants[i]
+            : contestants[i].copyWith(
+                primaryColor: lineColors[i],
+                glowColor: Color.lerp(lineColors[i], Colors.white, 0.35),
+              ),
         position: position,
         velocity: velocity,
         radius: ballRadius,
@@ -188,9 +198,7 @@ class MatchSimulationController {
 
   Future<void> preloadImages() async {
     for (final ball in _balls) {
-      final bytes = ball.config.imageBytes;
-      if (bytes == null) continue;
-      ball.cachedUiImage = await CanvasImageHelper.decode(bytes);
+      ball.cachedUiImage = await BallImageLoader.load(ball.config);
     }
   }
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/neon_button.dart';
 import 'features/ball_management/data/local_ball_repository.dart';
+import 'features/ball_management/domain/custom_ball.dart';
 import 'features/ball_management/presentation/ball_library_screen.dart';
+import 'features/ball_packs/data/ball_pack_repository.dart';
 import 'features/arena_simulation/presentation/arena_battle_screen.dart';
 import 'features/match_setup/domain/match_config.dart';
 import 'features/match_setup/presentation/match_setup_screen.dart';
@@ -34,22 +36,36 @@ class _HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
+  // Built-in packs (Streaming, Countries, ...), loaded once and shared.
+  final BallPackRepository _packs = BallPackRepository();
+
   @override
   void initState() {
     super.initState();
     // Opened from a shared replay link (web): go straight to that match.
-    final link = ReplayLink.fromUri(Uri.base, presets: LocalBallRepository.presets);
-    if (link != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => ArenaBattleScreen(
-            config: MatchConfig(contestants: link.contestants, speedMultiplier: link.speedMultiplier),
-            seed: link.seed,
-          ),
-        ));
-      });
+    _openReplayLink(Uri.base);
+  }
+
+  Future<void> _openReplayLink(Uri uri) async {
+    var packBalls = const <String, CustomBall>{};
+    if (ReplayLink.usesPacks(uri)) {
+      try {
+        packBalls = {for (final pack in await _packs.load()) for (final b in pack.balls) b.id: b};
+      } catch (_) {
+        return; // Packs unreachable: stay on the home screen.
+      }
     }
+    final link = ReplayLink.fromUri(uri, presets: LocalBallRepository.presets, packBalls: packBalls);
+    if (link == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ArenaBattleScreen(
+          config: MatchConfig(contestants: link.contestants, speedMultiplier: link.speedMultiplier),
+          seed: link.seed,
+        ),
+      ));
+    });
   }
 
   @override
@@ -74,6 +90,7 @@ class _HomeScreenState extends State<_HomeScreen> {
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => MatchSetupScreen(
                   repository: repository,
+                  packRepository: _packs,
                   onStartBattle: (config) {
                     Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => ArenaBattleScreen(config: config),

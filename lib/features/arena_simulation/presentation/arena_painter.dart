@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../domain/simulation_state.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/particle_system.dart';
+import 'ball_face_painter.dart';
 
 class ArenaPainter extends CustomPainter {
   final SimulationState state;
@@ -243,54 +244,7 @@ class ArenaPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6.0);
     canvas.drawCircle(ball.position, effectiveGlowRadius, glowPaint);
 
-    // === BANDED SPHERE RENDERING ===
-    // Base colored body
-    final bodyPaint = Paint()..color = ball.config.primaryColor;
-    canvas.drawCircle(ball.position, ball.radius, bodyPaint);
-
-    // White equator band (horizontal band around middle)
-    final equatorPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = ball.radius * 0.15
-      ..color = Colors.white.withValues(alpha: 0.8);
-    canvas.drawCircle(ball.position, ball.radius * 0.92, equatorPaint);
-
-    // Red core band (inner vertical band)
-    final corePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = ball.radius * 0.1
-      ..color = Colors.red.withValues(alpha: 0.9);
-    canvas.drawCircle(ball.position, ball.radius * 0.6, corePaint);
-
-    // Ball texture/image if available (clipped to ball circle)
-    final image = ball.cachedUiImage;
-    if (image != null) {
-      canvas.save();
-      canvas.clipPath(Path()..addOval(Rect.fromCircle(center: ball.position, radius: ball.radius)));
-      final srcRect = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
-      final dstRect = Rect.fromCircle(center: ball.position, radius: ball.radius);
-      canvas.drawImageRect(image, srcRect, dstRect, Paint());
-      canvas.restore();
-    } else {
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: ball.config.name.isNotEmpty ? ball.config.name.substring(0, 1).toUpperCase() : '?',
-          style: TextStyle(color: Colors.white, fontSize: ball.radius, fontWeight: FontWeight.bold),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      textPainter.paint(
-        canvas,
-        ball.position - Offset(textPainter.width / 2, textPainter.height / 2),
-      );
-    }
-
-    // Bright rim ring (tight white outline)
-    final rimPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = Colors.white;
-    canvas.drawCircle(ball.position, ball.radius, rimPaint);
+    BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
   }
 
   void _paintHudElements(Canvas canvas) {

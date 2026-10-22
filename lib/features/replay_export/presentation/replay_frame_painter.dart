@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../arena_simulation/domain/simulation_ball.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_painter.dart';
+import '../../arena_simulation/presentation/ball_face_painter.dart';
 
 /// Draws one frame of the exported 9:16 replay video, laid out like the
 /// reference: "WHO WINS?" / "ROUND 1" header, the arena, a slow-motion badge,
@@ -131,31 +132,7 @@ class ReplayFramePainter {
   }
 
   static void _paintBallFace(Canvas canvas, SimulationBall ball, Offset center, double radius) {
-    final rect = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawCircle(center, radius, Paint()..color = ball.config.primaryColor);
-    final image = ball.cachedUiImage;
-    if (image != null) {
-      canvas.save();
-      canvas.clipPath(Path()..addOval(rect));
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        rect,
-        Paint()..filterQuality = FilterQuality.medium,
-      );
-      canvas.restore();
-    } else {
-      final initial = ball.config.name.isNotEmpty ? ball.config.name.substring(0, 1).toUpperCase() : '?';
-      _paintText(canvas, initial, radius, FontWeight.bold, Colors.white, y: center.dy - radius * 0.6);
-    }
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..color = Colors.white,
-    );
+    BallFacePainter.paint(canvas, center, radius, ball.config, ball.cachedUiImage, rimWidth: 4);
   }
 
   static TextPainter _layout(

@@ -37,14 +37,8 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _scaleAnim = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.elasticOut,
-    );
+    _controller = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
+    _scaleAnim = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
     _opacityAnim = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
@@ -65,117 +59,115 @@ class _WinnerModalState extends State<WinnerModal> with SingleTickerProviderStat
         // Dimmed HUD background at ~40% opacity. Taps pass through it so the
         // screen's own controls (RETRY under the scoreboard) keep working.
         Positioned.fill(
-          child: IgnorePointer(
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.4),
-            ),
-          ),
+          child: IgnorePointer(child: Container(color: Colors.black.withValues(alpha: 0.4))),
         ),
         // Faint tiled watermark background (behind the card, never takes taps:
         // a full-size CustomPaint otherwise swallows every tap on the screen)
         Positioned.fill(
           child: IgnorePointer(
-            child: CustomPaint(
-              painter: _WatermarkPainter(text: 'BALLWARS'),
-            ),
+            child: CustomPaint(painter: _WatermarkPainter(text: 'BALLWARS')),
           ),
         ),
-        // Winner card centered
+        // Winner card centered; shrinks to fit small areas (e.g. the left half
+        // of a wide screen) instead of overflowing.
         Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _opacityAnim.value,
-                child: Transform.scale(
-                  scale: _scaleAnim.value,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Winner ball scaled up, keeps physics-stripe look
-                      CircularBallPreview(ball: widget.winner, size: 220),
-                      const SizedBox(height: 24),
-                      // Country name in heavy white caps
-                      Text(
-                        widget.winner.name.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 2.0,
-                          height: 1.0,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      // Small gold trophy/star glyph
-                      Icon(
-                        Icons.emoji_events,
-                        color: const Color(0xFFFFD700), // Gold
-                        size: 32,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            offset: const Offset(0, 2),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      if (widget.durationSeconds != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          'MATCH TIME ${widget.durationSeconds!.toStringAsFixed(1)}s',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white70,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-                      Row(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Opacity(
+                    opacity: _opacityAnim.value,
+                    child: Transform.scale(
+                      scale: _scaleAnim.value,
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          FilledButton.icon(
-                            onPressed: widget.onReplay,
-                            icon: const Icon(Icons.replay),
-                            label: const Text('RETRY'),
+                          // Winner ball scaled up, keeps physics-stripe look
+                          CircularBallPreview(ball: widget.winner, size: 220),
+                          const SizedBox(height: 24),
+                          // Country name in heavy white caps
+                          Text(
+                            widget.winner.name.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 2.0,
+                              height: 1.0,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(width: 12),
-                          OutlinedButton(
-                            onPressed: widget.onExit,
-                            child: const Text('EXIT'),
+                          const SizedBox(height: 16),
+                          // Small gold trophy/star glyph
+                          Icon(
+                            Icons.emoji_events,
+                            color: const Color(0xFFFFD700), // Gold
+                            size: 32,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                offset: const Offset(0, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
+                          if (widget.durationSeconds != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'MATCH TIME ${widget.durationSeconds!.toStringAsFixed(1)}s',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white70,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: widget.onReplay,
+                                icon: const Icon(Icons.replay),
+                                label: const Text('RETRY'),
+                              ),
+                              const SizedBox(width: 12),
+                              OutlinedButton(onPressed: widget.onExit, child: const Text('EXIT')),
+                            ],
+                          ),
+                          if (widget.onSaveVideo != null || widget.onShareLink != null) ...[
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                if (widget.onSaveVideo != null)
+                                  OutlinedButton.icon(
+                                    onPressed: widget.onSaveVideo,
+                                    icon: const Icon(Icons.movie),
+                                    label: const Text('SAVE VIDEO'),
+                                  ),
+                                if (widget.onShareLink != null)
+                                  OutlinedButton.icon(
+                                    onPressed: widget.onShareLink,
+                                    icon: const Icon(Icons.link),
+                                    label: const Text('SHARE LINK'),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
-                      if (widget.onSaveVideo != null || widget.onShareLink != null) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            if (widget.onSaveVideo != null)
-                              OutlinedButton.icon(
-                                onPressed: widget.onSaveVideo,
-                                icon: const Icon(Icons.movie),
-                                label: const Text('SAVE VIDEO'),
-                              ),
-                            if (widget.onShareLink != null)
-                              OutlinedButton.icon(
-                                onPressed: widget.onShareLink,
-                                icon: const Icon(Icons.link),
-                                label: const Text('SHARE LINK'),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ],

@@ -235,40 +235,52 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
               ),
             );
 
-            final content = isPortrait
-                ? Column(children: [Expanded(child: arena), scoreboard])
-                : Row(children: [
-                    Expanded(child: arena),
-                    SizedBox(width: 240, child: scoreboard),
-                  ]);
-
-            return Stack(
-              children: [
-                content,
-                // Lose-out dissolution animation
-                if (_showDissolve && !_dissolveComplete && _loserBall != null)
-                  _buildDissolveAnimation(),
-                // Winner modal after dissolve completes
-                if (_dissolveComplete && _winnerBall != null)
-                  Positioned.fill(
-                    child: WinnerModal(
-                      winner: _winnerBall!,
-                      durationSeconds: _controller.elapsedSeconds,
-                      onSaveVideo: _videoExport == null
-                          ? null
-                          : () => ExportVideoDialog.show(
-                                context,
-                                contestants: widget.config.contestants,
-                                seed: _controller.seed,
-                                arenaRadius: _arenaRadius,
-                                speedMultiplier: widget.config.speedMultiplier,
-                                backend: _videoExport,
-                              ),
-                      onShareLink: _copyReplayLink,
-                      onReplay: _replay,
-                      onExit: () => Navigator.of(context).maybePop(),
-                    ),
+            final overlays = <Widget>[
+              // Lose-out dissolution animation
+              if (_showDissolve && !_dissolveComplete && _loserBall != null) _buildDissolveAnimation(),
+              // Winner modal after dissolve completes
+              if (_dissolveComplete && _winnerBall != null)
+                Positioned.fill(
+                  child: WinnerModal(
+                    winner: _winnerBall!,
+                    durationSeconds: _controller.elapsedSeconds,
+                    onSaveVideo: _videoExport == null
+                        ? null
+                        : () => ExportVideoDialog.show(
+                              context,
+                              contestants: widget.config.contestants,
+                              seed: _controller.seed,
+                              arenaRadius: _arenaRadius,
+                              speedMultiplier: widget.config.speedMultiplier,
+                              backend: _videoExport,
+                            ),
+                    onShareLink: _copyReplayLink,
+                    onReplay: _replay,
+                    onExit: () => Navigator.of(context).maybePop(),
                   ),
+                ),
+            ];
+
+            if (isPortrait) {
+              return Stack(
+                children: [
+                  Column(children: [Expanded(child: arena), scoreboard]),
+                  ...overlays,
+                ],
+              );
+            }
+
+            // Wide screens (web, landscape): the game takes the left half and
+            // the winner card stays there, centered on the arena; the
+            // scoreboard sits in the right half.
+            return Row(
+              children: [
+                Expanded(child: Stack(children: [Positioned.fill(child: arena), ...overlays])),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 360), child: scoreboard),
+                  ),
+                ),
               ],
             );
           },

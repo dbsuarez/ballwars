@@ -6,6 +6,7 @@ import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
 import '../../ball_packs/domain/ball_pack.dart';
+import '../../custom_groups/data/custom_group_repository.dart';
 import '../domain/match_config.dart';
 
 /// Pick 2-4 balls from your own balls or the built-in packs (Streaming,
@@ -15,12 +16,16 @@ class MatchSetupScreen extends StatefulWidget {
 
   /// Built-in packs; null hides them (e.g. in tests or offline builds).
   final BallPackRepository? packRepository;
+
+  /// The user's own groups (My Groups); null hides them.
+  final CustomGroupRepository? customGroups;
   final void Function(MatchConfig) onStartBattle;
 
   const MatchSetupScreen({
     super.key,
     required this.repository,
     this.packRepository,
+    this.customGroups,
     required this.onStartBattle,
   });
 
@@ -40,6 +45,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   double _speedMultiplier = 1.0;
   String _category = _myBalls;
   List<BallPack> _packs = const [];
+  // The user's groups, shown as categories after "My Balls".
+  List<BallPack> _groups = const [];
   bool _packsLoading = false;
   bool _packsFailed = false;
 
@@ -56,6 +63,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   Future<void> _loadPacks() async {
+    _loadGroups();
     final repo = widget.packRepository;
     if (repo == null) return;
     setState(() {
@@ -72,9 +80,25 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     }
   }
 
+  /// Groups that fail to load (offline, not set up) just don't show.
+  Future<void> _loadGroups() async {
+    final repo = widget.customGroups;
+    if (repo == null) return;
+    try {
+      final groups = await repo.myGroups();
+      if (!mounted) return;
+      setState(() => _groups = [
+            for (final g in groups)
+              if (g.balls.isNotEmpty) BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls),
+          ]);
+    } catch (_) {}
+  }
+
   List<CustomBall> get _categoryBalls => _category == _myBalls
       ? widget.repository.getAll()
-      : _packs.firstWhere((p) => p.id == _category, orElse: () => const BallPack(id: '', name: '', balls: [])).balls;
+      : [..._groups, ..._packs]
+          .firstWhere((p) => p.id == _category, orElse: () => const BallPack(id: '', name: '', balls: []))
+          .balls;
 
   List<CustomBall> get _visibleBalls {
     final query = _search.text.trim().toLowerCase();
@@ -191,6 +215,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         scrollDirection: Axis.horizontal,
         children: [
           _categoryChip(_myBalls, 'My Balls'),
+          for (final group in _groups) _categoryChip(group.id, group.name),
           for (final pack in _packs) _categoryChip(pack.id, pack.name),
           if (_packsLoading)
             const Padding(

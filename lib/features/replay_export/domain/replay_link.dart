@@ -16,6 +16,7 @@ const String kWebAppUrl = 'https://dbsuarez.github.io/ballwars/';
 /// their physics settings are enough to reproduce it. Ball tokens:
 /// - `p.<id>`: a preset ball;
 /// - `k.<pack>/<ball>`: a built-in pack ball (logo/flag included);
+/// - `g.<uuid>`: a ball from a user group (picture included, from Supabase);
 /// - `c.<base64 json>`: a custom ball. Uploaded images can't fit in a link,
 ///   so these replay with their colors and initial.
 class ReplayLink {
@@ -30,6 +31,7 @@ class ReplayLink {
     final balls = contestants.map((b) {
       if (presetIds.contains(b.id)) return 'p.${b.id}';
       if (b.id.startsWith(_packPrefix)) return 'k.${b.id.substring(_packPrefix.length)}';
+      if (b.id.startsWith(_groupPrefix)) return 'g.${b.id.substring(_groupPrefix.length)}';
       return 'c.${_encodeCustom(b)}';
     });
     final app = Uri.parse(appUrl ?? defaultAppUrl);
@@ -39,7 +41,8 @@ class ReplayLink {
   }
 
   /// The replay in [uri], or null if it isn't a valid replay link.
-  /// [packBalls] maps pack ball ids (`pack:streaming/netflix`) to balls.
+  /// [packBalls] maps online ball ids (`pack:streaming/netflix`,
+  /// `group:<uuid>`) to balls; links using them resolve only if they're here.
   static ReplayLink? fromUri(
     Uri uri, {
     required List<CustomBall> presets,
@@ -76,10 +79,23 @@ class ReplayLink {
       })))
       .replaceAll('=', '');
 
+  /// The ball tokens of a replay link in [uri] (empty if it isn't one).
+  static List<String> ballTokens(Uri uri) =>
+      _params(uri)['seed'] == null ? const [] : (_params(uri)['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
+
+  static bool isPackToken(String token) => token.startsWith('k.');
+
+  static bool isGroupToken(String token) => token.startsWith('g.');
+
   /// Whether [uri] is a replay link that needs the built-in packs loaded.
-  static bool usesPacks(Uri uri) => (_params(uri)['balls'] ?? '').split(',').any((t) => t.startsWith('k.'));
+  static bool usesPacks(Uri uri) => ballTokens(uri).any(isPackToken);
+
+  /// Ids (`group:<uuid>`) of the user-group balls a link uses.
+  static List<String> groupBallIds(Uri uri) =>
+      [for (final t in ballTokens(uri)) if (isGroupToken(t)) '$_groupPrefix${t.substring(2)}'];
 
   static const String _packPrefix = 'pack:';
+  static const String _groupPrefix = 'group:';
 
   static Map<String, String> _params(Uri uri) =>
       uri.fragment.startsWith('/replay') ? Uri.parse(uri.fragment).queryParameters : uri.queryParameters;
@@ -95,6 +111,7 @@ class ReplayLink {
       return presets.where((b) => b.id == id).firstOrNull;
     }
     if (token.startsWith('k.')) return packBalls['$_packPrefix${token.substring(2)}'];
+    if (token.startsWith('g.')) return packBalls['$_groupPrefix${token.substring(2)}'];
     if (!token.startsWith('c.')) return null;
     try {
       final raw = token.substring(2);

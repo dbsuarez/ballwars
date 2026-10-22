@@ -35,7 +35,14 @@ class CircularBallPreview extends StatelessWidget {
   }
 
   Widget _face() {
-    if (ball.imageBytes != null) return Image.memory(ball.imageBytes!, fit: BoxFit.cover);
+    if (ball.imageBytes != null) {
+      if (!_isLogo) return Image.memory(ball.imageBytes!, fit: BoxFit.cover);
+      return Container(
+        color: Colors.white,
+        padding: EdgeInsets.all(size * 0.16),
+        child: Image.memory(ball.imageBytes!, fit: BoxFit.contain),
+      );
+    }
     if (ball.imageUrl == null) return _placeholder();
     return FutureBuilder<ui.Image?>(
       future: BallImageLoader.load(ball),

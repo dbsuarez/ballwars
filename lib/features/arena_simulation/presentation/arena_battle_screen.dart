@@ -18,6 +18,7 @@ import '../../replay_export/data/video_export_backend.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../../replay_export/presentation/export_video_dialog.dart';
 import '../../replay_export/presentation/replay_frame_painter.dart';
+import '../../settings/data/effects_prefs.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
   final MatchConfig config;
@@ -44,6 +45,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   late SimulationState _state;
   bool _isPaused = false;
 
+  // Particle effects: start as the match was set up; the winner card can
+  // turn them off for the rest of the series ("Game running slow?").
+  late bool _showEffects = widget.config.showEffects;
+  bool _askSlow = false;
+
   // Null where this platform can't export video yet (hides SAVE VIDEO).
   final VideoExportBackend? _videoExport = createVideoExportBackend();
 
@@ -67,6 +73,18 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     super.initState();
     _ticker = createTicker(_onTick)..start();
     _dissolveController = AnimationController(duration: _loserShowDuration, vsync: this);
+    EffectsPrefs.askWhenSlow().then((ask) {
+      if (mounted) setState(() => _askSlow = ask);
+    });
+  }
+
+  void _answerSlow(bool turnOff, bool dontAskAgain) {
+    setState(() {
+      _askSlow = false; // Asked once per series at most.
+      if (turnOff) _showEffects = false;
+    });
+    if (turnOff) EffectsPrefs.setEffectsOn(false);
+    if (dontAskAgain) EffectsPrefs.setAskWhenSlow(false);
   }
 
   // Series of rounds (MatchConfig.winsNeeded): round number and wins so far.
@@ -169,7 +187,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     Uri link = ReplayLink(
       seed: _controller.seed,
       speedMultiplier: widget.config.speedMultiplier,
-      showEffects: widget.config.showEffects,
+      showEffects: _showEffects,
       contestants: widget.config.contestants,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
@@ -307,7 +325,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                       state: _state,
                       arenaRadius: _arenaRadius,
                       rimAngle: _rimAngle,
-                      showEffects: widget.config.showEffects,
+                      showEffects: _showEffects,
                     ),
                   ),
                   if (_state.status == MatchStatus.slowMotion)
@@ -332,7 +350,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                             seed: _controller.seed,
                             arenaRadius: _arenaRadius,
                             speedMultiplier: widget.config.speedMultiplier,
-                            showEffects: widget.config.showEffects,
+                            showEffects: _showEffects,
                             headline: headline,
                             colors: c,
                             backend: _videoExport,
@@ -346,6 +364,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                         ? [for (final b in widget.config.contestants) (b.name, _roundWins[b.id] ?? 0)]
                         : null,
                     onExit: () => Navigator.of(context).maybePop(),
+                    showEffects: _showEffects,
+                    onSlowAnswer: _showEffects && _askSlow ? _answerSlow : null,
                   ),
                 ),
             ];

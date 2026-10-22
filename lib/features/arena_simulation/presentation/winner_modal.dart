@@ -28,6 +28,14 @@ class WinnerModal extends StatefulWidget {
   final bool seriesOver;
   final VoidCallback? onNextRound;
 
+  /// Confetti; off when the player turned particle effects off.
+  final bool showEffects;
+
+  /// When set, asks under the buttons whether the game runs slow and effects
+  /// should go off. Called with (turn effects off, don't ask again); the
+  /// question then disappears.
+  final void Function(bool turnOff, bool dontAskAgain)? onSlowAnswer;
+
   const WinnerModal({
     super.key,
     required this.winner,
@@ -40,6 +48,8 @@ class WinnerModal extends StatefulWidget {
     this.score,
     this.seriesOver = true,
     this.onNextRound,
+    this.showEffects = true,
+    this.onSlowAnswer,
   });
 
   @override
@@ -52,6 +62,9 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
   late final Animation<double> _opacityAnim;
   // Drives the confetti clock (seconds = value * 600); long enough to never end.
   late final AnimationController _confetti;
+
+  bool _dontAskAgain = false;
+  bool _slowAnswered = false;
 
   @override
   void initState() {
@@ -71,6 +84,55 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
     _confetti.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _answerSlow(bool turnOff) {
+    setState(() => _slowAnswered = true);
+    widget.onSlowAnswer!(turnOff, _dontAskAgain);
+  }
+
+  /// "Running slow? Turn off effects" with Yes / No and "Don't ask again".
+  Widget _slowPrompt(BallWarsColors c) {
+    return Container(
+      margin: const EdgeInsets.only(top: 18),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 6),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: c.surfaceHigh),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Game running slow?', style: AppText.ui(14, FontWeight.w700, color: c.text)),
+          const SizedBox(height: 2),
+          Text(
+            'Turning off particle effects (sparks and confetti) can make it smoother.',
+            style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.4),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => setState(() => _dontAskAgain = !_dontAskAgain),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _dontAskAgain,
+                        visualDensity: VisualDensity.compact,
+                        onChanged: (v) => setState(() => _dontAskAgain = v ?? false),
+                      ),
+                      Flexible(
+                        child: Text("Don't ask again", style: AppText.ui(12, FontWeight.w600, color: c.muted)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              TextButton(onPressed: () => _answerSlow(false), child: const Text('No')),
+              TextButton(onPressed: () => _answerSlow(true), child: const Text('Turn off')),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   String get _result {
@@ -103,14 +165,15 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
               child: CustomPaint(painter: _WatermarkPainter(text: settings.watermarkText, color: c.text)),
             ),
           ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: AnimatedBuilder(
-              animation: _confetti,
-              builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value * 600)),
+        if (widget.showEffects)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _confetti,
+                builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value * 600)),
+              ),
             ),
           ),
-        ),
         // Shrinks to fit small areas (e.g. the left half of a wide screen).
         Center(
           child: Padding(
@@ -222,6 +285,7 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                           ],
                         ),
                       ),
+                      if (widget.onSlowAnswer != null && !_slowAnswered) _slowPrompt(c),
                     ],
                   ),
                 ),

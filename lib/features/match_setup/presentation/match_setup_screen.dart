@@ -7,6 +7,7 @@ import '../../ball_packs/data/ball_pack_repository.dart';
 import '../../ball_packs/domain/ball_pack.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/domain/custom_group.dart';
+import '../../settings/data/effects_prefs.dart';
 import '../domain/match_config.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
@@ -50,6 +51,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   void initState() {
     super.initState();
     _load();
+    // Effects start the way this device last left them.
+    EffectsPrefs.effectsOn().then((on) {
+      if (mounted) setState(() => _showEffects = on);
+    });
   }
 
   @override
@@ -395,7 +400,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     values: const [true, false],
                     value: _showEffects,
                     label: (v) => v ? 'On' : 'Off',
-                    onChanged: (v) => setState(() => _showEffects = v),
+                    onChanged: (v) {
+                      setState(() => _showEffects = v);
+                      EffectsPrefs.setEffectsOn(v);
+                    },
                   ),
                 ),
               ),

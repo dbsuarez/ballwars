@@ -30,7 +30,8 @@ class ReplayVideoExporter {
   static const int width = 720;
   static const int height = 1280;
   static const int fps = 30;
-  static const double finalHoldSeconds = 0.6;
+  // Same beat the app pauses for after the last line is cut.
+  static const double finalHoldSeconds = 1.2;
   static const double winnerCardSeconds = 2.5;
   // Guard against a match that never ends (none do in practice).
   static const int maxMatchFrames = fps * 60 * 10;
@@ -47,6 +48,7 @@ class ReplayVideoExporter {
     required int seed,
     required double arenaRadius,
     double speedMultiplier = 1.0,
+    bool showEffects = true,
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
   }) async {
@@ -89,23 +91,40 @@ class ReplayVideoExporter {
     try {
       for (var frame = 0; frame <= matchFrames; frame++) {
         final state = match.state;
-        await emit((canvas, size) =>
-            ReplayFramePainter.paintMatch(canvas, size, state, arenaRadius, videoTime: videoTime()));
+        await emit(
+          (canvas, size) => ReplayFramePainter.paintMatch(
+            canvas,
+            size,
+            state,
+            arenaRadius,
+            videoTime: videoTime(),
+            showEffects: showEffects,
+          ),
+        );
         if (frame < matchFrames) match.tick(frameDelta);
       }
 
       final finalState = match.state;
       for (var i = 0; i < holdFrames; i++) {
-        await emit((canvas, size) =>
-            ReplayFramePainter.paintMatch(canvas, size, finalState, arenaRadius, videoTime: videoTime()));
+        await emit(
+          (canvas, size) => ReplayFramePainter.paintMatch(
+            canvas,
+            size,
+            finalState,
+            arenaRadius,
+            videoTime: videoTime(),
+            showEffects: showEffects,
+          ),
+        );
       }
 
       final winner = finalState.balls.where((b) => b.config.id == finalState.winnerId).firstOrNull;
       for (var i = 0; i < cardFrames && winner != null; i++) {
-        await emit((canvas, size) =>
-            // Same number the in-app timer and winner card show.
-            ReplayFramePainter.paintWinnerCard(canvas, size, winner, match.elapsedSeconds,
-                videoTime: videoTime()));
+        await emit(
+          (canvas, size) =>
+              // Same number the in-app timer and winner card show.
+              ReplayFramePainter.paintWinnerCard(canvas, size, winner, match.elapsedSeconds, videoTime: videoTime()),
+        );
       }
 
       return await encoder.finish();

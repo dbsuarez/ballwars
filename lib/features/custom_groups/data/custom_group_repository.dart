@@ -27,6 +27,16 @@ abstract class CustomGroupRepository {
     required Color color,
   });
 
+  /// Changes a ball's name, style and color, and its picture when [png] is
+  /// given (the old picture is then deleted).
+  Future<CustomBall> updateBall(
+    CustomBall ball, {
+    required String name,
+    required BallImageStyle style,
+    required Color color,
+    Uint8List? png,
+  });
+
   Future<void> deleteBall(CustomBall ball);
 
   /// Group balls by id, for opening shared replay links. Missing or private
@@ -89,18 +99,14 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     required BallImageStyle style,
     required Color color,
   }) async {
-    final uid = await _userId();
-    final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
-    await _images.uploadBinary(path, png, fileOptions: const FileOptions(contentType: 'image/png'));
+    final path = await _upload(png);
     try {
       final row = await _client
           .from('group_balls')
           .insert({
             'group_id': groupId,
-            'name': name.trim(),
+            ..._fields(name, style, color),
             'image_path': path,
-            'image_style': style == BallImageStyle.logo ? 'logo' : 'cover',
-            'color': '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
             'position': DateTime.now().millisecondsSinceEpoch ~/ 1000,
           })
           .select(_ballColumns)
@@ -110,6 +116,46 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
       await _images.remove([path]);
       rethrow;
     }
+  }
+
+  @override
+  Future<CustomBall> updateBall(
+    CustomBall ball, {
+    required String name,
+    required BallImageStyle style,
+    required Color color,
+    Uint8List? png,
+  }) async {
+    final oldPath = _pathOf(ball);
+    final newPath = png == null ? null : await _upload(png);
+    try {
+      final row = await _client
+          .from('group_balls')
+          .update({..._fields(name, style, color), 'image_path': ?newPath})
+          .eq('id', CustomGroup.uuidOf(ball))
+          .select(_ballColumns)
+          .single();
+      if (newPath != null && oldPath != null) await _images.remove([oldPath]);
+      return _ball(row);
+    } catch (_) {
+      if (newPath != null) await _images.remove([newPath]);
+      rethrow;
+    }
+  }
+
+  Map<String, Object> _fields(String name, BallImageStyle style, Color color) => {
+        'name': name.trim(),
+        'image_style': style == BallImageStyle.logo ? 'logo' : 'cover',
+        'color': '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
+      };
+
+  /// Uploads a prepared PNG into this user's folder and returns its path.
+  Future<String> _upload(Uint8List png) async {
+    final uid = await _userId();
+    // 0x7FFFFFFF, not 1 << 32: on web 1 << 32 is 0 and nextInt(0) throws.
+    final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
+    await _images.uploadBinary(path, png, fileOptions: const FileOptions(contentType: 'image/png'));
+    return path;
   }
 
   @override

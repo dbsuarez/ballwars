@@ -26,8 +26,7 @@ class ArenaBattleScreen extends StatefulWidget {
   State<ArenaBattleScreen> createState() => _ArenaBattleScreenState();
 }
 
-class _ArenaBattleScreenState extends State<ArenaBattleScreen>
-    with TickerProviderStateMixin {
+class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProviderStateMixin {
   static const double _arenaRadius = 260.0;
 
   late MatchSimulationController _controller;
@@ -52,23 +51,22 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   CustomBall? _winnerBall;
   bool _dissolveComplete = false;
 
+  // A beat after the last line is cut before the loser dissolves and the
+  // winner banner shows. [_matchGeneration] cancels it if RETRY is pressed.
+  static const Duration _endPause = Duration(milliseconds: 1200);
+  bool _endPending = false;
+  int _matchGeneration = 0;
+
   @override
   void initState() {
     super.initState();
     _initMatch();
     _ticker = createTicker(_onTick)..start();
-    _dissolveController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
+    _dissolveController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this);
   }
 
   void _initMatch() {
-    _controller = MatchSimulationController(
-      widget.config.contestants,
-      arenaRadius: _arenaRadius,
-      seed: widget.seed,
-    );
+    _controller = MatchSimulationController(widget.config.contestants, arenaRadius: _arenaRadius, seed: widget.seed);
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
@@ -77,6 +75,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _loserBall = null;
     _winnerBall = null;
     _dissolveComplete = false;
+    _endPending = false;
+    _matchGeneration++;
     _controller.preloadImages().then((_) {
       if (mounted) setState(() {});
     });
@@ -97,13 +97,20 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
     // Check for win condition and start dissolve animation
     final isFinished = _state.winnerId != null;
-    if (isFinished && !_showDissolve && !_dissolveComplete) {
-      _winnerBall = _state.balls.firstWhere((b) => b.config.id == _state.winnerId).config;
-      _loserBall = _state.balls.firstWhere((b) => b.config.id != _state.winnerId).config;
-      _showDissolve = true;
-      _dissolveController.forward().then((_) {
+    if (isFinished && !_endPending && !_showDissolve && !_dissolveComplete) {
+      _endPending = true;
+      final generation = _matchGeneration;
+      bool current() => mounted && generation == _matchGeneration;
+      Future.delayed(_endPause, () {
+        if (!current()) return;
         setState(() {
-          _dissolveComplete = true;
+          _winnerBall = _state.balls.firstWhere((b) => b.config.id == _state.winnerId).config;
+          _loserBall = _state.balls.firstWhere((b) => b.config.id != _state.winnerId).config;
+          _showDissolve = true;
+        });
+        // from: 0, so the dissolve plays again after a RETRY.
+        _dissolveController.forward(from: 0).then((_) {
+          if (current()) setState(() => _dissolveComplete = true);
         });
       });
     }
@@ -118,13 +125,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final link = ReplayLink(
       seed: _controller.seed,
       speedMultiplier: widget.config.speedMultiplier,
+      showEffects: widget.config.showEffects,
       contestants: widget.config.contestants,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     await Clipboard.setData(ClipboardData(text: link.toString()));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Replay link copied. Anyone who opens it watches this match.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Replay link copied. Anyone who opens it watches this match.')));
   }
 
   void _togglePause() {
@@ -158,12 +166,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             opacity: opacity,
             child: Transform.scale(
               scale: scale,
-              child: Center(
-                child: CircularBallPreview(
-                  ball: _loserBall!,
-                  size: 220,
-                ),
-              ),
+              child: Center(child: CircularBallPreview(ball: _loserBall!, size: 220)),
             ),
           ),
         );
@@ -188,18 +191,19 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             tooltip: _isPaused ? 'Play' : 'Pause',
             onPressed: _togglePause,
           ),
-          IconButton(
-            icon: const Icon(Icons.restart_alt),
-            tooltip: 'Restart',
-            onPressed: _replay,
-          ),
+          IconButton(icon: const Icon(Icons.restart_alt), tooltip: 'Restart', onPressed: _replay),
         ],
       ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isPortrait = constraints.maxHeight >= constraints.maxWidth;
-            final arena = ArenaCanvas(state: _state, arenaRadius: _arenaRadius, rimAngle: _rimAngle);
+            final arena = ArenaCanvas(
+              state: _state,
+              arenaRadius: _arenaRadius,
+              rimAngle: _rimAngle,
+              showEffects: widget.config.showEffects,
+            );
             final scoreboard = Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -247,13 +251,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     onSaveVideo: _videoExport == null
                         ? null
                         : () => ExportVideoDialog.show(
-                              context,
-                              contestants: widget.config.contestants,
-                              seed: _controller.seed,
-                              arenaRadius: _arenaRadius,
-                              speedMultiplier: widget.config.speedMultiplier,
-                              backend: _videoExport,
-                            ),
+                            context,
+                            contestants: widget.config.contestants,
+                            seed: _controller.seed,
+                            arenaRadius: _arenaRadius,
+                            speedMultiplier: widget.config.speedMultiplier,
+                            showEffects: widget.config.showEffects,
+                            backend: _videoExport,
+                          ),
                     onShareLink: _copyReplayLink,
                     onReplay: _replay,
                     onExit: () => Navigator.of(context).maybePop(),
@@ -264,7 +269,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             if (isPortrait) {
               return Stack(
                 children: [
-                  Column(children: [Expanded(child: arena), scoreboard]),
+                  Column(
+                    children: [
+                      Expanded(child: arena),
+                      scoreboard,
+                    ],
+                  ),
                   ...overlays,
                 ],
               );
@@ -275,7 +285,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             // scoreboard sits in the right half.
             return Row(
               children: [
-                Expanded(child: Stack(children: [Positioned.fill(child: arena), ...overlays])),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: arena),
+                      ...overlays,
+                    ],
+                  ),
+                ),
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 360), child: scoreboard),

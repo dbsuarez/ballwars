@@ -225,7 +225,12 @@ class MatchSimulationController {
   }
 
   void tick(double realDeltaSeconds) {
-    if (_status == MatchStatus.finished) return;
+    if (_status == MatchStatus.finished) {
+      // The match is over, but the last sparks and texts finish animating.
+      _particles.update(realDeltaSeconds);
+      _floatingTexts.update(realDeltaSeconds);
+      return;
+    }
 
     _elapsedSeconds += realDeltaSeconds;
     final timeScale = _status == MatchStatus.slowMotion ? slowMotionTimeScale : 1.0;

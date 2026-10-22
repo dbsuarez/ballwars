@@ -43,6 +43,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   final TextEditingController _search = TextEditingController();
   final math.Random _random = math.Random();
   double _speedMultiplier = 1.0;
+  bool _showEffects = true;
   String _category = _myBalls;
   List<BallPack> _packs = const [];
   // The user's groups, shown as categories after "My Balls".
@@ -131,6 +132,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     widget.onStartBattle(MatchConfig(
       contestants: _selected.values.toList(),
       speedMultiplier: _speedMultiplier,
+      showEffects: _showEffects,
     ));
   }
 
@@ -187,6 +189,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     ),
                   ),
                 ],
+              ),
+              SwitchListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Sparks & particles'),
+                value: _showEffects,
+                onChanged: (v) => setState(() => _showEffects = v),
               ),
               Wrap(
                 alignment: WrapAlignment.center,

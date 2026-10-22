@@ -105,6 +105,11 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     if (added != null) await _reload();
   }
 
+  Future<void> _editBall(CustomGroup group, CustomBall ball) async {
+    final updated = await AddBallDialog.show(context, groupId: group.id, repository: widget.repository, existing: ball);
+    if (updated != null) await _reload();
+  }
+
   Future<void> _deleteBall(CustomBall ball) async {
     if (!await _confirm('Delete "${ball.name}"?')) return;
     await _run(() => widget.repository.deleteBall(ball));
@@ -185,6 +190,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                   SizedBox(
                     width: 72,
                     child: GestureDetector(
+                      onTap: _busy ? null : () => _editBall(group, ball),
                       onLongPress: _busy ? null : () => _deleteBall(ball),
                       child: Column(children: [
                         CircularBallPreview(ball: ball, size: 56),
@@ -210,7 +216,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
             if (group.balls.isNotEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('Long-press a ball to delete it.', style: TextStyle(fontSize: 11, color: Colors.white54)),
+                child: Text('Tap a ball to edit it, long-press to delete it.', style: TextStyle(fontSize: 11, color: Colors.white54)),
               ),
           ],
         ),

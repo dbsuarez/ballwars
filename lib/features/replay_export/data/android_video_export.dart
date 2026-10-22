@@ -20,8 +20,7 @@ class AndroidVideoExport implements VideoExportBackend {
   Future<void> cancel() => _channel.invokeMethod('cancel');
 
   @override
-  Future<String> save(String video) async =>
-      (await _channel.invokeMethod<String>('saveToGallery', {'path': video}))!;
+  Future<String> save(String video) async => (await _channel.invokeMethod<String>('saveToGallery', {'path': video}))!;
 
   @override
   String get savedMessage => 'Saved to Movies/BallWars.';

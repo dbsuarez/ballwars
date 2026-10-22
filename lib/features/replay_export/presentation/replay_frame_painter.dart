@@ -30,6 +30,7 @@ class ReplayFramePainter {
     SimulationState state,
     double arenaRadius, {
     required double videoTime,
+    bool showEffects = true,
   }) {
     _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: false);
@@ -37,8 +38,12 @@ class ReplayFramePainter {
 
       canvas.save();
       canvas.translate((designSize.width - _arenaSide) / 2, _arenaTop);
-      ArenaPainter(state: state, arenaRadius: arenaRadius, rimAngle: 0)
-          .paint(canvas, const Size(_arenaSide, _arenaSide));
+      ArenaPainter(
+        state: state,
+        arenaRadius: arenaRadius,
+        rimAngle: 0,
+        showEffects: showEffects,
+      ).paint(canvas, const Size(_arenaSide, _arenaSide));
       canvas.restore();
     });
   }
@@ -65,12 +70,34 @@ class ReplayFramePainter {
       );
       _paintBallFace(canvas, winner, center, radius);
 
-      _paintText(canvas, winner.config.name.toUpperCase(), 64, FontWeight.w900, Colors.white,
-          y: 760, letterSpacing: 2, maxWidth: 680);
-      _paintText(canvas, String.fromCharCode(Icons.emoji_events.codePoint), 72, FontWeight.normal, _gold,
-          y: 850, fontFamily: Icons.emoji_events.fontFamily);
-      _paintText(canvas, 'MATCH TIME ${matchSeconds.toStringAsFixed(1)}s', 28, FontWeight.w600, Colors.white70,
-          y: 950, letterSpacing: 1.5);
+      _paintText(
+        canvas,
+        winner.config.name.toUpperCase(),
+        64,
+        FontWeight.w900,
+        Colors.white,
+        y: 760,
+        letterSpacing: 2,
+        maxWidth: 680,
+      );
+      _paintText(
+        canvas,
+        String.fromCharCode(Icons.emoji_events.codePoint),
+        72,
+        FontWeight.normal,
+        _gold,
+        y: 850,
+        fontFamily: Icons.emoji_events.fontFamily,
+      );
+      _paintText(
+        canvas,
+        'MATCH TIME ${matchSeconds.toStringAsFixed(1)}s',
+        28,
+        FontWeight.w600,
+        Colors.white70,
+        y: 950,
+        letterSpacing: 1.5,
+      );
     });
   }
 
@@ -107,8 +134,15 @@ class ReplayFramePainter {
 
   static void _paintHeader(Canvas canvas, {required bool dimmed}) {
     _paintText(canvas, 'WHO WINS?', 64, FontWeight.w900, Colors.white, y: 130, letterSpacing: 1);
-    _paintText(canvas, 'ROUND 1', 30, FontWeight.bold, Colors.redAccent.withValues(alpha: dimmed ? 0.4 : 1),
-        y: 210, letterSpacing: 1);
+    _paintText(
+      canvas,
+      'ROUND 1',
+      30,
+      FontWeight.bold,
+      Colors.redAccent.withValues(alpha: dimmed ? 0.4 : 1),
+      y: 210,
+      letterSpacing: 1,
+    );
   }
 
   static void _paintSlowMotionBadge(Canvas canvas) {
@@ -174,8 +208,15 @@ class ReplayFramePainter {
     String? fontFamily,
     double maxWidth = double.infinity,
   }) {
-    final painter = _layout(text, fontSize, weight, color,
-        letterSpacing: letterSpacing, fontFamily: fontFamily, maxWidth: maxWidth);
+    final painter = _layout(
+      text,
+      fontSize,
+      weight,
+      color,
+      letterSpacing: letterSpacing,
+      fontFamily: fontFamily,
+      maxWidth: maxWidth,
+    );
     painter.paint(canvas, Offset(math.max(0, (designSize.width - painter.width) / 2), y));
   }
 }

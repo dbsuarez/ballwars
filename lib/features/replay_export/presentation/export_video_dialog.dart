@@ -10,6 +10,7 @@ class ExportVideoDialog extends StatefulWidget {
   final int seed;
   final double arenaRadius;
   final double speedMultiplier;
+  final bool showEffects;
   final VideoEncoder encoder;
   final VideoSaver saver;
 
@@ -19,6 +20,7 @@ class ExportVideoDialog extends StatefulWidget {
     required this.seed,
     required this.arenaRadius,
     required this.speedMultiplier,
+    this.showEffects = true,
     required this.encoder,
     required this.saver,
   });
@@ -29,6 +31,7 @@ class ExportVideoDialog extends StatefulWidget {
     required int seed,
     required double arenaRadius,
     required double speedMultiplier,
+    bool showEffects = true,
     required VideoExportBackend backend,
   }) {
     return showDialog<void>(
@@ -39,6 +42,7 @@ class ExportVideoDialog extends StatefulWidget {
         seed: seed,
         arenaRadius: arenaRadius,
         speedMultiplier: speedMultiplier,
+        showEffects: showEffects,
         encoder: backend,
         saver: backend,
       ),
@@ -71,6 +75,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         seed: widget.seed,
         arenaRadius: widget.arenaRadius,
         speedMultiplier: widget.speedMultiplier,
+        showEffects: widget.showEffects,
         isCancelled: () => _cancelled,
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
@@ -137,9 +142,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         return AlertDialog(
           title: const Text('COULD NOT SAVE VIDEO'),
           content: Text(_error ?? 'Unknown error'),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CLOSE')),
-          ],
+          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CLOSE'))],
         );
     }
   }

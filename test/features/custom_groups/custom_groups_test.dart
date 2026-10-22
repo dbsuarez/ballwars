@@ -6,6 +6,7 @@ import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/custom_groups/data/custom_group_repository.dart';
 import 'package:ballwars/features/custom_groups/data/image_prep.dart';
 import 'package:ballwars/features/custom_groups/domain/custom_group.dart';
+import 'package:ballwars/features/custom_groups/presentation/my_groups_screen.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/match_setup/presentation/match_setup_screen.dart';
 import 'package:ballwars/features/replay_export/domain/replay_link.dart';
@@ -21,7 +22,15 @@ CustomBall _groupBall(String uuid, String name) => CustomBall(
 
 class _FakeGroups implements CustomGroupRepository {
   final List<CustomGroup> groups;
+  final List<Map<String, Object?>> updates = [];
   _FakeGroups(this.groups);
+
+  @override
+  Future<CustomBall> updateBall(CustomBall ball,
+      {required String name, required BallImageStyle style, required Color color, Uint8List? png}) async {
+    updates.add({'id': ball.id, 'name': name, 'style': style, 'color': color, 'png': png});
+    return ball.copyWith(name: name, imageStyle: style, primaryColor: color);
+  }
 
   @override
   Future<List<CustomGroup>> myGroups() async => groups;
@@ -90,5 +99,35 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('START BATTLE'));
     expect(started!.contestants.map((b) => b.name).toSet(), {'Goku', 'Luffy'});
+  });
+
+  testWidgets('tapping a ball in My Groups opens it for editing; saving without a new picture keeps it', (tester) async {
+    final repo = _FakeGroups([
+      CustomGroup(id: 'g1', name: 'Anime', isPublic: true, balls: [_groupBall('a', 'Goku')]),
+    ]);
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Goku'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit ball'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Goku'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Son Goku');
+    await tester.tap(find.text('Fill'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SAVE'));
+    await tester.pumpAndSettle();
+
+    expect(repo.updates, hasLength(1));
+    expect(repo.updates.single['id'], 'group:a');
+    expect(repo.updates.single['name'], 'Son Goku');
+    expect(repo.updates.single['style'], BallImageStyle.cover);
+    expect(repo.updates.single['color'], const Color(0xFF8E44AD)); // kept
+    expect(repo.updates.single['png'], isNull); // picture unchanged
+    expect(find.text('Edit ball'), findsNothing);
   });
 }

@@ -12,12 +12,17 @@ class ArenaPainter extends CustomPainter {
   final double arenaRadius;
   final double rimAngle;
 
+  /// Sparks and particles. Off only hides them: they are still simulated,
+  /// so the match plays out the same either way.
+  final bool showEffects;
+
   static const double _ballGlowPadding = 4.0;
 
   ArenaPainter({
     required this.state,
     required this.arenaRadius,
     required this.rimAngle,
+    this.showEffects = true,
   });
 
   @override
@@ -33,7 +38,7 @@ class ArenaPainter extends CustomPainter {
     _paintRim(canvas);
     _paintFanLines(canvas);
     _paintBeamAttack(canvas);
-    _paintParticles(canvas);
+    if (showEffects) _paintParticles(canvas);
     // Depth order: sort balls by distance from center (farthest drawn first = behind)
     final sortedBalls = List<SimulationBall>.from(state.balls)
       ..sort((a, b) => b.position.distance.compareTo(a.position.distance));

@@ -7,21 +7,28 @@ import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../data/custom_group_repository.dart';
 import '../data/image_prep.dart';
 
-/// Adds a ball to a user group: name, picture, how the picture sits on the
-/// ball (logo on white, or filling it) and its line color (suggested from
-/// the picture). The picture is shrunk to a small PNG and uploaded.
+/// Adds a ball to a user group, or edits one ([existing]): name, picture,
+/// how the picture sits on the ball (logo on white, or filling it) and its
+/// line color (suggested from the picture). New pictures are shrunk to a
+/// small PNG and uploaded; when editing, the picture is optional.
 class AddBallDialog extends StatefulWidget {
   final String groupId;
   final CustomGroupRepository repository;
+  final CustomBall? existing;
 
-  const AddBallDialog({super.key, required this.groupId, required this.repository});
+  const AddBallDialog({super.key, required this.groupId, required this.repository, this.existing});
 
-  /// The added ball, or null if cancelled.
-  static Future<CustomBall?> show(BuildContext context, {required String groupId, required CustomGroupRepository repository}) =>
+  /// The added or updated ball, or null if cancelled.
+  static Future<CustomBall?> show(
+    BuildContext context, {
+    required String groupId,
+    required CustomGroupRepository repository,
+    CustomBall? existing,
+  }) =>
       showDialog<CustomBall>(
         context: context,
         barrierDismissible: false,
-        builder: (_) => AddBallDialog(groupId: groupId, repository: repository),
+        builder: (_) => AddBallDialog(groupId: groupId, repository: repository, existing: existing),
       );
 
   @override
@@ -36,6 +43,19 @@ class _AddBallDialogState extends State<AddBallDialog> {
   Color? _color;
   bool _working = false;
   String? _error;
+
+  bool get _editing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    if (existing != null) {
+      _name.text = existing.name;
+      _style = existing.imageStyle;
+      _color = existing.primaryColor;
+    }
+  }
 
   @override
   void dispose() {
@@ -77,25 +97,34 @@ class _AddBallDialogState extends State<AddBallDialog> {
   Future<void> _save() async {
     final prepared = _prepared;
     final name = _name.text.trim();
-    if (prepared == null || name.isEmpty) return;
+    if ((prepared == null && !_editing) || name.isEmpty) return;
     setState(() {
       _working = true;
       _error = null;
     });
     try {
-      final ball = await widget.repository.addBall(
-        groupId: widget.groupId,
-        name: name,
-        png: prepared.png,
-        style: _style,
-        color: _lineColor,
-      );
+      final existing = widget.existing;
+      final ball = existing == null
+          ? await widget.repository.addBall(
+              groupId: widget.groupId,
+              name: name,
+              png: prepared!.png,
+              style: _style,
+              color: _lineColor,
+            )
+          : await widget.repository.updateBall(
+              existing,
+              name: name,
+              style: _style,
+              color: _lineColor,
+              png: prepared?.png,
+            );
       if (mounted) Navigator.of(context).pop(ball);
     } catch (e) {
       if (mounted) {
         setState(() {
           _working = false;
-          _error = 'Upload failed: $e';
+          _error = '${_editing ? 'Saving' : 'Upload'} failed: $e';
         });
       }
     }
@@ -107,14 +136,16 @@ class _AddBallDialogState extends State<AddBallDialog> {
       id: 'preview',
       name: _name.text.isEmpty ? '?' : _name.text,
       imageBytes: _prepared?.png,
+      // Until a new picture is picked, an edited ball shows its current one.
+      imageUrl: _prepared == null ? widget.existing?.imageUrl : null,
       imageStyle: _style,
       primaryColor: _lineColor,
       glowColor: Color.lerp(_lineColor, Colors.white, 0.35)!,
     );
-    final canSave = !_working && _prepared != null && _name.text.trim().isNotEmpty;
+    final canSave = !_working && (_prepared != null || _editing) && _name.text.trim().isNotEmpty;
 
     return AlertDialog(
-      title: const Text('Add ball'),
+      title: Text(_editing ? 'Edit ball' : 'Add ball'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -124,7 +155,7 @@ class _AddBallDialogState extends State<AddBallDialog> {
             TextButton.icon(
               onPressed: _working ? null : _pick,
               icon: const Icon(Icons.image),
-              label: Text(_picked == null ? 'Pick picture' : 'Change picture'),
+              label: Text(_picked == null && !_editing ? 'Pick picture' : 'Change picture'),
             ),
             TextField(
               controller: _name,
@@ -151,7 +182,7 @@ class _AddBallDialogState extends State<AddBallDialog> {
               runSpacing: 8,
               alignment: WrapAlignment.center,
               children: [
-                for (final c in [?_prepared?.suggestedColor, ...kNeonColorPresets])
+                for (final c in {?_prepared?.suggestedColor, ?widget.existing?.primaryColor, ...kNeonColorPresets})
                   GestureDetector(
                     onTap: () => setState(() => _color = c),
                     child: Container(
@@ -180,7 +211,7 @@ class _AddBallDialogState extends State<AddBallDialog> {
       ),
       actions: [
         TextButton(onPressed: _working ? null : () => Navigator.of(context).pop(), child: const Text('CANCEL')),
-        FilledButton(onPressed: canSave ? _save : null, child: const Text('ADD')),
+        FilledButton(onPressed: canSave ? _save : null, child: Text(_editing ? 'SAVE' : 'ADD')),
       ],
     );
   }

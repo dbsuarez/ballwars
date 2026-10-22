@@ -98,4 +98,17 @@ void main() {
     final parsed = ReplayLink.fromUri(uri, presets: _presets, packBalls: {netflix.id: netflix})!;
     expect(parsed.contestants.first, same(netflix));
   });
+
+  test('links remember when sparks and particles were turned off', () {
+    final off = ReplayLink(seed: 1, speedMultiplier: 1, showEffects: false, contestants: [_presets[0], _presets[1]])
+        .toUri(presetIds: _presetIds, appUrl: kWebAppUrl);
+    final on = ReplayLink(seed: 1, speedMultiplier: 1, contestants: [_presets[0], _presets[1]])
+        .toUri(presetIds: _presetIds, appUrl: kWebAppUrl);
+
+    expect(off.toString(), contains('fx=0'));
+    expect(on.toString(), isNot(contains('fx=')));
+    expect(ReplayLink.fromUri(off, presets: _presets)!.showEffects, isFalse);
+    expect(ReplayLink.fromUri(on, presets: _presets)!.showEffects, isTrue);
+  });
 }
+

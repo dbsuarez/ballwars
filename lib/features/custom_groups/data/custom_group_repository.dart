@@ -90,7 +90,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     required Color color,
   }) async {
     final uid = await _userId();
-    final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(1 << 32).toRadixString(16)}.png';
+    final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
     await _images.uploadBinary(path, png, fileOptions: const FileOptions(contentType: 'image/png'));
     try {
       final row = await _client

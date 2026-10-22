@@ -122,6 +122,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       arenaRadius: _arenaRadius,
       seed: seed,
       arenaBackground: BallWarsColors.of(context).background,
+      slowMotionLines: AppSettingsScope.of(context).slowMotionLines,
+      slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
     );
     _roundCounted = false;
     _state = _controller.state;
@@ -381,6 +383,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                               arenaRadius: _arenaRadius,
                               speedMultiplier: widget.config.speedMultiplier,
                               showEffects: _showEffects,
+                              slowMotionLines: AppSettingsScope.of(context).slowMotionLines,
+                              slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
                               headline: headline,
                               colors: c,
                               backend: _videoExport,

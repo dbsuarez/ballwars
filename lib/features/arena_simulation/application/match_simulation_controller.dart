@@ -54,7 +54,7 @@ class MatchSimulationController {
   // total kinetic energy is still conserved.
   static const double collisionSpeedTransfer = 0.25;
   // Slow motion kicks in when one of the last two balls has this many lines
-  // or fewer.
+  // or fewer (the default; the admin can change it, see [slowMotionLines]).
   static const int slowMotionLineThreshold = 10;
   static const double slowMotionTimeScale = 0.25;
 
@@ -89,6 +89,32 @@ class MatchSimulationController {
 
   /// [layoutRotation] fixes where ball 0 starts (radians); by default the
   /// whole starting layout is rotated by a seeded random angle.
+  /// Slow motion starts when one of the last two balls is down to this many
+  /// lines (0: never) and stays there until the end: thanks to the
+  /// look-ahead, a ball that will recover never triggers it. It only changes
+  /// playback speed, never the outcome.
+  final int slowMotionLines;
+
+  /// When set, slow motion instead starts this many seconds of game time
+  /// before the winning cut.
+  final double? slowMotionBeforeWinSeconds;
+
+  /// The match is deterministic, so the constructor plays it through once
+  /// off-screen (a few tens of ms) to learn when it ends and from which step
+  /// the endgame is final. False skips that (used by the look-ahead itself).
+  final bool lookAhead;
+
+  /// The step on which the match ends (null without a look-ahead, or if it
+  /// hit its limit).
+  int? get predictedFinishStep => _finishStep;
+  int? _finishStep;
+
+  // First step from which the lines condition holds until the end.
+  int? _settledEndgameStep;
+
+  // Look-ahead limit: ten minutes of game time.
+  static const int _maxPredictedSteps = 60 * 60 * 10;
+
   MatchSimulationController(
     List<CustomBall> contestants, {
     required this.arenaRadius,
@@ -97,7 +123,34 @@ class MatchSimulationController {
     this.rimSlotCount = kRimSlotCount,
     double? layoutRotation,
     Color arenaBackground = const Color(0xFF0A0A0B),
+    this.slowMotionLines = slowMotionLineThreshold,
+    this.slowMotionBeforeWinSeconds,
+    this.lookAhead = true,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
+    if (lookAhead && (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
+      // Same seed and setup: the steps are identical (slow motion only
+      // changes playback), so its timeline is this match's.
+      final ahead = MatchSimulationController(
+        contestants,
+        arenaRadius: arenaRadius,
+        seed: this.seed,
+        restitution: restitution,
+        rimSlotCount: rimSlotCount,
+        layoutRotation: layoutRotation,
+        slowMotionLines: slowMotionLines,
+        lookAhead: false,
+      );
+      var lastCalmStep = 0;
+      while (ahead._status != MatchStatus.finished && ahead._stepCount < _maxPredictedSteps) {
+        ahead._stepPhysics(fixedTimestep);
+        ahead._stepCount++;
+        if (ahead._status == MatchStatus.running) lastCalmStep = ahead._stepCount;
+      }
+      if (ahead._status == MatchStatus.finished) {
+        _finishStep = ahead._stepCount;
+        _settledEndgameStep = lastCalmStep + 1;
+      }
+    }
     _rng = SeededRandom(this.seed);
     _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution);
     _slotOwners = List<SimulationBall?>.filled(rimSlotCount, null);
@@ -403,11 +456,24 @@ class MatchSimulationController {
     } else if (activeBalls.isEmpty) {
       _status = MatchStatus.finished;
     } else {
-      // 7. Slow motion while the match is about to end: the final two are
-      // left and one of them is down to a handful of lines. Normal speed
-      // returns if that ball recovers.
-      final endgame = activeBalls.length == 2 &&
-          activeBalls.any((b) => b.fanLines.length <= slowMotionLineThreshold);
+      // 7. Slow motion while the match is about to end: either the last
+      // seconds before the (predicted) winning cut, or once the final two are
+      // left and one of them is down to a handful of lines for good (the
+      // look-ahead knows it won't recover; without one, normal speed returns
+      // if it does).
+      final finish = _finishStep;
+      final bool endgame;
+      if (slowMotionBeforeWinSeconds != null) {
+        // The winning cut is known in advance (see the constructor).
+        endgame = finish != null && _stepCount + 1 >= finish - (slowMotionBeforeWinSeconds! / fixedTimestep).round();
+      } else if (_settledEndgameStep != null) {
+        // From here the low ball stays low until it is knocked out.
+        endgame = _stepCount + 1 >= _settledEndgameStep!;
+      } else {
+        endgame = activeBalls.length == 2 &&
+            slowMotionLines > 0 &&
+            activeBalls.any((b) => b.fanLines.length <= slowMotionLines);
+      }
       _status = endgame ? MatchStatus.slowMotion : MatchStatus.running;
     }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../application/replay_video_exporter.dart';
 import '../data/video_encoder.dart';
 import 'replay_frame_painter.dart';
@@ -15,6 +16,9 @@ class ExportVideoDialog extends StatefulWidget {
   final bool showEffects;
   final ReplayStyle style;
   final VideoEncoder encoder;
+  /// When slow motion starts (the admin's setting), so the video matches.
+  final int slowMotionLines;
+  final double? slowMotionBeforeWinSeconds;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -24,6 +28,8 @@ class ExportVideoDialog extends StatefulWidget {
     required this.arenaRadius,
     required this.speedMultiplier,
     this.showEffects = true,
+    this.slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
+    this.slowMotionBeforeWinSeconds,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -36,6 +42,8 @@ class ExportVideoDialog extends StatefulWidget {
     required double arenaRadius,
     required double speedMultiplier,
     bool showEffects = true,
+    int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
+    double? slowMotionBeforeWinSeconds,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
     required VideoExportBackend backend,
@@ -49,6 +57,8 @@ class ExportVideoDialog extends StatefulWidget {
         arenaRadius: arenaRadius,
         speedMultiplier: speedMultiplier,
         showEffects: showEffects,
+        slowMotionLines: slowMotionLines,
+        slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -88,6 +98,8 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         arenaRadius: widget.arenaRadius,
         speedMultiplier: widget.speedMultiplier,
         showEffects: widget.showEffects,
+        slowMotionLines: widget.slowMotionLines,
+        slowMotionBeforeWinSeconds: widget.slowMotionBeforeWinSeconds,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {

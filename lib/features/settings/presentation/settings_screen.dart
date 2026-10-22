@@ -22,6 +22,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _headline = TextEditingController();
   final TextEditingController _watermark = TextEditingController();
   bool? _isAdmin;
+  // Slow-motion choices before they are saved.
+  int? _slowMotionLines;
+  bool? _slowBeforeWin;
+  double? _slowSeconds;
   bool _busy = false;
   String? _message;
 
@@ -200,6 +204,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                     ),
                 ],
+              ),
+            ),
+            _Section(
+              title: 'SLOW MOTION',
+              child: Builder(
+                builder: (context) {
+                  final beforeWin = _slowBeforeWin ?? settings.slowMotionBeforeWinSeconds != null;
+                  final lines = _slowMotionLines ?? settings.slowMotionLines;
+                  final seconds = _slowSeconds ??
+                      settings.slowMotionBeforeWinSeconds ??
+                      AppSettings.defaultSlowMotionBeforeWinSeconds;
+                  final changed = beforeWin
+                      ? settings.slowMotionBeforeWinSeconds != seconds
+                      : settings.slowMotionBeforeWinSeconds != null || settings.slowMotionLines != lines;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(value: false, label: Text('By lines')),
+                          ButtonSegment(value: true, label: Text('Before the win')),
+                        ],
+                        selected: {beforeWin},
+                        onSelectionChanged: _busy ? null : (v) => setState(() => _slowBeforeWin = v.first),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        beforeWin
+                            ? 'Starts ${seconds.toStringAsFixed(1)} s before the winning cut.'
+                            : lines == 0
+                            ? 'Off: matches never slow down.'
+                            : 'Starts when one of the last two balls is down to $lines lines or fewer for good.',
+                        style: AppText.ui(14, FontWeight.w600, color: c.text),
+                      ),
+                      if (beforeWin)
+                        Slider(
+                          value: seconds,
+                          min: 0.5,
+                          max: 5,
+                          divisions: 9,
+                          label: '${seconds.toStringAsFixed(1)} s',
+                          onChanged: _busy ? null : (v) => setState(() => _slowSeconds = v),
+                        )
+                      else
+                        Slider(
+                          value: lines.toDouble(),
+                          min: 0,
+                          max: 60,
+                          divisions: 60,
+                          label: lines == 0 ? 'Off' : '$lines',
+                          onChanged: _busy ? null : (v) => setState(() => _slowMotionLines = v.round()),
+                        ),
+                      Text(
+                        beforeWin
+                            ? 'Game time; slow motion plays it 4x slower. The app plays each match ahead to know the moment.'
+                            : 'Default ${AppSettings.defaultSlowMotionLines}. Each ball starts with about 90 lines. '
+                                  "A ball that will recover doesn't trigger it.",
+                        style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.4),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: _busy || !changed
+                            ? null
+                            : () => _save(
+                                  beforeWin
+                                      ? settings.copyWith(slowMotionBeforeWinSeconds: () => seconds)
+                                      : settings.copyWith(slowMotionLines: lines, slowMotionBeforeWinSeconds: () => null),
+                                  done: 'Slow motion saved for everyone.',
+                                ),
+                        child: const Text('Save slow motion'),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             _Section(

@@ -267,8 +267,10 @@ void main() {
     expect(senses, {true, false});
   });
 
-  test('slow motion starts when one of the last two drops to 10 lines or fewer and ends if it recovers', () {
-    final controller = MatchSimulationController(_twoBalls(), arenaRadius: _arenaRadius, layoutRotation: 0, seed: 1);
+  test('without a look-ahead, slow motion starts at 10 lines or fewer and ends if the ball recovers', () {
+    // Lines are cut by hand below, which no look-ahead could foresee.
+    final controller =
+        MatchSimulationController(_twoBalls(), arenaRadius: _arenaRadius, layoutRotation: 0, seed: 1, lookAhead: false);
     _freeze(controller);
     final a = _ball(controller, 'a');
     _ball(controller, 'b').position = const Offset(-100, 0);
@@ -313,4 +315,66 @@ void main() {
     expect(controller.state.status, MatchStatus.finished);
     expect(controller.state.winnerId, isNotNull);
   });
+
+  test('the slow-motion threshold changes only playback, never the outcome', () {
+    (String?, int, bool) play(int lines) {
+      final c = MatchSimulationController(_twoBalls(), arenaRadius: 300, seed: 42, slowMotionLines: lines);
+      var slowed = false;
+      for (var i = 0; i < 60 * 60 * 10 && c.state.status != MatchStatus.finished; i++) {
+        c.tick(1 / 60);
+        slowed |= c.state.status == MatchStatus.slowMotion;
+      }
+      return (c.state.winnerId, c.wallHits, slowed);
+    }
+
+    final standard = play(MatchSimulationController.slowMotionLineThreshold);
+    final never = play(0);
+    final early = play(40);
+    expect(never.$3, isFalse);
+    expect(early.$3, isTrue);
+    expect(never.$1, standard.$1);
+    expect(early.$1, standard.$1);
+    expect(never.$2, standard.$2);
+    expect(early.$2, standard.$2);
+  });
+
+  test('before-the-win slow motion starts the set time before the predicted winning cut', () {
+    for (final seed in [3, 11, 42]) {
+      final c = MatchSimulationController(_twoBalls(), arenaRadius: 300, seed: seed, slowMotionBeforeWinSeconds: 1.5);
+      final finish = c.predictedFinishStep!;
+      int? slowFrom;
+      var steps = 0;
+      while (c.state.status != MatchStatus.finished) {
+        c.tick(MatchSimulationController.fixedTimestep);
+        steps++;
+        if (c.state.status == MatchStatus.slowMotion) slowFrom ??= steps;
+        if (slowFrom != null && c.state.status != MatchStatus.finished) {
+          expect(c.state.status, MatchStatus.slowMotion, reason: 'no return to normal speed');
+        }
+      }
+      // Slow motion stretches real time 4x, but steps are steps.
+      expect(c.state.winnerId, isNotNull);
+      expect(slowFrom, finish - 90);
+    }
+  });
+
+  test('by-lines slow motion never starts for a ball that recovers', () {
+    for (var seed = 1; seed <= 30; seed++) {
+      final c = MatchSimulationController(_threeBalls(), arenaRadius: 300, seed: seed, slowMotionLines: 30);
+      var slowed = false;
+      for (var i = 0; i < 60 * 60 * 10 && c.state.status != MatchStatus.finished; i++) {
+        c.tick(1 / 60);
+        if (c.state.status == MatchStatus.slowMotion) slowed = true;
+        if (slowed && c.state.status != MatchStatus.finished) {
+          expect(c.state.status, MatchStatus.slowMotion, reason: 'seed $seed went back to normal speed');
+        }
+      }
+    }
+  });
 }
+
+List<CustomBall> _threeBalls() => const [
+      CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
+      CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
+      CustomBall(id: 'c', name: 'C', primaryColor: Colors.green, glowColor: Colors.lightGreen),
+    ];

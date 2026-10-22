@@ -1,5 +1,5 @@
 /// App-wide settings, set by the admin and shown to everyone
-/// (Supabase table `app_settings`, see supabase/migrations/002, 003 and 005).
+/// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005 and 006).
 class AppSettings {
   /// Big title over the arena and in videos, e.g. "WHO WINS?".
   final String headline;
@@ -14,17 +14,29 @@ class AppSettings {
   /// [MusicTrack.id] of the background music during matches.
   final String musicId;
 
+  /// Slow motion starts when one of the last two balls is down to this many
+  /// lines (0: never)...
+  final int slowMotionLines;
+
+  /// ...or, when set, this many seconds of game time before the winning cut
+  /// (predicted, see MatchSimulationController.slowMotionBeforeWinSeconds).
+  final double? slowMotionBeforeWinSeconds;
+
   const AppSettings({
     this.headline = defaultHeadline,
     this.themeId = 'midnight',
     this.watermarkEnabled = true,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
+    this.slowMotionLines = defaultSlowMotionLines,
+    this.slowMotionBeforeWinSeconds,
   });
 
   static const String defaultHeadline = 'WHO WINS?';
   static const String defaultWatermark = 'dbsuarez';
   static const String defaultMusic = 'arena';
+  static const int defaultSlowMotionLines = 10;
+  static const double defaultSlowMotionBeforeWinSeconds = 1.5;
   static const AppSettings defaults = AppSettings();
 
   AppSettings copyWith({
@@ -33,6 +45,8 @@ class AppSettings {
     bool? watermarkEnabled,
     String? watermarkText,
     String? musicId,
+    int? slowMotionLines,
+    double? Function()? slowMotionBeforeWinSeconds,
   }) =>
       AppSettings(
         headline: headline ?? this.headline,
@@ -40,5 +54,8 @@ class AppSettings {
         watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
         watermarkText: watermarkText ?? this.watermarkText,
         musicId: musicId ?? this.musicId,
+        slowMotionLines: slowMotionLines ?? this.slowMotionLines,
+        slowMotionBeforeWinSeconds:
+            slowMotionBeforeWinSeconds == null ? this.slowMotionBeforeWinSeconds : slowMotionBeforeWinSeconds(),
       );
 }

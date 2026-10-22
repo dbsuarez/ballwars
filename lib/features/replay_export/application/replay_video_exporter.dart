@@ -51,12 +51,21 @@ class ReplayVideoExporter {
     required double arenaRadius,
     double speedMultiplier = 1.0,
     bool showEffects = true,
+    int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
+    double? slowMotionBeforeWinSeconds,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
   }) async {
     MatchSimulationController newMatch() =>
-        MatchSimulationController(contestants, arenaRadius: arenaRadius, seed: seed, arenaBackground: style.background);
+        MatchSimulationController(
+          contestants,
+          arenaRadius: arenaRadius,
+          seed: seed,
+          arenaBackground: style.background,
+          slowMotionLines: slowMotionLines,
+          slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
+        );
     final frameDelta = speedMultiplier / fps;
 
     // Dry run (no rendering) to know the total frame count for progress.

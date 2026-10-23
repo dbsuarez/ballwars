@@ -123,6 +123,37 @@ class PowerUpPainter {
       );
     }
 
+    for (final portal in p.portals) {
+      final pulse =
+          0.5 +
+          0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
+      final radial = portal.position.distance == 0
+          ? const Offset(1, 0)
+          : portal.position / portal.position.distance;
+      final tangentAngle = math.atan2(radial.dy, radial.dx) + math.pi / 2;
+      canvas.save();
+      canvas.translate(portal.position.dx, portal.position.dy);
+      canvas.rotate(tangentAngle);
+      for (var i = 0; i < 3; i++) {
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: r * (1.0 + i * 0.32 + pulse * 0.08),
+            height: r * (2.1 + i * 0.28 + pulse * 0.12),
+          ),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(1.5, r * 0.13)
+            ..color =
+                (i.isEven
+                        ? colorOf(PowerUpKind.portal)
+                        : const Color(0xFFFF58D6))
+                    .withValues(alpha: 0.9 - i * 0.22),
+        );
+      }
+      canvas.restore();
+    }
+
     for (final wall in p.spikeWalls) {
       final radial = Offset(math.cos(wall.angle), math.sin(wall.angle));
       final tangent = Offset(-radial.dy, radial.dx);

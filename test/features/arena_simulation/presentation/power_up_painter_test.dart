@@ -58,6 +58,7 @@ void main() {
       p.mines.add(
         ArmedMine(owner: a, position: const Offset(0, -50), armedStep: 0),
       );
+      p.portals.add(ArenaPortal(position: const Offset(180, 0), spawnStep: 0));
       p.spikeWalls.add(
         SpikeWall(position: const Offset(0, 180), angle: 1, spawnStep: 0),
       );

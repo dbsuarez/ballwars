@@ -185,8 +185,11 @@ void main() {
       b.velocity = Offset.zero;
     }
     _run(c, PowerUpTuning.firstSpawnSteps);
-    final portal = c.powerUps!.field.single;
-    expect(portal.kind, PowerUpKind.portal);
+    expect(
+      c.powerUps!.field.where((item) => item.kind == PowerUpKind.portal),
+      isEmpty,
+    );
+    final portal = c.powerUps!.portals.single;
     expect(
       portal.position.distance,
       closeTo(_arenaRadius - c.powerUps!.fieldRadius * 1.6, 0.001),

@@ -114,7 +114,8 @@ void main() {
       final entrance = a.position;
       a.equipWeapon(PowerUpKind.pistol, dualWield: false);
 
-      _give(c, a, PowerUpKind.portal);
+      c.powerUps!.portals.add(ArenaPortal(position: entrance, spawnStep: 0));
+      _run(c, 1);
 
       expect(a.position, isNot(entrance));
       expect(
@@ -123,6 +124,7 @@ void main() {
       );
       expect(a.held, PowerUpKind.pistol);
       expect(c.powerUps!.portalFlashes, hasLength(1));
+      expect(c.powerUps!.portals, isEmpty);
       expect(c.powerUps!.portalFlashes.single.from, entrance);
       expect(c.powerUps!.portalFlashes.single.to, a.position);
       expect(c.powerUps!.pickups, 0);

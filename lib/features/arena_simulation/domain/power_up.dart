@@ -149,6 +149,15 @@ class PortalFlash {
   int age = 0;
 }
 
+/// A portal opening embedded near the arena boundary. It is entered by
+/// collision and never appears in the collectible field list.
+class ArenaPortal {
+  ArenaPortal({required this.position, required this.spawnStep});
+
+  final Offset position;
+  final int spawnStep;
+}
+
 /// A physical row of spikes placed near the arena boundary. Unlike pickup
 /// tokens, balls collide with the row directly.
 class SpikeWall {
@@ -419,7 +428,7 @@ String powerUpDescription(
     PowerUpKind.magneticField =>
       'A 2x purple force field repels balls and every attack for 3 s.',
     PowerUpKind.portal =>
-      'A boundary trap that teleports the ball entering it to a random side of the arena.',
+      'An edge portal that teleports the ball entering it to a random side of the arena.',
     PowerUpKind.spikeWall =>
       'A row of 6 boundary spikes that deals ${dmg(kind)} and knocks the ball inward.',
     PowerUpKind.goldenArmor =>

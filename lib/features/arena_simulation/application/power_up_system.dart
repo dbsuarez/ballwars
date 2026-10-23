@@ -53,6 +53,9 @@ class PowerUpSystem {
   /// Recent portal exits and entries, retained briefly for the painter.
   final List<PortalFlash> portalFlashes = [];
 
+  /// Portal openings at the arena edge. They are hazards, never pickups.
+  final List<ArenaPortal> portals = [];
+
   /// Physical spike rows in the arena. They are hazards, never pickups.
   final List<SpikeWall> spikeWalls = [];
 
@@ -118,6 +121,7 @@ class PowerUpSystem {
   void step() {
     _countDown();
     _triggerMines();
+    _triggerPortals();
     _triggerSpikeWalls();
     _pickUpTouched();
     _sweep();
@@ -151,10 +155,6 @@ class PowerUpSystem {
         ball,
         p.kind == PowerUpKind.phaseMine ? 'NOW YOU SEE ME!' : 'MINE SET!',
       );
-      return;
-    }
-    if (p.kind == PowerUpKind.portal) {
-      _teleport(ball, p.position);
       return;
     }
     pickups++;
@@ -238,6 +238,22 @@ class PowerUpSystem {
     ball.position = destination;
     portalFlashes.add(PortalFlash(from: entrance, to: destination));
     _yell(ball, 'WARP SPEED!');
+  }
+
+  void _triggerPortals() {
+    if (portals.isEmpty) return;
+    for (final portal in List<ArenaPortal>.of(portals)) {
+      for (final ball in match.state.balls) {
+        if (!_alive(ball) || ball.isGhost) continue;
+        if ((ball.position - portal.position).distance >=
+            ball.radius + fieldRadius) {
+          continue;
+        }
+        portals.remove(portal);
+        _teleport(ball, portal.position);
+        break;
+      }
+    }
   }
 
   void _hitSpikes(SimulationBall ball, Offset at) {
@@ -573,6 +589,9 @@ class PowerUpSystem {
     for (final wall in spikeWalls) {
       taken[quadrantOf(wall.position)]++;
     }
+    for (final portal in portals) {
+      taken[quadrantOf(portal.position)]++;
+    }
     final fewest = taken.reduce(math.min);
     final open = [
       for (var q = 0; q < 4; q++)
@@ -600,8 +619,18 @@ class PowerUpSystem {
           mines.every((b) => (b.position - spot).distance >= 2 * radius) &&
           spikeWalls.every(
             (wall) => (wall.position - spot).distance >= 4 * radius,
+          ) &&
+          portals.every(
+            (portal) => (portal.position - spot).distance >= 2 * radius,
           );
       if (!clear) continue;
+      if (kind == PowerUpKind.portal) {
+        portals.add(ArenaPortal(position: spot, spawnStep: number));
+        if (portals.length > PowerUpTuning.maxOnField(_ballCount)) {
+          portals.removeAt(0);
+        }
+        return;
+      }
       if (kind == PowerUpKind.spikeWall) {
         spikeWalls.add(
           SpikeWall(position: spot, angle: angle, spawnStep: number),

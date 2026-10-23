@@ -222,12 +222,12 @@ void main() {
       speedMultiplier: 1,
       contestants: [_presets[0], _presets[1]],
       mode: MatchMode.arsenal,
-      powerUps: {PowerUpKind.knife, PowerUpKind.bomb},
+      powerUps: {PowerUpKind.knife, PowerUpKind.mine},
     ).toUri(presetIds: ids, appUrl: app);
     final tokens = some.queryParameters['balls']!.split(',');
     expect(tokens[0], 'm.arsenal');
     expect(tokens[1], startsWith('w.'));
-    expect(ReplayLink.fromUri(some, presets: _presets)!.powerUps, {PowerUpKind.knife, PowerUpKind.bomb});
+    expect(ReplayLink.fromUri(some, presets: _presets)!.powerUps, {PowerUpKind.knife, PowerUpKind.mine});
 
     final all = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], mode: MatchMode.arsenal)
         .toUri(presetIds: ids, appUrl: app);

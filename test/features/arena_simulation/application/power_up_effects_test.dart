@@ -283,7 +283,7 @@ void main() {
   });
 
   test('ghost passes through balls, cannot be hit and in All-Out neither loses nor cuts threads for 180 steps', () {
-    // Arsenal: no bounce, no damage from bullets, knives or bombs.
+    // Arsenal: no bounce, no damage from bullets, knives or mines.
     final c = _match();
     final [a, b] = c.state.balls;
     _give(c, a, PowerUpKind.ghost);
@@ -304,7 +304,7 @@ void main() {
 
     final bullet = _bulletAt(b, a);
     c.powerUps!.projectiles.add(bullet);
-    c.powerUps!.bombs.add(ArmedBomb(owner: b, position: a.position, armedStep: 0));
+    c.powerUps!.mines.add(ArmedMine(owner: b, position: a.position, armedStep: 0));
     _run(c, 1);
     expect(bullet.spent, isFalse);
     expect(a.life, _life);
@@ -354,11 +354,11 @@ void main() {
       ..held = PowerUpKind.knife;
     b.position = const Offset(-100 + 60, 0);
     final field = c.powerUps!.field;
-    _give(c, a, PowerUpKind.bomb);
+    _give(c, a, PowerUpKind.mine);
     // Arming doesn't cost the held power-up, and the armed bomb leaves the field (no limit slot).
     expect(a.held, PowerUpKind.knife);
     expect(field, isEmpty);
-    final bomb = c.powerUps!.bombs.single;
+    final bomb = c.powerUps!.mines.single;
     expect(bomb.owner, a);
     expect(bomb.position, a.position);
 
@@ -372,9 +372,9 @@ void main() {
     a.position = bomb.position - const Offset(40, 0);
     _run(c, 1);
     expect(c.powerUps!.blasts, 1);
-    expect(c.powerUps!.bombs, isEmpty);
+    expect(c.powerUps!.mines, isEmpty);
     // 3 balls: crowded Arsenal damage is x2.25 (never below 0).
-    expect(b.life, math.max(0.0, _life - PowerUpTuning.arenaDamage[PowerUpKind.bomb]! * 2.25));
+    expect(b.life, math.max(0.0, _life - PowerUpTuning.arenaDamage[PowerUpKind.mine]! * 2.25));
     expect(a.life, _life);
     expect(other.life, _life);
     expect(c.state.floatingTexts.items.map((t) => t.text), contains('KABOOM!'));
@@ -383,10 +383,10 @@ void main() {
   test('a bomb whose owner is out is gone', () {
     final c = _match(count: 3);
     final [a, b, _] = c.state.balls;
-    c.powerUps!.bombs.add(ArmedBomb(owner: a, position: const Offset(0, -150), armedStep: 0));
+    c.powerUps!.mines.add(ArmedMine(owner: a, position: const Offset(0, -150), armedStep: 0));
     a.isEliminated = true;
     _run(c, 1);
-    expect(c.powerUps!.bombs, isEmpty);
+    expect(c.powerUps!.mines, isEmpty);
     b.position = const Offset(0, -150);
     _run(c, 1);
     expect(c.powerUps!.blasts, 0);

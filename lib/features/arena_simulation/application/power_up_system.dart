@@ -10,7 +10,7 @@ import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 import 'match_simulation_controller.dart';
 
-/// Runs the power-ups of an Arsenal or All-Out match: spawning, pick-up, aiming, projectiles, bombs and
+/// Runs the power-ups of an Arsenal or All-Out match: spawning, pick-up, aiming, projectiles, mines and
 /// the personal effects (apple, speed, ghost, magnet, shield).
 ///
 /// The controller creates one (never in Threads mode), calls [onContact] for every ball-ball bump and
@@ -18,8 +18,9 @@ import 'match_simulation_controller.dart';
 /// match's [rng], drawn only inside the simulation step.
 ///
 /// Guns, the knife and the shield are held ([SimulationBall.held]) until used. Apple, speed, ghost and
-/// magnet act at once. A ball never has two power-ups: any pickup drops the one it held. A bomb is not
-/// carried: the first ball to touch it arms it where it lies ([ArmedBomb]), and it keeps what it held.
+/// magnet act at once. A ball never has two power-ups: any pickup drops the one it held. A mine is not
+/// carried: the first ball to touch it arms it where it lies ([ArmedMine]), and it keeps what it held. A
+/// grenade is held like a gun: aimed, then thrown at where the target is, exploding where it lands.
 ///
 /// Balls yell what they do ("BANG!", "SHIELD BASH!") and every hit shows the damage taken, as floating
 /// labels (drawn only; no randomness).
@@ -39,8 +40,8 @@ class PowerUpSystem {
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
 
-  /// Armed proximity bombs waiting for an opponent of their owner.
-  final List<ArmedBomb> bombs = [];
+  /// Armed proximity mines waiting for an opponent of their owner.
+  final List<ArmedMine> mines = [];
 
   /// Recent blasts, for drawing (removed after [PowerUpTuning.explosionShowSteps]).
   final List<Explosion> explosions = [];
@@ -99,10 +100,10 @@ class PowerUpSystem {
   /// Advances the power-ups by one simulation step.
   ///
   /// Timers count down first, so an effect picked up in step N lasts its full count from step N + 1 on
-  /// (a bomb picked up in step N explodes in step N + [PowerUpTuning.bombFuseSteps]).
+  /// (a speed boost picked up in step N runs from step N + 1).
   void step() {
     _countDown();
-    _triggerBombs();
+    _triggerMines();
     _pickUpTouched();
     _sweep();
     _updateFrozen();
@@ -122,9 +123,9 @@ class PowerUpSystem {
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
     pickups++;
-    if (p.kind == PowerUpKind.bomb) {
-      bombs.add(ArmedBomb(owner: ball, position: p.position, armedStep: match.stepCount));
-      _yell(ball, 'BOMB SET!');
+    if (p.kind == PowerUpKind.mine) {
+      mines.add(ArmedMine(owner: ball, position: p.position, armedStep: match.stepCount));
+      _yell(ball, 'MINE SET!');
       return;
     }
     ball
@@ -152,7 +153,7 @@ class PowerUpSystem {
       default:
         ball.held = p.kind;
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
-        if (p.kind == PowerUpKind.knife && match.mode == MatchMode.allOut) ball.sweepLeft = PowerUpTuning.sweepSteps;
+        if (p.kind.isBlade && match.mode == MatchMode.allOut) ball.sweepLeft = PowerUpTuning.sweepSteps;
     }
   }
 
@@ -169,10 +170,10 @@ class PowerUpSystem {
 
   void _melee(SimulationBall attacker, PowerUpKind? weapon, SimulationBall target, PowerUpKind? targetHeld) {
     final PowerUpKind kind;
-    if (weapon == PowerUpKind.knife) {
-      kind = PowerUpKind.knife;
+    if (weapon != null && weapon.isBlade) {
+      kind = weapon;
       slashes++;
-      _yell(attacker, 'SLASH!');
+      _yell(attacker, weapon == PowerUpKind.sword ? 'HIYAA!' : 'SLASH!');
     } else if (weapon == PowerUpKind.shield && targetHeld == null) {
       kind = PowerUpKind.shield;
       _yell(attacker, 'SHIELD BASH!');
@@ -183,7 +184,7 @@ class PowerUpSystem {
     final toAttacker = attacker.position - target.position;
     final distance = toAttacker.distance;
     final at = distance > 0 ? target.position + toAttacker * (target.radius / distance) : target.position;
-    if (kind == PowerUpKind.knife) {
+    if (kind.isBlade) {
       // The cut runs across the line between the two balls.
       slashMarks.add(SlashMark(position: at, angle: math.atan2(toAttacker.dy, toAttacker.dx) + math.pi / 2));
     }
@@ -247,52 +248,54 @@ class PowerUpSystem {
     }
   }
 
-  /// An armed bomb goes off as soon as a ball other than its owner touches it (a ghost passes over it),
-  /// hitting every ball but the owner whose body is within [PowerUpTuning.bombRadiusRatio] arena radii
-  /// (ghosts are spared). A bomb whose owner is out is gone.
-  void _triggerBombs() {
-    if (bombs.isEmpty) return;
-    final radius = match.arenaRadius * PowerUpTuning.bombRadiusRatio;
+  /// An armed mine goes off as soon as a ball other than its owner touches it (a ghost passes over it).
+  /// A mine whose owner is out is gone.
+  void _triggerMines() {
+    if (mines.isEmpty) return;
     final balls = match.state.balls;
-    for (final bomb in List.of(bombs)) {
-      if (!_alive(bomb.owner)) {
-        bombs.remove(bomb);
+    for (final mine in List.of(mines)) {
+      if (!_alive(mine.owner)) {
+        mines.remove(mine);
         continue;
       }
       final touched = balls.any((b) =>
-          !identical(b, bomb.owner) &&
+          !identical(b, mine.owner) &&
           _alive(b) &&
           !b.isGhost &&
-          (b.position - bomb.position).distance < b.radius + fieldRadius);
+          (b.position - mine.position).distance < b.radius + fieldRadius);
       if (!touched) continue;
-      bombs.remove(bomb);
-      blasts++;
-      explosions.add(Explosion(position: bomb.position, radius: radius));
-      match.state.floatingTexts.spawn(bomb.position, 'KABOOM!', _blastColor);
-      // All-Out bomb blast: every thread passing through the blast is cut, from every ball but the owner
-      // and ghosts.
-      if (match.mode == MatchMode.allOut) {
-        for (final ball in balls) {
-          if (identical(ball, bomb.owner) || !_alive(ball) || ball.isGhost) continue;
-          for (final line in List.of(ball.fanLines)) {
-            if (MathUtils.distancePointToSegmentSquared(bomb.position, line.startPoint, ball.position) <=
-                radius * radius) {
-              _cutLine(ball, line);
-            }
+      mines.remove(mine);
+      _explode(mine.position, mine.owner, PowerUpKind.mine);
+    }
+  }
+
+  /// A blast at [at] (a mine or a grenade): hits every ball but [owner] whose body is within
+  /// [PowerUpTuning.blastRadiusRatio] arena radii (ghosts are spared), as [kind]. In All-Out it also cuts
+  /// every thread passing through it, from every ball but the owner and ghosts.
+  void _explode(Offset at, SimulationBall owner, PowerUpKind kind) {
+    final radius = match.arenaRadius * PowerUpTuning.blastRadiusRatio;
+    final balls = match.state.balls;
+    blasts++;
+    explosions.add(Explosion(position: at, radius: radius));
+    match.state.floatingTexts.spawn(at, 'KABOOM!', _blastColor);
+    if (match.mode == MatchMode.allOut) {
+      for (final ball in balls) {
+        if (identical(ball, owner) || !_alive(ball) || ball.isGhost) continue;
+        for (final line in List.of(ball.fanLines)) {
+          if (MathUtils.distancePointToSegmentSquared(at, line.startPoint, ball.position) <= radius * radius) {
+            _cutLine(ball, line);
           }
         }
       }
-      for (final ball in balls) {
-        if (identical(ball, bomb.owner) || !_alive(ball)) continue;
-        final offset = ball.position - bomb.position;
-        final distance = offset.distance;
-        if (distance - ball.radius > radius) continue;
-        // The side of the ball facing the bomb, so the splash flies away from the blast.
-        final at = distance > ball.radius
-            ? bomb.position + offset * ((distance - ball.radius) / distance)
-            : bomb.position;
-        _hit(ball, PowerUpKind.bomb, at: at);
-      }
+    }
+    for (final ball in balls) {
+      if (identical(ball, owner) || !_alive(ball)) continue;
+      final offset = ball.position - at;
+      final distance = offset.distance;
+      if (distance - ball.radius > radius) continue;
+      // The side of the ball facing the blast, so the splash flies away from it.
+      final side = distance > ball.radius ? at + offset * ((distance - ball.radius) / distance) : at;
+      _hit(ball, kind, at: side);
     }
   }
 
@@ -343,7 +346,7 @@ class PowerUpSystem {
   }
 
   /// Spawns one of the chosen kinds at a random spot in the emptiest quadrant of the arena (the one with
-  /// the fewest power-ups and armed bombs, a seeded pick among ties), away from the rim and the center
+  /// the fewest power-ups and armed mines, a seeded pick among ties), away from the rim and the center
   /// and clear of balls and other power-ups. Skipped when 10 tries find no clear spot.
   void _spawn(int number) {
     // Uniform over the chosen kinds; with all of them chosen this draws exactly as with none chosen.
@@ -359,7 +362,7 @@ class PowerUpSystem {
     for (final f in field) {
       taken[quadrantOf(f.position)]++;
     }
-    for (final b in bombs) {
+    for (final b in mines) {
       taken[quadrantOf(b.position)]++;
     }
     final fewest = taken.reduce(math.min);
@@ -373,7 +376,7 @@ class PowerUpSystem {
       final spot = Offset(math.cos(angle) * distance, math.sin(angle) * distance);
       final clear = balls.every((b) => b.isEliminated || (b.position - spot).distance >= b.radius + radius) &&
           field.every((f) => (f.position - spot).distance >= 2 * radius) &&
-          bombs.every((b) => (b.position - spot).distance >= 2 * radius);
+          mines.every((b) => (b.position - spot).distance >= 2 * radius);
       if (!clear) continue;
       final spawned = FieldPowerUp(kind: kind, position: spot, spawnStep: number);
       field.add(spawned);
@@ -475,6 +478,9 @@ class PowerUpSystem {
           case PowerUpKind.freeze:
             _fire(ball, target, kind, 0);
             _yell(ball, 'FREEZE!');
+          case PowerUpKind.grenade:
+            _throwGrenade(ball, target);
+            _yell(ball, 'FIRE IN THE HOLE!');
           default:
             _fire(ball, target, kind, 0);
             _yell(ball, 'BANG!');
@@ -499,6 +505,22 @@ class PowerUpSystem {
       final jitter = edge ? 0.0 : rng.nextDoubleRange(-_pelletJitter, _pelletJitter);
       _fire(ball, target, PowerUpKind.shotgun, -spread / 2 + spread * i / (count - 1) + jitter, volley: volley);
     }
+  }
+
+  /// Throws a grenade from [ball]'s edge at where [target] is now; it explodes on the first opponent it
+  /// meets or where it lands.
+  void _throwGrenade(SimulationBall ball, SimulationBall target) {
+    final toTarget = target.position - ball.position;
+    final distance = toTarget.distance;
+    final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    projectiles.add(Projectile(
+      owner: ball,
+      kind: PowerUpKind.grenade,
+      position: ball.position + direction * ball.radius,
+      velocity: direction * (match.arenaRadius * PowerUpTuning.grenadeSpeedRatio),
+      landAt: target.position,
+    ));
+    shots++;
   }
 
   /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
@@ -538,7 +560,23 @@ class PowerUpSystem {
           strikeAt = t;
         }
       }
-      final end = struck == null ? to : Offset.lerp(from, to, strikeAt)!;
+      var end = struck == null ? to : Offset.lerp(from, to, strikeAt)!;
+      final landAt = p.landAt;
+      if (landAt != null) {
+        // A grenade flies over threads, and blows up on a ball or where it lands (or at the rim).
+        final left = (landAt - from).distance;
+        final landed = struck == null && (to - from).distance >= left;
+        if (landed) end = landAt;
+        if (struck != null || landed || end.distance >= match.arenaRadius) {
+          p
+            ..position = end
+            ..spent = true;
+          _explode(end, p.owner, PowerUpKind.grenade);
+        } else {
+          p.position = end;
+        }
+        continue;
+      }
 
       if (allOut) {
         for (final ball in balls) {

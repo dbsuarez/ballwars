@@ -116,7 +116,7 @@ void main() {
     expect(c.state.powerUps, same(c.powerUps));
     expect(c.powerUps!.field, isEmpty);
     expect(c.powerUps!.projectiles, isEmpty);
-    expect(c.powerUps!.bombs, isEmpty);
+    expect(c.powerUps!.mines, isEmpty);
   });
 
   test('Arsenal wall hits claim no slots', () {
@@ -242,7 +242,8 @@ void main() {
   (int, List<int>) playOut(MatchSimulationController c) {
     final slow = <int>[];
     while (c.state.status != MatchStatus.finished && c.stepCount < 60 * 60 * 10) {
-      c.tick(MatchSimulationController.fixedTimestep);
+      // One step per tick, also once playback speeds up after a minute.
+      c.tick(MatchSimulationController.fixedTimestep / c.playbackSpeedUp * 1.0000001);
       if (c.state.status == MatchStatus.slowMotion) slow.add(c.stepCount);
     }
     return (c.stepCount, slow);

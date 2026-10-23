@@ -14,7 +14,7 @@ const _balls = [
 ];
 
 void main() {
-  test('paints field power-ups, projectiles, bombs, blasts and ball effects without throwing', () {
+  test('paints field power-ups, projectiles, mines, blasts and ball effects without throwing', () {
     final c = MatchSimulationController(_balls, arenaRadius: 260, seed: 1, mode: MatchMode.arsenal, lookAhead: false);
     final p = c.powerUps!;
     final a = c.state.balls[0];
@@ -23,7 +23,7 @@ void main() {
       p.field.add(FieldPowerUp(kind: kind, position: Offset(kind.index * 15.0 - 80, 60), spawnStep: 0));
     }
     p.projectiles.add(Projectile(owner: a, kind: PowerUpKind.pistol, position: Offset.zero, velocity: const Offset(100, 0)));
-    p.bombs.add(ArmedBomb(owner: a, position: const Offset(0, -50), armedStep: 0));
+    p.mines.add(ArmedMine(owner: a, position: const Offset(0, -50), armedStep: 0));
     p.slashMarks.add(SlashMark(position: const Offset(20, 20), angle: 1));
     p.explosions.add(Explosion(position: const Offset(30, 30), radius: 70));
     a

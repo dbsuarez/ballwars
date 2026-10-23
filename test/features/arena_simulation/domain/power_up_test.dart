@@ -3,7 +3,7 @@ import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 
 void main() {
   test('every kind has a label and the guns are flagged', () {
-    const guns = {PowerUpKind.pistol, PowerUpKind.shotgun, PowerUpKind.gatling, PowerUpKind.freeze};
+    const guns = {PowerUpKind.pistol, PowerUpKind.shotgun, PowerUpKind.gatling, PowerUpKind.freeze, PowerUpKind.grenade};
     for (final kind in PowerUpKind.values) {
       expect(kind.label, isNotEmpty);
       expect(kind.isGun, guns.contains(kind), reason: kind.name);
@@ -13,7 +13,9 @@ void main() {
       PowerUpKind.shotgun,
       PowerUpKind.gatling,
       PowerUpKind.knife,
-      PowerUpKind.bomb,
+      PowerUpKind.mine,
+      PowerUpKind.grenade,
+      PowerUpKind.sword,
     ];
     for (final kind in damaging) {
       expect(PowerUpTuning.arenaDamage.containsKey(kind), isTrue, reason: kind.name);

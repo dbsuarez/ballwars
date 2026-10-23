@@ -13,6 +13,8 @@ The dark background square was removed; the app tints them.
 | apple.svg | shiny-apple | Lorc |
 | speed.svg | power-lightning | Lorc |
 | freeze.svg | snowflake-1 | Lorc |
-| bomb.svg | sparky-bomb | Lorc |
+| mine.svg | sparky-bomb | Lorc |
 | magnet.svg | magnet | Lorc |
 | ghost.svg | ghost | Lorc |
+| grenade.svg | grenade | sbed |
+| sword.svg | broadsword | Lorc |

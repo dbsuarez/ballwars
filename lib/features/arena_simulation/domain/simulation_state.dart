@@ -19,10 +19,10 @@ class SimulationState {
   final int beamPhase; // 0=inactive, 1=solid, 2=dotted, 3=haze
   final double beamTimer;
 
-  /// The match's power-ups (field, projectiles, bombs) for painting; null in Threads mode.
+  /// The match's power-ups (field, projectiles, mines) for painting; null in Threads mode.
   final PowerUpSystem? powerUps;
 
-  /// Simulation steps taken so far (drives the power-ups' pulse and the bombs' blink).
+  /// Simulation steps taken so far (drives the power-ups' pulse and the mines' blink).
   final int step;
 
   const SimulationState({

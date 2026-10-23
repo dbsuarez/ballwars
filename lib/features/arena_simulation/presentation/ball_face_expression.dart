@@ -36,13 +36,31 @@ Offset pupilOffset(SimulationBall ball, List<SimulationBall> balls, double eyeRa
   return to * (0.35 * eyeRadius / length);
 }
 
-/// Draws [ball] as a smiley: the ball's color, two white eyes with black pupils (or squeezed shut on a
-/// fresh hit), brows only when worried or hurt, and a black mouth arc.
-void paintSmiley(Canvas canvas, SimulationBall ball, double healthRatio, List<SimulationBall> balls) {
-  final c = ball.position;
-  final r = ball.radius;
+/// Draws [ball]'s smiley: the ball's color, two white eyes with black pupils (or squeezed shut on a
+/// fresh hit), brows only when worried or hurt, and a black mouth arc. By default it fills the ball; with
+/// [center] and [radius] it is drawn there instead (beside the ball's picture), with a dark outline.
+void paintSmiley(
+  Canvas canvas,
+  SimulationBall ball,
+  double healthRatio,
+  List<SimulationBall> balls, {
+  Offset? center,
+  double? radius,
+}) {
+  final c = center ?? ball.position;
+  final r = radius ?? ball.radius;
   final expression = expressionFor(ball, healthRatio);
   canvas.drawCircle(c, r, Paint()..color = ball.config.primaryColor);
+  if (center != null) {
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.0, r * 0.1)
+        ..color = const Color(0xFF111114),
+    );
+  }
 
   final ink = Paint()
     ..style = PaintingStyle.stroke

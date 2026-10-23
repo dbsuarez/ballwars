@@ -50,13 +50,13 @@ void main() {
     final c = _match();
     final a = c.state.balls[0];
     final b = c.state.balls[1];
-    final radius = _arenaRadius * PowerUpTuning.bombRadiusRatio;
+    final radius = _arenaRadius * PowerUpTuning.blastRadiusRatio;
     // Between the two balls, near the rim at the top: crosses threads of both.
     const at = Offset(0, -170);
     final ownLines = _linesNear(a, at, radius);
     expect(ownLines, greaterThan(0));
 
-    c.powerUps!.bombs.add(ArmedBomb(owner: a, position: at, armedStep: 0));
+    c.powerUps!.mines.add(ArmedMine(owner: a, position: at, armedStep: 0));
     b.position = at; // The opponent runs onto it.
     _run(c, 1);
 
@@ -76,11 +76,11 @@ void main() {
       ..ghostLeft = 30
       ..position = at;
 
-    c.powerUps!.bombs.add(ArmedBomb(owner: a, position: at, armedStep: 0));
+    c.powerUps!.mines.add(ArmedMine(owner: a, position: at, armedStep: 0));
     _run(c, 1);
 
     expect(c.powerUps!.blasts, 0);
-    expect(c.powerUps!.bombs, hasLength(1));
+    expect(c.powerUps!.mines, hasLength(1));
   });
 
   test('a sword sweep cuts every opponent thread the holder passes through for 60 steps', () {

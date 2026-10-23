@@ -149,7 +149,7 @@ void main() {
       layoutRotation: 0,
       mode: MatchMode.arsenal,
       lookAhead: false,
-      powerUpKinds: {PowerUpKind.apple, PowerUpKind.bomb},
+      powerUpKinds: {PowerUpKind.apple, PowerUpKind.mine},
     );
     for (final b in c.state.balls) {
       b.velocity = Offset.zero;
@@ -160,7 +160,7 @@ void main() {
       seen.addAll(c.powerUps!.field.map((p) => p.kind));
     }
     expect(seen, isNotEmpty);
-    expect(seen.difference({PowerUpKind.apple, PowerUpKind.bomb}), isEmpty);
+    expect(seen.difference({PowerUpKind.apple, PowerUpKind.mine}), isEmpty);
   });
 
   test('choosing every power-up draws exactly like not choosing', () {

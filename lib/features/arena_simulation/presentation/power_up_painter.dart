@@ -8,7 +8,7 @@ import '../domain/simulation_state.dart';
 import 'power_up_sprites.dart';
 
 /// Draws the power-up layer of an Arsenal / All-Out match in the arena's coordinates (center at 0, 0):
-/// pulsing field power-ups, armed bombs, aim lines, bullets, blasts and knife slashes ([paint]), plus the
+/// pulsing field power-ups, armed mines, aim lines, bullets, blasts and knife slashes ([paint]), plus the
 /// per-ball looks ([paintBallEffects]: the held weapon or shield on the ball, frozen tint).
 ///
 /// Flat style and cheap to draw (see CLAUDE.md "Painting performance"): no blur filters, icons are
@@ -25,15 +25,17 @@ class PowerUpPainter {
     PowerUpKind.apple: Color(0xFF3BB54A),
     PowerUpKind.speed: Color(0xFFF5E050),
     PowerUpKind.freeze: Color(0xFF7FDBFF),
-    PowerUpKind.bomb: Color(0xFF9A9AAE),
+    PowerUpKind.mine: Color(0xFF9A9AAE),
     PowerUpKind.magnet: Color(0xFFE0457B),
     PowerUpKind.ghost: Color(0xFFC9B8F0),
+    PowerUpKind.grenade: Color(0xFF8DBF4A),
+    PowerUpKind.sword: Color(0xFFE6D3A3),
   };
 
   /// The color a power-up is drawn in.
   static Color colorOf(PowerUpKind kind) => _colors[kind]!;
 
-  /// Field power-ups, aim lines, bullets, bombs, blasts and slashes. Call after the fan lines, before the
+  /// Field power-ups, aim lines, bullets, mines, blasts and slashes. Call after the fan lines, before the
   /// balls. [showEffects] covers only the decorative blast flash; gameplay objects always draw.
   static void paint(Canvas canvas, SimulationState state, double arenaRadius, {bool showEffects = true}) {
     final p = state.powerUps;
@@ -66,10 +68,10 @@ class PowerUpPainter {
       _paintToken(canvas, item.kind, item.position, r * (0.96 + 0.08 * pulse), 0.5 + 0.5 * pulse);
     }
 
-    for (final bomb in p.bombs) {
+    for (final bomb in p.mines) {
       // Armed: ringed in its owner's color, with a red light blinking twice a second.
       final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
-      _paintToken(canvas, PowerUpKind.bomb, bomb.position, r, 1, ring: bomb.owner.config.primaryColor);
+      _paintToken(canvas, PowerUpKind.mine, bomb.position, r, 1, ring: bomb.owner.config.primaryColor);
       canvas.drawCircle(
         bomb.position + Offset(r * 0.62, -r * 0.62),
         math.max(2.5, r * 0.18),
@@ -93,12 +95,22 @@ class PowerUpPainter {
       final points = Float32List(p.projectiles.length * 2);
       var n = 0;
       for (final shot in p.projectiles) {
+        if (shot.landAt != null) {
+          // A grenade in flight: its icon, tumbling.
+          final sprite = PowerUpSprites.of(PowerUpKind.grenade);
+          if (sprite == null) {
+            canvas.drawCircle(shot.position, r * 0.4, Paint()..color = colorOf(PowerUpKind.grenade));
+          } else {
+            _drawSprite(canvas, sprite, shot.position, r * 0.6, state.step * 0.3);
+          }
+          continue;
+        }
         points[n++] = shot.position.dx;
         points[n++] = shot.position.dy;
       }
       canvas.drawRawPoints(
         ui.PointMode.points,
-        points,
+        Float32List.sublistView(points, 0, n),
         Paint()
           ..strokeWidth = 4
           ..strokeCap = StrokeCap.round
@@ -179,6 +191,8 @@ class PowerUpPainter {
     PowerUpKind.gatling: 0,
     PowerUpKind.freeze: 0,
     PowerUpKind.knife: math.pi / 4,
+    PowerUpKind.grenade: 0,
+    PowerUpKind.sword: -math.pi / 4,
   };
 
   /// Looks drawn over [ball]: a frozen ball gets an icy tint, and what it holds is drawn on it. A gun
@@ -309,7 +323,7 @@ class PowerUpPainter {
           final a = i * math.pi / 3;
           canvas.drawLine(at(math.cos(a), math.sin(a)), at(-math.cos(a), -math.sin(a)), stroke);
         }
-      case PowerUpKind.bomb:
+      case PowerUpKind.mine:
         canvas.drawCircle(at(-0.1, 0.2), s * 0.7, Paint()..color = const Color(0xFF2B2B33));
         canvas.drawLine(
           at(0.35, -0.35),
@@ -322,6 +336,12 @@ class PowerUpPainter {
         canvas.drawArc(Rect.fromCircle(center: at(0, 0.1), radius: s * 0.65), 0, math.pi, false, stroke);
         canvas.drawLine(at(-0.65, 0.1), at(-0.65, -0.8), stroke);
         canvas.drawLine(at(0.65, 0.1), at(0.65, -0.8), stroke);
+      case PowerUpKind.grenade:
+        canvas.drawOval(Rect.fromCenter(center: at(0, 0.2), width: s * 1.3, height: s * 1.5), fill);
+        canvas.drawLine(at(-0.2, -0.6), at(0.5, -0.9), stroke);
+      case PowerUpKind.sword:
+        canvas.drawLine(at(-0.85, 0.85), at(0.9, -0.9), stroke);
+        canvas.drawLine(at(-0.75, 0.25), at(-0.25, 0.75), stroke);
       case PowerUpKind.ghost:
         canvas.drawPath(
           Path()

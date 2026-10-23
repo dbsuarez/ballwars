@@ -41,6 +41,9 @@ class ArenaPainter extends CustomPainter {
   /// Pictures, or smiley faces (cosmetic).
   final BallLook look;
 
+  /// Faces look: the smiley's radius as a share of the ball's.
+  static const double smileyScale = 0.55;
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
@@ -312,12 +315,20 @@ class ArenaPainter extends CustomPainter {
         ),
     );
 
+    BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
     if (look == BallLook.faces) {
       // Health: life in Arsenal (no threads), otherwise the share of starting threads left.
       final health = ball.startLines > 0 ? ball.lineCount / ball.startLines : ball.life / PowerUpTuning.arenaLife;
-      paintSmiley(canvas, ball, health, state.balls);
-    } else {
-      BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
+      // A smaller smiley beside the ball's picture, overlapping it a little, on the same base line.
+      final s = ball.radius * smileyScale;
+      paintSmiley(
+        canvas,
+        ball,
+        health,
+        state.balls,
+        center: ball.position + Offset(ball.radius + s * 0.45, ball.radius - s),
+        radius: s,
+      );
     }
     PowerUpPainter.paintBallEffects(canvas, ball);
     if (ball.isGhost) canvas.restore();

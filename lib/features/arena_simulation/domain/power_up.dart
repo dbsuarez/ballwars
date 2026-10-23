@@ -13,9 +13,12 @@ enum PowerUpKind {
   apple('Apple'),
   speed('Speed'),
   freeze('Freeze'),
-  bomb('Bomb'),
+  mine('Mine'),
   magnet('Magnet'),
-  ghost('Ghost');
+  ghost('Ghost'),
+  // New kinds go last: links store the chosen kinds as a bitmask of their index.
+  grenade('Grenade'),
+  sword('Sword');
 
   const PowerUpKind(this.label);
 
@@ -23,7 +26,10 @@ enum PowerUpKind {
   final String label;
 
   /// True for the kinds that aim at an opponent and shoot.
-  bool get isGun => this == pistol || this == shotgun || this == gatling || this == freeze;
+  bool get isGun => this == pistol || this == shotgun || this == gatling || this == freeze || this == grenade;
+
+  /// True for the melee kinds used up on the next ball they touch.
+  bool get isBlade => this == knife || this == sword;
 }
 
 /// A power-up lying in the arena, waiting to be picked up.
@@ -45,7 +51,11 @@ class Projectile {
     required this.position,
     required this.velocity,
     this.volley = 0,
+    this.landAt,
   });
+
+  /// A grenade's landing point (where its target was when thrown); null for bullets.
+  final Offset? landAt;
 
   final SimulationBall owner;
   final PowerUpKind kind;
@@ -85,10 +95,10 @@ class SlashMark {
 }
 
 /// A proximity bomb set by the first ball that touched it. It stays where it lay and goes off the moment
-/// an opponent of [owner] touches it; [owner] never sets it off and is spared by its blast. Armed bombs
+/// an opponent of [owner] touches it; [owner] never sets it off and is spared by its blast. Armed mines
 /// don't count toward the field limit.
-class ArmedBomb {
-  ArmedBomb({required this.owner, required this.position, required this.armedStep});
+class ArmedMine {
+  ArmedMine({required this.owner, required this.position, required this.armedStep});
 
   final SimulationBall owner;
   final Offset position;
@@ -131,6 +141,9 @@ class PowerUpTuning {
 
   /// Bullet speed in arena radii per second.
   static const double bulletSpeedRatio = 1.2;
+
+  /// Grenade speed in arena radii per second (slower than a bullet: it is thrown).
+  static const double grenadeSpeedRatio = 0.7;
   static const int shotgunPellets = 10;
 
   /// Total spread of the shotgun fan, in radians.
@@ -143,7 +156,7 @@ class PowerUpTuning {
   static const int ghostSteps = 180;
 
   /// Bomb blast radius as a fraction of the arena radius.
-  static const double bombRadiusRatio = 0.28;
+  static const double blastRadiusRatio = 0.28;
 
   /// How long a blast stays on screen (steps).
   static const int explosionShowSteps = 30;
@@ -164,8 +177,10 @@ class PowerUpTuning {
     PowerUpKind.pistol: 10,
     PowerUpKind.shotgun: 10,
     PowerUpKind.gatling: 15,
-    PowerUpKind.knife: 25,
-    PowerUpKind.bomb: 50,
+    PowerUpKind.knife: 20,
+    PowerUpKind.mine: 50,
+    PowerUpKind.grenade: 50,
+    PowerUpKind.sword: 40,
   };
   static const double arenaShieldBash = 5;
   static const double arenaAppleHeal = 25;
@@ -179,7 +194,9 @@ class PowerUpTuning {
     PowerUpKind.shotgun: 2,
     PowerUpKind.gatling: 3,
     PowerUpKind.knife: 15,
-    PowerUpKind.bomb: 10,
+    PowerUpKind.mine: 10,
+    PowerUpKind.grenade: 10,
+    PowerUpKind.sword: 30,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -207,6 +224,9 @@ String powerUpDescription(PowerUpKind kind, {required bool arsenal}) {
     PowerUpKind.shotgun => '$aim fires a fan of ${PowerUpTuning.shotgunPellets} pellets: ${dmg(kind)} each.',
     PowerUpKind.gatling => '$aim fires ${PowerUpTuning.gatlingRounds} rounds: ${dmg(kind)} each.',
     PowerUpKind.knife => 'Carried until it stabs the next ball it touches: ${dmg(kind)}.',
+    PowerUpKind.sword => 'Carried until it slashes the next ball it touches: ${dmg(kind)}.',
+    PowerUpKind.grenade => '$aim throws it where the target is: ${dmg(kind)} to everyone near where it '
+        'blows up but the thrower.',
     PowerUpKind.shield => arsenal
         ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '
             '${PowerUpTuning.arenaShieldBash.round()} damage.'
@@ -218,7 +238,7 @@ String powerUpDescription(PowerUpKind kind, {required bool arsenal}) {
         : 'Adds up to ${PowerUpTuning.allOutAppleSlots} lines from free rim spots.',
     PowerUpKind.speed => '${PowerUpTuning.speedFactor.round()}x speed for ${secs(PowerUpTuning.speedSteps)}.',
     PowerUpKind.freeze => '$aim freezes the target for ${secs(PowerUpTuning.freezeSteps)}. No damage.',
-    PowerUpKind.bomb => 'The first ball to touch it sets it. It explodes when an opponent touches it: '
+    PowerUpKind.mine => 'The first ball to touch it sets it as a mine. It explodes when an opponent touches it: '
         '${dmg(kind)} to everyone nearby but its owner.',
     PowerUpKind.magnet => 'Pulls the nearest power-up (or the next one) straight to the ball.',
     PowerUpKind.ghost => 'For ${secs(PowerUpTuning.ghostSteps)} passes through balls and can\'t be hit.',

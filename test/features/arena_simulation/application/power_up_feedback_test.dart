@@ -180,4 +180,55 @@ void main() {
     expect(c.powerUps!.shots, PowerUpTuning.gatlingRounds);
     expect(_texts(c), contains('RATATAT!'));
   });
+
+  test('a grenade is aimed, thrown at where the target was, and blows up there, sparing the thrower', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.grenade;
+    _run(c, PowerUpTuning.aimSteps);
+    expect(a.held, isNull);
+    final grenade = c.powerUps!.projectiles.single;
+    expect(grenade.kind, PowerUpKind.grenade);
+    expect(grenade.landAt, b.position);
+    expect(_texts(c), contains('FIRE IN THE HOLE!'));
+    for (var i = 0; i < 120 && c.powerUps!.blasts == 0; i++) {
+      _run(c, 1);
+    }
+    expect(c.powerUps!.blasts, 1);
+    expect(c.powerUps!.projectiles, isEmpty);
+    expect(b.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.grenade]!);
+    expect(a.life, PowerUpTuning.arenaLife);
+  });
+
+  test('a grenade lands where the target was even if it moved away, and hits only who is near', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.grenade;
+    _run(c, PowerUpTuning.aimSteps);
+    final landAt = c.powerUps!.projectiles.single.landAt!;
+    b.position = const Offset(0, 200); // Ran off, far from the landing spot.
+    for (var i = 0; i < 120 && c.powerUps!.blasts == 0; i++) {
+      _run(c, 1);
+    }
+    expect(c.powerUps!.explosions.single.position, landAt);
+    expect(b.life, PowerUpTuning.arenaLife);
+  });
+
+  test('a sword strikes like a knife at double the damage and is used up', () {
+    expect(PowerUpTuning.arenaDamage[PowerUpKind.sword], 2 * PowerUpTuning.arenaDamage[PowerUpKind.knife]!);
+    expect(PowerUpTuning.allOutThreads[PowerUpKind.sword], 2 * PowerUpTuning.allOutThreads[PowerUpKind.knife]!);
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a
+      ..held = PowerUpKind.sword
+      ..position = Offset(b.position.dx - a.radius - b.radius - 2, 0)
+      ..velocity = const Offset(120, 0);
+    for (var i = 0; i < 30 && a.held != null; i++) {
+      _run(c, 1);
+    }
+    expect(a.held, isNull);
+    expect(b.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.sword]!);
+    expect(_texts(c), contains('HIYAA!'));
+    expect(c.powerUps!.slashMarks, isNotEmpty);
+  });
 }

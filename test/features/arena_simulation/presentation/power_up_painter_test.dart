@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +91,22 @@ void main() {
       for (final kind in PowerUpKind.values) PowerUpPainter.colorOf(kind),
     };
     expect(colors.length, PowerUpKind.values.length);
+  });
+
+  test('portal oval rotation conforms to every arena edge', () {
+    expect(PowerUpPainter.portalRotationFor(const Offset(100, 0)), 0);
+    expect(
+      PowerUpPainter.portalRotationFor(const Offset(0, 100)),
+      closeTo(math.pi / 2, 1e-9),
+    );
+    expect(
+      PowerUpPainter.portalRotationFor(const Offset(-100, 0)).abs(),
+      closeTo(math.pi, 1e-9),
+    );
+    expect(
+      PowerUpPainter.portalRotationFor(const Offset(0, -100)),
+      closeTo(-math.pi / 2, 1e-9),
+    );
   });
 
   test('every selection icon paints visible pixels', () async {

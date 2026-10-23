@@ -127,13 +127,9 @@ class PowerUpPainter {
       final pulse =
           0.5 +
           0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
-      final radial = portal.position.distance == 0
-          ? const Offset(1, 0)
-          : portal.position / portal.position.distance;
-      final tangentAngle = math.atan2(radial.dy, radial.dx) + math.pi / 2;
       canvas.save();
       canvas.translate(portal.position.dx, portal.position.dy);
-      canvas.rotate(tangentAngle);
+      canvas.rotate(portalRotationFor(portal.position));
       for (var i = 0; i < 3; i++) {
         canvas.drawOval(
           Rect.fromCenter(
@@ -327,6 +323,11 @@ class PowerUpPainter {
       }
     }
   }
+
+  /// Rotation for a vertically-authored portal oval so its long axis follows
+  /// the tangent of the circular arena edge at [position].
+  static double portalRotationFor(Offset position) =>
+      position.distance == 0 ? 0 : math.atan2(position.dy, position.dx);
 
   static final Paint _trailPaint = Paint()
     ..strokeCap = StrokeCap.round

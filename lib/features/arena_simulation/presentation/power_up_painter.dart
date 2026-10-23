@@ -93,8 +93,13 @@ class PowerUpPainter {
     }
 
     if (p.projectiles.isNotEmpty) {
-      final points = Float32List(p.projectiles.length * 2);
+      // Bullets: a faint trail, a brass casing and a copper tip along the flight direction, each layer one
+      // batched call.
+      final trail = Float32List(p.projectiles.length * 4);
+      final casing = Float32List(p.projectiles.length * 4);
+      final tip = Float32List(p.projectiles.length * 4);
       var n = 0;
+      final len = math.max(6.0, r * 0.6);
       for (final shot in p.projectiles) {
         if (shot.kind == PowerUpKind.hook) {
           // The hook flying out on its chain.
@@ -118,17 +123,47 @@ class PowerUpPainter {
           }
           continue;
         }
-        points[n++] = shot.position.dx;
-        points[n++] = shot.position.dy;
+        if (shot.kind == PowerUpKind.freeze) {
+          _paintIceWave(canvas, shot, r);
+          continue;
+        }
+        final speed = shot.velocity.distance;
+        if (speed == 0) continue;
+        final dir = shot.velocity / speed;
+        final front = shot.position;
+        final mid = front - dir * (len * 0.45);
+        final back = front - dir * len;
+        final tail = front - dir * (len * 3.5);
+        void put(Float32List list, Offset a, Offset b) {
+          list
+            ..[n] = a.dx
+            ..[n + 1] = a.dy
+            ..[n + 2] = b.dx
+            ..[n + 3] = b.dy;
+        }
+
+        put(trail, tail, back);
+        put(casing, back, mid);
+        put(tip, mid, front);
+        n += 4;
       }
-      canvas.drawRawPoints(
-        ui.PointMode.points,
-        Float32List.sublistView(points, 0, n),
-        Paint()
-          ..strokeWidth = 4
-          ..strokeCap = StrokeCap.round
-          ..color = const Color(0xFFFFF3C4),
-      );
+      if (n > 0) {
+        canvas.drawRawPoints(
+          ui.PointMode.lines,
+          Float32List.sublistView(trail, 0, n),
+          _trailPaint..strokeWidth = len * 0.35,
+        );
+        canvas.drawRawPoints(
+          ui.PointMode.lines,
+          Float32List.sublistView(casing, 0, n),
+          _casingPaint..strokeWidth = len * 0.5,
+        );
+        canvas.drawRawPoints(
+          ui.PointMode.lines,
+          Float32List.sublistView(tip, 0, n),
+          _tipPaint..strokeWidth = len * 0.5,
+        );
+      }
     }
 
     // Hooked balls on their chain, being reeled in.
@@ -151,6 +186,72 @@ class PowerUpPainter {
         canvas.drawLine(o - along, o + along, paint);
       }
     }
+  }
+
+  static final Paint _trailPaint = Paint()
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0x33FFF3C4);
+  static final Paint _casingPaint = Paint()
+    ..strokeCap = StrokeCap.butt
+    ..color = const Color(0xFFF2C14E);
+  static final Paint _tipPaint = Paint()
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0xFFE08A4F);
+
+  static final Paint _iceArc = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
+  /// A freeze shot as an icy blast: pale arcs facing forward, widening the farther the shot has flown,
+  /// a white core and a few frost sparkles behind it.
+  static void _paintIceWave(Canvas canvas, Projectile shot, double r) {
+    final speed = shot.velocity.distance;
+    if (speed == 0) return;
+    final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
+    final dir = shot.velocity / speed;
+    // Grows from a ball's edge outward as it travels.
+    final travelled = (shot.position - shot.owner.position).distance;
+    final grow = (travelled / (r * 8)).clamp(0.0, 1.0);
+    // A soft frosty glow around the blast (a gradient, no blur).
+    final glowR = r * (1.2 + 1.2 * grow);
+    canvas.drawCircle(
+      shot.position - dir * (r * 0.4),
+      glowR,
+      Paint()
+        ..shader = ui.Gradient.radial(shot.position - dir * (r * 0.4), glowR, [
+          const Color(0x667FDBFF),
+          const Color(0x007FDBFF),
+        ]),
+    );
+    for (var i = 0; i < 3; i++) {
+      final back = shot.position - dir * (i * r * 0.55);
+      final radius = r * (0.9 + 1.3 * grow) * (1 - i * 0.18);
+      _iceArc
+        ..strokeWidth = math.max(1.5, r * (0.32 - i * 0.08))
+        ..color = Color.lerp(
+          const Color(0xFFE8FBFF),
+          const Color(0xFF7FDBFF),
+          i / 2,
+        )!.withValues(alpha: 0.95 - i * 0.28);
+      canvas.drawArc(Rect.fromCircle(center: back - dir * radius, radius: radius), angle - 0.75, 1.5, false, _iceArc);
+    }
+    canvas.drawCircle(shot.position, math.max(2.0, r * 0.22), Paint()..color = const Color(0xFFF4FDFF));
+    final side = Offset(-dir.dy, dir.dx);
+    final sparkles = Float32List(8);
+    for (var i = 0; i < 4; i++) {
+      final o = shot.position - dir * (r * (0.9 + i * 0.5)) + side * (r * 0.5 * math.sin(travelled * 0.05 + i * 2.1));
+      sparkles
+        ..[i * 2] = o.dx
+        ..[i * 2 + 1] = o.dy;
+    }
+    canvas.drawRawPoints(
+      ui.PointMode.points,
+      sparkles,
+      Paint()
+        ..strokeWidth = math.max(1.5, r * 0.14)
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xCCBFEFFF),
+    );
   }
 
   static final Paint _chainPaint = Paint()
@@ -188,13 +289,12 @@ class PowerUpPainter {
       c,
       r * 1.5,
       Paint()
-        ..shader = ui.Gradient.radial(c, r * 1.5, [
-          color.withValues(alpha: 0.35 * ringAlpha),
-          color.withValues(alpha: 0),
-        ], [
-          0.6,
-          1,
-        ]),
+        ..shader = ui.Gradient.radial(
+          c,
+          r * 1.5,
+          [color.withValues(alpha: 0.35 * ringAlpha), color.withValues(alpha: 0)],
+          [0.6, 1],
+        ),
     );
     canvas.drawCircle(c, r, Paint()..color = const Color(0xFFF4F4F2));
     canvas.drawCircle(
@@ -243,10 +343,7 @@ class PowerUpPainter {
 
   /// The direction, in radians, each weapon icon points in as drawn in its SVG (guns: the muzzle; knife:
   /// the tip). Weapons are turned from it to point where they are used.
-  static const Map<PowerUpKind, double> _iconAngle = {
-    PowerUpKind.knife: -math.pi / 4,
-    PowerUpKind.sword: -math.pi / 4,
-  };
+  static const Map<PowerUpKind, double> _iconAngle = {PowerUpKind.knife: -math.pi / 4, PowerUpKind.sword: -math.pi / 4};
 
   /// Looks drawn over [ball]: a frozen ball gets an icy tint, and what it holds is drawn on it. A gun
   /// sits on its edge pointing at its target (or the way it moves), a knife points the way it moves, and
@@ -272,7 +369,13 @@ class PowerUpPainter {
       );
       if (sprite != null) {
         final dir = Offset(math.cos(ball.shieldAngle), math.sin(ball.shieldAngle));
-        _drawSprite(canvas, sprite, ball.position + dir * ball.radius, ball.radius * 0.7, ball.shieldAngle + math.pi / 2);
+        _drawSprite(
+          canvas,
+          sprite,
+          ball.position + dir * ball.radius,
+          ball.radius * 0.7,
+          ball.shieldAngle + math.pi / 2,
+        );
       }
       return;
     }

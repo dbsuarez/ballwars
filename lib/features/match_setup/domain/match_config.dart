@@ -19,7 +19,8 @@ enum BallSize {
 
   const BallSize(this.id, this.label, this.scale);
 
-  static BallSize? byId(String? id) => values.where((s) => s.id == id).firstOrNull;
+  static BallSize? byId(String? id) =>
+      values.where((s) => s.id == id).firstOrNull;
 }
 
 /// How a match is played. Threads is the original line-cutting game; the
@@ -34,7 +35,8 @@ enum MatchMode {
 
   const MatchMode(this.id, this.label);
 
-  static MatchMode? byId(String? id) => values.where((m) => m.id == id).firstOrNull;
+  static MatchMode? byId(String? id) =>
+      values.where((m) => m.id == id).firstOrNull;
 }
 
 /// How balls are drawn (cosmetic, not part of the match or of replay links): their pictures, or
@@ -47,7 +49,8 @@ enum BallLook {
 
   const BallLook(this.label);
 
-  static BallLook? byName(String? name) => values.where((l) => l.name == name).firstOrNull;
+  static BallLook? byName(String? name) =>
+      values.where((l) => l.name == name).firstOrNull;
 }
 
 class MatchConfig {
@@ -71,6 +74,9 @@ class MatchConfig {
   /// Power-up modes: the power-ups that can spawn; null for all of them.
   final Set<PowerUpKind>? powerUps;
 
+  /// Whether balls can equip two weapons instead of one.
+  final bool dualWield;
+
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
 
@@ -87,6 +93,7 @@ class MatchConfig {
     this.look = BallLook.pictures,
     this.question,
     this.powerUps,
+    this.dualWield = false,
     this.tuning = PowerUpConfig.defaults,
     this.mode = MatchMode.threads,
   });

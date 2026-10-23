@@ -11,9 +11,24 @@ import 'package:ballwars/features/match_setup/domain/match_config.dart';
 const _arenaRadius = 260.0;
 
 const _balls = [
-  CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
-  CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
-  CustomBall(id: 'c', name: 'C', primaryColor: Colors.green, glowColor: Colors.lightGreen),
+  CustomBall(
+    id: 'a',
+    name: 'A',
+    primaryColor: Colors.red,
+    glowColor: Colors.pink,
+  ),
+  CustomBall(
+    id: 'b',
+    name: 'B',
+    primaryColor: Colors.blue,
+    glowColor: Colors.cyan,
+  ),
+  CustomBall(
+    id: 'c',
+    name: 'C',
+    primaryColor: Colors.green,
+    glowColor: Colors.lightGreen,
+  ),
 ];
 
 /// (ball count, seed, winnerId, wallHits, ballHits, stepCount) of a full run with `slowMotionLines: 0`,
@@ -61,20 +76,23 @@ const _threadsBaseline = [
   (3, 20, 'a', 24, 0, 1259),
 ];
 
-SimulationBall _ball(MatchSimulationController c, String id) => c.state.balls.firstWhere((b) => b.config.id == id);
+SimulationBall _ball(MatchSimulationController c, String id) =>
+    c.state.balls.firstWhere((b) => b.config.id == id);
 
-MatchSimulationController _arsenal({int count = 2, int seed = 1}) => MatchSimulationController(
-  _balls.take(count).toList(),
-  arenaRadius: _arenaRadius,
-  seed: seed,
-  layoutRotation: 0,
-  mode: MatchMode.arsenal,
-  lookAhead: false,
-);
+MatchSimulationController _arsenal({int count = 2, int seed = 1}) =>
+    MatchSimulationController(
+      _balls.take(count).toList(),
+      arenaRadius: _arenaRadius,
+      seed: seed,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
 
 void main() {
   test('Threads mode plays exactly as before', () {
-    for (final (count, seed, winner, wallHits, ballHits, steps) in _threadsBaseline) {
+    for (final (count, seed, winner, wallHits, ballHits, steps)
+        in _threadsBaseline) {
       final c = MatchSimulationController(
         _balls.take(count).toList(),
         arenaRadius: _arenaRadius,
@@ -98,7 +116,11 @@ void main() {
   });
 
   test('Threads is the default mode', () {
-    final c = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: 1);
+    final c = MatchSimulationController(
+      _balls.take(2).toList(),
+      arenaRadius: _arenaRadius,
+      seed: 1,
+    );
     expect(c.mode, MatchMode.threads);
     expect(c.powerUps, isNull);
   });
@@ -163,11 +185,15 @@ void main() {
       c.tick(1 / 60);
       expect(c.state.status, MatchStatus.finished, reason: 'seed $seed');
       expect(c.state.winnerId, isNotNull, reason: 'seed $seed');
-      expect(c.state.balls.where((b) => !b.isEliminated).length, 1, reason: 'seed $seed');
+      expect(
+        c.state.balls.where((b) => !b.isEliminated).length,
+        1,
+        reason: 'seed $seed',
+      );
     }
   });
 
-  test('Arsenal bumps do no damage', () {
+  test('Arsenal bumps deal 5 damage to both balls', () {
     final c = _arsenal();
     final ballA = _ball(c, 'a');
     final ballB = _ball(c, 'b');
@@ -177,24 +203,27 @@ void main() {
     ballB.velocity = const Offset(-100, 0);
     c.tick(1 / 60);
     expect(c.ballHits, greaterThan(0));
-    expect(ballA.life, 100);
-    expect(ballB.life, 100);
+    expect(ballA.life, 100 - PowerUpTuning.arenaCollisionDamage);
+    expect(ballB.life, 100 - PowerUpTuning.arenaCollisionDamage);
   });
 
-  test('All-Out starts with threads like Threads mode and has a power-up system', () {
-    final c = MatchSimulationController(
-      _balls.take(2).toList(),
-      arenaRadius: _arenaRadius,
-      seed: 1,
-      layoutRotation: 0,
-      mode: MatchMode.allOut,
-      lookAhead: false,
-    );
-    expect(c.powerUps, isNotNull);
-    expect(_ball(c, 'a').fanLines.length, kRimSlotCount ~/ 2);
-    expect(_ball(c, 'b').fanLines.length, kRimSlotCount ~/ 2);
-    expect(c.freeSlotCount, 0);
-  });
+  test(
+    'All-Out starts with threads like Threads mode and has a power-up system',
+    () {
+      final c = MatchSimulationController(
+        _balls.take(2).toList(),
+        arenaRadius: _arenaRadius,
+        seed: 1,
+        layoutRotation: 0,
+        mode: MatchMode.allOut,
+        lookAhead: false,
+      );
+      expect(c.powerUps, isNotNull);
+      expect(_ball(c, 'a').fanLines.length, kRimSlotCount ~/ 2);
+      expect(_ball(c, 'b').fanLines.length, kRimSlotCount ~/ 2);
+      expect(c.freeSlotCount, 0);
+    },
+  );
 
   test('cutThreads frees the slots nearest to the hit first', () {
     final c = MatchSimulationController(
@@ -214,7 +243,11 @@ void main() {
     expect(c.freeSlotCount, 5);
     final remaining = ballA.fanLines.map((l) => l.slotIndex).toSet();
     for (final slot in const [0, 1, kRimSlotCount - 1, 2, kRimSlotCount - 2]) {
-      expect(remaining, isNot(contains(slot)), reason: 'slot $slot is among the nearest');
+      expect(
+        remaining,
+        isNot(contains(slot)),
+        reason: 'slot $slot is among the nearest',
+      );
     }
   });
 
@@ -241,9 +274,12 @@ void main() {
   /// steps on which it was in slow motion.
   (int, List<int>) playOut(MatchSimulationController c) {
     final slow = <int>[];
-    while (c.state.status != MatchStatus.finished && c.stepCount < 60 * 60 * 10) {
+    while (c.state.status != MatchStatus.finished &&
+        c.stepCount < 60 * 60 * 10) {
       // One step per tick, also once playback speeds up after a minute.
-      c.tick(MatchSimulationController.fixedTimestep / c.playbackSpeedUp * 1.0000001);
+      c.tick(
+        MatchSimulationController.fixedTimestep / c.playbackSpeedUp * 1.0000001,
+      );
       if (c.state.status == MatchStatus.slowMotion) slow.add(c.stepCount);
     }
     return (c.stepCount, slow);
@@ -252,10 +288,19 @@ void main() {
   test('the look-ahead predicts the real finish in Arsenal and All-Out', () {
     for (final mode in [MatchMode.arsenal, MatchMode.allOut]) {
       for (var seed = 1; seed <= 10; seed++) {
-        final c = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: seed, mode: mode);
+        final c = MatchSimulationController(
+          _balls.take(2).toList(),
+          arenaRadius: _arenaRadius,
+          seed: seed,
+          mode: mode,
+        );
         final predicted = c.predictedFinishStep;
         final (steps, _) = playOut(c);
-        expect(c.state.status, MatchStatus.finished, reason: '$mode seed $seed did not finish');
+        expect(
+          c.state.status,
+          MatchStatus.finished,
+          reason: '$mode seed $seed did not finish',
+        );
         expect(predicted, steps, reason: '$mode seed $seed');
       }
     }
@@ -264,7 +309,12 @@ void main() {
   test('Arsenal slow motion uses seconds before the win', () {
     for (var seed = 1; seed <= 5; seed++) {
       // Lines setting (admin default) with no seconds: Arsenal falls back to 1.5 s before the win.
-      final c = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: seed, mode: MatchMode.arsenal);
+      final c = MatchSimulationController(
+        _balls.take(2).toList(),
+        arenaRadius: _arenaRadius,
+        seed: seed,
+        mode: MatchMode.arsenal,
+      );
       final finish = c.predictedFinishStep!;
       final (_, slow) = playOut(c);
       expect(slow.first, finish - 90, reason: 'seed $seed');
@@ -281,17 +331,42 @@ void main() {
     }
   });
 
-  test('crowded Arsenal matches hit harder: damage scales with the number of balls', () {
-    final four = [
-      ..._balls.take(2),
-      const CustomBall(id: 'c', name: 'C', primaryColor: Colors.green, glowColor: Colors.lime),
-      const CustomBall(id: 'd', name: 'D', primaryColor: Colors.orange, glowColor: Colors.amber),
-    ];
-    final two = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: 3, mode: MatchMode.arsenal, lookAhead: false);
-    final crowd = MatchSimulationController(four, arenaRadius: _arenaRadius, seed: 3, mode: MatchMode.arsenal, lookAhead: false);
-    two.damage(two.state.balls[0], 10);
-    crowd.damage(crowd.state.balls[0], 10);
-    expect(PowerUpTuning.arenaLife - two.state.balls[0].life, 10);
-    expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 40);
-  });
+  test(
+    'crowded Arsenal matches hit harder: damage scales with the number of balls',
+    () {
+      final four = [
+        ..._balls.take(2),
+        const CustomBall(
+          id: 'c',
+          name: 'C',
+          primaryColor: Colors.green,
+          glowColor: Colors.lime,
+        ),
+        const CustomBall(
+          id: 'd',
+          name: 'D',
+          primaryColor: Colors.orange,
+          glowColor: Colors.amber,
+        ),
+      ];
+      final two = MatchSimulationController(
+        _balls.take(2).toList(),
+        arenaRadius: _arenaRadius,
+        seed: 3,
+        mode: MatchMode.arsenal,
+        lookAhead: false,
+      );
+      final crowd = MatchSimulationController(
+        four,
+        arenaRadius: _arenaRadius,
+        seed: 3,
+        mode: MatchMode.arsenal,
+        lookAhead: false,
+      );
+      two.damage(two.state.balls[0], 10);
+      crowd.damage(crowd.state.balls[0], 10);
+      expect(PowerUpTuning.arenaLife - two.state.balls[0].life, 10);
+      expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 40);
+    },
+  );
 }

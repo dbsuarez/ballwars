@@ -65,6 +65,7 @@ void main() {
     controller.state.balls.first
       ..held = PowerUpKind.pistol
       ..aimTarget = controller.state.balls.last;
+    controller.state.balls.last.speedLeft = PowerUpTuning.speedSteps;
 
     final recorder = ui.PictureRecorder();
     ArenaPainter(

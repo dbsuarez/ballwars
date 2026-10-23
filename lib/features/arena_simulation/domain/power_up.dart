@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'power_up_config.dart';
 import 'simulation_ball.dart';
 
-/// The power-ups a ball can pick up in the Arsenal and All-Out match modes.
+/// Pickups a ball can collect in the Arsenal and All-Out match modes.
 enum PowerUpKind {
   pistol('Pistol'),
   shotgun('Shotgun'),
@@ -29,15 +29,40 @@ enum PowerUpKind {
 
   /// True for the kinds that aim at an opponent and shoot.
   bool get isGun =>
-      this == pistol || this == shotgun || this == gatling || this == freeze || this == grenade || this == hook;
+      this == pistol ||
+      this == shotgun ||
+      this == gatling ||
+      this == freeze ||
+      this == grenade ||
+      this == hook;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
+
+  /// Weapons occupy the ball's single equipment slot. Keeping this category
+  /// explicit leaves room for a future multi-weapon loadout.
+  bool get isWeapon =>
+      this == pistol ||
+      this == shotgun ||
+      this == gatling ||
+      this == knife ||
+      this == shield ||
+      this == freeze ||
+      this == grenade ||
+      this == sword ||
+      this == hook;
+
+  /// Power-ups apply immediately and never replace an equipped weapon.
+  bool get isPowerUp => !isWeapon;
 }
 
 /// A power-up lying in the arena, waiting to be picked up.
 class FieldPowerUp {
-  FieldPowerUp({required this.kind, required this.position, required this.spawnStep});
+  FieldPowerUp({
+    required this.kind,
+    required this.position,
+    required this.spawnStep,
+  });
 
   final PowerUpKind kind;
   Offset position;
@@ -87,7 +112,12 @@ class Explosion {
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or
 /// [stepsLeft] runs out), then takes the uppercut and is thrown off at [speed] in a random direction.
 class HookPull {
-  HookPull({required this.owner, required this.target, required this.speed, required this.stepsLeft});
+  HookPull({
+    required this.owner,
+    required this.target,
+    required this.speed,
+    required this.stepsLeft,
+  });
 
   final SimulationBall owner;
   final SimulationBall target;
@@ -114,7 +144,11 @@ class SlashMark {
 /// an opponent of [owner] touches it; [owner] never sets it off and is spared by its blast. Armed mines
 /// don't count toward the field limit.
 class ArmedMine {
-  ArmedMine({required this.owner, required this.position, required this.armedStep});
+  ArmedMine({
+    required this.owner,
+    required this.position,
+    required this.armedStep,
+  });
 
   final SimulationBall owner;
   final Offset position;
@@ -131,7 +165,8 @@ class PowerUpTuning {
   static const int spawnIntervalSteps = 300;
 
   /// Steps between two spawns for [ballCount] balls: more balls, more often (2: 5 s, 3: 3.3 s, 4: 2.5 s).
-  static int spawnInterval(int ballCount) => (spawnIntervalSteps * 2 / math.max(2, ballCount)).round();
+  static int spawnInterval(int ballCount) =>
+      (spawnIntervalSteps * 2 / math.max(2, ballCount)).round();
 
   /// Most unclaimed power-ups lying on the field for [ballCount] balls (2: 3, 3: 4, 4: 5); a new one
   /// removes the oldest.
@@ -208,6 +243,7 @@ class PowerUpTuning {
     PowerUpKind.sword: 40,
     PowerUpKind.hook: 30,
   };
+  static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
   static const double arenaAppleHeal = 25;
 
@@ -235,10 +271,16 @@ class PowerUpTuning {
 /// What [kind] does, with its numbers from [PowerUpTuning], for the weapons list in Match Setup.
 /// [arsenal]: damage in life (Arsenal); otherwise in lines (All-Out), with [config]'s numbers. Damage is for
 /// 2 balls (see [crowdNote]).
-String powerUpDescription(PowerUpKind kind, {required bool arsenal, PowerUpConfig config = PowerUpConfig.defaults}) {
+String powerUpDescription(
+  PowerUpKind kind, {
+  required bool arsenal,
+  PowerUpConfig config = PowerUpConfig.defaults,
+}) {
   String secs(int steps) {
     final s = steps / 60;
-    return s == s.roundToDouble() ? '${s.round()} s' : '${s.toStringAsFixed(1)} s';
+    return s == s.roundToDouble()
+        ? '${s.round()} s'
+        : '${s.toStringAsFixed(1)} s';
   }
 
   String dmg(PowerUpKind k) => arsenal
@@ -248,29 +290,42 @@ String powerUpDescription(PowerUpKind kind, {required bool arsenal, PowerUpConfi
   final block = (config.shieldBlock * 100).round();
   return switch (kind) {
     PowerUpKind.pistol => '$aim fires one shot: ${dmg(kind)}.',
-    PowerUpKind.shotgun => '$aim fires a fan of ${config.shotgunPellets} pellets: ${dmg(kind)} each.',
-    PowerUpKind.gatling => '$aim fires ${config.gatlingRounds} rounds: ${dmg(kind)} each.',
-    PowerUpKind.knife => 'Carried until it stabs the next ball it touches: ${dmg(kind)}.',
-    PowerUpKind.sword => 'Carried until it slashes the next ball it touches: ${dmg(kind)}.',
-    PowerUpKind.grenade => '$aim throws it where the target is: ${dmg(kind)} to everyone near where it '
-        'blows up but the thrower.',
-    PowerUpKind.shield => arsenal
-        ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '
-            '${config.arenaShieldBash.round()} damage.'
-        : 'Keeps the lines lost to the next hit at ${(config.allOutShieldKeep * 100).round()}%. Bashes an unarmed ball: '
-            '${config.allOutShieldBash} lines.',
-    PowerUpKind.apple => arsenal
-        ? 'Heals ${config.arenaAppleHeal.round()} life, even past full '
-            '(up to ${config.arenaMaxLife.round()}).'
-        : 'Adds up to ${config.allOutAppleSlots} lines from free rim spots.',
-    PowerUpKind.speed => '${PowerUpTuning.speedFactor.round()}x speed for ${secs(config.speedSteps)}.',
-    PowerUpKind.freeze => '$aim freezes the target for ${secs(config.freezeSteps)}. No damage.',
-    PowerUpKind.hook => '$aim throws a hook on a chain. A hit pulls the opponent in ("COME OVER HERE!"), '
-        'uppercuts it for ${dmg(kind)} and throws it away.',
-    PowerUpKind.mine => 'The first ball to touch it sets it as a mine. It explodes when an opponent touches it: '
-        '${dmg(kind)} to everyone nearby but its owner.',
-    PowerUpKind.magnet => 'Pulls the nearest power-up (or the next one) straight to the ball.',
-    PowerUpKind.ghost => 'For ${secs(config.ghostSteps)} passes through balls and can\'t be hit.',
+    PowerUpKind.shotgun =>
+      '$aim fires a fan of ${config.shotgunPellets} pellets: ${dmg(kind)} each.',
+    PowerUpKind.gatling =>
+      '$aim fires ${config.gatlingRounds} rounds: ${dmg(kind)} each.',
+    PowerUpKind.knife =>
+      'Carried until it stabs the next ball it touches: ${dmg(kind)}.',
+    PowerUpKind.sword =>
+      'Carried until it slashes the next ball it touches: ${dmg(kind)}.',
+    PowerUpKind.grenade =>
+      '$aim throws it where the target is: ${dmg(kind)} to everyone near where it '
+          'blows up but the thrower.',
+    PowerUpKind.shield =>
+      arsenal
+          ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '
+                '${config.arenaShieldBash.round()} damage.'
+          : 'Keeps the lines lost to the next hit at ${(config.allOutShieldKeep * 100).round()}%. Bashes an unarmed ball: '
+                '${config.allOutShieldBash} lines.',
+    PowerUpKind.apple =>
+      arsenal
+          ? 'Heals ${config.arenaAppleHeal.round()} life, even past full '
+                '(up to ${config.arenaMaxLife.round()}).'
+          : 'Adds up to ${config.allOutAppleSlots} lines from free rim spots.',
+    PowerUpKind.speed =>
+      '${PowerUpTuning.speedFactor.round()}x speed for ${secs(config.speedSteps)}.',
+    PowerUpKind.freeze =>
+      '$aim freezes the target for ${secs(config.freezeSteps)}. No damage.',
+    PowerUpKind.hook =>
+      '$aim throws a hook on a chain. A hit pulls the opponent in ("COME OVER HERE!"), '
+          'uppercuts it for ${dmg(kind)} and throws it away.',
+    PowerUpKind.mine =>
+      'The first ball to touch it sets it as a mine. It explodes when an opponent touches it: '
+          '${dmg(kind)} to everyone nearby but its owner.',
+    PowerUpKind.magnet =>
+      'Pulls the nearest power-up (or the next one) straight to the ball.',
+    PowerUpKind.ghost =>
+      'For ${secs(config.ghostSteps)} passes through balls and can\'t be hit.',
   };
 }
 

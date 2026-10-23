@@ -39,7 +39,10 @@ void main() {
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
         home: MatchSetupScreen(
-          packRepository: BallPackRepository(baseUri: Uri.parse('http://localhost:1/packs/'), fetch: (_) async => _catalog),
+          packRepository: BallPackRepository(
+            baseUri: Uri.parse('http://localhost:1/packs/'),
+            fetch: (_) async => _catalog,
+          ),
           onStartBattle: (config) => started = config,
         ),
       ),
@@ -54,54 +57,75 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('categories are sorted by name; the first opens by default and Start needs two balls', (tester) async {
-    await pumpSetup(tester);
-    expect(find.text('Nike'), findsOneWidget);
+  testWidgets(
+    'categories are sorted by name; the first opens by default and Start needs two balls',
+    (tester) async {
+      await pumpSetup(tester);
+      expect(find.text('Nike'), findsOneWidget);
 
-    await tester.tap(find.text('Nike'));
-    await tester.pump();
-    await tester.tap(find.text('Start'));
-    expect(started, isNull);
-  });
+      await tester.tap(find.text('Nike'));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started, isNull);
+    },
+  );
 
-  testWidgets('switching categories clears the picks, so a match never mixes categories', (tester) async {
-    await pumpSetup(tester);
-    await tester.tap(find.text('Nike'));
-    await pickCategory(tester, 'Countries');
-    await tester.enterText(find.widgetWithText(TextField, 'Search'), 'phil');
-    await tester.pumpAndSettle();
-    expect(find.text('Country 3'), findsNothing);
-    await tester.tap(find.text('Philippines'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Start'));
-    expect(started, isNull); // Nike was cleared: one ball only.
+  testWidgets(
+    'switching categories clears the picks, so a match never mixes categories',
+    (tester) async {
+      await pumpSetup(tester);
+      await tester.tap(find.text('Nike'));
+      await pickCategory(tester, 'Countries');
+      await tester.enterText(find.widgetWithText(TextField, 'Search'), 'phil');
+      await tester.pumpAndSettle();
+      expect(find.text('Country 3'), findsNothing);
+      await tester.tap(find.text('Philippines'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start'));
+      expect(started, isNull); // Nike was cleared: one ball only.
 
-    await tester.enterText(find.widgetWithText(TextField, 'Search'), 'country 3');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Country 3'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Start'));
-    expect(started!.contestants.map((b) => b.name), ['Philippines', 'Country 3']);
-  });
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search'),
+        'country 3',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Country 3'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start'));
+      expect(started!.contestants.map((b) => b.name), [
+        'Philippines',
+        'Country 3',
+      ]);
+    },
+  );
 
-  testWidgets('random matchup picks two balls from the current category', (tester) async {
+  testWidgets('random matchup picks two balls from the current category', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     await tester.tap(find.byIcon(Icons.shuffle));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
 
     expect(started!.contestants.length, 2);
-    expect(started!.contestants.every((b) => b.id.startsWith('pack:shoes/')), isTrue);
+    expect(
+      started!.contestants.every((b) => b.id.startsWith('pack:shoes/')),
+      isTrue,
+    );
   });
 
-  testWidgets('small categories have no ball search; big ones do', (tester) async {
+  testWidgets('small categories have no ball search; big ones do', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     expect(find.widgetWithText(TextField, 'Search'), findsNothing);
     await pickCategory(tester, 'Countries');
     expect(find.widgetWithText(TextField, 'Search'), findsOneWidget);
   });
 
-  testWidgets('rounds, speed and effects are passed to the match', (tester) async {
+  testWidgets('rounds, speed and effects are passed to the match', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     await tester.tap(find.text('1 round'));
     await tester.tap(find.text('1×'));
@@ -116,7 +140,9 @@ void main() {
     expect(started!.showEffects, isFalse);
   });
 
-  testWidgets('rounds and speed are remembered for the next match setup', (tester) async {
+  testWidgets('rounds and speed are remembered for the next match setup', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     await tester.tap(find.text('1 round'));
     await tester.tap(find.text('1×'));
@@ -142,7 +168,9 @@ void main() {
     expect(find.text('Clear'), findsNothing);
   });
 
-  testWidgets('ball size is passed to the match and remembered', (tester) async {
+  testWidgets('ball size is passed to the match and remembered', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     await tester.tap(find.text('Medium'));
     await tester.pump();
@@ -175,7 +203,9 @@ void main() {
     expect(started!.mode, MatchMode.arsenal);
   });
 
-  testWidgets('ball look is passed to the match and remembered', (tester) async {
+  testWidgets('ball look is passed to the match and remembered', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     await tester.tap(find.byTooltip('Ball look: pictures'));
     await tester.pump();
@@ -194,7 +224,10 @@ void main() {
     expect(find.widgetWithText(TextField, 'Your question'), findsNothing);
     await pickCategory(tester, 'Yes or No');
     expect(find.widgetWithText(TextField, 'Your question'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Your question'), '  Will it rain?  ');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Your question'),
+      '  Will it rain?  ',
+    );
     await tester.tap(find.text('YES'));
     await tester.tap(find.text('NO'));
     await tester.pump();
@@ -202,48 +235,69 @@ void main() {
     expect(started!.question, 'Will it rain?');
   });
 
-  testWidgets('weapons can be chosen for power-up modes; All switches every one; Done needs at least one', (tester) async {
-    await pumpSetup(tester);
-    expect(find.textContaining('Weapons'), findsNothing);
-    await tester.tap(find.text('Arsenal'));
-    await tester.pump();
-    expect(find.text('Weapons: All'), findsOneWidget);
+  testWidgets(
+    'weapons can be chosen for power-up modes; All switches every one; Done needs at least one',
+    (tester) async {
+      await pumpSetup(tester);
+      expect(find.textContaining('Weapons'), findsNothing);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      expect(find.text('Weapons: All'), findsOneWidget);
 
-    await tester.tap(find.text('Weapons: All'));
-    await tester.pumpAndSettle();
-    // Each one says what it does, with its damage.
-    expect(find.text(powerUpDescription(PowerUpKind.pistol, arsenal: true)), findsOneWidget);
-    expect(find.textContaining('one shot: ${PowerUpTuning.arenaDamage[PowerUpKind.pistol]!.round()} damage'), findsOneWidget);
+      await tester.tap(find.text('Weapons: All'));
+      await tester.pumpAndSettle();
+      // Each one says what it does, with its damage.
+      expect(
+        find.text(powerUpDescription(PowerUpKind.pistol, arsenal: true)),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'one shot: ${PowerUpTuning.arenaDamage[PowerUpKind.pistol]!.round()} damage',
+        ),
+        findsOneWidget,
+      );
 
-    FilledButton done() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'));
-    // All off: nothing left, so Done waits for a pick.
-    await tester.tap(find.widgetWithText(SwitchListTile, 'All weapons'));
-    await tester.pump();
-    expect(done().onPressed, isNull);
-    expect(find.text('Pick at least one.'), findsOneWidget);
+      FilledButton done() => tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Done'),
+      );
+      // All off: nothing left, so Done waits for a pick.
+      expect(find.text('Weapons & power-ups'), findsOneWidget);
+      expect(find.text('Weapons'), findsOneWidget);
+      await tester.tap(find.widgetWithText(SwitchListTile, 'All pickups'));
+      await tester.pump();
+      expect(done().onPressed, isNull);
+      expect(find.text('Pick at least one.'), findsOneWidget);
 
-    final first = find.widgetWithText(SwitchListTile, PowerUpKind.values.first.label);
-    await tester.ensureVisible(first);
-    await tester.pumpAndSettle();
-    await tester.tap(first);
-    await tester.pump();
-    expect(done().onPressed, isNotNull);
-    await tester.tap(find.text('Done'));
-    await tester.pumpAndSettle();
-    expect(find.text('Weapons: 1 of ${PowerUpKind.values.length}'), findsOneWidget);
+      final first = find.widgetWithText(
+        SwitchListTile,
+        PowerUpKind.values.first.label,
+      );
+      await tester.ensureVisible(first);
+      await tester.pumpAndSettle();
+      await tester.tap(first);
+      await tester.pump();
+      expect(done().onPressed, isNotNull);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Weapons: 1 of ${PowerUpKind.values.length}'),
+        findsOneWidget,
+      );
 
-    // All on again.
-    await tester.tap(find.text('Weapons: 1 of ${PowerUpKind.values.length}'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(SwitchListTile, 'All weapons'));
-    await tester.pump();
-    await tester.tap(find.text('Done'));
-    await tester.pumpAndSettle();
-    expect(find.text('Weapons: All'), findsOneWidget);
+      // All on again.
+      await tester.tap(find.text('Weapons: 1 of ${PowerUpKind.values.length}'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(SwitchListTile, 'All pickups'));
+      await tester.pump();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Weapons: All'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.shuffle));
-    await tester.pump();
-    await tester.tap(find.text('Start'));
-    expect(started!.powerUps, isNull);
-  });
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, isNull);
+    },
+  );
 }

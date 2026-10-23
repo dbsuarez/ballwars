@@ -40,6 +40,9 @@ class ReplayLink {
   /// values travel as `t=` ([PowerUpConfig.encode]); old links without it use the defaults.
   final PowerUpConfig tuning;
 
+  /// Whether this match allows two equipped weapons (`dw=1`).
+  final bool dualWield;
+
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
 
@@ -53,11 +56,13 @@ class ReplayLink {
     this.question,
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
+    this.dualWield = false,
   });
 
   static const String _weaponsPrefix = 'w.';
 
-  static int _mask(Set<PowerUpKind> kinds) => kinds.fold(0, (m, k) => m | (1 << k.index));
+  static int _mask(Set<PowerUpKind> kinds) =>
+      kinds.fold(0, (m, k) => m | (1 << k.index));
 
   /// Longest question kept (the rest is cut).
   static const int maxQuestionLength = 100;
@@ -66,7 +71,9 @@ class ReplayLink {
   static String? cleanQuestion(String? raw) {
     final q = (raw ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
     if (q.isEmpty) return null;
-    return q.length > maxQuestionLength ? q.substring(0, maxQuestionLength).trim() : q;
+    return q.length > maxQuestionLength
+        ? q.substring(0, maxQuestionLength).trim()
+        : q;
   }
 
   /// Changes the match, so it travels as a leading `m.<id>` token in the ball
@@ -78,26 +85,37 @@ class ReplayLink {
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
     final balls = contestants.map((b) {
       if (presetIds.contains(b.id)) return 'p.${b.id}';
-      if (b.id.startsWith(_packPrefix)) return 'k.${b.id.substring(_packPrefix.length)}';
-      if (b.id.startsWith(_groupPrefix)) return 'g.${b.id.substring(_groupPrefix.length)}';
+      if (b.id.startsWith(_packPrefix)) {
+        return 'k.${b.id.substring(_packPrefix.length)}';
+      }
+      if (b.id.startsWith(_groupPrefix)) {
+        return 'g.${b.id.substring(_groupPrefix.length)}';
+      }
       return 'c.${_encodeCustom(b)}';
     });
     final chosen = powerUps;
     final tokens = [
       if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
-      if (mode != MatchMode.threads && chosen != null && chosen.length < PowerUpKind.values.length)
+      if (mode != MatchMode.threads &&
+          chosen != null &&
+          chosen.length < PowerUpKind.values.length)
         '$_weaponsPrefix${_mask(chosen).toRadixString(36)}',
       ...balls,
     ];
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
-    final q = question == null ? '' : '&q=${Uri.encodeQueryComponent(question!)}';
+    final q = question == null
+        ? ''
+        : '&q=${Uri.encodeQueryComponent(question!)}';
     final encoded = mode == MatchMode.threads ? null : tuning.encode();
     final t = encoded == null ? '' : '&t=$encoded';
+    final dw = mode != MatchMode.threads && dualWield ? '&dw=1' : '';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t&balls=${tokens.join(',')}';
-    return Uri.parse('${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query');
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw&balls=${tokens.join(',')}';
+    return Uri.parse(
+      '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
+    );
   }
 
   /// The replay in [uri], or null if it isn't a valid replay link.
@@ -116,30 +134,55 @@ class ReplayLink {
     final params = _params(uri);
     final seed = int.tryParse(params['seed'] ?? '');
     final speed = double.tryParse(params['speed'] ?? '1') ?? 1.0;
-    final tokens = (params['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
+    final tokens = (params['balls'] ?? '')
+        .split(',')
+        .where((t) => t.isNotEmpty)
+        .toList();
     var mode = MatchMode.threads;
     if (tokens.isNotEmpty && tokens.first.startsWith(_modePrefix)) {
-      final parsedMode = MatchMode.byId(tokens.removeAt(0).substring(_modePrefix.length));
+      final parsedMode = MatchMode.byId(
+        tokens.removeAt(0).substring(_modePrefix.length),
+      );
       if (parsedMode == null) return null;
       mode = parsedMode;
     }
     Set<PowerUpKind>? powerUps;
     if (tokens.isNotEmpty && tokens.first.startsWith(_weaponsPrefix)) {
-      final mask = int.tryParse(tokens.removeAt(0).substring(_weaponsPrefix.length), radix: 36);
+      final mask = int.tryParse(
+        tokens.removeAt(0).substring(_weaponsPrefix.length),
+        radix: 36,
+      );
       final all = (1 << PowerUpKind.values.length) - 1;
       // Only with a power-up mode, never empty, no unknown kinds.
-      if (mode == MatchMode.threads || mask == null || mask <= 0 || mask & ~all != 0) return null;
-      powerUps = {for (final k in PowerUpKind.values) if (mask & (1 << k.index) != 0) k};
+      if (mode == MatchMode.threads ||
+          mask == null ||
+          mask <= 0 ||
+          mask & ~all != 0) {
+        return null;
+      }
+      powerUps = {
+        for (final k in PowerUpKind.values)
+          if (mask & (1 << k.index) != 0) k,
+      };
     }
-    if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) return null;
+    if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) {
+      return null;
+    }
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
-    final ballSize = params['size'] == null ? BallSize.medium : BallSize.byId(params['size']);
+    final ballSize = params['size'] == null
+        ? BallSize.medium
+        : BallSize.byId(params['size']);
     if (ballSize == null) return null;
+    final dualWield = params['dw'] == '1';
+    if (params.containsKey('dw') && params['dw'] != '1') return null;
+    if (mode == MatchMode.threads && dualWield) return null;
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
       // Only with a power-up mode, and only something PowerUpConfig.encode could have made.
-      final decoded = mode == MatchMode.threads ? null : PowerUpConfig.decode(t);
+      final decoded = mode == MatchMode.threads
+          ? null
+          : PowerUpConfig.decode(t);
       if (decoded == null) return null;
       tuning = decoded;
     }
@@ -160,34 +203,44 @@ class ReplayLink {
       question: cleanQuestion(params['q']),
       powerUps: powerUps,
       tuning: tuning,
+      dualWield: dualWield,
     );
   }
 
   /// A short link `<app>?r=<code>` (see ShortLinkRepository).
-  static Uri shortUri(String code, {String? appUrl}) =>
-      Uri.parse('${Uri.parse(appUrl ?? defaultAppUrl).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?r=$code');
+  static Uri shortUri(String code, {String? appUrl}) => Uri.parse(
+    '${Uri.parse(appUrl ?? defaultAppUrl).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?r=$code',
+  );
 
   /// The short-link code in [uri], if it is one.
   static String? shortCode(Uri uri) {
     final code = uri.queryParameters['r'];
-    return code != null && RegExp(r'^[A-Za-z0-9]{7}$').hasMatch(code) ? code : null;
+    return code != null && RegExp(r'^[A-Za-z0-9]{7}$').hasMatch(code)
+        ? code
+        : null;
   }
 
   /// A link that lets anyone add the group [groupId] to their categories:
   /// `<app>?g=<group uuid>`.
-  static Uri groupUri(String groupId, {String? appUrl}) =>
-      Uri.parse('${Uri.parse(appUrl ?? defaultAppUrl).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?g=$groupId');
+  static Uri groupUri(String groupId, {String? appUrl}) => Uri.parse(
+    '${Uri.parse(appUrl ?? defaultAppUrl).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?g=$groupId',
+  );
 
   /// The group id in a group share link, if [uri] is one.
   static String? sharedGroupId(Uri uri) {
     final id = uri.queryParameters['g'];
-    return id != null && RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id) ? id.toLowerCase() : null;
+    return id != null && RegExp(r'^[0-9a-fA-F-]{36}$').hasMatch(id)
+        ? id.toLowerCase()
+        : null;
   }
 
   /// The running page's address on web (so local builds link to themselves).
   static String get defaultAppUrl {
     if (!kIsWeb) return kWebAppUrl;
-    return Uri.base.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '');
+    return Uri.base
+        .replace(query: '', fragment: '')
+        .toString()
+        .replaceAll(RegExp(r'[?#]+$'), '');
   }
 
   static String _encodeCustom(CustomBall b) => base64Url
@@ -207,7 +260,10 @@ class ReplayLink {
   /// The ball tokens of a replay link in [uri] (empty if it isn't one).
   static List<String> ballTokens(Uri uri) => _params(uri)['seed'] == null
       ? const []
-      : (_params(uri)['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
+      : (_params(uri)['balls'] ?? '')
+            .split(',')
+            .where((t) => t.isNotEmpty)
+            .toList();
 
   static bool isPackToken(String token) => token.startsWith('k.');
 
@@ -227,7 +283,9 @@ class ReplayLink {
   static const String _groupPrefix = 'group:';
 
   static Map<String, String> _params(Uri uri) =>
-      uri.fragment.startsWith('/replay') ? Uri.parse(uri.fragment).queryParameters : uri.queryParameters;
+      uri.fragment.startsWith('/replay')
+      ? Uri.parse(uri.fragment).queryParameters
+      : uri.queryParameters;
 
   static const int minBalls = 2;
   static const int maxBalls = 4;
@@ -238,26 +296,44 @@ class ReplayLink {
   static const int maxLinkLength = 4096;
   static const int maxNameLength = 40;
 
-  static bool _within(double v, double min, double max) => v.isFinite && v >= min && v <= max;
+  static bool _within(double v, double min, double max) =>
+      v.isFinite && v >= min && v <= max;
 
-  static CustomBall? _decodeBall(String token, int index, List<CustomBall> presets, Map<String, CustomBall> packBalls) {
+  static CustomBall? _decodeBall(
+    String token,
+    int index,
+    List<CustomBall> presets,
+    Map<String, CustomBall> packBalls,
+  ) {
     if (token.startsWith('p.')) {
       final id = token.substring(2);
       return presets.where((b) => b.id == id).firstOrNull;
     }
-    if (token.startsWith('k.')) return packBalls['$_packPrefix${token.substring(2)}'];
-    if (token.startsWith('g.')) return packBalls['$_groupPrefix${token.substring(2)}'];
+    if (token.startsWith('k.')) {
+      return packBalls['$_packPrefix${token.substring(2)}'];
+    }
+    if (token.startsWith('g.')) {
+      return packBalls['$_groupPrefix${token.substring(2)}'];
+    }
     if (!token.startsWith('c.')) return null;
     try {
       final raw = token.substring(2);
       final padded = raw.padRight((raw.length + 3) ~/ 4 * 4, '=');
-      final data = jsonDecode(utf8.decode(base64Url.decode(padded))) as Map<String, dynamic>;
+      final data =
+          jsonDecode(utf8.decode(base64Url.decode(padded)))
+              as Map<String, dynamic>;
       final name = (data['n'] as String).trim();
       final baseSpeed = (data['s'] as num).toDouble();
       final mass = (data['m'] as num).toDouble();
       // Within 4x either way of the defaults; anything else is not from the app.
       if (name.isEmpty || name.length > maxNameLength) return null;
-      if (!_within(baseSpeed, CustomBall.defaultBaseSpeed / 4, CustomBall.defaultBaseSpeed * 4)) return null;
+      if (!_within(
+        baseSpeed,
+        CustomBall.defaultBaseSpeed / 4,
+        CustomBall.defaultBaseSpeed * 4,
+      )) {
+        return null;
+      }
       if (!_within(mass, 0.25, 4)) return null;
       return CustomBall(
         id: 'link-$index',

@@ -128,7 +128,9 @@ class MatchSimulationController {
   /// no lines, so its "lines" setting means "before the win" ([arsenalBeforeWinSeconds] unless the admin
   /// set seconds); with slow motion off (no lines, no seconds) it stays off.
   double? get _beforeWinSeconds {
-    if (mode != MatchMode.arsenal || slowMotionBeforeWinSeconds != null) return slowMotionBeforeWinSeconds;
+    if (mode != MatchMode.arsenal || slowMotionBeforeWinSeconds != null) {
+      return slowMotionBeforeWinSeconds;
+    }
     return slowMotionLines > 0 ? arsenalBeforeWinSeconds : null;
   }
 
@@ -138,6 +140,7 @@ class MatchSimulationController {
 
   /// The power-up numbers (the admin's settings, or a replay link's). Part of the match, like the seed.
   final PowerUpConfig tuning;
+  final bool dualWield;
 
   /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
   static const int hurtFlashSteps = 18;
@@ -171,8 +174,10 @@ class MatchSimulationController {
     this.mode = MatchMode.threads,
     this.powerUpKinds,
     this.tuning = PowerUpConfig.defaults,
+    this.dualWield = false,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
-    if (lookAhead && (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
+    if (lookAhead &&
+        (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
       // Same seed and setup: the steps are identical (slow motion only
       // changes playback), so its timeline is this match's.
       final ahead = MatchSimulationController(
@@ -188,12 +193,16 @@ class MatchSimulationController {
         mode: mode,
         powerUpKinds: powerUpKinds,
         tuning: tuning,
+        dualWield: dualWield,
       );
       var lastCalmStep = 0;
-      while (ahead._status != MatchStatus.finished && ahead._stepCount < _maxPredictedSteps) {
+      while (ahead._status != MatchStatus.finished &&
+          ahead._stepCount < _maxPredictedSteps) {
         ahead._stepPhysics(fixedTimestep);
         ahead._stepCount++;
-        if (ahead._status == MatchStatus.running) lastCalmStep = ahead._stepCount;
+        if (ahead._status == MatchStatus.running) {
+          lastCalmStep = ahead._stepCount;
+        }
       }
       if (ahead._status == MatchStatus.finished) {
         _finishStep = ahead._stepCount;
@@ -223,8 +232,11 @@ class MatchSimulationController {
     _balls = List.generate(count, (i) {
       final angle = _startAngle(i, count);
       final radial = Offset(math.cos(angle), math.sin(angle));
-      final position = radial * (arenaRadius * _rng.nextDoubleRange(startRadiusMin, startRadiusMax));
-      final speed = _cruiseSpeed(contestants[i]) *
+      final position =
+          radial *
+          (arenaRadius * _rng.nextDoubleRange(startRadiusMin, startRadiusMax));
+      final speed =
+          _cruiseSpeed(contestants[i]) *
           _crowdSpeedFactor(count) *
           _rng.nextDoubleRange(1 - speedVariation, 1 + speedVariation);
 
@@ -264,7 +276,8 @@ class MatchSimulationController {
     if (mode != MatchMode.threads) _powerUps = PowerUpSystem(this, _rng);
   }
 
-  double _startAngle(int index, int count) => _layoutRotation + (2 * math.pi / count) * index;
+  double _startAngle(int index, int count) =>
+      _layoutRotation + (2 * math.pi / count) * index;
 
   Offset _tangent(double angle) => Offset(-math.sin(angle), math.cos(angle));
 
@@ -275,7 +288,10 @@ class MatchSimulationController {
   /// Starting speed in px/s. [CustomBall.baseSpeed] scales it relative to
   /// the default ball, so the default matches the reference video.
   double _cruiseSpeed(CustomBall config) =>
-      arenaRadius * cruiseRadiiPerStep / fixedTimestep * (config.baseSpeed / CustomBall.defaultBaseSpeed);
+      arenaRadius *
+      cruiseRadiiPerStep /
+      fixedTimestep *
+      (config.baseSpeed / CustomBall.defaultBaseSpeed);
 
   double _slotAngle(int slot) => 2 * math.pi * slot / rimSlotCount;
 
@@ -291,7 +307,8 @@ class MatchSimulationController {
     final share = 2 * math.pi / _balls.length;
     for (var slot = 0; slot < rimSlotCount; slot++) {
       // Shift by half a share so ball 0's arc is centered on its start angle.
-      final shifted = (_slotAngle(slot) - _layoutRotation + share / 2) % (2 * math.pi);
+      final shifted =
+          (_slotAngle(slot) - _layoutRotation + share / 2) % (2 * math.pi);
       final owner = _balls[(shifted / share).floor() % _balls.length];
       _claimSlot(owner, slot);
     }
@@ -303,13 +320,18 @@ class MatchSimulationController {
   void _claimSlot(SimulationBall ball, int slot) {
     _slotOwners[slot] = ball;
     final angle = _slotAngle(slot);
-    ball.fanLines.add(FanLine(
-      ownerBallId: ball.config.id,
-      slotIndex: slot,
-      rimAngle: angle,
-      startPoint: Offset(math.cos(angle) * arenaRadius, math.sin(angle) * arenaRadius),
-      endPoint: ball.position,
-    ));
+    ball.fanLines.add(
+      FanLine(
+        ownerBallId: ball.config.id,
+        slotIndex: slot,
+        rimAngle: angle,
+        startPoint: Offset(
+          math.cos(angle) * arenaRadius,
+          math.sin(angle) * arenaRadius,
+        ),
+        endPoint: ball.position,
+      ),
+    );
   }
 
   /// Number of rim slots no ball owns.
@@ -349,7 +371,9 @@ class MatchSimulationController {
   /// Returns the life actually taken.
   double damage(SimulationBall ball, double amount) {
     if (mode != MatchMode.arsenal) return 0;
-    final crowd = _balls.length > 2 ? math.pow(_balls.length / 2, 2).toDouble() : 1.0;
+    final crowd = _balls.length > 2
+        ? math.pow(_balls.length / 2, 2).toDouble()
+        : 1.0;
     final before = ball.life;
     ball.life = math.max(0, ball.life - amount * crowd);
     return before - ball.life;
@@ -363,8 +387,14 @@ class MatchSimulationController {
     final candidates = [...ball.fanLines];
     if (near != null) {
       // Stable on equal distances, so the result only depends on the match state.
-      final distance = {for (final line in candidates) line: (line.startPoint - near).distanceSquared};
-      mergeSort(candidates, compare: (a, b) => distance[a]!.compareTo(distance[b]!));
+      final distance = {
+        for (final line in candidates)
+          line: (line.startPoint - near).distanceSquared,
+      };
+      mergeSort(
+        candidates,
+        compare: (a, b) => distance[a]!.compareTo(distance[b]!),
+      );
     }
     final cut = candidates.take(count).toSet();
     ball.fanLines.removeWhere((line) {
@@ -401,18 +431,20 @@ class MatchSimulationController {
   static const double maxSpeedUp = 2.0;
 
   /// The current playback speed-up (1 in the first minute).
-  double get playbackSpeedUp =>
-      math.min(maxSpeedUp, 1 + speedUpPerMinute * (_stepCount * fixedTimestep / 60).floor());
+  double get playbackSpeedUp => math.min(
+    maxSpeedUp,
+    1 + speedUpPerMinute * (_stepCount * fixedTimestep / 60).floor(),
+  );
 
   SimulationState get state => SimulationState(
-        balls: _balls,
-        particles: _particles,
-        floatingTexts: _floatingTexts,
-        status: _status,
-        winnerId: _winnerId,
-        powerUps: _powerUps,
-        step: _stepCount,
-      );
+    balls: _balls,
+    particles: _particles,
+    floatingTexts: _floatingTexts,
+    status: _status,
+    winnerId: _winnerId,
+    powerUps: _powerUps,
+    step: _stepCount,
+  );
 
   void tick(double realDeltaSeconds) {
     if (_status == MatchStatus.finished) {
@@ -423,7 +455,9 @@ class MatchSimulationController {
     }
 
     _elapsedSeconds += realDeltaSeconds;
-    final timeScale = _status == MatchStatus.slowMotion ? slowMotionTimeScale : playbackSpeedUp;
+    final timeScale = _status == MatchStatus.slowMotion
+        ? slowMotionTimeScale
+        : playbackSpeedUp;
     _accumulator += realDeltaSeconds * timeScale;
 
     // Cap accumulator to prevent spiral of death
@@ -446,16 +480,23 @@ class MatchSimulationController {
     // Lines deactivated from outside the step (e.g. tests) free their slots.
     _pruneInactiveLines();
     for (final ball in _balls) {
-      if (ball.hurtFlashLeft > 0) ball.hurtFlashLeft--; // Cosmetic ("Faces" wince), no effect on play.
+      if (ball.hurtFlashLeft > 0) {
+        ball.hurtFlashLeft--; // Cosmetic ("Faces" wince), no effect on play.
+      }
     }
-    final linesAtStart = {for (final ball in _balls) ball: ball.fanLines.length};
+    final linesAtStart = {
+      for (final ball in _balls) ball: ball.fanLines.length,
+    };
     final arsenal = mode == MatchMode.arsenal;
-    final lifeAtStart = arsenal ? {for (final ball in _balls) ball: ball.life} : null;
+    final lifeAtStart = arsenal
+        ? {for (final ball in _balls) ball: ball.life}
+        : null;
 
     // Who goes first rotates every step, so no contestant always wins ties
     // (e.g. two wall hits racing for the same free run).
     final order = [
-      for (var k = 0; k < _balls.length; k++) _balls[(k + _stepCount) % _balls.length],
+      for (var k = 0; k < _balls.length; k++)
+        _balls[(k + _stepCount) % _balls.length],
     ];
 
     // 1. Physics update & wall collision (wall hits claim free rim slots)
@@ -465,8 +506,13 @@ class MatchSimulationController {
       final previousPosition = ball.position;
       final move = ball.velocity * dt;
       // A speed boost moves the ball faster without changing its stored velocity, so it ends cleanly.
-      ball.position += ball.speedLeft > 0 ? move * PowerUpTuning.speedFactor : move;
-      final collision = _physics.resolveWallCollision(ball, previousPosition: previousPosition);
+      ball.position += ball.speedLeft > 0
+          ? move * PowerUpTuning.speedFactor
+          : move;
+      final collision = _physics.resolveWallCollision(
+        ball,
+        previousPosition: previousPosition,
+      );
       if (collision != null) {
         wallHits++;
         _particles.spawnBurst(
@@ -482,7 +528,11 @@ class MatchSimulationController {
         if (!arsenal) {
           final claimed = _claimFromWallHit(ball, collision.contactPoint);
           if (claimed > 0) {
-            _floatingTexts.spawn(collision.contactPoint, '+$claimed LINES', ball.config.primaryColor);
+            _floatingTexts.spawn(
+              collision.contactPoint,
+              '+$claimed LINES',
+              ball.config.primaryColor,
+            );
           }
         }
       }
@@ -514,6 +564,10 @@ class MatchSimulationController {
           final impactAngle = math.atan2(result.normal.dy, result.normal.dx);
           a.rotation += impactAngle * 0.05;
           b.rotation -= impactAngle * 0.05;
+
+          // In Arsenal, every genuine ball-to-ball bounce hurts both balls.
+          damage(a, PowerUpTuning.arenaCollisionDamage);
+          damage(b, PowerUpTuning.arenaCollisionDamage);
 
           // Melee power-ups (knife, shield bash) strike on contact.
           _powerUps?.onContact(a, b);
@@ -547,7 +601,9 @@ class MatchSimulationController {
 
         // Direction from cutter to target
         final offset = target.position - cutter.position;
-        final cutNormal = offset.distance > 0 ? offset / offset.distance : const Offset(1, 0);
+        final cutNormal = offset.distance > 0
+            ? offset / offset.distance
+            : const Offset(1, 0);
 
         // Cut sparks - white dot burst at cut point
         _particles.spawnCutSparks(
@@ -576,7 +632,11 @@ class MatchSimulationController {
       if (arsenal ? ball.life <= 0 : ball.fanLines.isEmpty) {
         ball.isEliminated = true;
         eliminatedNow.add(ball);
-        _floatingTexts.spawn(ball.position, 'ELIMINATED', ball.config.primaryColor);
+        _floatingTexts.spawn(
+          ball.position,
+          'ELIMINATED',
+          ball.config.primaryColor,
+        );
       }
     }
 
@@ -592,7 +652,9 @@ class MatchSimulationController {
         final best = eliminatedNow.map((b) => lifeAtStart[b]!).reduce(math.max);
         tied = eliminatedNow.where((b) => lifeAtStart[b] == best).toList();
       } else {
-        final best = eliminatedNow.map((b) => linesAtStart[b]!).reduce(math.max);
+        final best = eliminatedNow
+            .map((b) => linesAtStart[b]!)
+            .reduce(math.max);
         tied = eliminatedNow.where((b) => linesAtStart[b] == best).toList();
       }
       final survivor = tied[_rng.nextInt(tied.length)];
@@ -619,13 +681,16 @@ class MatchSimulationController {
       final bool endgame;
       if (beforeWin != null) {
         // The winning cut is known in advance (see the constructor).
-        endgame = finish != null && _stepCount + 1 >= finish - (beforeWin / fixedTimestep).round();
+        endgame =
+            finish != null &&
+            _stepCount + 1 >= finish - (beforeWin / fixedTimestep).round();
       } else if (_settledEndgameStep != null) {
         // From here the low ball stays low until it is knocked out.
         endgame = _stepCount + 1 >= _settledEndgameStep!;
       } else {
         // Arsenal has no lines (its slow motion is decided by the look-ahead).
-        endgame = !arsenal &&
+        endgame =
+            !arsenal &&
             activeBalls.length == 2 &&
             slowMotionLines > 0 &&
             activeBalls.any((b) => b.fanLines.length <= slowMotionLines);
@@ -675,7 +740,11 @@ class MatchSimulationController {
   /// Unit direction for a ball after contact: the elastic result's direction,
   /// or (when the elastic result left it at rest) its incoming velocity
   /// mirrored off the contact, [towardOther] pointing at the other ball.
-  Offset _directionAfterHit(Offset elastic, Offset incoming, Offset towardOther) {
+  Offset _directionAfterHit(
+    Offset elastic,
+    Offset incoming,
+    Offset towardOther,
+  ) {
     final elasticSpeed = elastic.distance;
     if (elasticSpeed > 1e-6) return elastic / elasticSpeed;
     final into = incoming.dx * towardOther.dx + incoming.dy * towardOther.dy;
@@ -702,7 +771,10 @@ class MatchSimulationController {
 
   /// Cuts every line of [target] whose segment (rim anchor -> target center)
   /// passes through [cutter]'s body. Returns the cut lines.
-  List<FanLine> _cutLinesCrossedBy(SimulationBall cutter, SimulationBall target) {
+  List<FanLine> _cutLinesCrossedBy(
+    SimulationBall cutter,
+    SimulationBall target,
+  ) {
     final radiusSq = cutter.radius * cutter.radius;
     final cut = <FanLine>[];
     target.fanLines.removeWhere((line) {

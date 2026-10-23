@@ -189,6 +189,28 @@ void paintHands(Canvas canvas, SimulationBall ball) {
     return;
   }
 
+  if (ball.heldSecondary != null) {
+    for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
+      final weapon = ball.equippedWeapons[slot];
+      final angle = PowerUpPainter.heldAngle(ball, weapon: weapon, slot: slot);
+      final center = PowerUpPainter.heldCenter(
+        ball,
+        weapon: weapon,
+        slot: slot,
+      );
+      final dir = _unit(angle);
+      _paintHandAt(
+        canvas,
+        weapon == PowerUpKind.shield
+            ? ball.position + dir * (r * 0.95)
+            : center - dir * (r * 0.5),
+        r,
+        gripAngle: angle,
+      );
+    }
+    return;
+  }
+
   final angle = PowerUpPainter.heldAngle(ball);
   final dir = _unit(angle);
   final side = Offset(-dir.dy, dir.dx);

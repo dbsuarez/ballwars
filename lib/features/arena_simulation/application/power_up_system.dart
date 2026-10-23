@@ -19,7 +19,7 @@ import 'match_simulation_controller.dart';
 /// match's [rng], drawn only inside the simulation step.
 ///
 /// Guns, the knife and the shield are held ([SimulationBall.held]) until used. Apple, speed, ghost and
-/// magnet act at once. A ball never has two power-ups: any pickup drops the one it held. A mine is not
+/// power-ups act at once and preserve an equipped weapon; weapon pickups replace it. A mine is not
 /// carried: the first ball to touch it arms it where it lies ([ArmedMine]), and it keeps what it held. A
 /// grenade is held like a gun: aimed, then thrown at where the target is, exploding where it lands.
 ///
@@ -99,7 +99,8 @@ class PowerUpSystem {
   static const double _pelletJitter = 0.03;
 
   /// Pick-up radius of a field power-up: a little smaller than the balls, so it follows the ball size.
-  late final double fieldRadius = match.state.balls.first.radius * _t.fieldRadiusRatio;
+  late final double fieldRadius =
+      match.state.balls.first.radius * _t.fieldRadiusRatio;
 
   /// How many balls the match started with (spawn rate and field limit follow it).
   late final int _ballCount = match.state.balls.length;
@@ -126,24 +127,30 @@ class PowerUpSystem {
     _turnShields();
   }
 
-  /// Gives [ball] the power-up [p] and takes [p] off the field. Whatever [ball] held is dropped (a ball
-  /// never has two power-ups); a held kind takes its place, the others act at once.
+  /// Gives [ball] the pickup [p] and takes [p] off the field. Power-ups apply
+  /// without replacing equipment; a weapon replaces the one equipped weapon.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
     pickups++;
     if (p.kind == PowerUpKind.mine) {
-      mines.add(ArmedMine(owner: ball, position: p.position, armedStep: match.stepCount));
+      mines.add(
+        ArmedMine(
+          owner: ball,
+          position: p.position,
+          armedStep: match.stepCount,
+        ),
+      );
       _yell(ball, 'MINE SET!');
       return;
     }
-    ball
-      ..held = null
-      ..magnetPending = false;
-    // A new power-up starts its own aim (a gatling burst already firing finishes first).
-    if (ball.burstLeft == 0) {
-      ball
-        ..aimLeft = 0
-        ..aimTarget = null;
+    if (p.kind.isWeapon) {
+      ball.magnetPending = false;
+      // A new power-up starts its own aim (a gatling burst already firing finishes first).
+      if (ball.burstLeft == 0) {
+        ball
+          ..aimLeft = 0
+          ..aimTarget = null;
+      }
     }
     switch (p.kind) {
       case PowerUpKind.apple:
@@ -159,9 +166,11 @@ class PowerUpSystem {
         _pullNearest(ball);
         _yell(ball, 'MINE!');
       default:
-        ball.held = p.kind;
+        ball.equipWeapon(p.kind, dualWield: match.dualWield);
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
-        if (p.kind.isBlade && match.mode == MatchMode.allOut) ball.sweepLeft = PowerUpTuning.sweepSteps;
+        if (p.kind.isBlade && match.mode == MatchMode.allOut) {
+          ball.sweepLeft = PowerUpTuning.sweepSteps;
+        }
     }
   }
 
@@ -170,31 +179,47 @@ class PowerUpSystem {
   /// touched, so two knives hit each other. Nothing happens if either is a ghost or already out.
   void onContact(SimulationBall a, SimulationBall b) {
     if (!_alive(a) || !_alive(b) || a.isGhost || b.isGhost) return;
-    final heldA = a.held;
-    final heldB = b.held;
-    _melee(a, heldA, b, heldB);
-    _melee(b, heldB, a, heldA);
+    final heldA = [...a.equippedWeapons];
+    final heldB = [...b.equippedWeapons];
+    for (final weapon in heldA) {
+      _melee(a, weapon, b, heldB);
+    }
+    for (final weapon in heldB) {
+      _melee(b, weapon, a, heldA);
+    }
   }
 
-  void _melee(SimulationBall attacker, PowerUpKind? weapon, SimulationBall target, PowerUpKind? targetHeld) {
+  void _melee(
+    SimulationBall attacker,
+    PowerUpKind weapon,
+    SimulationBall target,
+    List<PowerUpKind> targetHeld,
+  ) {
     final PowerUpKind kind;
-    if (weapon != null && weapon.isBlade) {
+    if (weapon.isBlade) {
       kind = weapon;
       slashes++;
       _yell(attacker, weapon == PowerUpKind.sword ? 'HIYAA!' : 'SLASH!');
-    } else if (weapon == PowerUpKind.shield && targetHeld == null) {
+    } else if (weapon == PowerUpKind.shield && targetHeld.isEmpty) {
       kind = PowerUpKind.shield;
       _yell(attacker, 'SHIELD BASH!');
     } else {
       return;
     }
-    if (attacker.held == weapon) attacker.held = null;
+    attacker.removeWeapon(weapon);
     final toAttacker = attacker.position - target.position;
     final distance = toAttacker.distance;
-    final at = distance > 0 ? target.position + toAttacker * (target.radius / distance) : target.position;
+    final at = distance > 0
+        ? target.position + toAttacker * (target.radius / distance)
+        : target.position;
     if (kind.isBlade) {
       // The cut runs across the line between the two balls.
-      slashMarks.add(SlashMark(position: at, angle: math.atan2(toAttacker.dy, toAttacker.dx) + math.pi / 2));
+      slashMarks.add(
+        SlashMark(
+          position: at,
+          angle: math.atan2(toAttacker.dy, toAttacker.dx) + math.pi / 2,
+        ),
+      );
     }
     _hit(target, kind, at: at, from: attacker);
   }
@@ -202,7 +227,10 @@ class PowerUpSystem {
   /// True while [ball] is still in the match: not eliminated, and not already at 0 life (Arsenal) or out
   /// of threads (All-Out) earlier in this step, before the elimination check has marked it.
   bool _alive(SimulationBall ball) =>
-      !ball.isEliminated && (match.mode == MatchMode.arsenal ? ball.life > 0 : ball.fanLines.isNotEmpty);
+      !ball.isEliminated &&
+      (match.mode == MatchMode.arsenal
+          ? ball.life > 0
+          : ball.fanLines.isNotEmpty);
 
   /// Counts the speed boosts, ghosts and sweeps down, ages blasts; a ball that is out drops its waiting
   /// magnet.
@@ -232,7 +260,13 @@ class PowerUpSystem {
       ball.life = math.min(_t.arenaMaxLife, ball.life + _t.arenaAppleHeal);
     } else {
       final claimed = match.claimFreeSlots(ball, _t.allOutAppleSlots);
-      if (claimed > 0) match.state.floatingTexts.spawn(ball.position, '+$claimed LINES', ball.config.primaryColor);
+      if (claimed > 0) {
+        match.state.floatingTexts.spawn(
+          ball.position,
+          '+$claimed LINES',
+          ball.config.primaryColor,
+        );
+      }
     }
     match.state.particles.spawnSparkle(origin: ball.position, rng: rng);
   }
@@ -266,11 +300,13 @@ class PowerUpSystem {
         mines.remove(mine);
         continue;
       }
-      final touched = balls.any((b) =>
-          !identical(b, mine.owner) &&
-          _alive(b) &&
-          !b.isGhost &&
-          (b.position - mine.position).distance < b.radius + fieldRadius);
+      final touched = balls.any(
+        (b) =>
+            !identical(b, mine.owner) &&
+            _alive(b) &&
+            !b.isGhost &&
+            (b.position - mine.position).distance < b.radius + fieldRadius,
+      );
       if (!touched) continue;
       mines.remove(mine);
       _explode(mine.position, mine.owner, PowerUpKind.mine);
@@ -290,7 +326,12 @@ class PowerUpSystem {
       for (final ball in balls) {
         if (identical(ball, owner) || !_alive(ball) || ball.isGhost) continue;
         for (final line in List.of(ball.fanLines)) {
-          if (MathUtils.distancePointToSegmentSquared(at, line.startPoint, ball.position) <= radius * radius) {
+          if (MathUtils.distancePointToSegmentSquared(
+                at,
+                line.startPoint,
+                ball.position,
+              ) <=
+              radius * radius) {
             _cutLine(ball, line);
           }
         }
@@ -302,7 +343,9 @@ class PowerUpSystem {
       final distance = offset.distance;
       if (distance - ball.radius > radius) continue;
       // The side of the ball facing the blast, so the splash flies away from it.
-      final side = distance > ball.radius ? at + offset * ((distance - ball.radius) / distance) : at;
+      final side = distance > ball.radius
+          ? at + offset * ((distance - ball.radius) / distance)
+          : at;
       _hit(ball, kind, at: side);
     }
   }
@@ -311,12 +354,17 @@ class PowerUpSystem {
   /// the nearest opponent. Only shows where it braces; a shield blocks from every side.
   void _turnShields() {
     for (final ball in match.state.balls) {
-      if (ball.held != PowerUpKind.shield || !_alive(ball)) continue;
-      final threat = _incoming(ball)?.position ?? _nearestTarget(ball)?.position;
+      if (!ball.equippedWeapons.contains(PowerUpKind.shield) || !_alive(ball)) {
+        continue;
+      }
+      final threat =
+          _incoming(ball)?.position ?? _nearestTarget(ball)?.position;
       if (threat == null) continue;
       final toThreat = threat - ball.position;
       final want = math.atan2(toThreat.dy, toThreat.dx);
-      final turn = _wrap(want - ball.shieldAngle).clamp(-_shieldTurnPerStep, _shieldTurnPerStep);
+      final turn = _wrap(
+        want - ball.shieldAngle,
+      ).clamp(-_shieldTurnPerStep, _shieldTurnPerStep);
       ball.shieldAngle = _wrap(ball.shieldAngle + turn);
     }
   }
@@ -339,7 +387,8 @@ class PowerUpSystem {
   }
 
   /// [angle] wrapped into -pi..pi.
-  static double _wrap(double angle) => (angle + math.pi) % (2 * math.pi) - math.pi;
+  static double _wrap(double angle) =>
+      (angle + math.pi) % (2 * math.pi) - math.pi;
 
   void _pickUpTouched() {
     if (field.isEmpty) return;
@@ -348,7 +397,9 @@ class PowerUpSystem {
       if (!_alive(ball)) continue;
       // At most one per step, so a second one in reach is not used up unseen. The index is found first,
       // so [field] is never changed while it is being walked.
-      final index = field.indexWhere((p) => (p.position - ball.position).distance < ball.radius + radius);
+      final index = field.indexWhere(
+        (p) => (p.position - ball.position).distance < ball.radius + radius,
+      );
       if (index >= 0) pickUp(ball, field[index]);
     }
   }
@@ -361,7 +412,10 @@ class PowerUpSystem {
     final chosen = match.powerUpKinds;
     final kinds = chosen == null || chosen.length == PowerUpKind.values.length
         ? PowerUpKind.values
-        : [for (final k in PowerUpKind.values) if (chosen.contains(k)) k];
+        : [
+            for (final k in PowerUpKind.values)
+              if (chosen.contains(k)) k,
+          ];
     if (kinds.isEmpty) return;
     final kind = kinds[rng.nextInt(kinds.length)];
     final radius = fieldRadius;
@@ -374,21 +428,40 @@ class PowerUpSystem {
       taken[quadrantOf(b.position)]++;
     }
     final fewest = taken.reduce(math.min);
-    final open = [for (var q = 0; q < 4; q++) if (taken[q] == fewest) q];
+    final open = [
+      for (var q = 0; q < 4; q++)
+        if (taken[q] == fewest) q,
+    ];
     final quadrant = open[rng.nextInt(open.length)];
     final inner = match.arenaRadius * PowerUpTuning.spawnMinDistance;
     final outer = match.arenaRadius * PowerUpTuning.spawnMaxDistance;
     for (var attempt = 0; attempt < 10; attempt++) {
       final angle = (quadrant + rng.nextDoubleRange(0.1, 0.9)) * math.pi / 2;
-      final distance = math.sqrt(rng.nextDoubleRange(inner * inner, outer * outer));
-      final spot = Offset(math.cos(angle) * distance, math.sin(angle) * distance);
-      final clear = balls.every((b) => b.isEliminated || (b.position - spot).distance >= b.radius + radius) &&
+      final distance = math.sqrt(
+        rng.nextDoubleRange(inner * inner, outer * outer),
+      );
+      final spot = Offset(
+        math.cos(angle) * distance,
+        math.sin(angle) * distance,
+      );
+      final clear =
+          balls.every(
+            (b) =>
+                b.isEliminated ||
+                (b.position - spot).distance >= b.radius + radius,
+          ) &&
           field.every((f) => (f.position - spot).distance >= 2 * radius) &&
           mines.every((b) => (b.position - spot).distance >= 2 * radius);
       if (!clear) continue;
-      final spawned = FieldPowerUp(kind: kind, position: spot, spawnStep: number);
+      final spawned = FieldPowerUp(
+        kind: kind,
+        position: spot,
+        spawnStep: number,
+      );
       field.add(spawned);
-      if (field.length > PowerUpTuning.maxOnField(_ballCount)) field.removeAt(0);
+      if (field.length > PowerUpTuning.maxOnField(_ballCount)) {
+        field.removeAt(0);
+      }
       // A waiting magnet pulls it straight in.
       for (final ball in balls) {
         if (!ball.magnetPending || !_alive(ball)) continue;
@@ -413,7 +486,9 @@ class PowerUpSystem {
       if (ball.frozenLeft <= 0) continue;
       final knocked = ball.velocity;
       final old = _frozenVelocity[ball];
-      if (old != null && knocked != Offset.zero) _frozenVelocity[ball] = knocked * (old.distance / knocked.distance);
+      if (old != null && knocked != Offset.zero) {
+        _frozenVelocity[ball] = knocked * (old.distance / knocked.distance);
+      }
       ball.frozenLeft--;
       if (ball.frozenLeft == 0) {
         ball.velocity = _frozenVelocity.remove(ball) ?? ball.velocity;
@@ -454,7 +529,10 @@ class PowerUpSystem {
       // A frozen ball can't shoot; a ghost is purely defensive, so it holds its aim until it's solid.
       if (ball.frozenLeft > 0 || ball.isGhost) continue;
       final bursting = ball.burstLeft > 0;
-      if (!bursting && ball.held?.isGun != true) continue;
+      final guns = ball.equippedWeapons
+          .where((weapon) => weapon.isGun)
+          .toList();
+      if (!bursting && guns.isEmpty) continue;
       final target = _nearestTarget(ball);
       ball.aimTarget = target;
       if (target == null) {
@@ -467,33 +545,46 @@ class PowerUpSystem {
       if (ball.aimLeft > 0) continue;
 
       if (bursting) {
-        _fire(ball, target, PowerUpKind.gatling, 0, volley: _burstVolley[ball] ?? 0);
+        _fire(
+          ball,
+          target,
+          PowerUpKind.gatling,
+          0,
+          volley: _burstVolley[ball] ?? 0,
+        );
         gatlingShots++;
         ball.burstLeft--;
       } else {
-        final kind = ball.held!;
-        ball.held = null;
-        switch (kind) {
-          case PowerUpKind.shotgun:
-            _fireShotgun(ball, target);
-            _yell(ball, 'BLAM!');
-          case PowerUpKind.gatling:
-            _burstVolley[ball] = ++_lastVolley;
-            _fire(ball, target, kind, 0, volley: _lastVolley);
-            gatlingShots++;
-            ball.burstLeft = _t.gatlingRounds - 1;
-            _yell(ball, 'RATATAT!');
-          case PowerUpKind.freeze:
-            _fire(ball, target, kind, 0);
-            _yell(ball, 'FREEZE!');
-          case PowerUpKind.grenade:
-            _throwGrenade(ball, target);
-            _yell(ball, 'FIRE IN THE HOLE!');
-          case PowerUpKind.hook:
-            _fire(ball, target, kind, 0, speedRatio: PowerUpTuning.hookSpeedRatio);
-          default:
-            _fire(ball, target, kind, 0);
-            _yell(ball, 'BANG!');
+        for (final kind in guns) {
+          ball.removeWeapon(kind);
+          switch (kind) {
+            case PowerUpKind.shotgun:
+              _fireShotgun(ball, target);
+              _yell(ball, 'BLAM!');
+            case PowerUpKind.gatling:
+              _burstVolley[ball] = ++_lastVolley;
+              _fire(ball, target, kind, 0, volley: _lastVolley);
+              gatlingShots++;
+              ball.burstLeft = _t.gatlingRounds - 1;
+              _yell(ball, 'RATATAT!');
+            case PowerUpKind.freeze:
+              _fire(ball, target, kind, 0);
+              _yell(ball, 'FREEZE!');
+            case PowerUpKind.grenade:
+              _throwGrenade(ball, target);
+              _yell(ball, 'FIRE IN THE HOLE!');
+            case PowerUpKind.hook:
+              _fire(
+                ball,
+                target,
+                kind,
+                0,
+                speedRatio: PowerUpTuning.hookSpeedRatio,
+              );
+            default:
+              _fire(ball, target, kind, 0);
+              _yell(ball, 'BANG!');
+          }
         }
       }
       if (ball.burstLeft > 0) {
@@ -508,21 +599,27 @@ class PowerUpSystem {
   /// reeling it in. A ball already on a hook isn't caught again.
   void _catch(SimulationBall owner, SimulationBall target) {
     if (!_alive(owner) || !_alive(target) || target.isGhost) return;
-    if (target.held == PowerUpKind.shield) {
-      target.held = null;
+    if (target.equippedWeapons.contains(PowerUpKind.shield)) {
+      target.removeWeapon(PowerUpKind.shield);
       blocks++;
       _yell(target, 'BLOCKED!');
       return;
     }
-    if (pulls.any((h) => identical(h.target, target) || identical(h.target, owner))) return;
+    if (pulls.any(
+      (h) => identical(h.target, target) || identical(h.target, owner),
+    )) {
+      return;
+    }
     hits++;
     _yell(owner, 'COME OVER HERE!');
-    pulls.add(HookPull(
-      owner: owner,
-      target: target,
-      speed: target.velocity.distance,
-      stepsLeft: PowerUpTuning.hookMaxPullSteps,
-    ));
+    pulls.add(
+      HookPull(
+        owner: owner,
+        target: target,
+        speed: target.velocity.distance,
+        stepsLeft: PowerUpTuning.hookMaxPullSteps,
+      ),
+    );
     target.velocity = Offset.zero;
   }
 
@@ -532,7 +629,10 @@ class PowerUpSystem {
   /// the target turns ghost.
   void _reelIn() {
     if (pulls.isEmpty) return;
-    final pull = match.arenaRadius * PowerUpTuning.hookPullRatio * MatchSimulationController.fixedTimestep;
+    final pull =
+        match.arenaRadius *
+        PowerUpTuning.hookPullRatio *
+        MatchSimulationController.fixedTimestep;
     for (final h in List.of(pulls)) {
       final owner = h.owner;
       final target = h.target;
@@ -551,7 +651,9 @@ class PowerUpSystem {
       }
       pulls.remove(h);
       final distance = toOwner.distance;
-      final at = distance > 0 ? target.position + toOwner * (target.radius / distance) : target.position;
+      final at = distance > 0
+          ? target.position + toOwner * (target.radius / distance)
+          : target.position;
       _yell(owner, 'UPPERCUT!');
       slashMarks.add(SlashMark(position: at, angle: -math.pi / 2));
       _hit(target, PowerUpKind.hook, at: at, from: owner);
@@ -571,8 +673,16 @@ class PowerUpSystem {
     final volley = ++_lastVolley;
     for (var i = 0; i < count; i++) {
       final edge = i == 0 || i == count - 1;
-      final jitter = edge ? 0.0 : rng.nextDoubleRange(-_pelletJitter, _pelletJitter);
-      _fire(ball, target, PowerUpKind.shotgun, -spread / 2 + spread * i / (count - 1) + jitter, volley: volley);
+      final jitter = edge
+          ? 0.0
+          : rng.nextDoubleRange(-_pelletJitter, _pelletJitter);
+      _fire(
+        ball,
+        target,
+        PowerUpKind.shotgun,
+        -spread / 2 + spread * i / (count - 1) + jitter,
+        volley: volley,
+      );
     }
   }
 
@@ -582,13 +692,15 @@ class PowerUpSystem {
     final toTarget = target.position - ball.position;
     final distance = toTarget.distance;
     final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
-    projectiles.add(Projectile(
-      owner: ball,
-      kind: PowerUpKind.grenade,
-      position: ball.position + direction * ball.radius,
-      velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
-      landAt: target.position,
-    ));
+    projectiles.add(
+      Projectile(
+        owner: ball,
+        kind: PowerUpKind.grenade,
+        position: ball.position + direction * ball.radius,
+        velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
+        landAt: target.position,
+      ),
+    );
     shots++;
   }
 
@@ -604,13 +716,17 @@ class PowerUpSystem {
     final toTarget = target.position - ball.position;
     final angle = math.atan2(toTarget.dy, toTarget.dx) + turn;
     final direction = Offset(math.cos(angle), math.sin(angle));
-    projectiles.add(Projectile(
-      owner: ball,
-      kind: kind,
-      position: ball.position + direction * ball.radius,
-      velocity: direction * (match.arenaRadius * (speedRatio ?? _t.bulletSpeedRatio)),
-      volley: volley,
-    ));
+    projectiles.add(
+      Projectile(
+        owner: ball,
+        kind: kind,
+        position: ball.position + direction * ball.radius,
+        velocity:
+            direction *
+            (match.arenaRadius * (speedRatio ?? _t.bulletSpeedRatio)),
+        volley: volley,
+      ),
+    );
     shots++;
   }
 
@@ -629,7 +745,9 @@ class PowerUpSystem {
       SimulationBall? struck;
       var strikeAt = double.infinity;
       for (final ball in balls) {
-        if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) continue;
+        if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) {
+          continue;
+        }
         final t = _entry(from, to, ball.position, ball.radius);
         if (t != null && t < strikeAt) {
           struck = ball;
@@ -657,7 +775,9 @@ class PowerUpSystem {
       // A hook's chain doesn't cut threads.
       if (allOut && p.kind != PowerUpKind.hook) {
         for (final ball in balls) {
-          if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) continue;
+          if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) {
+            continue;
+          }
           for (final line in List.of(ball.fanLines)) {
             // Rim anchors are unique, so the thread nearest a thread's own anchor is that thread.
             if (_crosses(from, end, line.startPoint, ball.position)) {
@@ -689,15 +809,23 @@ class PowerUpSystem {
   /// in the target's color. A freeze shot instead stops the target for [_t.freezeSteps] steps
   /// (shortened the same way by a shield). [kind] [PowerUpKind.shield] is a shield bash. [from] is the
   /// attacker (null for a bomb: the splash then flies away from [at]).
-  void _hit(SimulationBall target, PowerUpKind kind, {Offset? at, SimulationBall? from, int volley = 0}) {
+  void _hit(
+    SimulationBall target,
+    PowerUpKind kind, {
+    Offset? at,
+    SimulationBall? from,
+    int volley = 0,
+  }) {
     if (target.isGhost) return;
     hits++;
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
     var share = 1.0;
-    final shielded = match.mode == MatchMode.arsenal ? 1 - _t.shieldBlock : _t.allOutShieldKeep;
-    if (target.held == PowerUpKind.shield) {
-      target.held = null;
+    final shielded = match.mode == MatchMode.arsenal
+        ? 1 - _t.shieldBlock
+        : _t.allOutShieldKeep;
+    if (target.equippedWeapons.contains(PowerUpKind.shield)) {
+      target.removeWeapon(PowerUpKind.shield);
       blocks++;
       _yell(target, 'BLOCKED!');
       share = shielded;
@@ -724,9 +852,15 @@ class PowerUpSystem {
       _showDamage(target, impact, lost, volley);
     } else {
       // Thread snap: the threads nearest the impact break, each with its rim spark.
-      final threads = ((bash ? _t.allOutShieldBash : _t.allOutThreads(kind)) * share).round();
+      final threads =
+          ((bash ? _t.allOutShieldBash : _t.allOutThreads(kind)) * share)
+              .round();
       final nearest = [...target.fanLines]
-        ..sort((x, y) => (x.startPoint - impact).distanceSquared.compareTo((y.startPoint - impact).distanceSquared));
+        ..sort(
+          (x, y) => (x.startPoint - impact).distanceSquared.compareTo(
+            (y.startPoint - impact).distanceSquared,
+          ),
+        );
       var cut = 0;
       for (final line in nearest.take(threads)) {
         if (_cutLine(target, line)) cut++;
@@ -751,9 +885,15 @@ class PowerUpSystem {
       if (cutter.sweepLeft == 0 || !_alive(cutter) || cutter.isGhost) continue;
       final reach = cutter.radius * PowerUpTuning.sweepReach;
       for (final target in balls) {
-        if (identical(target, cutter) || !_alive(target) || target.isGhost) continue;
+        if (identical(target, cutter) || !_alive(target) || target.isGhost) {
+          continue;
+        }
         for (final line in List.of(target.fanLines)) {
-          if (MathUtils.distancePointToSegmentSquared(cutter.position, line.startPoint, target.position) <=
+          if (MathUtils.distancePointToSegmentSquared(
+                cutter.position,
+                line.startPoint,
+                target.position,
+              ) <=
               reach * reach) {
             _cutLine(target, line);
           }
@@ -766,22 +906,34 @@ class PowerUpSystem {
   /// add up in a single label while it still shows.
   void _showDamage(SimulationBall target, Offset at, num amount, int volley) {
     if (amount <= 0) return;
-    String label(num total) =>
-        match.mode == MatchMode.arsenal ? '-${total.round()}' : '-$total ${total == 1 ? 'LINE' : 'LINES'}';
+    String label(num total) => match.mode == MatchMode.arsenal
+        ? '-${total.round()}'
+        : '-$total ${total == 1 ? 'LINE' : 'LINES'}';
     final last = _volleyLabel[target];
-    if (volley != 0 && last != null && last.$1 == volley && !last.$2.isExpired) {
+    if (volley != 0 &&
+        last != null &&
+        last.$1 == volley &&
+        !last.$2.isExpired) {
       final total = last.$3 + amount;
       last.$2.text = label(total);
       _volleyLabel[target] = (volley, last.$2, total);
       return;
     }
-    final text = match.state.floatingTexts.spawn(at, label(amount), _damageColor);
+    final text = match.state.floatingTexts.spawn(
+      at,
+      label(amount),
+      _damageColor,
+    );
     _volleyLabel[target] = (volley, text, amount);
   }
 
   /// [ball] yells [text] (a floating label just above it, in its color).
   void _yell(SimulationBall ball, String text) {
-    match.state.floatingTexts.spawn(ball.position - Offset(0, ball.radius * 1.4), text, ball.config.primaryColor);
+    match.state.floatingTexts.spawn(
+      ball.position - Offset(0, ball.radius * 1.4),
+      text,
+      ball.config.primaryColor,
+    );
   }
 
   /// Cuts [line] of [ball] (rim anchors are unique, so the thread nearest its own anchor is that thread)
@@ -815,7 +967,9 @@ class PowerUpSystem {
 
   /// True when the segments [p1]-[p2] and [q1]-[q2] properly cross.
   static bool _crosses(Offset p1, Offset p2, Offset q1, Offset q2) {
-    double side(Offset o, Offset a, Offset b) => (a.dx - o.dx) * (b.dy - o.dy) - (a.dy - o.dy) * (b.dx - o.dx);
-    return side(q1, q2, p1) * side(q1, q2, p2) < 0 && side(p1, p2, q1) * side(p1, p2, q2) < 0;
+    double side(Offset o, Offset a, Offset b) =>
+        (a.dx - o.dx) * (b.dy - o.dy) - (a.dy - o.dy) * (b.dx - o.dx);
+    return side(q1, q2, p1) * side(q1, q2, p2) < 0 &&
+        side(p1, p2, q1) * side(p1, p2, q2) < 0;
   }
 }

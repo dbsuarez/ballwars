@@ -62,11 +62,11 @@ The logo is `BallWarsLogoPainter` (`core/widgets/ball_wars_logo.dart`). `flutter
 - **Match modes and power-ups** (spec `docs/superpowers/specs/2026-10-23-power-ups-design.md`).
   - **Modes:** `MatchConfig.mode` is one of:
     - **Threads:** the default, and identical to before. A test pins 40 recorded results; no power-up code runs and no extra RNG draws happen.
-    - **Arsenal:** no threads; `SimulationBall.life` runs 100 to 0, and plain bumps do no damage. Crowded matches multiply damage by `(count / 2)^2`.
+    - **Arsenal:** no threads; `SimulationBall.life` runs 100 to 0, and plain bumps deal 5 base damage to both balls. Crowded matches multiply damage by `(count / 2)^2`.
     - **All-Out:** threads are the life, and power-up hits cut threads.
   - **`PowerUpSystem`** (`application/power_up_system.dart`) is created only in Arsenal and All-Out. The controller calls `step()` right after the ball-ball collisions. It handles:
     - spawning: first at 1 s, then every 5 s for 2 balls (`PowerUpTuning.spawnInterval`: faster with more balls), at most balls + 1 on the field (`maxOnField`), the oldest removed; each spawn picks the emptiest quadrant, away from the rim; field power-ups are 0.7x the ball radius;
-    - pickup: one held power-up; any pickup drops the held one;
+    - pickups have two categories: weapons and power-ups. A ball equips one weapon at a time (new weapons replace it); power-ups apply without removing the equipped weapon. Keep the category model extensible for future dual-wielding;
     - guns: a 1 s aim, then projectiles;
     - contact effects: knife, shield and bash; the shield aims (`shieldAngle`) but blocks from every side;
     - apple (Arsenal: past full life up to 150, shown as gold hearts), speed, freeze, magnet and ghost; a ghost passes through balls and is immune;

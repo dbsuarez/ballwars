@@ -22,8 +22,31 @@ class SimulationBall {
   /// Life points in Arsenal mode (set to `PowerUpTuning.arenaLife` there).
   double life = 0;
 
-  /// The power-up carried, waiting to be used.
+  /// Primary and optional secondary equipped weapon.
   PowerUpKind? held;
+  PowerUpKind? heldSecondary;
+
+  List<PowerUpKind> get equippedWeapons => [?held, ?heldSecondary];
+
+  void equipWeapon(PowerUpKind weapon, {required bool dualWield}) {
+    assert(weapon.isWeapon);
+    if (!dualWield || held == null) {
+      held = weapon;
+      if (!dualWield) heldSecondary = null;
+    } else {
+      heldSecondary = weapon;
+    }
+  }
+
+  void removeWeapon(PowerUpKind weapon) {
+    if (held == weapon) {
+      held = heldSecondary;
+      heldSecondary = null;
+    } else if (heldSecondary == weapon) {
+      heldSecondary = null;
+    }
+  }
+
   int speedLeft = 0;
   int frozenLeft = 0;
   int ghostLeft = 0;

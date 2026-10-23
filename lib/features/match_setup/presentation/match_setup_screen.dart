@@ -27,7 +27,12 @@ class MatchSetupScreen extends StatefulWidget {
   final CustomGroupRepository? customGroups;
   final void Function(MatchConfig) onStartBattle;
 
-  const MatchSetupScreen({super.key, this.packRepository, this.customGroups, required this.onStartBattle});
+  const MatchSetupScreen({
+    super.key,
+    this.packRepository,
+    this.customGroups,
+    required this.onStartBattle,
+  });
 
   @override
   State<MatchSetupScreen> createState() => _MatchSetupScreenState();
@@ -55,6 +60,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   /// Power-up modes: the chosen power-ups, null for all.
   Set<PowerUpKind>? _powerUps;
+  bool _dualWield = false;
 
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
@@ -81,11 +87,14 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final size = BallSize.byId(await DevicePrefs.read('size'));
     final mode = MatchMode.byId(await DevicePrefs.read('mode'));
     final look = BallLook.byName(await DevicePrefs.read('look'));
+    final dualWield = await DevicePrefs.read('dual-wield');
     final savedKinds = {
       for (final name in (await DevicePrefs.read('power-ups') ?? '').split(','))
         ...PowerUpKind.values.where((k) => k.name == name),
     };
-    final filter = _CategoryFilter.byName(await DevicePrefs.read('category-filter'));
+    final filter = _CategoryFilter.byName(
+      await DevicePrefs.read('category-filter'),
+    );
     if (!mounted) return;
     setState(() {
       if (filter != null && filter != _filter) {
@@ -95,9 +104,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       if (size != null) _ballSize = size;
       if (mode != null) _mode = mode;
       if (look != null) _look = look;
-      if (savedKinds.isNotEmpty && savedKinds.length < PowerUpKind.values.length) _powerUps = savedKinds;
+      _dualWield = dualWield == '1';
+      if (savedKinds.isNotEmpty &&
+          savedKinds.length < PowerUpKind.values.length) {
+        _powerUps = savedKinds;
+      }
       _showEffects = effects;
-      if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
+      if (rounds != null && const [1, 2, 3].contains(rounds)) {
+        _winsNeeded = rounds;
+      }
       if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
     });
   }
@@ -111,7 +126,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   List<BallPack> get _categories =>
-      [..._groups, ..._packsWithExtras]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      [..._groups, ..._packsWithExtras]
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   /// Groups the admin added to built-in categories (see [CustomGroup.packId]).
   List<CustomGroup> _packExtras = const [];
@@ -119,22 +135,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// The built-in packs with the admin's extra balls appended, plus groups
   /// the admin made main categories of their own.
   List<BallPack> get _packsWithExtras => [
-        for (final pack in _packs)
-          BallPack(
-            id: pack.id,
-            name: pack.name,
-            tag: pack.tag,
-            balls: [
-              ...pack.balls,
-              for (final g in _packExtras)
-                if (g.packId == pack.id) ...g.balls,
-            ],
-          ),
-        for (final g in _packExtras)
-          if (g.packId == CustomGroup.ownCategory && g.balls.isNotEmpty)
-            // Not 'group:<id>': the same group may also be listed as Mine/Shared.
-            BallPack(id: 'main:${g.id}', name: g.name, balls: g.balls),
-      ];
+    for (final pack in _packs)
+      BallPack(
+        id: pack.id,
+        name: pack.name,
+        tag: pack.tag,
+        balls: [
+          ...pack.balls,
+          for (final g in _packExtras)
+            if (g.packId == pack.id) ...g.balls,
+        ],
+      ),
+    for (final g in _packExtras)
+      if (g.packId == CustomGroup.ownCategory && g.balls.isNotEmpty)
+        // Not 'group:<id>': the same group may also be listed as Mine/Shared.
+        BallPack(id: 'main:${g.id}', name: g.name, balls: g.balls),
+  ];
 
   Future<void> _load() async {
     setState(() {
@@ -166,7 +182,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   Future<void> _loadGroups() async {
     final repo = widget.customGroups;
     if (repo == null) return;
-    Future<List<CustomGroup>> orNone(Future<List<CustomGroup>> Function() load) async {
+    Future<List<CustomGroup>> orNone(
+      Future<List<CustomGroup>> Function() load,
+    ) async {
       try {
         return await load();
       } catch (_) {
@@ -183,19 +201,30 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     setState(
       () => _groups = [
         for (final g in mine)
-          if (g.balls.isNotEmpty) BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls, tag: 'Mine'),
+          if (g.balls.isNotEmpty)
+            BallPack(
+              id: 'group:${g.id}',
+              name: g.name,
+              balls: g.balls,
+              tag: 'Mine',
+            ),
         for (final g in saved)
           if (g.balls.isNotEmpty && !mineIds.contains(g.id))
-            BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls, tag: 'Shared'),
+            BallPack(
+              id: 'group:${g.id}',
+              name: g.name,
+              balls: g.balls,
+              tag: 'Shared',
+            ),
       ],
     );
   }
 
   /// The categories the current filter shows (Mine / Default / Shared).
   List<BallPack> get _shown => [
-        for (final c in _categories)
-          if (c.tag == _filter.tag) c,
-      ];
+    for (final c in _categories)
+      if (c.tag == _filter.tag) c,
+  ];
 
   void _setFilter(_CategoryFilter filter) {
     GameAudio.instance.click();
@@ -219,7 +248,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   List<CustomBall> get _visibleBalls {
     final query = _search.text.trim().toLowerCase();
     final balls = _categoryBalls;
-    return query.isEmpty ? balls : balls.where((b) => b.name.toLowerCase().contains(query)).toList();
+    return query.isEmpty
+        ? balls
+        : balls.where((b) => b.name.toLowerCase().contains(query)).toList();
   }
 
   void _toggle(CustomBall ball) {
@@ -279,12 +310,14 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mode: _mode,
         look: _look,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
+        dualWield: _mode != MatchMode.threads && _dualWield,
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode == MatchMode.threads
             ? PowerUpConfig.defaults
             : AppSettingsScope.of(context).powerUps,
         // Only for matches with Yes or No balls.
-        question: _selected.keys.any((id) => id.startsWith('pack:$_decisionPack/'))
+        question:
+            _selected.keys.any((id) => id.startsWith('pack:$_decisionPack/'))
             ? ReplayLink.cleanQuestion(_question.text)
             : null,
       ),
@@ -305,7 +338,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(padding: const EdgeInsets.fromLTRB(20, 4, 20, 12), child: _categoryPicker(c)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: _categoryPicker(c),
+                ),
                 if (_categoryBalls.length > _searchFrom)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -335,7 +371,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       children: [
         SegmentedButton<_CategoryFilter>(
           segments: [
-            for (final f in _CategoryFilter.values) ButtonSegment(value: f, label: Text(f.label)),
+            for (final f in _CategoryFilter.values)
+              ButtonSegment(value: f, label: Text(f.label)),
           ],
           selected: {_filter},
           showSelectedIcon: false,
@@ -351,7 +388,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             controller: _question,
             maxLength: ReplayLink.maxQuestionLength,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(labelText: 'Your question', hintText: 'Will it rain tomorrow?'),
+            decoration: const InputDecoration(
+              labelText: 'Your question',
+              hintText: 'Will it rain tomorrow?',
+            ),
           ),
         ],
       ],
@@ -377,25 +417,33 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         children: [
           Expanded(
             child: Text(
-              _packsFailed ? "Couldn't load the categories." : 'No categories yet.',
+              _packsFailed
+                  ? "Couldn't load the categories."
+                  : 'No categories yet.',
               style: AppText.ui(14, FontWeight.w500, color: c.muted),
             ),
           ),
-          if (_packsFailed) TextButton(onPressed: _load, child: const Text('Retry')),
+          if (_packsFailed)
+            TextButton(onPressed: _load, child: const Text('Retry')),
         ],
       );
     }
-    final selectedName = categories.where((p) => p.id == _category).firstOrNull?.name ?? '';
+    final selectedName =
+        categories.where((p) => p.id == _category).firstOrNull?.name ?? '';
     return LayoutBuilder(
       builder: (context, constraints) => Focus(
         onFocusChange: (focused) {
           if (focused) {
             // After the tap that focused it has placed the caret.
             WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _categoryText.selection = TextSelection(baseOffset: 0, extentOffset: _categoryText.text.length),
+              (_) => _categoryText.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: _categoryText.text.length,
+              ),
             );
           } else {
-            _categoryText.text = selectedName; // left without picking: show the current one again
+            _categoryText.text =
+                selectedName; // left without picking: show the current one again
           }
         },
         child: DropdownMenu<String>(
@@ -428,8 +476,14 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 trailingIcon: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (pack.tag != null) ...[_Tag(pack.tag!), const SizedBox(width: 10)],
-                    Text('${pack.balls.length}', style: AppText.mono(12, color: c.muted)),
+                    if (pack.tag != null) ...[
+                      _Tag(pack.tag!),
+                      const SizedBox(width: 10),
+                    ],
+                    Text(
+                      '${pack.balls.length}',
+                      style: AppText.mono(12, color: c.muted),
+                    ),
                   ],
                 ),
               ),
@@ -440,10 +494,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   Widget _ballGrid(BallWarsColors c, List<CustomBall> balls) {
-    if (_loading && balls.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (_loading && balls.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (balls.isEmpty) {
       return Center(
-        child: Text('No balls here yet.', style: AppText.ui(14, FontWeight.w500, color: c.muted)),
+        child: Text(
+          'No balls here yet.',
+          style: AppText.ui(14, FontWeight.w500, color: c.muted),
+        ),
       );
     }
     return GridView.builder(
@@ -474,7 +533,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: selected ? c.text : Colors.transparent, width: 2),
+                      border: Border.all(
+                        color: selected ? c.text : Colors.transparent,
+                        width: 2,
+                      ),
                     ),
                     child: CircularBallPreview(ball: ball, size: 56),
                   ),
@@ -512,7 +574,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           // The kind of match: the thread game, weapons only, or both.
           SegmentedButton<MatchMode>(
             segments: [
-              for (final m in MatchMode.values) ButtonSegment(value: m, label: Text(m.label)),
+              for (final m in MatchMode.values)
+                ButtonSegment(value: m, label: Text(m.label)),
             ],
             selected: {_mode},
             showSelectedIcon: false,
@@ -529,8 +592,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               onPressed: _chooseWeapons,
               icon: const Icon(Icons.tune_rounded, size: 18),
               label: Text(
-                _powerUps == null ? 'Weapons: All' : 'Weapons: ${_powerUps!.length} of ${PowerUpKind.values.length}',
+                _powerUps == null
+                    ? 'Weapons: All'
+                    : 'Weapons: ${_powerUps!.length} of ${PowerUpKind.values.length}',
               ),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Dual wield'),
+              subtitle: const Text('Equip up to two weapons'),
+              value: _dualWield,
+              onChanged: (value) {
+                GameAudio.instance.click();
+                setState(() => _dualWield = value);
+                DevicePrefs.write('dual-wield', value ? '1' : '0');
+              },
             ),
           ],
           const SizedBox(height: 8),
@@ -538,11 +615,21 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             height: 36,
             child: Row(
               children: [
-                Text('${_selected.length}/$_maxBalls', style: AppText.mono(12, color: c.muted)),
+                Text(
+                  '${_selected.length}/$_maxBalls',
+                  style: AppText.mono(12, color: c.muted),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _selected.isEmpty
-                      ? Text('Pick 2 to 4 balls', style: AppText.ui(13, FontWeight.w500, color: c.muted))
+                      ? Text(
+                          'Pick 2 to 4 balls',
+                          style: AppText.ui(
+                            13,
+                            FontWeight.w500,
+                            color: c.muted,
+                          ),
+                        )
                       : ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
@@ -550,8 +637,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                               Padding(
                                 padding: const EdgeInsets.only(right: 6),
                                 child: InputChip(
-                                  avatar: CircularBallPreview(ball: ball, size: 22),
-                                  label: Text(ball.name, style: AppText.ui(13, FontWeight.w600, color: c.text)),
+                                  avatar: CircularBallPreview(
+                                    ball: ball,
+                                    size: 22,
+                                  ),
+                                  label: Text(
+                                    ball.name,
+                                    style: AppText.ui(
+                                      13,
+                                      FontWeight.w600,
+                                      color: c.text,
+                                    ),
+                                  ),
                                   onDeleted: () => _toggle(ball),
                                   backgroundColor: c.surfaceHigh,
                                   side: BorderSide.none,
@@ -678,13 +775,20 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   child: OutlinedButton(
                     onPressed: () {
                       GameAudio.instance.click();
-                      final next = _look == BallLook.pictures ? BallLook.faces : BallLook.pictures;
+                      final next = _look == BallLook.pictures
+                          ? BallLook.faces
+                          : BallLook.pictures;
                       setState(() => _look = next);
                       DevicePrefs.write('look', next.name);
                     },
-                    style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(48, 52)),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(48, 52),
+                    ),
                     child: Icon(
-                      _look == BallLook.faces ? Icons.sentiment_satisfied_alt_rounded : Icons.image_outlined,
+                      _look == BallLook.faces
+                          ? Icons.sentiment_satisfied_alt_rounded
+                          : Icons.image_outlined,
                       semanticLabel: 'Ball look',
                     ),
                   ),
@@ -696,13 +800,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 height: 52,
                 child: OutlinedButton(
                   onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
-                  style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(56, 52)),
-                  child: const Icon(Icons.shuffle, semanticLabel: 'Random matchup'),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(56, 52),
+                  ),
+                  child: const Icon(
+                    Icons.shuffle,
+                    semanticLabel: 'Random matchup',
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton(onPressed: _canStart ? _start : null, child: const Text('Start')),
+                child: FilledButton(
+                  onPressed: _canStart ? _start : null,
+                  child: const Text('Start'),
+                ),
               ),
             ],
           ),
@@ -731,7 +844,15 @@ class _Setting extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppText.ui(10, FontWeight.w700, color: c.muted, letterSpacing: 0.8)),
+          Text(
+            label,
+            style: AppText.ui(
+              10,
+              FontWeight.w700,
+              color: c.muted,
+              letterSpacing: 0.8,
+            ),
+          ),
           child,
         ],
       ),
@@ -746,7 +867,12 @@ class _Cycle<T> extends StatelessWidget {
   final String Function(T) label;
   final ValueChanged<T> onChanged;
 
-  const _Cycle({required this.values, required this.value, required this.label, required this.onChanged});
+  const _Cycle({
+    required this.values,
+    required this.value,
+    required this.label,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -764,7 +890,11 @@ class _Cycle<T> extends StatelessWidget {
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.centerLeft,
-        child: Text(label(value), maxLines: 1, style: AppText.ui(14, FontWeight.w700, color: c.text)),
+        child: Text(
+          label(value),
+          maxLines: 1,
+          style: AppText.ui(14, FontWeight.w700, color: c.text),
+        ),
       ),
     );
   }
@@ -781,8 +911,19 @@ class _Tag extends StatelessWidget {
     final c = BallWarsColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), border: Border.all(color: c.border)),
-      child: Text(label, style: AppText.ui(10, FontWeight.w700, color: c.muted, letterSpacing: 0.4)),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: c.border),
+      ),
+      child: Text(
+        label,
+        style: AppText.ui(
+          10,
+          FontWeight.w700,
+          color: c.muted,
+          letterSpacing: 0.4,
+        ),
+      ),
     );
   }
 }
@@ -813,8 +954,15 @@ class _SoundToggle extends StatelessWidget {
         message: '$tooltip: ${on ? 'on' : 'off'}',
         child: OutlinedButton(
           onPressed: () => onChanged(!on),
-          style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(48, 52)),
-          child: Icon(on ? icon : offIcon, color: on ? c.text : c.muted, semanticLabel: tooltip),
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(48, 52),
+          ),
+          child: Icon(
+            on ? icon : offIcon,
+            color: on ? c.text : c.muted,
+            semanticLabel: tooltip,
+          ),
         ),
       ),
     );
@@ -835,7 +983,8 @@ enum _CategoryFilter {
 
   const _CategoryFilter(this.label, this.tag);
 
-  static _CategoryFilter? byName(String? name) => values.where((f) => f.name == name).firstOrNull;
+  static _CategoryFilter? byName(String? name) =>
+      values.where((f) => f.name == name).firstOrNull;
 }
 
 /// Which power-ups can spawn: a switch per power-up with its icon and what it does (damage in life for
@@ -845,7 +994,11 @@ class _WeaponsDialog extends StatefulWidget {
   final bool arsenal;
   final PowerUpConfig config;
 
-  const _WeaponsDialog({required this.initial, required this.arsenal, required this.config});
+  const _WeaponsDialog({
+    required this.initial,
+    required this.arsenal,
+    required this.config,
+  });
 
   @override
   State<_WeaponsDialog> createState() => _WeaponsDialogState();
@@ -856,47 +1009,97 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 700;
+    final weapons = PowerUpKind.values.where((kind) => kind.isWeapon);
+    final powerUps = PowerUpKind.values.where((kind) => kind.isPowerUp);
     return AlertDialog(
-      title: const Text('Weapons'),
+      constraints: const BoxConstraints(maxWidth: 760),
+      title: const Text('Weapons & power-ups'),
       contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
       content: SizedBox(
-        width: 360,
+        width: 720,
         child: ListView(
           shrinkWrap: true,
           children: [
             if (widget.arsenal)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                child: Text(crowdNote, style: Theme.of(context).textTheme.bodySmall),
+                child: Text(
+                  crowdNote,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             // Switches every weapon on or off at once (then pick at least one).
             SwitchListTile(
-              title: const Text('All weapons'),
+              title: const Text('All pickups'),
               subtitle: _on.isEmpty
-                  ? Text('Pick at least one.', style: TextStyle(color: Theme.of(context).colorScheme.error))
+                  ? Text(
+                      'Pick at least one.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    )
                   : null,
               value: _on.length == PowerUpKind.values.length,
-              onChanged: (v) => setState(() => v ? _on.addAll(PowerUpKind.values) : _on.clear()),
+              onChanged: (v) => setState(
+                () => v ? _on.addAll(PowerUpKind.values) : _on.clear(),
+              ),
             ),
             const Divider(height: 1),
-            for (final kind in PowerUpKind.values)
-              SwitchListTile(
-                dense: true,
-                isThreeLine: true,
-                secondary: PowerUpIcon(kind),
-                title: Text(kind.label),
-                subtitle: Text(powerUpDescription(kind, arsenal: widget.arsenal, config: widget.config)),
-                value: _on.contains(kind),
-                onChanged: (v) => setState(() => v ? _on.add(kind) : _on.remove(kind)),
-              ),
+            if (wide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _section('Weapons', weapons)),
+                  Expanded(child: _section('Power-ups', powerUps)),
+                ],
+              )
+            else ...[
+              _section('Weapons', weapons),
+              const Divider(height: 20),
+              _section('Power-ups', powerUps),
+            ],
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         // At least one has to stay on.
-        FilledButton(onPressed: _on.isEmpty ? null : () => Navigator.of(context).pop(_on), child: const Text('Done')),
+        FilledButton(
+          onPressed: _on.isEmpty ? null : () => Navigator.of(context).pop(_on),
+          child: const Text('Done'),
+        ),
       ],
     );
   }
+
+  Widget _section(String title, Iterable<PowerUpKind> kinds) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      ),
+      for (final kind in kinds)
+        SwitchListTile(
+          dense: true,
+          isThreeLine: true,
+          secondary: PowerUpIcon(kind),
+          title: Text(kind.label),
+          subtitle: Text(
+            powerUpDescription(
+              kind,
+              arsenal: widget.arsenal,
+              config: widget.config,
+            ),
+          ),
+          value: _on.contains(kind),
+          onChanged: (v) =>
+              setState(() => v ? _on.add(kind) : _on.remove(kind)),
+        ),
+    ],
+  );
 }

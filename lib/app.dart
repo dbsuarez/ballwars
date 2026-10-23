@@ -56,7 +56,9 @@ class BallWarsApp extends StatefulWidget {
 }
 
 class _BallWarsAppState extends State<BallWarsApp> {
-  final ValueNotifier<AppSettings> _settings = ValueNotifier(AppSettings.defaults);
+  final ValueNotifier<AppSettings> _settings = ValueNotifier(
+    AppSettings.defaults,
+  );
 
   // Built-in packs (Streaming, Countries, ...), loaded once and shared.
   final BallPackRepository _packs = BallPackRepository();
@@ -75,7 +77,9 @@ class _BallWarsAppState extends State<BallWarsApp> {
 
   void _applyMusic() {
     GameAudio.instance.track = MusicTrack.byId(_settings.value.musicId);
-    GameAudio.instance.menuTrack = MusicTrack.menuById(_settings.value.menuMusicId);
+    GameAudio.instance.menuTrack = MusicTrack.menuById(
+      _settings.value.menuMusicId,
+    );
   }
 
   /// Waits only for the settings (theme, headline) and the pack catalog;
@@ -84,13 +88,16 @@ class _BallWarsAppState extends State<BallWarsApp> {
   Future<void> _prepare() async {
     await Future.wait([
       _loadSettings(),
-      if (widget.syncOffline) _packs.load().then((_) {}, onError: (Object _) {}),
+      if (widget.syncOffline)
+        _packs.load().then((_) {}, onError: (Object _) {}),
     ]);
     if (!widget.syncOffline) return;
     OfflineSync(packs: _packs, groups: widget.customGroups)
-        .run(onProgress: (done, total) {
-          if (mounted) _progress.value = (done, total);
-        })
+        .run(
+          onProgress: (done, total) {
+            if (mounted) _progress.value = (done, total);
+          },
+        )
         .whenComplete(() {
           if (mounted) _progress.value = null;
         });
@@ -128,7 +135,8 @@ class _BallWarsAppState extends State<BallWarsApp> {
           theme: AppTheme.build(AppPalettes.byId(settings.themeId)),
           home: FutureBuilder<void>(
             future: _ready,
-            builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done
+            builder: (context, snapshot) =>
+                snapshot.connectionState == ConnectionState.done
                 ? _HomeScreen(
                     packs: _packs,
                     customGroups: widget.customGroups,
@@ -158,7 +166,12 @@ class _LoadingScreen extends StatelessWidget {
           Center(
             child: SizedBox.square(
               dimension: 116,
-              child: CustomPaint(painter: BallWarsLogoPainter(background: c.background, rim: c.text)),
+              child: CustomPaint(
+                painter: BallWarsLogoPainter(
+                  background: c.background,
+                  rim: c.text,
+                ),
+              ),
             ),
           ),
           Positioned(
@@ -170,7 +183,11 @@ class _LoadingScreen extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 280),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(minHeight: 4, color: c.text, backgroundColor: c.surfaceHigh),
+                  child: LinearProgressIndicator(
+                    minHeight: 4,
+                    color: c.text,
+                    backgroundColor: c.surfaceHigh,
+                  ),
                 ),
               ),
             ),
@@ -193,7 +210,9 @@ class _OfflineProgress extends StatelessWidget {
     return ValueListenableBuilder<(int, int)?>(
       valueListenable: progress,
       builder: (context, p, _) {
-        if (p == null || p.$2 == 0 || p.$1 >= p.$2) return const SizedBox.shrink();
+        if (p == null || p.$2 == 0 || p.$1 >= p.$2) {
+          return const SizedBox.shrink();
+        }
         return Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 8),
           child: Column(
@@ -202,9 +221,15 @@ class _OfflineProgress extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text('Saving balls for offline…', style: AppText.ui(12, FontWeight.w600, color: c.muted)),
+                    child: Text(
+                      'Saving balls for offline…',
+                      style: AppText.ui(12, FontWeight.w600, color: c.muted),
+                    ),
                   ),
-                  Text('${p.$1}/${p.$2}', style: AppText.mono(11, color: c.muted)),
+                  Text(
+                    '${p.$1}/${p.$2}',
+                    style: AppText.mono(11, color: c.muted),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -234,7 +259,13 @@ class _HomeScreen extends StatefulWidget {
   /// Background download of ball images (null when not syncing).
   final ValueListenable<(int, int)?>? offlineProgress;
 
-  const _HomeScreen({required this.packs, this.customGroups, this.adminGroups, this.shortLinks, this.offlineProgress});
+  const _HomeScreen({
+    required this.packs,
+    this.customGroups,
+    this.adminGroups,
+    this.shortLinks,
+    this.offlineProgress,
+  });
 
   @override
   State<_HomeScreen> createState() => _HomeScreenState();
@@ -278,7 +309,13 @@ class _HomeScreenState extends State<_HomeScreen> {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     if (problem != null || alreadySaved) {
-      messenger.showSnackBar(SnackBar(content: Text(problem ?? '"${group!.name}" is already in your categories.')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            problem ?? '"${group!.name}" is already in your categories.',
+          ),
+        ),
+      );
       return;
     }
     final add = await showDialog<bool>(
@@ -294,18 +331,32 @@ class _HomeScreenState extends State<_HomeScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [for (final b in group.balls.take(10)) CircularBallPreview(ball: b, size: 40)],
+                children: [
+                  for (final b in group.balls.take(10))
+                    CircularBallPreview(ball: b, size: 40),
+                ],
               ),
               const SizedBox(height: 14),
               Text(
                 '${group.balls.length} balls from another player. The group shows up in your categories, marked Shared.',
-                style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.4),
+                style: AppText.ui(
+                  14,
+                  FontWeight.w500,
+                  color: c.muted,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Add')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Add'),
+            ),
           ],
         );
       },
@@ -313,9 +364,13 @@ class _HomeScreenState extends State<_HomeScreen> {
     if (add != true) return;
     try {
       await repo.saveGroup(id);
-      messenger.showSnackBar(SnackBar(content: Text('Added "${group!.name}" to your categories.')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Added "${group!.name}" to your categories.')),
+      );
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text("Couldn't add the group: $e")));
+      messenger.showSnackBar(
+        SnackBar(content: Text("Couldn't add the group: $e")),
+      );
     }
   }
 
@@ -340,15 +395,23 @@ class _HomeScreenState extends State<_HomeScreen> {
           for (final pack in await _packs.load())
             for (final b in pack.balls) b.id: b,
         if (widget.customGroups != null && tokens.any(ReplayLink.isGroupToken))
-          for (final b in await widget.customGroups!.ballsById(ReplayLink.groupBallIds(uri))) b.id: b,
+          for (final b in await widget.customGroups!.ballsById(
+            ReplayLink.groupBallIds(uri),
+          ))
+            b.id: b,
       };
     } catch (_) {
       return; // Packs or groups unreachable: stay on the home screen.
     }
-    final link = ReplayLink.fromUri(uri, presets: LocalBallRepository.presets, packBalls: extraBalls);
+    final link = ReplayLink.fromUri(
+      uri,
+      presets: LocalBallRepository.presets,
+      packBalls: extraBalls,
+    );
     if (link == null) return;
     // The ball look is the viewer's own choice (cosmetic, not in links).
-    final look = BallLook.byName(await DevicePrefs.read('look')) ?? BallLook.pictures;
+    final look =
+        BallLook.byName(await DevicePrefs.read('look')) ?? BallLook.pictures;
     // endOfFrame (not addPostFrameCallback): after the awaits above the first
     // frame is long done and an idle screen never draws another one, so a
     // post-frame callback would never run. endOfFrame schedules a frame.
@@ -365,6 +428,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             question: link.question,
             powerUps: link.powerUps,
             tuning: link.tuning,
+            dualWield: link.dualWield,
             showEffects: link.showEffects,
             look: look,
           ),
@@ -382,7 +446,11 @@ class _HomeScreenState extends State<_HomeScreen> {
           packRepository: _packs,
           customGroups: widget.customGroups,
           onStartBattle: (config) {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArenaBattleScreen(config: config)));
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ArenaBattleScreen(config: config),
+              ),
+            );
           },
         ),
       ),
@@ -405,16 +473,32 @@ class _HomeScreenState extends State<_HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Text('BALL WARS', style: AppText.ui(15, FontWeight.w800, color: c.text, letterSpacing: 2.6)),
+                      Text(
+                        'BALL WARS',
+                        style: AppText.ui(
+                          15,
+                          FontWeight.w800,
+                          color: c.text,
+                          letterSpacing: 2.6,
+                        ),
+                      ),
                       const Spacer(),
                       IconButton(
-                        tooltip: GameAudio.instance.menuMusicOn ? 'Home music: on' : 'Home music: off',
+                        tooltip: GameAudio.instance.menuMusicOn
+                            ? 'Home music: on'
+                            : 'Home music: off',
                         icon: Icon(
-                          GameAudio.instance.menuMusicOn ? Icons.music_note_rounded : Icons.music_off_rounded,
-                          color: GameAudio.instance.menuMusicOn ? c.text : c.muted,
+                          GameAudio.instance.menuMusicOn
+                              ? Icons.music_note_rounded
+                              : Icons.music_off_rounded,
+                          color: GameAudio.instance.menuMusicOn
+                              ? c.text
+                              : c.muted,
                         ),
                         onPressed: () async {
-                          await GameAudio.instance.setMenuMusicOn(!GameAudio.instance.menuMusicOn);
+                          await GameAudio.instance.setMenuMusicOn(
+                            !GameAudio.instance.menuMusicOn,
+                          );
                           GameAudio.instance.click();
                           if (mounted) setState(() {});
                         },
@@ -426,31 +510,58 @@ class _HomeScreenState extends State<_HomeScreen> {
                           GameAudio.instance.click();
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => SettingsScreen(customGroups: customGroups, adminGroups: widget.adminGroups),
+                              builder: (_) => SettingsScreen(
+                                customGroups: customGroups,
+                                adminGroups: widget.adminGroups,
+                              ),
                             ),
                           );
                         },
                       ),
                     ],
                   ),
-                  if (widget.offlineProgress != null) _OfflineProgress(widget.offlineProgress!),
+                  if (widget.offlineProgress != null)
+                    _OfflineProgress(widget.offlineProgress!),
                   Expanded(
                     child: Center(
                       child: AspectRatio(
                         aspectRatio: 1,
-                        child: CustomPaint(painter: _HomeArenaPainter(rim: c.text)),
+                        child: CustomPaint(
+                          painter: _HomeArenaPainter(rim: c.text),
+                        ),
                       ),
                     ),
                   ),
-                  Text(AppSettingsScope.of(context).headline.toLowerCase().replaceFirstMapped(RegExp(r'^\w'), (m) => m[0]!.toUpperCase()),
-                      style: AppText.ui(40, FontWeight.w800, color: c.text, height: 1.05, letterSpacing: -0.8)),
+                  Text(
+                    AppSettingsScope.of(
+                      context,
+                    ).headline.toLowerCase().replaceFirstMapped(
+                      RegExp(r'^\w'),
+                      (m) => m[0]!.toUpperCase(),
+                    ),
+                    style: AppText.ui(
+                      40,
+                      FontWeight.w800,
+                      color: c.text,
+                      height: 1.05,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     'Pick two to four balls. Each holds a fan of lines to the rim - cut them all and it\'s out.',
-                    style: AppText.ui(15, FontWeight.w500, color: c.muted, height: 1.5),
+                    style: AppText.ui(
+                      15,
+                      FontWeight.w500,
+                      color: c.muted,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 28),
-                  FilledButton(onPressed: _openMatchSetup, child: const Text('Start a match')),
+                  FilledButton(
+                    onPressed: _openMatchSetup,
+                    child: const Text('Start a match'),
+                  ),
                   if (customGroups != null) ...[
                     const SizedBox(height: 12),
                     _HomeTile(
@@ -458,7 +569,12 @@ class _HomeScreenState extends State<_HomeScreen> {
                       subtitle: 'Your own categories of balls',
                       onTap: () {
                         GameAudio.instance.click();
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyGroupsScreen(repository: customGroups)));
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                MyGroupsScreen(repository: customGroups),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -477,7 +593,11 @@ class _HomeTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  const _HomeTile({required this.title, required this.subtitle, required this.onTap});
+  const _HomeTile({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -489,16 +609,25 @@ class _HomeTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Ink(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: c.border)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.border),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: AppText.ui(14, FontWeight.w700, color: c.text)),
+                    Text(
+                      title,
+                      style: AppText.ui(14, FontWeight.w700, color: c.text),
+                    ),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: AppText.ui(12, FontWeight.w500, color: c.muted)),
+                    Text(
+                      subtitle,
+                      style: AppText.ui(12, FontWeight.w500, color: c.muted),
+                    ),
                   ],
                 ),
               ),
@@ -535,7 +664,11 @@ class _HomeArenaPainter extends CustomPainter {
         ..strokeWidth = 1;
       for (var i = 0; i < 13; i++) {
         final a = (fromDeg + (toDeg - fromDeg) * i / 12) * math.pi / 180;
-        canvas.drawLine(center + Offset(math.cos(a), math.sin(a)) * r, ball, paint);
+        canvas.drawLine(
+          center + Offset(math.cos(a), math.sin(a)) * r,
+          ball,
+          paint,
+        );
       }
       canvas.drawCircle(ball, r * 0.1, Paint()..color = rim);
       canvas.drawCircle(
@@ -548,7 +681,12 @@ class _HomeArenaPainter extends CustomPainter {
       );
     }
 
-    fan(center + Offset(r * 0.25, -r * 0.32), const Color(0xFF4FD1C5), 200, 330);
+    fan(
+      center + Offset(r * 0.25, -r * 0.32),
+      const Color(0xFF4FD1C5),
+      200,
+      330,
+    );
     fan(center + Offset(-r * 0.29, r * 0.29), const Color(0xFFFF7A59), 15, 150);
   }
 

@@ -312,6 +312,8 @@ class ArenaPainter extends CustomPainter {
       );
     }
 
+    PowerUpPainter.paintSpeedTrail(canvas, ball);
+
     // Glow with edge compression (glow compresses against arena edge instead of clipping)
     final distToCenter = ball.position.distance;
     final edgeDist = arenaRadius - distToCenter;

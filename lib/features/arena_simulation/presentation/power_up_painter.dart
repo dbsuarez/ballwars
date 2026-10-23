@@ -419,28 +419,85 @@ class PowerUpPainter {
   /// The direction in which [ball]'s held item is drawn. Kept public so the
   /// Faces look can put its gripping hand on the same item without duplicating
   /// the aiming rules.
-  static double heldAngle(SimulationBall ball) {
-    if (ball.held == PowerUpKind.shield) return ball.shieldAngle;
+  static double heldAngle(
+    SimulationBall ball, {
+    PowerUpKind? weapon,
+    int slot = 0,
+  }) {
+    final held = weapon ?? ball.held;
+    final spread = ball.heldSecondary == null
+        ? 0.0
+        : (slot == 0 ? -0.32 : 0.32);
+    if (held == PowerUpKind.shield) return ball.shieldAngle + spread;
     final target = ball.aimTarget;
     final Offset toward;
-    if ((ball.held?.isGun ?? false) && target != null) {
+    if ((held?.isGun ?? false) && target != null) {
       toward = target.position - ball.position;
     } else if (ball.velocity != Offset.zero) {
       toward = ball.velocity;
     } else {
       toward = const Offset(1, 0);
     }
-    return math.atan2(toward.dy, toward.dx);
+    return math.atan2(toward.dy, toward.dx) + spread;
   }
 
   /// Center of the held item's sprite.
-  static Offset heldCenter(SimulationBall ball) {
-    final angle = heldAngle(ball);
+  static Offset heldCenter(
+    SimulationBall ball, {
+    PowerUpKind? weapon,
+    int slot = 0,
+  }) {
+    final held = weapon ?? ball.held;
+    final angle = heldAngle(ball, weapon: held, slot: slot);
     final dir = Offset(math.cos(angle), math.sin(angle));
-    final distance = ball.held == PowerUpKind.shield
+    final distance = held == PowerUpKind.shield
         ? ball.radius
         : ball.radius * 1.2;
     return ball.position + dir * distance;
+  }
+
+  /// Yellow lightning streaks behind a ball while the Speed power-up is
+  /// active. They are painted before the ball so the face and held item stay
+  /// crisp in front. Cosmetic only - no random draws or simulation state.
+  static void paintSpeedTrail(Canvas canvas, SimulationBall ball) {
+    if (ball.speedLeft <= 0) return;
+    final speed = ball.velocity.distance;
+    if (speed == 0) return;
+    final dir = ball.velocity / speed;
+    final side = Offset(-dir.dy, dir.dx);
+    final r = ball.radius;
+    final pulse = 0.85 + 0.15 * math.sin(ball.speedLeft * 0.45);
+    final colors = [
+      const Color(0xFFFFF176),
+      const Color(0xFFFFD600),
+      const Color(0xFFFF8F00),
+    ];
+    for (var i = 0; i < 3; i++) {
+      final sideOffset = (i - 1) * r * 0.48;
+      final start = ball.position - dir * (r * 0.72) + side * sideOffset;
+      final length = r * (1.45 + i * 0.34) * pulse;
+      final zig = (i.isEven ? 1.0 : -1.0) * r * 0.2;
+      final path = Path()
+        ..moveTo(start.dx, start.dy)
+        ..lineTo(
+          (start - dir * (length * 0.34) + side * zig).dx,
+          (start - dir * (length * 0.34) + side * zig).dy,
+        )
+        ..lineTo(
+          (start - dir * (length * 0.68) - side * zig * 0.65).dx,
+          (start - dir * (length * 0.68) - side * zig * 0.65).dy,
+        )
+        ..lineTo((start - dir * length).dx, (start - dir * length).dy);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1.5, r * (0.13 - i * 0.015))
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.miter
+          ..color = colors[i].withValues(alpha: 0.9 - i * 0.16),
+      );
+    }
   }
 
   /// Looks drawn over [ball]: a frozen ball gets an icy tint, and what it holds is drawn on it. A gun
@@ -454,11 +511,20 @@ class PowerUpPainter {
         Paint()..color = const Color(0xFF9FE3FF).withValues(alpha: 0.45),
       );
     }
-    final held = ball.held;
-    if (held == null) return;
+    for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
+      _paintHeldWeapon(canvas, ball, ball.equippedWeapons[slot], slot);
+    }
+  }
+
+  static void _paintHeldWeapon(
+    Canvas canvas,
+    SimulationBall ball,
+    PowerUpKind held,
+    int slot,
+  ) {
     final sprite = PowerUpSprites.of(held);
     if (held == PowerUpKind.shield) {
-      final angle = heldAngle(ball);
+      final angle = heldAngle(ball, weapon: held, slot: slot);
       canvas.drawArc(
         Rect.fromCircle(center: ball.position, radius: ball.radius + 4),
         angle - 0.9,
@@ -474,7 +540,7 @@ class PowerUpPainter {
         _drawSprite(
           canvas,
           sprite,
-          heldCenter(ball),
+          heldCenter(ball, weapon: held, slot: slot),
           ball.radius * 0.7,
           angle + math.pi / 2,
         );
@@ -482,18 +548,18 @@ class PowerUpPainter {
       return;
     }
     if (sprite == null) {
-      final badge = heldCenter(ball);
+      final badge = heldCenter(ball, weapon: held, slot: slot);
       final r = math.max(6.0, ball.radius * 0.36);
       canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
       drawGlyph(canvas, held, badge, r * 0.62);
       return;
     }
-    final angle = heldAngle(ball);
+    final angle = heldAngle(ball, weapon: held, slot: slot);
     final dir = Offset(math.cos(angle), math.sin(angle));
     _drawSprite(
       canvas,
       sprite,
-      heldCenter(ball),
+      heldCenter(ball, weapon: held, slot: slot),
       ball.radius * 0.9,
       angle,
       iconAngle: _iconAngle[held] ?? 0,

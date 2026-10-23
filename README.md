@@ -9,6 +9,7 @@ Ball battles in a circular arena. Pick 2–4 balls: brands, flags or your own pi
 - **Fair, deterministic matches.** Every match comes from a seed, so the same seed always plays out the same way. Starting positions and speeds are balanced so every ball has an equal chance.
 - **Built-in packs:** streaming services, AI, cars, consoles, fast food, every country flag and more.
 - **Your own groups:** upload pictures, crop them in a circle and make your own categories. Share a group with a link so friends can add it to their categories (tagged *Shared*; your own are tagged *Mine*). Submit a group, and the admin can add it to a main category for everyone.
+- **Three kinds of match:** *Threads* (the classic line-cutting game), *Arsenal* (power-ups and weapons with a hearts life bar) and *All-Out* (both: threads are the life and bullets cut them). Power-ups: pistol, shotgun, Gatling, knife, shield, apple, speed boost, freeze ray, bomb, magnet and ghost.
 - **Match options:** one round or first to 2 or 3, speed, effects, and ball size (Smallest to Large).
 - **Replays:** share a short link to a match, or save it as a 9:16 MP4 video (web and Android).
 - **Offline play:** on first start the app downloads every ball image to the device; after that it works without a connection.

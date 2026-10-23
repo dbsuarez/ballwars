@@ -136,6 +136,60 @@ def win():
     return mix
 
 
+# --- Power-up sounds (Arsenal / All-Out) ---------------------------------------
+
+def shot():
+    """Pistol / gatling round: a short falling pew."""
+    n = samples(0.09)
+    return pulse(np.geomspace(1400, 380, n), n, 0.25) * env(n, release=0.02, decay=0.04, sustain=0.1)
+
+
+def shotgun():
+    """A wide blast: noise burst over a low thump."""
+    n = samples(0.22)
+    blast = noise(n, rate=6000, seed=21) * env(n, release=0.05, decay=0.07, sustain=0.0)
+    thump = triangle(np.geomspace(180, 55, n), n) * env(n, release=0.05, decay=0.08, sustain=0.0)
+    return blast * 0.7 + thump * 0.8
+
+
+def slash():
+    """Knife: a quick high swish."""
+    n = samples(0.13)
+    return noise(n, rate=18000, seed=22) * env(n, attack=0.03, release=0.05, decay=0.05, sustain=0.0)
+
+
+def shield():
+    """A metallic clang: two bright tones ringing out."""
+    n = samples(0.3)
+    e = env(n, release=0.08, decay=0.12, sustain=0.0)
+    return (pulse(1480, n, 0.25) * 0.5 + pulse(2310, n, 0.125) * 0.35) * e
+
+
+def bomb():
+    """An explosion: long low noise with a falling rumble."""
+    n = samples(0.7)
+    rumble = triangle(np.geomspace(130, 35, n), n) * env(n, release=0.2, decay=0.25, sustain=0.0)
+    crack = noise(n, rate=4000, seed=23) * env(n, release=0.2, decay=0.18, sustain=0.0)
+    return rumble * 0.9 + crack * 0.7
+
+
+def pickup():
+    """A power-up taken: a quick rising chime."""
+    s = 0.045
+    out = []
+    for note in ['C6', 'E6', 'G6']:
+        n = samples(s)
+        out.append(pulse(freq(note), n, 0.25) * env(n, release=0.015))
+    return np.concatenate(out)
+
+
+def hit():
+    """A weapon hit lands: a soft thud."""
+    n = samples(0.11)
+    thud = triangle(np.geomspace(220, 80, n), n) * env(n, release=0.03, decay=0.05, sustain=0.0)
+    return thud + noise(n, rate=7000, seed=24) * env(n, release=0.02, decay=0.02, sustain=0.0) * 0.4
+
+
 def slowed(x, factor=2.0):
     """Slow-motion version: stretched (so lower and longer) and muffled."""
     n = int(len(x) * factor)
@@ -153,6 +207,13 @@ if __name__ == '__main__':
     save('collide_slow.wav', slowed(collide()), 0.45)
     save('out.wav', out(), 0.6)
     save('win.wav', win(), 0.8)
+    save('shot.wav', shot(), 0.5)
+    save('shotgun.wav', shotgun(), 0.65)
+    save('slash.wav', slash(), 0.5)
+    save('shield.wav', shield(), 0.5)
+    save('bomb.wav', bomb(), 0.75)
+    save('pickup.wav', pickup(), 0.5)
+    save('hit.wav', hit(), 0.6)
     from music import MENU_TRACKS, TRACKS  # noqa: E402 (music.py reuses the helpers above)
 
     for track_id, track in TRACKS:

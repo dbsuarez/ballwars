@@ -67,6 +67,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   // Hit counts already played as sounds.
   int _heardWallHits = 0;
   int _heardBallHits = 0;
+  // Power-up events already played as sounds (shots, hits, slashes, blocks, blasts, pickups).
+  var _heardPowerUps = (0, 0, 0, 0, 0, 0);
 
   // Null where this platform can't export video yet (hides SAVE VIDEO).
   final VideoExportBackend? _videoExport = createVideoExportBackend();
@@ -152,6 +154,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     _endPending = false;
     _heardWallHits = 0;
     _heardBallHits = 0;
+    _heardPowerUps = (0, 0, 0, 0, 0, 0);
     _audio.startMusic();
     _matchGeneration++;
     _controller.preloadImages().then((_) {
@@ -176,6 +179,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       _heardWallHits = _controller.wallHits;
       _audio.bounce();
     }
+    _playPowerUpSounds();
     if (_controller.ballHits > _heardBallHits) {
       _heardBallHits = _controller.ballHits;
       _audio.collide();
@@ -224,6 +228,21 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       _lastPaint = elapsed;
       _frame.value++;
     }
+  }
+
+  /// Plays a sound for each kind of power-up event that happened since the last frame. Ten new shots at
+  /// once is a shotgun blast.
+  void _playPowerUpSounds() {
+    final p = _controller.powerUps;
+    if (p == null) return;
+    final (shots, hits, slashes, blocks, blasts, pickups) = _heardPowerUps;
+    if (p.shots > shots) p.shots - shots >= 5 ? _audio.shotgun() : _audio.shot();
+    if (p.hits > hits) _audio.hit();
+    if (p.slashes > slashes) _audio.slash();
+    if (p.blocks > blocks) _audio.shield();
+    if (p.blasts > blasts) _audio.bomb();
+    if (p.pickups > pickups) _audio.pickup();
+    _heardPowerUps = (p.shots, p.hits, p.slashes, p.blocks, p.blasts, p.pickups);
   }
 
   /// Back from the background (phone unlocked): the next frame is not

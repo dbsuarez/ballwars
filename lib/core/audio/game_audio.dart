@@ -200,6 +200,21 @@ class GameAudio with WidgetsBindingObserver {
 
   void win() => _play('win', 0.85);
 
+  // Power-ups (Arsenal / All-Out). Rapid repeats (gatling, pellets) are thinned out.
+  void shot() => _play('shot', 0.45, gap: 50);
+
+  void shotgun() => _play('shotgun', 0.6, gap: 120);
+
+  void slash() => _play('slash', 0.55, gap: 80);
+
+  void shield() => _play('shield', 0.5, gap: 120);
+
+  void bomb() => _play('bomb', 0.75, gap: 150);
+
+  void pickup() => _play('pickup', 0.5, gap: 80);
+
+  void hit() => _play('hit', 0.5, gap: 60);
+
   // --- Home music (everywhere outside matches) -------------------------------
 
   /// Outside a match (app start, back from a match).

@@ -178,6 +178,42 @@ void main() {
     expect(a.shieldAngle, closeTo(math.atan2(toBullet.dy, toBullet.dx), 1e-6));
   });
 
+  test('any pickup drops the held power-up, timed and instant kinds included', () {
+    for (final kind in [
+      PowerUpKind.apple,
+      PowerUpKind.speed,
+      PowerUpKind.ghost,
+      PowerUpKind.bomb,
+      PowerUpKind.magnet,
+      PowerUpKind.shield,
+    ]) {
+      final c = _match();
+      final a = c.state.balls.first;
+      a
+        ..held = PowerUpKind.knife
+        ..life = _life / 2;
+      _give(c, a, kind);
+      expect(a.held, kind == PowerUpKind.shield ? PowerUpKind.shield : isNull, reason: kind.label);
+      if (kind == PowerUpKind.apple) expect(a.life, _life / 2 + PowerUpTuning.arenaAppleHeal);
+    }
+  });
+
+  test('in All-Out a shield halves the threads lost to the next hit', () {
+    final c = _match(mode: MatchMode.allOut);
+    final [a, b] = c.state.balls;
+    b.held = PowerUpKind.shield;
+    final before = b.fanLines.length;
+    final bullet = _bulletAt(a, b);
+    c.powerUps!.projectiles.add(bullet);
+    _run(c, 1);
+    expect(bullet.spent, isTrue);
+    expect(
+      b.fanLines.length,
+      before - (PowerUpTuning.allOutThreads[PowerUpKind.pistol]! * PowerUpTuning.allOutShieldKeep).round(),
+    );
+    expect(b.held, isNull);
+  });
+
   test('apple heals 25 in Arsenal, capped at 100', () {
     final c = _match();
     final a = c.state.balls.first;

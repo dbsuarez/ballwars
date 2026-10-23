@@ -116,4 +116,7 @@ class PowerUpTuning {
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
+
+  /// All-Out: share of the threads a hit would cut that are still lost when a shield takes it.
+  static const double allOutShieldKeep = 0.5;
 }

@@ -14,8 +14,8 @@ import 'match_simulation_controller.dart';
 /// [step] once per simulation step, right after the ball-ball collisions. All randomness comes from the
 /// match's [rng], drawn only inside the simulation step.
 ///
-/// Guns, the knife and the shield are held ([SimulationBall.held]) until used, and picking up another of
-/// them replaces the one held. Apple, speed, ghost, bomb and magnet act at once and leave it alone.
+/// Guns, the knife and the shield are held ([SimulationBall.held]) until used. Apple, speed, ghost, bomb
+/// and magnet act at once. A ball never has two power-ups: any pickup drops the one it held.
 class PowerUpSystem {
   PowerUpSystem(this.match, this.rng);
 
@@ -82,11 +82,18 @@ class PowerUpSystem {
     _turnShields();
   }
 
-  /// Gives [ball] the power-up [p] and takes [p] off the field. A held kind replaces whatever [ball]
-  /// held; the others act at once.
+  /// Gives [ball] the power-up [p] and takes [p] off the field. Whatever [ball] held is dropped (a ball
+  /// never has two power-ups); a held kind takes its place, the others act at once.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
     pickups++;
+    ball.held = null;
+    // A new power-up starts its own aim (a gatling burst already firing finishes first).
+    if (ball.burstLeft == 0) {
+      ball
+        ..aimLeft = 0
+        ..aimTarget = null;
+    }
     switch (p.kind) {
       case PowerUpKind.apple:
         _eatApple(ball);
@@ -100,12 +107,6 @@ class PowerUpSystem {
         _pullNearest(ball);
       default:
         ball.held = p.kind;
-        // A new power-up starts its own aim (a gatling burst already firing finishes first).
-        if (ball.burstLeft == 0) {
-          ball
-            ..aimLeft = 0
-            ..aimTarget = null;
-        }
     }
   }
 
@@ -432,7 +433,8 @@ class PowerUpSystem {
   }
 
   /// Every weapon hit lands here (bullets, pellets, freeze shots, knife, shield bash, bomb). A ghost can't
-  /// be hit at all. A held shield absorbs [PowerUpTuning.shieldBlock] of the hit, then breaks. Arsenal
+  /// be hit at all. A held shield absorbs part of the hit, then breaks: [PowerUpTuning.shieldBlock] of it
+  /// in Arsenal, while in All-Out only [PowerUpTuning.allOutShieldKeep] of the threads are lost. Arsenal
   /// takes life off [target], All-Out snaps its threads nearest the impact point [at]; both splash "blood"
   /// in the target's color. A freeze shot instead stops the target for [PowerUpTuning.freezeSteps] steps
   /// (shortened the same way by a shield). [kind] [PowerUpKind.shield] is a shield bash. [from] is the
@@ -445,7 +447,7 @@ class PowerUpSystem {
     if (target.held == PowerUpKind.shield) {
       target.held = null;
       blocks++;
-      share = 1 - PowerUpTuning.shieldBlock;
+      share = match.mode == MatchMode.arsenal ? 1 - PowerUpTuning.shieldBlock : PowerUpTuning.allOutShieldKeep;
     }
     if (kind == PowerUpKind.freeze) {
       final steps = (PowerUpTuning.freezeSteps * share).round();

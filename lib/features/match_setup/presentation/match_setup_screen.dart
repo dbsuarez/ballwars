@@ -10,6 +10,7 @@ import '../../custom_groups/domain/custom_group.dart';
 import '../../../core/audio/game_audio.dart';
 import '../../../core/offline/device_prefs.dart';
 import '../../settings/data/effects_prefs.dart';
+import '../../replay_export/domain/replay_link.dart';
 import '../domain/match_config.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
@@ -36,6 +37,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   // Insertion-ordered: contestants keep the order they were picked in.
   final Map<String, CustomBall> _selected = {};
   final TextEditingController _search = TextEditingController();
+
+  /// Yes or No: the question the match answers.
+  final TextEditingController _question = TextEditingController();
   // The category box's text: selected on focus so typing replaces it.
   final TextEditingController _categoryText = TextEditingController();
   final math.Random _random = math.Random();
@@ -89,6 +93,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _question.dispose();
     _categoryText.dispose();
     super.dispose();
   }
@@ -243,6 +248,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ballSize: _ballSize,
         mode: _mode,
         look: _look,
+        // Only for matches with Yes or No balls.
+        question: _selected.keys.any((id) => id.startsWith('pack:$_decisionPack/'))
+            ? ReplayLink.cleanQuestion(_question.text)
+            : null,
       ),
     );
   }
@@ -300,9 +309,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ),
         const SizedBox(height: 12),
         _categoryDropdown(c),
+        // Yes or No: ask a question; the winning ball is the answer.
+        if (_category == _decisionPack) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _question,
+            maxLength: ReplayLink.maxQuestionLength,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Your question', hintText: 'Will it rain tomorrow?'),
+          ),
+        ],
       ],
     );
   }
+
+  /// The built-in "Yes or No" pack.
+  static const String _decisionPack = 'decision';
 
   Widget _categoryDropdown(BallWarsColors c) {
     final categories = _shown;

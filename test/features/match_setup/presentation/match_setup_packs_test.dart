@@ -13,6 +13,9 @@ final _catalog =
  {"id": "countries", "name": "Countries", "style": "flag", "balls": [
   {"id": "c0", "name": "Philippines", "image": "countries/ph.svg", "color": "#0038A8"},
   ${List.generate(24, (i) => '{"id": "x$i", "name": "Country $i", "image": "countries/x$i.svg", "color": "#123456"}').join(',')}]},
+ {"id": "decision", "name": "Yes or No", "style": "flag", "balls": [
+  {"id": "yes", "name": "YES", "image": "decision/yes.svg", "color": "#16A34A"},
+  {"id": "no", "name": "NO", "image": "decision/no.svg", "color": "#DC2626"}]},
  {"id": "shoes", "name": "Apparel", "style": "logo", "balls": [
   {"id": "nike", "name": "Nike", "image": "shoes/nike.svg", "color": "#111111"},
   {"id": "adidas", "name": "Adidas", "image": "shoes/adidas.svg", "color": "#000000"},
@@ -178,5 +181,18 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
     expect(find.byTooltip('Ball look: faces'), findsOneWidget);
+  });
+
+  testWidgets('Yes or No lets the user ask a question', (tester) async {
+    await pumpSetup(tester);
+    expect(find.widgetWithText(TextField, 'Your question'), findsNothing);
+    await pickCategory(tester, 'Yes or No');
+    expect(find.widgetWithText(TextField, 'Your question'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Your question'), '  Will it rain?  ');
+    await tester.tap(find.text('YES'));
+    await tester.tap(find.text('NO'));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.question, 'Will it rain?');
   });
 }

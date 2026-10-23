@@ -30,6 +30,9 @@ class ReplayLink {
   /// medium; older links are medium).
   final BallSize ballSize;
 
+  /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
+  final String? question;
+
   const ReplayLink({
     required this.seed,
     required this.speedMultiplier,
@@ -37,7 +40,18 @@ class ReplayLink {
     this.showEffects = true,
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
+    this.question,
   });
+
+  /// Longest question kept (the rest is cut).
+  static const int maxQuestionLength = 100;
+
+  /// [raw] on one line, trimmed and cut to [maxQuestionLength]; null when empty.
+  static String? cleanQuestion(String? raw) {
+    final q = (raw ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (q.isEmpty) return null;
+    return q.length > maxQuestionLength ? q.substring(0, maxQuestionLength).trim() : q;
+  }
 
   /// Changes the match, so it travels as a leading `m.<id>` token in the ball
   /// list (none for Threads). Apps that predate modes reject the unknown
@@ -56,7 +70,8 @@ class ReplayLink {
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
-    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size&balls=${tokens.join(',')}';
+    final q = question == null ? '' : '&q=${Uri.encodeQueryComponent(question!)}';
+    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q&balls=${tokens.join(',')}';
     return Uri.parse('${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query');
   }
 
@@ -101,6 +116,7 @@ class ReplayLink {
       showEffects: params['fx'] != '0',
       ballSize: ballSize,
       mode: mode,
+      question: cleanQuestion(params['q']),
     );
   }
 

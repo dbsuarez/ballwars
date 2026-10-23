@@ -123,4 +123,13 @@ void main() {
     expect(find.text('100 life'), findsNWidgets(2));
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('a question replaces the headline and the winner card gives the answer', (tester) async {
+    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls, question: 'Will it rain?'), seed: 3));
+    await tester.pump();
+    expect(find.text('Will it rain?'), findsOneWidget);
+    await _playUntilWinnerCard(tester);
+    expect(find.textContaining('Answer: '), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

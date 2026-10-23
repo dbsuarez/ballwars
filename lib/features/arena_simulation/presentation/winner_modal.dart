@@ -11,6 +11,9 @@ import 'confetti_painter.dart';
 class WinnerModal extends StatefulWidget {
   final CustomBall winner;
   final double? durationSeconds;
+
+  /// Yes or No: the question the match answered; the card then shows the winner as the answer.
+  final String? question;
   final VoidCallback onReplay;
   final VoidCallback onExit;
 
@@ -40,6 +43,7 @@ class WinnerModal extends StatefulWidget {
     super.key,
     required this.winner,
     this.durationSeconds,
+    this.question,
     required this.onReplay,
     required this.onExit,
     this.onSaveVideo,
@@ -214,6 +218,22 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                         overflow: TextOverflow.ellipsis,
                         style: AppText.ui(38, FontWeight.w800, color: c.text, height: 1.05, letterSpacing: -0.6),
                       ),
+                      if (widget.question != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.question!,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.ui(14, FontWeight.w600, color: c.muted),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Answer: ${widget.winner.name}',
+                          textAlign: TextAlign.center,
+                          style: AppText.ui(20, FontWeight.w800, color: c.text),
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       Text(
                         _result,

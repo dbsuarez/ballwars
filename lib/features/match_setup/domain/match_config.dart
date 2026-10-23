@@ -66,6 +66,9 @@ class MatchConfig {
 
   final BallLook look;
 
+  /// Yes or No: the question the match answers (shown instead of the headline), or null.
+  final String? question;
+
   const MatchConfig({
     required this.contestants,
     this.speedMultiplier = 1.0,
@@ -74,6 +77,7 @@ class MatchConfig {
     this.winCondition = WinCondition.domination,
     this.ballSize = BallSize.medium,
     this.look = BallLook.pictures,
+    this.question,
     this.mode = MatchMode.threads,
   });
 }

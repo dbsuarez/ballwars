@@ -262,6 +262,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       contestants: widget.config.contestants,
       ballSize: widget.config.ballSize,
       mode: widget.config.mode,
+      question: widget.config.question,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -360,7 +361,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
-    final headline = AppSettingsScope.of(context).headline;
+    // A Yes or No question takes the headline's place.
+    final headline = widget.config.question ?? AppSettingsScope.of(context).headline;
     final finished = _state.winnerId != null;
     final roundLabel = widget.config.winsNeeded > 1
         ? 'ROUND $_round · FIRST TO ${widget.config.winsNeeded}'
@@ -441,6 +443,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                 Positioned.fill(
                   child: WinnerModal(
                     winner: _winnerBall!,
+                    question: widget.config.question,
                     durationSeconds: _controller.elapsedSeconds,
                     onSaveVideo: _videoExport == null
                         ? null

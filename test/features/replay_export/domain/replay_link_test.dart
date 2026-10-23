@@ -191,4 +191,21 @@ void main() {
     final bad = uri.replace(queryParameters: {...uri.queryParameters, 'size': 'huge'});
     expect(ReplayLink.fromUri(bad, presets: _presets), isNull);
   });
+
+  test('a Yes or No question travels as q=, trimmed and on one line', () {
+    final link = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], question: 'Will it rain?');
+    final uri = link.toUri(presetIds: {for (final b in _presets) b.id}, appUrl: 'https://dbsuarez.github.io/ballwars/');
+    expect(uri.queryParameters['q'], 'Will it rain?');
+    expect(ReplayLink.fromUri(uri, presets: _presets)!.question, 'Will it rain?');
+
+    final none = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]])
+        .toUri(presetIds: {for (final b in _presets) b.id}, appUrl: 'https://dbsuarez.github.io/ballwars/');
+    expect(none.queryParameters.containsKey('q'), isFalse);
+    expect(ReplayLink.fromUri(none, presets: _presets)!.question, isNull);
+
+    final messy = uri.replace(queryParameters: {...uri.queryParameters, 'q': '  Line one\nline two  ${'x' * 200}'});
+    final q = ReplayLink.fromUri(messy, presets: _presets)!.question!;
+    expect(q.contains('\n'), isFalse);
+    expect(q.length, lessThanOrEqualTo(100));
+  });
 }

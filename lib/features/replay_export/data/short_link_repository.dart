@@ -40,6 +40,8 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
           // Only when not medium, so databases without the column (before
           // migration 008) still take ordinary links.
           if (replayQuery['size'] != null) 'size': replayQuery['size'],
+          // Likewise only when present (migration 010).
+          if (replayQuery['q'] != null) 'question': replayQuery['q'],
         });
         return code;
       } on PostgrestException catch (e) {
@@ -58,6 +60,7 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
       'speed': '${row['speed']}',
       if (row['effects'] == false) 'fx': '0',
       if (row['size'] != null && row['size'] != 'm') 'size': row['size'] as String,
+      if (row['question'] != null) 'q': row['question'] as String,
       'balls': row['balls'] as String,
     };
   }

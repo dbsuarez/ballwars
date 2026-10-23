@@ -172,6 +172,23 @@ class SpikeWall {
   final double angle;
   final int spawnStep;
   final int spikeCount;
+
+  /// Positions each spike along the arena arc instead of a straight chord.
+  List<Offset> spikePositions(double spacing) {
+    final radius = position.distance;
+    if (radius == 0) return List<Offset>.filled(spikeCount, Offset.zero);
+    final centerAngle = math.atan2(position.dy, position.dx);
+    final angleStep = spacing / radius;
+    final start = -(spikeCount - 1) / 2;
+    return [
+      for (var i = 0; i < spikeCount; i++)
+        Offset(
+              math.cos(centerAngle + (start + i) * angleStep),
+              math.sin(centerAngle + (start + i) * angleStep),
+            ) *
+            radius,
+    ];
+  }
 }
 
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or

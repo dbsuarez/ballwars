@@ -151,12 +151,11 @@ class PowerUpPainter {
     }
 
     for (final wall in p.spikeWalls) {
-      final radial = Offset(math.cos(wall.angle), math.sin(wall.angle));
-      final tangent = Offset(-radial.dy, radial.dx);
       final spacing = r * 0.96;
-      final start = -(wall.spikeCount - 1) / 2;
-      for (var i = 0; i < wall.spikeCount; i++) {
-        final base = wall.position + tangent * ((start + i) * spacing);
+      for (final base in wall.spikePositions(spacing)) {
+        final angle = math.atan2(base.dy, base.dx);
+        final radial = Offset(math.cos(angle), math.sin(angle));
+        final tangent = Offset(-radial.dy, radial.dx);
         final left = base - tangent * r * 0.42 + radial * r * 0.38;
         final right = base + tangent * r * 0.42 + radial * r * 0.38;
         final tip = base - radial * r * 0.9;

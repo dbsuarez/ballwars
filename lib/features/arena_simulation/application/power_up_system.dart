@@ -286,15 +286,13 @@ class PowerUpSystem {
   void _triggerSpikeWalls() {
     if (spikeWalls.isEmpty) return;
     for (final wall in List<SpikeWall>.of(spikeWalls)) {
-      final tangent = Offset(-math.sin(wall.angle), math.cos(wall.angle));
-      final halfLength = fieldRadius * 0.48 * (wall.spikeCount - 1);
-      final start = wall.position - tangent * halfLength;
-      final end = wall.position + tangent * halfLength;
+      final spikes = wall.spikePositions(fieldRadius * 0.96);
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         final reach = ball.radius + fieldRadius * 0.48;
-        if (MathUtils.distancePointToSegmentSquared(ball.position, start, end) >
-            reach * reach) {
+        if (!spikes.any(
+          (spike) => (ball.position - spike).distanceSquared <= reach * reach,
+        )) {
           continue;
         }
         spikeWalls.remove(wall);

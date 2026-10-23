@@ -225,6 +225,15 @@ void main() {
     );
     expect(c.powerUps!.spikeWalls, hasLength(1));
     expect(c.powerUps!.spikeWalls.single.spikeCount, greaterThanOrEqualTo(6));
+    final spikePositions = c.powerUps!.spikeWalls.single.spikePositions(
+      c.powerUps!.fieldRadius * 0.96,
+    );
+    expect(
+      spikePositions.map((position) => position.distance),
+      everyElement(
+        closeTo(c.powerUps!.spikeWalls.single.position.distance, 1e-9),
+      ),
+    );
     expect(
       c.powerUps!.spikeWalls.single.position.distance,
       closeTo(_arenaRadius - c.powerUps!.fieldRadius * 1.6, 0.001),

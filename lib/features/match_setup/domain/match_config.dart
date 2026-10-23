@@ -35,6 +35,19 @@ enum MatchMode {
   static MatchMode? byId(String? id) => values.where((m) => m.id == id).firstOrNull;
 }
 
+/// How balls are drawn (cosmetic, not part of the match or of replay links): their pictures, or
+/// smiley faces that follow the opponent and get hurt.
+enum BallLook {
+  pictures('Pictures'),
+  faces('Faces');
+
+  final String label;
+
+  const BallLook(this.label);
+
+  static BallLook? byName(String? name) => values.where((l) => l.name == name).firstOrNull;
+}
+
 class MatchConfig {
   final List<CustomBall> contestants;
   final double speedMultiplier;
@@ -51,6 +64,8 @@ class MatchConfig {
 
   final MatchMode mode;
 
+  final BallLook look;
+
   const MatchConfig({
     required this.contestants,
     this.speedMultiplier = 1.0,
@@ -58,6 +73,7 @@ class MatchConfig {
     this.winsNeeded = 1,
     this.winCondition = WinCondition.domination,
     this.ballSize = BallSize.medium,
+    this.look = BallLook.pictures,
     this.mode = MatchMode.threads,
   });
 }

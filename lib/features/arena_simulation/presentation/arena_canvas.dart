@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/simulation_state.dart';
 import 'arena_painter.dart';
+import '../../match_setup/domain/match_config.dart';
 
 class ArenaCanvas extends StatelessWidget {
   final SimulationState state;
@@ -12,6 +13,8 @@ class ArenaCanvas extends StatelessWidget {
   /// Repaints the arena when it notifies, without rebuilding any widgets.
   final Listenable? repaint;
 
+  final BallLook look;
+
   const ArenaCanvas({
     super.key,
     required this.state,
@@ -19,6 +22,7 @@ class ArenaCanvas extends StatelessWidget {
     required this.rimAngle,
     this.showEffects = true,
     this.repaint,
+    this.look = BallLook.pictures,
   });
 
   @override
@@ -35,6 +39,7 @@ class ArenaCanvas extends StatelessWidget {
           background: c.background,
           rimColor: c.text,
           repaint: repaint,
+          look: look,
         ),
         size: Size.infinite,
       ),

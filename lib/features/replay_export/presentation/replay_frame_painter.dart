@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../match_setup/domain/match_config.dart';
 import '../../arena_simulation/domain/simulation_ball.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_painter.dart';
@@ -49,6 +50,7 @@ class ReplayFramePainter {
         showEffects: showEffects,
         background: _style.background,
         rimColor: _style.text,
+        look: _style.look,
       ).paint(canvas, const Size(_arenaSide, _arenaSide));
       canvas.restore();
     });
@@ -295,10 +297,14 @@ class ReplayStyle {
   final Color text;
   final Color muted;
 
+  /// Ball look (pictures or faces), as in the app.
+  final BallLook look;
+
   const ReplayStyle({
     this.headline = 'WHO WINS?',
     this.background = const Color(0xFF0A0A0B),
     this.text = const Color(0xFFF2F2F0),
     this.muted = const Color(0xFF959596),
+    this.look = BallLook.pictures,
   });
 }

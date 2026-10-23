@@ -131,6 +131,9 @@ class MatchSimulationController {
     return slowMotionLines > 0 ? arsenalBeforeWinSeconds : null;
   }
 
+  /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
+  static const int hurtFlashSteps = 18;
+
   /// Arsenal's slow motion when the admin chose the lines rule.
   static const double arsenalBeforeWinSeconds = 1.5;
 
@@ -415,6 +418,9 @@ class MatchSimulationController {
   void _stepPhysics(double dt) {
     // Lines deactivated from outside the step (e.g. tests) free their slots.
     _pruneInactiveLines();
+    for (final ball in _balls) {
+      if (ball.hurtFlashLeft > 0) ball.hurtFlashLeft--; // Cosmetic ("Faces" wince), no effect on play.
+    }
     final linesAtStart = {for (final ball in _balls) ball: ball.fanLines.length};
     final arsenal = mode == MatchMode.arsenal;
     final lifeAtStart = arsenal ? {for (final ball in _balls) ball: ball.life} : null;
@@ -510,6 +516,7 @@ class MatchSimulationController {
 
         final cut = _cutLinesCrossedBy(cutter, target);
         if (cut.isEmpty) continue;
+        target.hurtFlashLeft = hurtFlashSteps;
 
         // Direction from cutter to target
         final offset = target.position - cutter.position;

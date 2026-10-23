@@ -472,6 +472,7 @@ class PowerUpSystem {
   void _hit(SimulationBall target, PowerUpKind kind, {Offset? at, SimulationBall? from}) {
     if (target.isGhost) return;
     hits++;
+    target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
     var share = 1.0;
     if (target.held == PowerUpKind.shield) {

@@ -33,6 +33,9 @@ class SimulationBall {
 
   /// Threads held at the start of the match (All-Out hearts show the share left).
   int startLines = 0;
+
+  /// Steps left of the wince on a "Faces" ball after a hit or a lost thread (cosmetic only).
+  int hurtFlashLeft = 0;
   bool magnetPending = false;
 
   /// Direction a held shield faces, in radians: it turns toward the biggest threat (see

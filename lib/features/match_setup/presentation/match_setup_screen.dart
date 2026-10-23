@@ -43,6 +43,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _showEffects = true;
   BallSize _ballSize = BallSize.medium;
   MatchMode _mode = MatchMode.threads;
+  BallLook _look = BallLook.pictures;
 
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
@@ -68,6 +69,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
     final size = BallSize.byId(await DevicePrefs.read('size'));
     final mode = MatchMode.byId(await DevicePrefs.read('mode'));
+    final look = BallLook.byName(await DevicePrefs.read('look'));
     final filter = _CategoryFilter.byName(await DevicePrefs.read('category-filter'));
     if (!mounted) return;
     setState(() {
@@ -77,6 +79,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       }
       if (size != null) _ballSize = size;
       if (mode != null) _mode = mode;
+      if (look != null) _look = look;
       _showEffects = effects;
       if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
       if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
@@ -239,6 +242,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         winsNeeded: _winsNeeded,
         ballSize: _ballSize,
         mode: _mode,
+        look: _look,
       ),
     );
   }
@@ -594,6 +598,28 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   GameAudio.instance.click();
                   setState(() {});
                 },
+              ),
+              const SizedBox(width: 8),
+              // Ball look: pictures or smiley faces (cosmetic, remembered).
+              SizedBox(
+                width: 48,
+                height: 52,
+                child: Tooltip(
+                  message: 'Ball look: ${_look.name}',
+                  child: OutlinedButton(
+                    onPressed: () {
+                      GameAudio.instance.click();
+                      final next = _look == BallLook.pictures ? BallLook.faces : BallLook.pictures;
+                      setState(() => _look = next);
+                      DevicePrefs.write('look', next.name);
+                    },
+                    style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(48, 52)),
+                    child: Icon(
+                      _look == BallLook.faces ? Icons.sentiment_satisfied_alt_rounded : Icons.image_outlined,
+                      semanticLabel: 'Ball look',
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               SizedBox(

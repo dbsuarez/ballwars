@@ -105,6 +105,30 @@ class ParticleSystem {
     }
   }
 
+  /// Spawns a short "blood" splash in the hit ball's [color] where a weapon struck it, thrown along
+  /// [direction] (the way the blow travelled).
+  void spawnBlood({
+    required Offset origin,
+    required Offset direction,
+    required Color color,
+    required SeededRandom rng,
+  }) {
+    final count = 10 + rng.nextInt(7); // 10..16
+    final baseAngle = math.atan2(direction.dy, direction.dx);
+
+    for (var i = 0; i < count; i++) {
+      final angle = baseAngle + rng.nextDoubleRange(-math.pi / 3, math.pi / 3);
+      final speed = rng.nextDoubleRange(60.0, 220.0);
+      _particles.add(Particle(
+        position: origin,
+        velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
+        lifespan: rng.nextDoubleRange(0.25, 0.5),
+        color: color,
+        baseRadius: rng.nextDoubleRange(1.5, 3.5),
+      ));
+    }
+  }
+
   /// Spawns cut sparks - small white dots, short burst (3-4 frames worth)
   void spawnCutSparks({
     required Offset origin,

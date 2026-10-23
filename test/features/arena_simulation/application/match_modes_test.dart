@@ -236,4 +236,47 @@ void main() {
     expect(ballB.isEliminated, isTrue);
     expect(c.state.winnerId, ballA.config.id);
   });
+
+  /// Plays a match to the end (10 minutes of game time at most) and returns the steps it took, plus the
+  /// steps on which it was in slow motion.
+  (int, List<int>) playOut(MatchSimulationController c) {
+    final slow = <int>[];
+    while (c.state.status != MatchStatus.finished && c.stepCount < 60 * 60 * 10) {
+      c.tick(MatchSimulationController.fixedTimestep);
+      if (c.state.status == MatchStatus.slowMotion) slow.add(c.stepCount);
+    }
+    return (c.stepCount, slow);
+  }
+
+  test('the look-ahead predicts the real finish in Arsenal and All-Out', () {
+    for (final mode in [MatchMode.arsenal, MatchMode.allOut]) {
+      for (var seed = 1; seed <= 10; seed++) {
+        final c = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: seed, mode: mode);
+        final predicted = c.predictedFinishStep;
+        final (steps, _) = playOut(c);
+        expect(c.state.status, MatchStatus.finished, reason: '$mode seed $seed did not finish');
+        expect(predicted, steps, reason: '$mode seed $seed');
+      }
+    }
+  });
+
+  test('Arsenal slow motion uses seconds before the win', () {
+    for (var seed = 1; seed <= 5; seed++) {
+      // Lines setting (admin default) with no seconds: Arsenal falls back to 1.5 s before the win.
+      final c = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: seed, mode: MatchMode.arsenal);
+      final finish = c.predictedFinishStep!;
+      final (_, slow) = playOut(c);
+      expect(slow.first, finish - 90, reason: 'seed $seed');
+
+      // Slow motion off (no lines, no seconds): never slows.
+      final off = MatchSimulationController(
+        _balls.take(2).toList(),
+        arenaRadius: _arenaRadius,
+        seed: seed,
+        mode: MatchMode.arsenal,
+        slowMotionLines: 0,
+      );
+      expect(playOut(off).$2, isEmpty, reason: 'seed $seed');
+    }
+  });
 }

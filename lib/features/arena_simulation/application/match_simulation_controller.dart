@@ -123,6 +123,17 @@ class MatchSimulationController {
   PowerUpSystem? get powerUps => _powerUps;
   PowerUpSystem? _powerUps;
 
+  /// Seconds of game time before the win when slow motion starts, or null for the lines rule. Arsenal has
+  /// no lines, so its "lines" setting means "before the win" ([arsenalBeforeWinSeconds] unless the admin
+  /// set seconds); with slow motion off (no lines, no seconds) it stays off.
+  double? get _beforeWinSeconds {
+    if (mode != MatchMode.arsenal || slowMotionBeforeWinSeconds != null) return slowMotionBeforeWinSeconds;
+    return slowMotionLines > 0 ? arsenalBeforeWinSeconds : null;
+  }
+
+  /// Arsenal's slow motion when the admin chose the lines rule.
+  static const double arsenalBeforeWinSeconds = 1.5;
+
   /// The step on which the match ends (null without a look-ahead, or if it
   /// hit its limit).
   int? get predictedFinishStep => _finishStep;
@@ -563,10 +574,11 @@ class MatchSimulationController {
       // look-ahead knows it won't recover; without one, normal speed returns
       // if it does).
       final finish = _finishStep;
+      final beforeWin = _beforeWinSeconds;
       final bool endgame;
-      if (slowMotionBeforeWinSeconds != null) {
+      if (beforeWin != null) {
         // The winning cut is known in advance (see the constructor).
-        endgame = finish != null && _stepCount + 1 >= finish - (slowMotionBeforeWinSeconds! / fixedTimestep).round();
+        endgame = finish != null && _stepCount + 1 >= finish - (beforeWin / fixedTimestep).round();
       } else if (_settledEndgameStep != null) {
         // From here the low ball stays low until it is knocked out.
         endgame = _stepCount + 1 >= _settledEndgameStep!;

@@ -233,3 +233,137 @@ def chill():
 
 
 TRACKS = [('arena', arena), ('turbo', turbo), ('sunny', sunny), ('boss', boss), ('chill', chill)]
+
+
+# --- Home screen music: slow, soft 8-bar loops -------------------------------
+# No drums; held pulse pads with slow swells, a triangle bass and a sparse
+# lead. Saved at a lower sample rate (they're soft, and stay small). The admin
+# picks one for everyone (app_settings.menu_music; ids must match
+# MenuTrack.all in the app).
+
+def ambient(tempo, chords, melody, *, arp_every=4, lead_gain=0.16):
+    s = 60 / tempo / 4  # one sixteenth
+    bar = 16
+    total = samples(s * bar * len(chords))
+    mix = np.zeros(total)
+
+    def at(sixteenth):
+        return samples(s * sixteenth)
+
+    def add(start, x, gain):
+        end = min(total, start + len(x))
+        mix[start:end] += x[:end - start] * gain
+
+    def swell(n, attack=0.35, release=0.6):
+        t = np.arange(n) / SR_AMB
+        e = np.minimum(1.0, t / attack)
+        r = int(release * SR_AMB)
+        if 0 < r < n:
+            e[-r:] *= np.linspace(1, 0, r)
+        return e
+
+    for b, name in enumerate(chords):
+        base = b * bar
+        root, steps = chord(name)
+        notes = melody[b]
+        assert sum(length for _, length in notes) == bar, f'bar {b + 1} ({name}) is not 16 sixteenths'
+
+        # Pad: the chord held for the whole bar, two soft pulse voices.
+        n = at(bar)
+        for i, step in enumerate(steps[:3]):
+            duty = 0.25 if i % 2 == 0 else 0.5
+            add(at(base), pulse(mfreq(root + 12 + step), n, duty) * swell(n), 0.035)
+        # Bass: one long triangle note.
+        add(at(base), triangle(mfreq(root - 12), n) * swell(n, attack=0.08, release=0.4), 0.22)
+        # A slow, quiet arpeggio.
+        tones = [root + 12 + i for i in steps] + [root + 24]
+        for k, i in enumerate(range(0, bar, arp_every)):
+            m = at(arp_every)
+            add(at(base + i), pulse(mfreq(tones[k % len(tones)] + 12), m, 0.125) *
+                env(m, attack=0.01, release=0.05, decay=0.18, sustain=0.0), 0.05)
+        # Lead: sparse, long and gentle.
+        pos = base
+        for pitch, length in notes:
+            if pitch:
+                m = at(length) - 60
+                add(at(pos), pulse(mfreq(midi(pitch)), m, 0.25) *
+                    env(m, attack=0.06, release=0.25, decay=0.8, sustain=0.35), lead_gain)
+            pos += length
+    return mix
+
+
+# Sample rate the generator works at; make_sounds.save() resamples.
+SR_AMB = 22050
+
+
+def drift():
+    """Calm and open: C major, 66 bpm."""
+    return ambient(66, ['Cmaj7', 'Am7', 'Fmaj7', 'G', 'Cmaj7', 'Am7', 'Fmaj7', 'G'], [
+        [('E5', 8), ('G5', 8)],
+        [('A4', 16)],
+        [('C5', 8), ('A4', 8)],
+        [('B4', 12), (None, 4)],
+        [('G5', 8), ('E5', 8)],
+        [('C5', 16)],
+        [('A4', 8), ('C5', 8)],
+        [('D5', 12), (None, 4)],
+    ])
+
+
+def lantern():
+    """Wistful: A minor, 70 bpm."""
+    return ambient(70, ['Am', 'F', 'C', 'G', 'Am', 'F', 'Em', 'E'], [
+        [('E5', 12), ('D5', 4)],
+        [('C5', 16)],
+        [('E5', 8), ('G5', 8)],
+        [('D5', 16)],
+        [('A5', 8), ('G5', 4), ('E5', 4)],
+        [('F5', 16)],
+        [('E5', 8), ('B4', 8)],
+        [('G#4', 12), (None, 4)],
+    ], arp_every=2)
+
+
+def tide():
+    """Rolling and soft: D major, 60 bpm."""
+    return ambient(60, ['D', 'Bm', 'G', 'A', 'D', 'Bm', 'Em', 'A'], [
+        [('F#5', 16)],
+        [('D5', 8), ('F#5', 8)],
+        [('B4', 16)],
+        [('C#5', 12), (None, 4)],
+        [('A5', 8), ('F#5', 8)],
+        [('D5', 16)],
+        [('G5', 8), ('E5', 8)],
+        [('A4', 12), (None, 4)],
+    ], arp_every=2, lead_gain=0.14)
+
+
+def hearth():
+    """Warm: F major, 72 bpm."""
+    return ambient(72, ['F', 'Dm', 'Bb', 'C', 'F', 'Am', 'Bb', 'C'], [
+        [('A4', 8), ('C5', 8)],
+        [('D5', 12), ('C5', 4)],
+        [('Bb4', 16)],
+        [('G4', 16)],
+        [('C5', 8), ('F5', 8)],
+        [('E5', 12), ('C5', 4)],
+        [('D5', 8), ('Bb4', 8)],
+        [('C5', 12), (None, 4)],
+    ])
+
+
+def starlight():
+    """Dreamy, high and sparse: E minor, 64 bpm."""
+    return ambient(64, ['Em', 'Cmaj7', 'G', 'D', 'Em', 'Cmaj7', 'Am7', 'D'], [
+        [('B5', 16)],
+        [('G5', 8), ('E5', 8)],
+        [('D6', 16)],
+        [('A5', 12), (None, 4)],
+        [('B5', 8), ('G5', 8)],
+        [('E5', 16)],
+        [('C6', 8), ('A5', 8)],
+        [('F#5', 12), (None, 4)],
+    ], arp_every=2, lead_gain=0.13)
+
+
+MENU_TRACKS = [('drift', drift), ('lantern', lantern), ('tide', tide), ('hearth', hearth), ('starlight', starlight)]

@@ -1,20 +1,25 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../offline/offline_store.dart';
 
-/// A background track (`assets/sounds/bgm_<id>.wav`, composed in
-/// tool/sounds/music.py). The admin picks one for everyone.
+/// A background track: match music (`assets/sounds/bgm_<id>.wav`) or Home
+/// screen music (`menu_<id>.wav`), composed in tool/sounds/music.py. The
+/// admin picks one of each for everyone.
 class MusicTrack {
   final String id;
   final String name;
   final String mood;
+  final String _file;
 
-  const MusicTrack(this.id, this.name, this.mood);
+  const MusicTrack(this.id, this.name, this.mood) : _file = 'bgm_$id';
 
-  String get asset => 'sounds/bgm_$id.wav';
+  const MusicTrack.home(this.id, this.name, this.mood) : _file = 'menu_$id';
 
+  String get asset => 'sounds/$_file.wav';
+
+  /// Match music.
   static const List<MusicTrack> all = [
     MusicTrack('arena', 'Arena', 'The classic theme · A minor, 140 bpm'),
     MusicTrack('turbo', 'Turbo', 'Fast and driving · 168 bpm'),
@@ -23,39 +28,65 @@ class MusicTrack {
     MusicTrack('chill', 'Chill Out', 'Laid back · 96 bpm'),
   ];
 
+  /// Home screen music: slow and soft.
+  static const List<MusicTrack> menu = [
+    MusicTrack.home('drift', 'Drift', 'Calm and open · 66 bpm'),
+    MusicTrack.home('lantern', 'Lantern', 'Wistful · A minor, 70 bpm'),
+    MusicTrack.home('tide', 'Tide', 'Rolling and soft · 60 bpm'),
+    MusicTrack.home('hearth', 'Hearth', 'Warm · F major, 72 bpm'),
+    MusicTrack.home('starlight', 'Starlight', 'Dreamy and sparse · 64 bpm'),
+  ];
+
   static MusicTrack byId(String id) => all.firstWhere((t) => t.id == id, orElse: () => all.first);
+
+  static MusicTrack menuById(String id) => menu.firstWhere((t) => t.id == id, orElse: () => menu.first);
 }
 
 /// The game's 8-bit sounds (assets/sounds, made by tool/sounds/make_sounds.py):
-/// button clicks, wall bounces, ball hits, the knock-out, the winner jingle
-/// and the background loop during matches. In slow motion the hits switch to
-/// slowed, muffled versions and the music slows and quiets down.
+/// button clicks, wall bounces, ball hits, the knock-out, the winner jingle,
+/// the background loop during matches, and the Home screen music everywhere
+/// outside matches. In slow motion the hits switch to slowed, muffled
+/// versions and the match music slows and quiets down. Music pauses while
+/// the app is in the background (phone locked).
 ///
 /// Off until [enabled] is set (main does; tests have no audio plugin). The
-/// player's [musicOn] and [effectsOn] choices are saved on the device.
-class GameAudio {
+/// player's [musicOn], [menuMusicOn] and [effectsOn] choices are saved on the
+/// device.
+class GameAudio with WidgetsBindingObserver {
   GameAudio._();
 
   static final GameAudio instance = GameAudio._();
 
   bool enabled = false;
   bool _musicOn = true;
+  bool _menuMusicOn = true;
   bool _effectsOn = true;
 
   static const String _musicKey = 'pref:music';
+  static const String _menuMusicKey = 'pref:menu-music';
   static const String _effectsKey = 'pref:sfx';
   static const double _musicVolume = 0.3;
+  static const double _menuVolume = 0.35;
 
   final Map<String, _Voices> _voices = {};
   AudioPlayer? _music;
+  AudioPlayer? _menu;
   AudioPlayer? _preview;
   String? _previewing;
   MusicTrack _track = MusicTrack.all.first;
+  MusicTrack _menuTrack = MusicTrack.menu.first;
   bool _musicWanted = false; // A match is on screen.
+  bool _musicPausedByUser = false; // The match is paused.
+  bool _menuWanted = false; // Outside a match.
+  bool _foreground = true;
   bool _slow = false;
   final Map<String, DateTime> _lastPlayed = {};
 
   bool get musicOn => _musicOn;
+
+  bool get menuMusicOn => _menuMusicOn;
+
+  bool get effectsOn => _effectsOn;
 
   MusicTrack get track => _track;
 
@@ -66,51 +97,52 @@ class GameAudio {
     if (_playMusic && _musicWanted && _music?.state == PlayerState.playing) _startMusic(restart: true);
   }
 
-  /// The track [id] being previewed, if any.
-  String? get previewing => _previewing;
+  MusicTrack get menuTrack => _menuTrack;
 
-  /// Plays [track] once for the admin's track picker, whatever the music
-  /// switch says; [onDone] runs when it stops by itself.
-  void preview(MusicTrack track, {VoidCallback? onDone}) {
-    if (!enabled) return;
-    _previewing = track.id;
-    _guard(() async {
-      final player = _preview ??= AudioPlayer();
-      await player.stop();
-      await player.setReleaseMode(ReleaseMode.stop);
-      await player.play(AssetSource(track.asset), volume: 0.6);
-      await player.onPlayerComplete.first;
-      if (_previewing == track.id) {
-        _previewing = null;
-        onDone?.call();
-      }
-    });
+  /// The Home music (from the admin's setting); a playing loop switches.
+  set menuTrack(MusicTrack track) {
+    if (track.id == _menuTrack.id) return;
+    _menuTrack = track;
+    if (_menu?.state == PlayerState.playing) _startMenu(restart: true);
   }
-
-  void stopPreview() {
-    _previewing = null;
-    _guard(() async => _preview?.stop());
-  }
-
-  bool get effectsOn => _effectsOn;
 
   bool get _playEffects => enabled && _effectsOn;
 
-  bool get _playMusic => enabled && _musicOn;
+  bool get _playMusic => enabled && _musicOn && _foreground;
+
+  bool get _playMenu => enabled && _menuMusicOn && _foreground && _previewing == null;
 
   /// Loads the saved choices, and lets the sounds mix with each other (and with
   /// other apps) instead of taking audio focus from one another on Android.
   Future<void> init() async {
     try {
       _musicOn = await _readFlag(_musicKey);
+      _menuMusicOn = await _readFlag(_menuMusicKey);
       _effectsOn = await _readFlag(_effectsKey);
       if (enabled) {
+        WidgetsBinding.instance.addObserver(this);
         await AudioPlayer.global.setAudioContext(
           AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build(),
         );
       }
     } catch (e) {
       debugPrint('GameAudio: $e');
+    }
+  }
+
+  /// Locked phone / app in the background: all music pauses; on return only
+  /// what should be playing resumes.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _foreground = true;
+      if (_playMusic && _musicWanted && !_musicPausedByUser) _guard(() async => _music?.resume());
+      if (_playMenu && _menuWanted) _startMenu();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _foreground = false;
+      _guard(() async => _music?.pause());
+      _guard(() async => _menu?.pause());
+      stopPreview();
     }
   }
 
@@ -122,6 +154,16 @@ class GameAudio {
       _startMusic();
     }
     await _writeFlag(_musicKey, on);
+  }
+
+  Future<void> setMenuMusicOn(bool on) async {
+    _menuMusicOn = on;
+    if (!_playMenu) {
+      _guard(() async => _menu?.pause());
+    } else if (_menuWanted) {
+      _startMenu();
+    }
+    await _writeFlag(_menuMusicKey, on);
   }
 
   Future<void> setEffectsOn(bool on) async {
@@ -140,7 +182,12 @@ class GameAudio {
     } catch (_) {}
   }
 
-  void click() => _play('click', 0.6);
+  /// A tap. Browsers only allow sound after the user interacts with the
+  /// page, so a Home music that couldn't start at launch starts here.
+  void click() {
+    _play('click', 0.6);
+    if (_playMenu && _menuWanted && _menu?.state != PlayerState.playing) _startMenu();
+  }
 
   /// A ball hit the rim. Rapid repeats are thinned out.
   void bounce() => _play(_slow ? 'bounce_slow' : 'bounce', 0.45, gap: 70);
@@ -153,15 +200,49 @@ class GameAudio {
 
   void win() => _play('win', 0.85);
 
+  // --- Home music (everywhere outside matches) -------------------------------
+
+  /// Outside a match (app start, back from a match).
+  void startMenuMusic() {
+    _menuWanted = true;
+    if (_playMenu) _startMenu();
+  }
+
+  /// A match starts: Home music steps aside for the match music.
+  void stopMenuMusic() {
+    _menuWanted = false;
+    _guard(() async => _menu?.pause());
+  }
+
+  void _startMenu({bool restart = false}) {
+    _guard(() async {
+      final menu = _menu ??= AudioPlayer()..setReleaseMode(ReleaseMode.loop);
+      if (!restart && menu.state == PlayerState.paused) {
+        await menu.resume();
+        return;
+      }
+      await menu.setVolume(_menuVolume);
+      await menu.play(AssetSource(_menuTrack.asset));
+    });
+  }
+
+  // --- Match music ------------------------------------------------------------
+
   /// Starts the loop from the beginning (a new match or round).
   void startMusic() {
     _musicWanted = true;
+    _musicPausedByUser = false;
     if (_playMusic) _startMusic(restart: true);
   }
 
-  void pauseMusic() => _guard(() async => _music?.pause());
+  /// The match is paused.
+  void pauseMusic() {
+    _musicPausedByUser = true;
+    _guard(() async => _music?.pause());
+  }
 
   void resumeMusic() {
+    _musicPausedByUser = false;
     if (_playMusic && _musicWanted) _guard(() async => _music?.resume());
   }
 
@@ -192,6 +273,45 @@ class GameAudio {
       await music.setVolume(_slow ? _musicVolume * 0.45 : _musicVolume);
       await music.play(AssetSource(_track.asset));
     });
+  }
+
+  // --- Admin previews ---------------------------------------------------------
+
+  /// The track [id] being previewed, if any.
+  String? get previewing => _previewing;
+
+  /// Plays [track] once for the admin's track pickers, whatever the music
+  /// switches say (the Home music pauses meanwhile); [onDone] runs when it
+  /// stops by itself.
+  void preview(MusicTrack track, {VoidCallback? onDone}) {
+    if (!enabled) return;
+    _previewing = track.asset;
+    _guard(() async => _menu?.pause());
+    _guard(() async {
+      final player = _preview ??= AudioPlayer();
+      await player.stop();
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.play(AssetSource(track.asset), volume: 0.6);
+      await player.onPlayerComplete.first;
+      if (_previewing == track.asset) {
+        _endPreview();
+        onDone?.call();
+      }
+    });
+  }
+
+  /// Whether [track] is the one being previewed.
+  bool isPreviewing(MusicTrack track) => _previewing == track.asset;
+
+  void stopPreview() {
+    if (_previewing == null) return;
+    _guard(() async => _preview?.stop());
+    _endPreview();
+  }
+
+  void _endPreview() {
+    _previewing = null;
+    if (_playMenu && _menuWanted) _startMenu();
   }
 
   void _play(String name, double volume, {int gap = 0}) {

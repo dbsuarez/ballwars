@@ -1,5 +1,5 @@
 /// App-wide settings, set by the admin and shown to everyone
-/// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005 and 006).
+/// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005, 006 and 009).
 class AppSettings {
   /// Big title over the arena and in videos, e.g. "WHO WINS?".
   final String headline;
@@ -13,6 +13,9 @@ class AppSettings {
 
   /// [MusicTrack.id] of the background music during matches.
   final String musicId;
+
+  /// [MusicTrack.id] of the Home screen music (MusicTrack.menu).
+  final String menuMusicId;
 
   /// Slow motion starts when one of the last two balls is down to this many
   /// lines (0: never)...
@@ -28,6 +31,7 @@ class AppSettings {
     this.watermarkEnabled = true,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
+    this.menuMusicId = defaultMenuMusic,
     this.slowMotionLines = defaultSlowMotionLines,
     this.slowMotionBeforeWinSeconds,
   });
@@ -35,6 +39,7 @@ class AppSettings {
   static const String defaultHeadline = 'WHO WINS?';
   static const String defaultWatermark = 'dbsuarez';
   static const String defaultMusic = 'arena';
+  static const String defaultMenuMusic = 'drift';
   static const int defaultSlowMotionLines = 10;
   static const double defaultSlowMotionBeforeWinSeconds = 1.5;
   static const AppSettings defaults = AppSettings();
@@ -45,6 +50,7 @@ class AppSettings {
     bool? watermarkEnabled,
     String? watermarkText,
     String? musicId,
+    String? menuMusicId,
     int? slowMotionLines,
     double? Function()? slowMotionBeforeWinSeconds,
   }) =>
@@ -54,6 +60,7 @@ class AppSettings {
         watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
         watermarkText: watermarkText ?? this.watermarkText,
         musicId: musicId ?? this.musicId,
+        menuMusicId: menuMusicId ?? this.menuMusicId,
         slowMotionLines: slowMotionLines ?? this.slowMotionLines,
         slowMotionBeforeWinSeconds:
             slowMotionBeforeWinSeconds == null ? this.slowMotionBeforeWinSeconds : slowMotionBeforeWinSeconds(),

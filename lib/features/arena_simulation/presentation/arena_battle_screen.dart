@@ -90,6 +90,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _audio.stopMenuMusic(); // The match music takes over until we leave.
     _ticker = createTicker(_onTick)..start();
     _dissolveController = AnimationController(duration: _loserShowDuration, vsync: this);
     EffectsPrefs.askWhenSlow().then((ask) {
@@ -224,17 +225,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     }
   }
 
-  /// Locked phone or app in the background: frames stop by themselves, but
-  /// the music would keep playing. On return the next frame is not counted
-  /// (no time jump) and the music resumes unless the match is paused.
+  /// Back from the background (phone unlocked): the next frame is not
+  /// counted, so there's no time jump. (GameAudio pauses and resumes music.)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _skipNextDelta = true;
-      if (!_isPaused) _audio.resumeMusic();
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
-      _audio.pauseMusic();
-    }
+    if (state == AppLifecycleState.resumed) _skipNextDelta = true;
   }
 
   /// Copies a link that replays this exact match in the web app: a short
@@ -295,6 +290,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     _dissolveController.dispose();
     _frame.dispose();
     _audio.stopMusic();
+    _audio.startMenuMusic();
     super.dispose();
   }
 

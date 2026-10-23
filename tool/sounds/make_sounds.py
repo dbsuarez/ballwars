@@ -63,15 +63,17 @@ def env(n, attack=0.002, release=0.03, sustain=1.0, decay=None):
     return e
 
 
-def save(name, x, peak=0.85):
+def save(name, x, peak=0.85, rate=SR):
     x = x / max(1e-9, np.max(np.abs(x))) * peak
+    if rate != SR:  # Resample (soft music doesn't need 22 kHz).
+        x = np.interp(np.arange(0, len(x), SR / rate), np.arange(len(x)), x)
     data = (x * 32767).astype('<i2').tobytes()
     with wave.open(os.path.join(OUT, name), 'wb') as w:
         w.setnchannels(1)
         w.setsampwidth(2)
-        w.setframerate(SR)
+        w.setframerate(rate)
         w.writeframes(data)
-    print(f'{name}: {len(x) / SR:.2f}s')
+    print(f'{name}: {len(x) / rate:.2f}s')
 
 
 def samples(seconds):
@@ -151,7 +153,9 @@ if __name__ == '__main__':
     save('collide_slow.wav', slowed(collide()), 0.45)
     save('out.wav', out(), 0.6)
     save('win.wav', win(), 0.8)
-    from music import TRACKS  # noqa: E402 (music.py reuses the helpers above)
+    from music import MENU_TRACKS, TRACKS  # noqa: E402 (music.py reuses the helpers above)
 
     for track_id, track in TRACKS:
         save(f'bgm_{track_id}.wav', track(), 0.75)
+    for track_id, track in MENU_TRACKS:
+        save(f'menu_{track_id}.wav', track(), 0.6, rate=16000)

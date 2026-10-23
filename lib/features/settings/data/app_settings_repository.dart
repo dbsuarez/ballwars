@@ -39,8 +39,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasWatermarkColumns = false;
   // Likewise the music column (migration 005).
   bool _hasMusicColumn = false;
-  // And the slow-motion column (migration 006).
+  // And the slow-motion column (migration 006), and Home music (009).
   bool _hasSlowMotionColumn = false;
+  bool _hasMenuMusicColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer}) : _writer = writer ?? _client;
 
@@ -68,12 +69,14 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasWatermarkColumns = row.containsKey('watermark_enabled');
     _hasMusicColumn = row.containsKey('music');
     _hasSlowMotionColumn = row.containsKey('slow_motion_lines');
+    _hasMenuMusicColumn = row.containsKey('menu_music');
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
       watermarkText: row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
+      menuMusicId: row['menu_music'] as String? ?? AppSettings.defaultMenuMusic,
       slowMotionLines: (row['slow_motion_lines'] as num?)?.toInt() ?? AppSettings.defaultSlowMotionLines,
       slowMotionBeforeWinSeconds: (row['slow_motion_before_win'] as num?)?.toDouble(),
     );
@@ -89,6 +92,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasWatermarkColumns) 'watermark_enabled': settings.watermarkEnabled,
           if (_hasWatermarkColumns) 'watermark_text': settings.watermarkText.trim(),
           if (_hasMusicColumn) 'music': settings.musicId,
+          if (_hasMenuMusicColumn) 'menu_music': settings.menuMusicId,
           if (_hasSlowMotionColumn) 'slow_motion_lines': settings.slowMotionLines,
           if (_hasSlowMotionColumn) 'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
           'updated_at': DateTime.now().toUtc().toIso8601String(),

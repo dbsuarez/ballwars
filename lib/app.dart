@@ -72,7 +72,10 @@ class _BallWarsAppState extends State<BallWarsApp> {
     _settings.addListener(_applyMusic);
   }
 
-  void _applyMusic() => GameAudio.instance.track = MusicTrack.byId(_settings.value.musicId);
+  void _applyMusic() {
+    GameAudio.instance.track = MusicTrack.byId(_settings.value.musicId);
+    GameAudio.instance.menuTrack = MusicTrack.menuById(_settings.value.menuMusicId);
+  }
 
   /// Waits only for the settings (theme, headline) and the pack catalog;
   /// the ball images then download in the background while Home shows their
@@ -242,6 +245,9 @@ class _HomeScreenState extends State<_HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Home music plays everywhere outside matches (browsers start it on the
+    // first tap; see GameAudio.click).
+    GameAudio.instance.startMenuMusic();
     // Opened from a shared replay link (web): go straight to that match.
     _openReplayLink(Uri.base);
     // Or from a group share link: offer to add that group.
@@ -394,6 +400,18 @@ class _HomeScreenState extends State<_HomeScreen> {
                       Text('BALL WARS', style: AppText.ui(15, FontWeight.w800, color: c.text, letterSpacing: 2.6)),
                       const Spacer(),
                       IconButton(
+                        tooltip: GameAudio.instance.menuMusicOn ? 'Home music: on' : 'Home music: off',
+                        icon: Icon(
+                          GameAudio.instance.menuMusicOn ? Icons.music_note_rounded : Icons.music_off_rounded,
+                          color: GameAudio.instance.menuMusicOn ? c.text : c.muted,
+                        ),
+                        onPressed: () async {
+                          await GameAudio.instance.setMenuMusicOn(!GameAudio.instance.menuMusicOn);
+                          GameAudio.instance.click();
+                          if (mounted) setState(() {});
+                        },
+                      ),
+                      IconButton(
                         tooltip: 'Settings',
                         icon: const Icon(Icons.tune),
                         onPressed: () {
@@ -420,7 +438,7 @@ class _HomeScreenState extends State<_HomeScreen> {
                       style: AppText.ui(40, FontWeight.w800, color: c.text, height: 1.05, letterSpacing: -0.8)),
                   const SizedBox(height: 10),
                   Text(
-                    'Pick two to four balls. Each holds a fan of lines to the rim — cut them all and it\'s out.',
+                    'Pick two to four balls. Each holds a fan of lines to the rim - cut them all and it\'s out.',
                     style: AppText.ui(15, FontWeight.w500, color: c.muted, height: 1.5),
                   ),
                   const SizedBox(height: 28),

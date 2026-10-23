@@ -12,7 +12,7 @@ Ball battles in a circular arena. Pick 2–4 balls: brands, flags or your own pi
 - **Match options:** one round or first to 2 or 3, speed, effects, and ball size (Smallest to Large).
 - **Replays:** share a short link to a match, or save it as a 9:16 MP4 video (web and Android).
 - **Offline play:** on first start the app downloads every ball image to the device; after that it works without a connection.
-- **8-bit sound:** original chiptune music (five tracks), plus bounce, hit, knockout and winner sounds. Music and sound effects each have their own on/off switch in Match Setup.
+- **8-bit sound:** original chiptune music (five match tracks and five calm Home tracks), plus bounce, hit, knockout and winner sounds. Music and sound effects each have their own on/off switch in Match Setup.
 - **Admin settings**, set for everyone: headline, theme (15 palettes), match music, when slow motion starts (*by lines* or *before the win*), the winner-card watermark, and which players' groups appear in the admin's categories.
 
 ## Development
@@ -27,7 +27,7 @@ flutter test
 ```
 
 - **Releases:** pushing to `master` deploys the web app to GitHub Pages. Pushing a `v*` tag builds a signed APK and attaches it to a GitHub Release.
-- **Supabase:** run the SQL files in `supabase/migrations/` in order (001–008) in the SQL editor. Enable anonymous sign-ins, and add the admin account to the `admins` table (see `002`).
+- **Supabase:** run the SQL files in `supabase/migrations/` in order (001-009) in the SQL editor. Enable anonymous sign-ins, and add the admin account to the `admins` table (see `002`).
 - **Generated assets:**
   - `node tool/build_packs.mjs` rebuilds the ball packs.
   - `python tool/sounds/make_sounds.py` rebuilds the sounds and music.

@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import '../../../core/utils/canvas_image_helper.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -33,6 +33,9 @@ class ImagePrep {
   /// Decodes a picked picture for framing, scaled down so its longer side is
   /// at most [maxSide] (big photos would otherwise use a lot of memory).
   static Future<ui.Image> decodeForCropping(Uint8List bytes, {int maxSide = 1024}) async {
+    // The web engine can't read an encoded image's size up front
+    // (ImageDescriptor.width throws there): decode it, then scale it down.
+    if (kIsWeb) return _shrink(await CanvasImageHelper.decode(bytes), maxSide);
     final full = await ui.ImmutableBuffer.fromUint8List(bytes);
     final descriptor = await ui.ImageDescriptor.encoded(full);
     final w = descriptor.width, h = descriptor.height;
@@ -45,6 +48,29 @@ class ImagePrep {
     descriptor.dispose();
     full.dispose();
     return frame.image;
+  }
+
+  /// [image] redrawn so its longer side is at most [maxSide] (the original
+  /// is disposed when a smaller copy is made).
+  static Future<ui.Image> _shrink(ui.Image image, int maxSide) async {
+    final longer = image.width > image.height ? image.width : image.height;
+    if (longer <= maxSide) return image;
+    final scale = maxSide / longer;
+    final w = (image.width * scale).round(), h = (image.height * scale).round();
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    final picture = recorder.endRecording();
+    try {
+      return await picture.toImage(w, h);
+    } finally {
+      picture.dispose();
+      image.dispose();
+    }
   }
 
   /// Same as [prepare], from an already decoded [source] (not disposed).

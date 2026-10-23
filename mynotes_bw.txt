@@ -3,3 +3,26 @@ Match-up Settings
 *- The Ball A VS Ball B in the right side of a wide-screen device, can we put it in the "left side" when in mobile?
 *- In Everyone's Gropu, a way to add custom balls to the main categories so that when I saw a good group, I can add it to the main even if the user who made it did not share it..
 *- How about a way for the users to submit their own created group?
+*- Scenario, mobile app, after a comleted game, i left it in the winning screen, phone locked, after a few minutes I cjecked my phone, the game is stuck, no response from the buttons, screen, etc.. I had to force close the app in the settings not just swiping it out of task manager..
+
+Power ups
+- Rules
+ - Power up appears every 5 secs at random location, old power up when not picked up will not disappear
+ - bouncing with each other does not damage the balls unless there is a melee weapon equiped..
+ 
+ -Weapons
+  - Shotgun, aims at opponent and then burst shot
+  - Gatling Gun, aims at opponent and then shot 10 rounds
+  - Pisotl, asims at opponent and show 1 round
+  - Knife/Sword, damage on collision
+  - Shield, when equipped, reduces damage from all attacks 
+  - Apple (life)
+ 
+ Do not remove our existing cutting threads, the user can select what kind of match they want.
+ - Thread Cutting
+ - Weaponize (suggest proper wording)
+ - Combined (im excited how will this turn out)
+ 
+ please think of more power ups.. also think of something cool to explicitly happens when the features are combined for the "Combined", maybe the gun can cut the threads when shot..
+ 
+ lets plan this lols

@@ -47,7 +47,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('MUSIC'), findsOneWidget);
+    expect(find.text('MATCH MUSIC'), findsOneWidget);
+    expect(find.text('HOME MUSIC'), findsOneWidget);
     for (final name in ['Arena', 'Turbo', 'Sunny Day', 'Boss Fight', 'Chill Out']) {
       expect(find.text(name), findsOneWidget);
       expect(find.byTooltip('Play $name'), findsOneWidget);
@@ -57,6 +58,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.saved.single.musicId, 'boss');
     expect(settings.value.musicId, 'boss');
+
+    // Home music: five slow tracks, picked the same way.
+    for (final name in ['Drift', 'Lantern', 'Tide', 'Hearth', 'Starlight']) {
+      expect(find.byTooltip('Play $name'), findsOneWidget);
+    }
+    await tester.tap(find.text('Tide'));
+    await tester.pumpAndSettle();
+    expect(repo.saved.last.menuMusicId, 'tide');
   });
 
   testWidgets('the admin sets when slow motion starts', (tester) async {

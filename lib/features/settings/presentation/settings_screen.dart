@@ -83,9 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signOut() => _run(() async {
-        await _scope!.adminAuth!.signOut();
-        if (mounted) setState(() => _isAdmin = false);
-      });
+    await _scope!.adminAuth!.signOut();
+    if (mounted) setState(() => _isAdmin = false);
+  });
 
   Future<void> _cleanUpImages() async {
     var removed = 0;
@@ -97,12 +97,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _togglePreview(MusicTrack track) {
     final audio = GameAudio.instance;
-    if (audio.previewing == track.id) {
+    if (audio.isPreviewing(track)) {
       audio.stopPreview();
     } else {
-      audio.preview(track, onDone: () {
-        if (mounted) setState(() {});
-      });
+      audio.preview(
+        track,
+        onDone: () {
+          if (mounted) setState(() {});
+        },
+      );
     }
     setState(() {});
   }
@@ -128,239 +131,305 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final settings = AppSettingsScope.of(context);
     final hasBackend = _scope?.adminAuth != null && _scope?.repository != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        bottom: _busy ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator()) : null,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          if (_message != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(_message!, style: AppText.ui(13, FontWeight.w600, color: c.muted)),
+    // The whole page (header too) is as wide as Home's column on big
+    // screens, so switching between them feels even.
+    return ColoredBox(
+      color: c.background,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Settings'),
+              bottom: _busy
+                  ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator())
+                  : null,
             ),
-          if (!hasBackend)
-            Text('Settings need a connection to the Ball Wars server.', style: AppText.ui(14, FontWeight.w500, color: c.muted))
-          else if (_isAdmin == null)
-            const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
-          else if (_isAdmin == false)
-            _Section(
-              title: 'ADMIN',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'The headline, theme and match music are set by the admin for everyone.',
-                    style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton(onPressed: _busy ? null : _signIn, child: const Text('Admin sign-in')),
-                ],
-              ),
-            )
-          else ...[
-            _Section(
-              title: 'HEADLINE',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _headline,
-                    maxLength: 30,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(hintText: AppSettings.defaultHeadline),
-                  ),
-                  FilledButton(
-                    onPressed: _busy || _headline.text.trim().isEmpty
-                        ? null
-                        : () => _save(settings.copyWith(headline: _headline.text.trim()), done: 'Headline saved for everyone.'),
-                    child: const Text('Save headline'),
-                  ),
-                ],
-              ),
-            ),
-            _Section(
-              title: 'THEME',
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final preset in AppPalettes.all)
-                    _ThemeSwatch(
-                      preset: preset,
-                      selected: preset.id == settings.themeId,
-                      onTap: _busy ? null : () => _save(settings.copyWith(themeId: preset.id), done: 'Theme set for everyone.'),
-                    ),
-                ],
-              ),
-            ),
-            _Section(
-              title: 'MUSIC',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final track in MusicTrack.all)
-                    _TrackRow(
-                      track: track,
-                      selected: track.id == settings.musicId,
-                      playing: GameAudio.instance.previewing == track.id,
-                      onPlay: () => _togglePreview(track),
-                      onSelect: _busy || track.id == settings.musicId
-                          ? null
-                          : () => _save(
-                                settings.copyWith(musicId: track.id),
-                                done: '"${track.name}" is now the match music for everyone.',
-                              ),
-                    ),
-                ],
-              ),
-            ),
-            _Section(
-              title: 'SLOW MOTION',
-              child: Builder(
-                builder: (context) {
-                  final beforeWin = _slowBeforeWin ?? settings.slowMotionBeforeWinSeconds != null;
-                  final lines = _slowMotionLines ?? settings.slowMotionLines;
-                  final seconds = _slowSeconds ??
-                      settings.slowMotionBeforeWinSeconds ??
-                      AppSettings.defaultSlowMotionBeforeWinSeconds;
-                  final changed = beforeWin
-                      ? settings.slowMotionBeforeWinSeconds != seconds
-                      : settings.slowMotionBeforeWinSeconds != null || settings.slowMotionLines != lines;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SegmentedButton<bool>(
-                        segments: const [
-                          ButtonSegment(value: false, label: Text('By lines')),
-                          ButtonSegment(value: true, label: Text('Before the win')),
-                        ],
-                        selected: {beforeWin},
-                        onSelectionChanged: _busy ? null : (v) => setState(() => _slowBeforeWin = v.first),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        beforeWin
-                            ? 'Starts ${seconds.toStringAsFixed(1)} s before the winning cut.'
-                            : lines == 0
-                            ? 'Off: matches never slow down.'
-                            : 'Starts when one of the last two balls is down to $lines lines or fewer for good.',
-                        style: AppText.ui(14, FontWeight.w600, color: c.text),
-                      ),
-                      if (beforeWin)
-                        Slider(
-                          value: seconds,
-                          min: 0.5,
-                          max: 5,
-                          divisions: 9,
-                          label: '${seconds.toStringAsFixed(1)} s',
-                          onChanged: _busy ? null : (v) => setState(() => _slowSeconds = v),
-                        )
-                      else
-                        Slider(
-                          value: lines.toDouble(),
-                          min: 0,
-                          max: 60,
-                          divisions: 60,
-                          label: lines == 0 ? 'Off' : '$lines',
-                          onChanged: _busy ? null : (v) => setState(() => _slowMotionLines = v.round()),
-                        ),
-                      Text(
-                        beforeWin
-                            ? 'Game time; slow motion plays it 4x slower. The app plays each match ahead to know the moment.'
-                            : 'Default ${AppSettings.defaultSlowMotionLines}. Each ball starts with about 90 lines. '
-                                  "A ball that will recover doesn't trigger it.",
-                        style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.4),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        onPressed: _busy || !changed
-                            ? null
-                            : () => _save(
-                                  beforeWin
-                                      ? settings.copyWith(slowMotionBeforeWinSeconds: () => seconds)
-                                      : settings.copyWith(slowMotionLines: lines, slowMotionBeforeWinSeconds: () => null),
-                                  done: 'Slow motion saved for everyone.',
-                                ),
-                        child: const Text('Save slow motion'),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            _Section(
-              title: 'WATERMARK',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Tiled watermark on the winner card', style: AppText.ui(14, FontWeight.w600, color: c.text)),
-                    value: settings.watermarkEnabled,
-                    onChanged: _busy
-                        ? null
-                        : (v) => _save(settings.copyWith(watermarkEnabled: v), done: v ? 'Watermark on.' : 'Watermark off.'),
-                  ),
-                  TextField(
-                    controller: _watermark,
-                    maxLength: 30,
-                    enabled: settings.watermarkEnabled,
-                    decoration: const InputDecoration(hintText: AppSettings.defaultWatermark),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  OutlinedButton(
-                    onPressed: _busy || !settings.watermarkEnabled || _watermark.text.trim().isEmpty
-                        ? null
-                        : () => _save(settings.copyWith(watermarkText: _watermark.text.trim()), done: 'Watermark saved.'),
-                    child: const Text('Save watermark text'),
-                  ),
-                ],
-              ),
-            ),
-            if (widget.customGroups != null)
-              _Section(
-                title: 'GROUPS',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                   children: [
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => MyGroupsScreen(
-                            repository: widget.customGroups!,
-                            editRepository: widget.adminGroups,
-                            allGroups: true,
+                    if (_message != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(_message!, style: AppText.ui(13, FontWeight.w600, color: c.muted)),
+                      ),
+                    if (!hasBackend)
+                      Text(
+                        'Settings need a connection to the Ball Wars server.',
+                        style: AppText.ui(14, FontWeight.w500, color: c.muted),
+                      )
+                    else if (_isAdmin == null)
+                      const Center(
+                        child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                      )
+                    else if (_isAdmin == false)
+                      _Section(
+                        title: 'ADMIN',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'The headline, theme and match music are set by the admin for everyone.',
+                              style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton(onPressed: _busy ? null : _signIn, child: const Text('Admin sign-in')),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      _Section(
+                        title: 'HEADLINE',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextField(
+                              controller: _headline,
+                              maxLength: 30,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: const InputDecoration(hintText: AppSettings.defaultHeadline),
+                            ),
+                            FilledButton(
+                              onPressed: _busy || _headline.text.trim().isEmpty
+                                  ? null
+                                  : () => _save(
+                                      settings.copyWith(headline: _headline.text.trim()),
+                                      done: 'Headline saved for everyone.',
+                                    ),
+                              child: const Text('Save headline'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'THEME',
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            for (final preset in AppPalettes.all)
+                              _ThemeSwatch(
+                                preset: preset,
+                                selected: preset.id == settings.themeId,
+                                onTap: _busy
+                                    ? null
+                                    : () =>
+                                          _save(settings.copyWith(themeId: preset.id), done: 'Theme set for everyone.'),
+                              ),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'MATCH MUSIC',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final track in MusicTrack.all)
+                              _TrackRow(
+                                track: track,
+                                selected: track.id == settings.musicId,
+                                playing: GameAudio.instance.isPreviewing(track),
+                                onPlay: () => _togglePreview(track),
+                                onSelect: _busy || track.id == settings.musicId
+                                    ? null
+                                    : () => _save(
+                                        settings.copyWith(musicId: track.id),
+                                        done: '"${track.name}" is now the match music for everyone.',
+                                      ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'HOME MUSIC',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final track in MusicTrack.menu)
+                              _TrackRow(
+                                track: track,
+                                selected: track.id == settings.menuMusicId,
+                                playing: GameAudio.instance.isPreviewing(track),
+                                onPlay: () => _togglePreview(track),
+                                onSelect: _busy || track.id == settings.menuMusicId
+                                    ? null
+                                    : () => _save(
+                                        settings.copyWith(menuMusicId: track.id),
+                                        done: '"${track.name}" is now the Home music for everyone.',
+                                      ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'SLOW MOTION',
+                        child: Builder(
+                          builder: (context) {
+                            final beforeWin = _slowBeforeWin ?? settings.slowMotionBeforeWinSeconds != null;
+                            final lines = _slowMotionLines ?? settings.slowMotionLines;
+                            final seconds =
+                                _slowSeconds ??
+                                settings.slowMotionBeforeWinSeconds ??
+                                AppSettings.defaultSlowMotionBeforeWinSeconds;
+                            final changed = beforeWin
+                                ? settings.slowMotionBeforeWinSeconds != seconds
+                                : settings.slowMotionBeforeWinSeconds != null || settings.slowMotionLines != lines;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SegmentedButton<bool>(
+                                  segments: const [
+                                    ButtonSegment(value: false, label: Text('By lines')),
+                                    ButtonSegment(value: true, label: Text('Before the win')),
+                                  ],
+                                  selected: {beforeWin},
+                                  onSelectionChanged: _busy ? null : (v) => setState(() => _slowBeforeWin = v.first),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  beforeWin
+                                      ? 'Starts ${seconds.toStringAsFixed(1)} s before the winning cut.'
+                                      : lines == 0
+                                      ? 'Off: matches never slow down.'
+                                      : 'Starts when one of the last two balls is down to $lines lines or fewer for good.',
+                                  style: AppText.ui(14, FontWeight.w600, color: c.text),
+                                ),
+                                if (beforeWin)
+                                  Slider(
+                                    value: seconds,
+                                    min: 0.5,
+                                    max: 5,
+                                    divisions: 9,
+                                    label: '${seconds.toStringAsFixed(1)} s',
+                                    onChanged: _busy ? null : (v) => setState(() => _slowSeconds = v),
+                                  )
+                                else
+                                  Slider(
+                                    value: lines.toDouble(),
+                                    min: 0,
+                                    max: 60,
+                                    divisions: 60,
+                                    label: lines == 0 ? 'Off' : '$lines',
+                                    onChanged: _busy ? null : (v) => setState(() => _slowMotionLines = v.round()),
+                                  ),
+                                Text(
+                                  beforeWin
+                                      ? 'Game time; slow motion plays it 4x slower. The app plays each match ahead to know the moment.'
+                                      : 'Default ${AppSettings.defaultSlowMotionLines}. Each ball starts with about 90 lines. '
+                                            "A ball that will recover doesn't trigger it.",
+                                  style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.4),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed: _busy || !changed
+                                      ? null
+                                      : () => _save(
+                                          beforeWin
+                                              ? settings.copyWith(slowMotionBeforeWinSeconds: () => seconds)
+                                              : settings.copyWith(
+                                                  slowMotionLines: lines,
+                                                  slowMotionBeforeWinSeconds: () => null,
+                                                ),
+                                          done: 'Slow motion saved for everyone.',
+                                        ),
+                                  child: const Text('Save slow motion'),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      _Section(
+                        title: 'WATERMARK',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                'Tiled watermark on the winner card',
+                                style: AppText.ui(14, FontWeight.w600, color: c.text),
+                              ),
+                              value: settings.watermarkEnabled,
+                              onChanged: _busy
+                                  ? null
+                                  : (v) => _save(
+                                      settings.copyWith(watermarkEnabled: v),
+                                      done: v ? 'Watermark on.' : 'Watermark off.',
+                                    ),
+                            ),
+                            TextField(
+                              controller: _watermark,
+                              maxLength: 30,
+                              enabled: settings.watermarkEnabled,
+                              decoration: const InputDecoration(hintText: AppSettings.defaultWatermark),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            OutlinedButton(
+                              onPressed: _busy || !settings.watermarkEnabled || _watermark.text.trim().isEmpty
+                                  ? null
+                                  : () => _save(
+                                      settings.copyWith(watermarkText: _watermark.text.trim()),
+                                      done: 'Watermark saved.',
+                                    ),
+                              child: const Text('Save watermark text'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (widget.customGroups != null)
+                        _Section(
+                          title: 'GROUPS',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              OutlinedButton(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MyGroupsScreen(
+                                      repository: widget.customGroups!,
+                                      editRepository: widget.adminGroups,
+                                      allGroups: true,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text("Everyone's groups"),
+                              ),
+                              if (widget.adminGroups != null) ...[
+                                const SizedBox(height: 10),
+                                OutlinedButton(
+                                  onPressed: _busy ? null : _cleanUpImages,
+                                  child: const Text('Clean up unused images'),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      ),
-                      child: const Text("Everyone's groups"),
-                    ),
-                    if (widget.adminGroups != null) ...[
-                      const SizedBox(height: 10),
-                      OutlinedButton(
-                        onPressed: _busy ? null : _cleanUpImages,
-                        child: const Text('Clean up unused images'),
+                      _Section(
+                        title: 'ACCOUNT',
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _scope?.adminAuth?.email ?? 'Admin',
+                                style: AppText.ui(14, FontWeight.w600, color: c.text),
+                              ),
+                            ),
+                            TextButton(onPressed: _busy ? null : _signOut, child: const Text('Sign out')),
+                          ],
+                        ),
                       ),
                     ],
                   ],
                 ),
               ),
-            _Section(
-              title: 'ACCOUNT',
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(_scope?.adminAuth?.email ?? 'Admin', style: AppText.ui(14, FontWeight.w600, color: c.text)),
-                  ),
-                  TextButton(onPressed: _busy ? null : _signOut, child: const Text('Sign out')),
-                ],
-              ),
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

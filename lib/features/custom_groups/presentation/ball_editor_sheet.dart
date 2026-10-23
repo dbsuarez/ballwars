@@ -60,7 +60,7 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   ui.Image? _picture;
   Rect? _crop;
   Color? _suggested;
-  BallImageStyle _style = BallImageStyle.logo;
+  BallImageStyle _style = BallImageStyle.cover; // New balls: picture fills the ball.
   Color? _color;
   bool _working = false;
   String? _error;

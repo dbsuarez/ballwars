@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/utils/ball_image_loader.dart';
+import 'package:ballwars/core/utils/canvas_image_helper.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
 
@@ -44,7 +45,7 @@ void main() {
     expect(ph.imageStyle, BallImageStyle.cover);
   });
 
-  testWidgets('every pack image renders with flutter_svg', (tester) async {
+  testWidgets('every pack image renders (SVGs with flutter_svg, photos decode)', (tester) async {
     final failures = <String>[];
     var rendered = 0;
     await tester.runAsync(() async {
@@ -52,7 +53,16 @@ void main() {
         for (final b in (g['balls'] as List).cast<Map<String, dynamic>>()) {
           final file = File('${packsDir.path}/${b['image']}');
           try {
-            final image = await BallImageLoader.renderSvg(file.readAsBytesSync());
+            // Photos (Ulam) are JPEGs: they only need to decode.
+            final image = file.path.endsWith('.svg')
+                ? await BallImageLoader.renderSvg(file.readAsBytesSync())
+                : await CanvasImageHelper.decode(file.readAsBytesSync());
+            if (!file.path.endsWith('.svg')) {
+              expect(image.width, greaterThanOrEqualTo(256));
+              image.dispose();
+              rendered++;
+              continue;
+            }
             expect(image.width, BallImageLoader.size);
             image.dispose();
             rendered++;

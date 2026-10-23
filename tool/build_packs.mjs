@@ -9,6 +9,9 @@
 //   svgl              (official logos, MIT repo) https://svgl.app
 //   simple-icons      (CC0, single-color, drawn in the brand color) https://simpleicons.org
 // Countries: flag-icons (MIT) https://github.com/lipis/flag-icons
+// Yes or No: drawn here (original).
+// Ulam (Filipino food): photos from Wikimedia Commons under free licenses
+// (CC BY / CC BY-SA / CC0 / public domain), credited in LICENSES.md.
 // Logos remain trademarks of their owners; they are used to identify them.
 
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -239,6 +242,88 @@ for (const c of countries) {
 catalog.groups.splice(3, 0, countryGroup); // after Laptops, as in the original list
 credits.push(`| Countries | all ${countryGroup.balls.length} flags | flag-icons ${FLAG_ICONS} (MIT) |`);
 
+// Yes or No: for decisions. A green ball with a check and a red one with a
+// cross, filling the ball (square SVGs, drawn here).
+const decisionSvg = (fill, mark) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${fill}"/>` +
+  `<path d="${mark}" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+mkdirSync(`${OUT}/decision`, { recursive: true });
+const decisionGroup = { id: 'decision', name: 'Yes or No', style: 'flag', balls: [] };
+for (const [id, name, fill, mark] of [
+  ['yes', 'YES', '#16A34A', 'M27 52 L44 68 L74 34'],
+  ['no', 'NO', '#DC2626', 'M32 32 L68 68 M68 32 L32 68'],
+]) {
+  const svg = decisionSvg(fill, mark);
+  writeFileSync(`${OUT}/decision/${id}.svg`, svg);
+  decisionGroup.balls.push({ id, name, image: `decision/${id}.svg`, hash: hashOf(svg), color: fill });
+}
+catalog.groups.push(decisionGroup);
+credits.push('| Yes or No | YES, NO | drawn for Ball Wars |');
+
+// Ulam (Filipino food): Wikimedia Commons photos, fetched as 384 px wide
+// JPEG thumbnails; the app crops them to the ball. [id, name, Commons file,
+// line color]. Only freely licensed files are accepted (no NC/ND).
+const ULAM = [
+  ['adobo', 'Adobo', 'Chicken adobo.jpg', '#7A4A22'],
+  ['sinigang', 'Sinigang', 'The_Best_Sinigang_Cuisine.jpg', '#D9A21B'],
+  ['kare-kare', 'Kare-kare', 'Mac_MG_5939.jpg', '#C2611F'],
+  ['lechon', 'Lechon', 'Lechon Cebu 2.jpg', '#B5451B'],
+  ['sisig', 'Sisig', 'Authentic_Kapampangan_Sisig.jpg', '#8C3B1E'],
+  ['bulalo', 'Bulalo', 'BULALO.jpg', '#C9A227'],
+  ['tinola', 'Tinola', 'Chicken_tinola.jpg', '#7FA33A'],
+  ['pinakbet', 'Pinakbet', 'Pinakbet_ni_Lakay_Jesse.jpg', '#4E8F3A'],
+  ['lumpia', 'Lumpiang Shanghai', 'Lumpiang Shanghai (Philippines).jpg', '#D98E2B'],
+  ['pancit', 'Pancit', 'Pancit_Ilonggo_Style_-_12110747826.jpg', '#E0B23C'],
+  ['kaldereta', 'Kaldereta', 'Home_cooked_Kaldereta.jpg', '#C0392B'],
+  ['menudo', 'Menudo', 'Pork Menudo.jpg', '#D35400'],
+  ['bicol-express', 'Bicol Express', 'Bicol_Express.jpg', '#E67E22'],
+  ['dinuguan', 'Dinuguan', 'Dinuguan_and_Puto.jpg', '#3B2A24'],
+  ['laing', 'Laing', 'Laing,_Bicolano_dish.jpg', '#4A6B2F'],
+  ['inasal', 'Chicken Inasal', 'Olympus_EP3_-_Mang_Inasal_Roasted_Chicken_(14456257212).jpg', '#E8A33D'],
+  ['crispy-pata', 'Crispy Pata', 'Crispy_Pata_Pork.jpg', '#A0522D'],
+  ['bistek', 'Bistek Tagalog', 'Bistek_Tagalog_DSCF3899.jpg', '#6B3A1F'],
+  ['afritada', 'Afritada', 'Chicken_Afritada_on_white_rice_with_pineapple_tidbits_(Philippines)_2.jpg', '#E2572B'],
+  ['mechado', 'Mechado', 'Cooked_mechado.JPG', '#B03A2E'],
+  ['nilaga', 'Nilagang Baka', 'Nilagang Baka.jpg', '#B8A04A'],
+  ['tapa', 'Tapa', 'Beef_tapa_with_steamed_rice_and_sliced_tomato_and_cucumber.jpg', '#7B2D26'],
+  ['longganisa', 'Longganisa', 'Vigan longganisa.JPG', '#C0392B'],
+  ['tortang-talong', 'Tortang Talong', 'EGGPLANT_TORTA.jpg', '#D4A017'],
+  ['ginataang-manok', 'Ginataang Manok', '1213Cuisine_of_Bulacan_02.jpg', '#D8B75A'],
+  ['batchoy', 'Batchoy', 'Batchoy_of_Iloilo.jpg', '#C87533'],
+  ['lechon-kawali', 'Lechon Kawali', 'Lechon_Kawali.jpg', '#B9770E'],
+  ['pork-bbq', 'Pork Barbecue', 'Filipino pork barbecue.jpg', '#A93226'],
+  ['chopsuey', 'Chopsuey', 'Chopsuey from the Philippines.jpg', '#58A33F'],
+  ['pochero', 'Pochero', '08266jfSanta Cruz, Filipino pochero Guiguinto, Bulacanfvf 05.jpg', '#C0782B'],
+  ['daing', 'Daing na Bangus', 'Daing_na_bangus.jpg', '#B7950B'],
+];
+const COMMONS_UA = { 'User-Agent': 'BallWarsPackBuilder/1.0 (https://dbsuarez.github.io/ballwars/)' };
+const FREE_LICENSE = /^(CC BY(-SA)? [0-9.]+|CC0|Public domain)/i;
+const stripHtml = (html) => (html ?? '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+mkdirSync(`${OUT}/ulam`, { recursive: true });
+const ulamGroup = { id: 'ulam', name: 'Ulam (Filipino food)', style: 'flag', balls: [] };
+for (const [id, name, file, color] of ULAM) {
+  try {
+    const api = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent('File:' + file)}` +
+      '&prop=imageinfo&iiprop=extmetadata|url&iiurlwidth=384&format=json';
+    const res = await fetch(api, { headers: COMMONS_UA });
+    if (!res.ok) throw new Error(`${res.status} commons api`);
+    const info = Object.values((await res.json()).query.pages)[0].imageinfo?.[0];
+    if (!info) throw new Error(`no file "${file}"`);
+    const license = stripHtml(info.extmetadata.LicenseShortName?.value);
+    if (!FREE_LICENSE.test(license)) throw new Error(`license "${license}" not allowed`);
+    const img = await fetch(info.thumburl, { headers: COMMONS_UA });
+    if (!img.ok) throw new Error(`${img.status} ${info.thumburl}`);
+    const bytes = Buffer.from(await img.arrayBuffer());
+    writeFileSync(`${OUT}/ulam/${id}.jpg`, bytes);
+    ulamGroup.balls.push({ id, name, image: `ulam/${id}.jpg`, hash: hashOf(bytes), color });
+    const artist = stripHtml(info.extmetadata.Artist?.value) || 'unknown';
+    credits.push(`| Ulam | ${name} | "${file}" by ${artist}, ${license}, ${info.descriptionurl} |`);
+  } catch (e) {
+    problems.push(`Ulam/${name}: ${e.message}`);
+  }
+}
+catalog.groups.push(ulamGroup);
+
 writeFileSync(`${OUT}/packs.json`, JSON.stringify(catalog, null, 1));
 writeFileSync(`${OUT}/LICENSES.md`, [
   '# Built-in ball images',
@@ -250,6 +335,8 @@ writeFileSync(`${OUT}/LICENSES.md`, [
   '- svgl: https://svgl.app (repository MIT; logos belong to their owners)',
   `- simple-icons ${SIMPLE_ICONS}: CC0-1.0, https://simpleicons.org`,
   `- flag-icons ${FLAG_ICONS}: MIT, https://github.com/lipis/flag-icons`,
+  '- Wikimedia Commons photos (Ulam): each under the license named below, by the',
+  '  author named below; resized to 384 px wide. CC BY-SA files stay under CC BY-SA.',
   '',
   '| Group | Ball | Source |',
   '| --- | --- | --- |',

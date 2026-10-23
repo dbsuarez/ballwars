@@ -42,6 +42,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   double _speedMultiplier = 1.0;
   bool _showEffects = true;
   BallSize _ballSize = BallSize.medium;
+
+  /// Which kind of categories the dropdown lists; remembered per device.
+  _CategoryFilter _filter = _CategoryFilter.defaults;
   int _winsNeeded = 1;
   String? _category;
   List<BallPack> _packs = const [];
@@ -63,8 +66,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
     final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
     final size = BallSize.byId(await DevicePrefs.read('size'));
+    final filter = _CategoryFilter.byName(await DevicePrefs.read('category-filter'));
     if (!mounted) return;
     setState(() {
+      if (filter != null && filter != _filter) {
+        _filter = filter;
+        _category = _shown.firstOrNull?.id;
+      }
       if (size != null) _ballSize = size;
       _showEffects = effects;
       if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
@@ -109,7 +117,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     if (!mounted) return;
     setState(() {
       _loading = false;
-      _category ??= _categories.isEmpty ? null : _categories.first.id;
+      _category ??= _shown.firstOrNull?.id;
     });
   }
 
@@ -153,6 +161,23 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             BallPack(id: 'group:${g.id}', name: g.name, balls: g.balls, tag: 'Shared'),
       ],
     );
+  }
+
+  /// The categories the current filter shows (Mine / Default / Shared).
+  List<BallPack> get _shown => [
+        for (final c in _categories)
+          if (c.tag == _filter.tag) c,
+      ];
+
+  void _setFilter(_CategoryFilter filter) {
+    GameAudio.instance.click();
+    DevicePrefs.write('category-filter', filter.name);
+    setState(() {
+      _filter = filter;
+      _category = _shown.firstOrNull?.id;
+      _categoryText.text = _shown.firstOrNull?.name ?? '';
+      _search.clear();
+    });
   }
 
   List<CustomBall> get _categoryBalls => _categories
@@ -248,9 +273,36 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   Widget _categoryPicker(BallWarsColors c) {
-    final categories = _categories;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<_CategoryFilter>(
+          segments: [
+            for (final f in _CategoryFilter.values) ButtonSegment(value: f, label: Text(f.label)),
+          ],
+          selected: {_filter},
+          showSelectedIcon: false,
+          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          onSelectionChanged: (v) => _setFilter(v.first),
+        ),
+        const SizedBox(height: 12),
+        _categoryDropdown(c),
+      ],
+    );
+  }
+
+  Widget _categoryDropdown(BallWarsColors c) {
+    final categories = _shown;
     if (categories.isEmpty) {
       if (_loading) return const LinearProgressIndicator();
+      if (_filter != _CategoryFilter.defaults) {
+        return Text(
+          _filter == _CategoryFilter.mine
+              ? 'No groups of your own yet. Make one in My groups on the home screen.'
+              : 'No shared groups yet. Open a group link from a friend to add one.',
+          style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.4),
+        );
+      }
       return Row(
         children: [
           Expanded(
@@ -277,7 +329,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           }
         },
         child: DropdownMenu<String>(
-          key: ValueKey(categories.length),
+          key: ValueKey('${_filter.name}-${categories.length}'),
           controller: _categoryText,
           width: constraints.maxWidth,
           initialSelection: _category,
@@ -287,10 +339,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           leadingIcon: const Icon(Icons.search),
           label: const Text('Category'),
           textStyle: AppText.ui(15, FontWeight.w600, color: c.text),
-          onSelected: (id) => setState(() {
-            _category = id;
-            _search.clear();
-          }),
+          onSelected: (id) {
+            // Enter on typed text that matches nothing reports null: keep the
+            // current category rather than showing an empty one.
+            if (id == null) return;
+            setState(() {
+              _category = id;
+              _search.clear();
+            });
+          },
           dropdownMenuEntries: [
             for (final pack in categories)
               DropdownMenuEntry(
@@ -643,4 +700,21 @@ class _SoundToggle extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The category filter above the dropdown: the user's own groups, the
+/// built-in packs (Default), or groups added from others.
+enum _CategoryFilter {
+  mine('Mine', 'Mine'),
+  defaults('Default', null),
+  shared('Shared', 'Shared');
+
+  final String label;
+
+  /// The [BallPack.tag] of the categories it shows (null: built-in packs).
+  final String? tag;
+
+  const _CategoryFilter(this.label, this.tag);
+
+  static _CategoryFilter? byName(String? name) => values.where((f) => f.name == name).firstOrNull;
 }

@@ -2604,6 +2604,251 @@
      "color": "#38096C"
     }
    ]
+  },
+  {
+   "id": "decision",
+   "name": "Yes or No",
+   "style": "flag",
+   "balls": [
+    {
+     "id": "yes",
+     "name": "YES",
+     "image": "decision/yes.svg",
+     "hash": "c1dd45f8ec",
+     "color": "#16A34A"
+    },
+    {
+     "id": "no",
+     "name": "NO",
+     "image": "decision/no.svg",
+     "hash": "d4fedb0517",
+     "color": "#DC2626"
+    }
+   ]
+  },
+  {
+   "id": "ulam",
+   "name": "Ulam (Filipino food)",
+   "style": "flag",
+   "balls": [
+    {
+     "id": "adobo",
+     "name": "Adobo",
+     "image": "ulam/adobo.jpg",
+     "hash": "8b6dd070dc",
+     "color": "#7A4A22"
+    },
+    {
+     "id": "sinigang",
+     "name": "Sinigang",
+     "image": "ulam/sinigang.jpg",
+     "hash": "bb160b35a2",
+     "color": "#D9A21B"
+    },
+    {
+     "id": "kare-kare",
+     "name": "Kare-kare",
+     "image": "ulam/kare-kare.jpg",
+     "hash": "6d02699615",
+     "color": "#C2611F"
+    },
+    {
+     "id": "lechon",
+     "name": "Lechon",
+     "image": "ulam/lechon.jpg",
+     "hash": "a71ec02e32",
+     "color": "#B5451B"
+    },
+    {
+     "id": "sisig",
+     "name": "Sisig",
+     "image": "ulam/sisig.jpg",
+     "hash": "9bfee50f74",
+     "color": "#8C3B1E"
+    },
+    {
+     "id": "bulalo",
+     "name": "Bulalo",
+     "image": "ulam/bulalo.jpg",
+     "hash": "fe6c082fc2",
+     "color": "#C9A227"
+    },
+    {
+     "id": "tinola",
+     "name": "Tinola",
+     "image": "ulam/tinola.jpg",
+     "hash": "e968df9fbf",
+     "color": "#7FA33A"
+    },
+    {
+     "id": "pinakbet",
+     "name": "Pinakbet",
+     "image": "ulam/pinakbet.jpg",
+     "hash": "cceabd0307",
+     "color": "#4E8F3A"
+    },
+    {
+     "id": "lumpia",
+     "name": "Lumpiang Shanghai",
+     "image": "ulam/lumpia.jpg",
+     "hash": "b453cc1edd",
+     "color": "#D98E2B"
+    },
+    {
+     "id": "pancit",
+     "name": "Pancit",
+     "image": "ulam/pancit.jpg",
+     "hash": "2b16d3d6f6",
+     "color": "#E0B23C"
+    },
+    {
+     "id": "kaldereta",
+     "name": "Kaldereta",
+     "image": "ulam/kaldereta.jpg",
+     "hash": "b79e6fd6f6",
+     "color": "#C0392B"
+    },
+    {
+     "id": "menudo",
+     "name": "Menudo",
+     "image": "ulam/menudo.jpg",
+     "hash": "003a2da079",
+     "color": "#D35400"
+    },
+    {
+     "id": "bicol-express",
+     "name": "Bicol Express",
+     "image": "ulam/bicol-express.jpg",
+     "hash": "6ab1211c20",
+     "color": "#E67E22"
+    },
+    {
+     "id": "dinuguan",
+     "name": "Dinuguan",
+     "image": "ulam/dinuguan.jpg",
+     "hash": "2f99dcffeb",
+     "color": "#3B2A24"
+    },
+    {
+     "id": "laing",
+     "name": "Laing",
+     "image": "ulam/laing.jpg",
+     "hash": "ea7ff4dd08",
+     "color": "#4A6B2F"
+    },
+    {
+     "id": "inasal",
+     "name": "Chicken Inasal",
+     "image": "ulam/inasal.jpg",
+     "hash": "53db9d39ed",
+     "color": "#E8A33D"
+    },
+    {
+     "id": "crispy-pata",
+     "name": "Crispy Pata",
+     "image": "ulam/crispy-pata.jpg",
+     "hash": "eaf0a1d129",
+     "color": "#A0522D"
+    },
+    {
+     "id": "bistek",
+     "name": "Bistek Tagalog",
+     "image": "ulam/bistek.jpg",
+     "hash": "fe6afce90e",
+     "color": "#6B3A1F"
+    },
+    {
+     "id": "afritada",
+     "name": "Afritada",
+     "image": "ulam/afritada.jpg",
+     "hash": "50150316ec",
+     "color": "#E2572B"
+    },
+    {
+     "id": "mechado",
+     "name": "Mechado",
+     "image": "ulam/mechado.jpg",
+     "hash": "28d1791498",
+     "color": "#B03A2E"
+    },
+    {
+     "id": "nilaga",
+     "name": "Nilagang Baka",
+     "image": "ulam/nilaga.jpg",
+     "hash": "59f938f58b",
+     "color": "#B8A04A"
+    },
+    {
+     "id": "tapa",
+     "name": "Tapa",
+     "image": "ulam/tapa.jpg",
+     "hash": "52a16cf14d",
+     "color": "#7B2D26"
+    },
+    {
+     "id": "longganisa",
+     "name": "Longganisa",
+     "image": "ulam/longganisa.jpg",
+     "hash": "f8ba1cb467",
+     "color": "#C0392B"
+    },
+    {
+     "id": "tortang-talong",
+     "name": "Tortang Talong",
+     "image": "ulam/tortang-talong.jpg",
+     "hash": "a6ed371cd6",
+     "color": "#D4A017"
+    },
+    {
+     "id": "ginataang-manok",
+     "name": "Ginataang Manok",
+     "image": "ulam/ginataang-manok.jpg",
+     "hash": "cac0d38374",
+     "color": "#D8B75A"
+    },
+    {
+     "id": "batchoy",
+     "name": "Batchoy",
+     "image": "ulam/batchoy.jpg",
+     "hash": "2130dd7258",
+     "color": "#C87533"
+    },
+    {
+     "id": "lechon-kawali",
+     "name": "Lechon Kawali",
+     "image": "ulam/lechon-kawali.jpg",
+     "hash": "f6f6543689",
+     "color": "#B9770E"
+    },
+    {
+     "id": "pork-bbq",
+     "name": "Pork Barbecue",
+     "image": "ulam/pork-bbq.jpg",
+     "hash": "020e945141",
+     "color": "#A93226"
+    },
+    {
+     "id": "chopsuey",
+     "name": "Chopsuey",
+     "image": "ulam/chopsuey.jpg",
+     "hash": "79af9d2873",
+     "color": "#58A33F"
+    },
+    {
+     "id": "pochero",
+     "name": "Pochero",
+     "image": "ulam/pochero.jpg",
+     "hash": "bf75379237",
+     "color": "#C0782B"
+    },
+    {
+     "id": "daing",
+     "name": "Daing na Bangus",
+     "image": "ulam/daing.jpg",
+     "hash": "68128ccc12",
+     "color": "#B7950B"
+    }
+   ]
   }
  ]
 }

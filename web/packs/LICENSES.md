@@ -7,6 +7,8 @@ used only to identify them; no endorsement is implied.
 - svgl: https://svgl.app (repository MIT; logos belong to their owners)
 - simple-icons 16.35.0: CC0-1.0, https://simpleicons.org
 - flag-icons 7.6.0: MIT, https://github.com/lipis/flag-icons
+- Wikimedia Commons photos (Ulam): each under the license named below, by the
+  author named below; resized to 384 px wide. CC BY-SA files stay under CC BY-SA.
 
 | Group | Ball | Source |
 | --- | --- | --- |
@@ -121,3 +123,35 @@ used only to identify them; no endorsement is implied.
 | Fast Food | Starbucks | simple-icons (CC0-1.0) |
 | Fast Food | Taco Bell | simple-icons (CC0-1.0) |
 | Countries | all 249 flags | flag-icons 7.6.0 (MIT) |
+| Yes or No | YES, NO | drawn for Ball Wars |
+| Ulam | Adobo | "Chicken adobo.jpg" by dbgg1979 on flickr, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Chicken_adobo.jpg |
+| Ulam | Sinigang | "The_Best_Sinigang_Cuisine.jpg" by Jessartcam, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:The_Best_Sinigang_Cuisine.jpg |
+| Ulam | Kare-kare | "Mac_MG_5939.jpg" by GwennVienn, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Mac_MG_5939.jpg |
+| Ulam | Lechon | "Lechon Cebu 2.jpg" by Bim24, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Lechon_Cebu_2.jpg |
+| Ulam | Sisig | "Authentic_Kapampangan_Sisig.jpg" by Joy L. Cruz, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Authentic_Kapampangan_Sisig.jpg |
+| Ulam | Bulalo | "BULALO.jpg" by LReformado, CC BY 4.0, https://commons.wikimedia.org/wiki/File:BULALO.jpg |
+| Ulam | Tinola | "Chicken_tinola.jpg" by Anne Molina, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Chicken_tinola.jpg |
+| Ulam | Pinakbet | "Pinakbet_ni_Lakay_Jesse.jpg" by Jesse Alegre, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Pinakbet_ni_Lakay_Jesse.jpg |
+| Ulam | Lumpiang Shanghai | "Lumpiang Shanghai (Philippines).jpg" by Arnold Gatilao, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Lumpiang_Shanghai_(Philippines).jpg |
+| Ulam | Pancit | "Pancit_Ilonggo_Style_-_12110747826.jpg" by pulaw, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Pancit_Ilonggo_Style_-_12110747826.jpg |
+| Ulam | Kaldereta | "Home_cooked_Kaldereta.jpg" by dbgg1979, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Home_cooked_Kaldereta.jpg |
+| Ulam | Menudo | "Pork Menudo.jpg" by Strawberrysweet07, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Pork_Menudo.jpg |
+| Ulam | Bicol Express | "Bicol_Express.jpg" by Raymund Macaalay, CC BY-SA 3.0, https://commons.wikimedia.org/wiki/File:Bicol_Express.jpg |
+| Ulam | Dinuguan | "Dinuguan_and_Puto.jpg" by Kat, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Dinuguan_and_Puto.jpg |
+| Ulam | Laing | "Laing,_Bicolano_dish.jpg" by Lokalpedia, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Laing,_Bicolano_dish.jpg |
+| Ulam | Chicken Inasal | "Olympus_EP3_-_Mang_Inasal_Roasted_Chicken_(14456257212).jpg" by michael reyes from Philippines, CC BY-SA 2.0, https://commons.wikimedia.org/wiki/File:Olympus_EP3_-_Mang_Inasal_Roasted_Chicken_(14456257212).jpg |
+| Ulam | Crispy Pata | "Crispy_Pata_Pork.jpg" by Cyapoj, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Crispy_Pata_Pork.jpg |
+| Ulam | Bistek Tagalog | "Bistek_Tagalog_DSCF3899.jpg" by Joy D. Ganaden, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Bistek_Tagalog_DSCF3899.jpg |
+| Ulam | Afritada | "Chicken_Afritada_on_white_rice_with_pineapple_tidbits_(Philippines)_2.jpg" by Jo Paragas, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Chicken_Afritada_on_white_rice_with_pineapple_tidbits_(Philippines)_2.jpg |
+| Ulam | Mechado | "Cooked_mechado.JPG" by BrokenSphere, CC BY-SA 3.0, https://commons.wikimedia.org/wiki/File:Cooked_mechado.JPG |
+| Ulam | Nilagang Baka | "Nilagang Baka.jpg" by Maffeth.opiana, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Nilagang_Baka.jpg |
+| Ulam | Tapa | "Beef_tapa_with_steamed_rice_and_sliced_tomato_and_cucumber.jpg" by Efrenefren, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Beef_tapa_with_steamed_rice_and_sliced_tomato_and_cucumber.jpg |
+| Ulam | Longganisa | "Vigan longganisa.JPG" by BrokenSphere, CC BY-SA 3.0, https://commons.wikimedia.org/wiki/File:Vigan_longganisa.JPG |
+| Ulam | Tortang Talong | "EGGPLANT_TORTA.jpg" by whologwhy, CC BY 2.0, https://commons.wikimedia.org/wiki/File:EGGPLANT_TORTA.jpg |
+| Ulam | Ginataang Manok | "1213Cuisine_of_Bulacan_02.jpg" by Judgefloro, CC0, https://commons.wikimedia.org/wiki/File:1213Cuisine_of_Bulacan_02.jpg |
+| Ulam | Batchoy | "Batchoy_of_Iloilo.jpg" by Mhlayson, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Batchoy_of_Iloilo.jpg |
+| Ulam | Lechon Kawali | "Lechon_Kawali.jpg" by punctuated, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Lechon_Kawali.jpg |
+| Ulam | Pork Barbecue | "Filipino pork barbecue.jpg" by RightCowLeftCoast, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Filipino_pork_barbecue.jpg |
+| Ulam | Chopsuey | "Chopsuey from the Philippines.jpg" by Ralff Nestor Nacor, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Chopsuey_from_the_Philippines.jpg |
+| Ulam | Pochero | "08266jfSanta Cruz, Filipino pochero Guiguinto, Bulacanfvf 05.jpg" by Judgefloro, CC0, https://commons.wikimedia.org/wiki/File:08266jfSanta_Cruz,_Filipino_pochero_Guiguinto,_Bulacanfvf_05.jpg |
+| Ulam | Daing na Bangus | "Daing_na_bangus.jpg" by bingbing on flickr, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Daing_na_bangus.jpg |

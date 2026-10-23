@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/core/offline/offline_store.dart';
 import 'package:ballwars/features/ball_management/data/local_ball_repository.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
@@ -77,6 +78,9 @@ class _FakeGroups implements CustomGroupRepository {
 }
 
 void main() {
+  // Match Setup remembers choices (e.g. the category filter) on the device.
+  setUp(() => OfflineStore.instance = MemoryOfflineStore());
+
   test('group balls travel in links as g.<uuid> and resolve from the group store', () {
     final ball = _groupBall('0b7c', 'Goku');
     final uri = ReplayLink(seed: 9, speedMultiplier: 1, contestants: [ball, LocalBallRepository.presets[0]])
@@ -116,7 +120,7 @@ void main() {
     expect(ReplayLink.sharedGroupId(Uri.parse(kWebAppUrl)), isNull);
   });
 
-  testWidgets('own groups are tagged Mine and added ones Shared in the category list', (tester) async {
+  testWidgets('the category filter switches between Default, Mine and Shared and is remembered', (tester) async {
     tester.view.physicalSize = const Size(1080, 2000);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
@@ -130,14 +134,43 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(DropdownMenu<String>));
+    // Default (built-in packs) first: none in this test.
+    expect(find.text('No categories yet.'), findsOneWidget);
+    expect(find.text('Goku'), findsNothing);
+
+    await tester.tap(find.text('Mine'));
     await tester.pumpAndSettle();
-    // (The menu also lays its entries out off-screen to size itself.)
-    expect(find.text('Mine'), findsWidgets);
-    expect(find.text('Shared'), findsWidgets);
-    await tester.tap(find.text('Barkada').last);
+    expect(find.text('Goku'), findsOneWidget);
+    expect(find.text('Juan'), findsNothing);
+
+    await tester.tap(find.text('Shared'));
     await tester.pumpAndSettle();
     expect(find.text('Juan'), findsOneWidget);
+
+    // Remembered next time.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(MaterialApp(
+      home: MatchSetupScreen(
+        customGroups: _FakeGroups(
+          const [],
+          saved: [CustomGroup(id: 'g9', name: 'Barkada', isPublic: true, balls: [_groupBall('c', 'Juan')])],
+        ),
+        onStartBattle: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Juan'), findsOneWidget);
+  });
+
+  testWidgets('an empty filter says how to get groups', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: MatchSetupScreen(customGroups: _FakeGroups(const []), onStartBattle: (_) {})));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mine'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Make one in My groups'), findsOneWidget);
   });
 
   testWidgets('My Groups lists added groups read-only, with a way to remove them', (tester) async {
@@ -176,6 +209,8 @@ void main() {
         onStartBattle: (c) => started = c,
       ),
     ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mine'));
     await tester.pumpAndSettle();
 
     // The first group with balls opens by default.

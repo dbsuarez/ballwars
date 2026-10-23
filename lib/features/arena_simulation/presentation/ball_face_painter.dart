@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -35,10 +36,12 @@ class BallFacePainter {
       );
     } else if (image != null) {
       // The image fills the circle through an image shader: no clip (a clip
-      // per ball per frame is costly on phone GPUs).
+      // per ball per frame is costly on phone GPUs). Non-square images
+      // (photos) are scaled to cover the ball and centered, not stretched.
+      final scale = math.max(rect.width / image.width, rect.height / image.height);
       final fit = Matrix4.identity()
-        ..translateByDouble(rect.left, rect.top, 0, 1)
-        ..scaleByDouble(rect.width / image.width, rect.height / image.height, 1, 1);
+        ..translateByDouble(center.dx - image.width * scale / 2, center.dy - image.height * scale / 2, 0, 1)
+        ..scaleByDouble(scale, scale, 1, 1);
       canvas.drawCircle(center, radius, Paint()..color = ball.primaryColor);
       canvas.drawCircle(
         center,

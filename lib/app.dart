@@ -358,6 +358,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             contestants: link.contestants,
             speedMultiplier: link.speedMultiplier,
             ballSize: link.ballSize,
+            mode: link.mode,
             showEffects: link.showEffects,
           ),
           seed: link.seed,

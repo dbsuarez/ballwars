@@ -116,4 +116,11 @@ void main() {
     }
     tester.view.reset();
   });
+
+  testWidgets('an Arsenal match shows life in the scoreboard', (tester) async {
+    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls, mode: MatchMode.arsenal)));
+    await tester.pump();
+    expect(find.text('100 life'), findsNWidgets(2));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

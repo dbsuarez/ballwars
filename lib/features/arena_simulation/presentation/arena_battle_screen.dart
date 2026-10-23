@@ -138,6 +138,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       slowMotionLines: AppSettingsScope.of(context).slowMotionLines,
       slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
       ballScale: widget.config.ballSize.scale,
+      mode: widget.config.mode,
     );
     _roundCounted = false;
     _state = _controller.state;
@@ -241,6 +242,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       showEffects: _showEffects,
       contestants: widget.config.contestants,
       ballSize: widget.config.ballSize,
+      mode: widget.config.mode,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -370,6 +372,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     final scoreboard = ListenableBuilder(
       listenable: _frame,
       builder: (context, _) => ScoreboardOverlay(
+        mode: widget.config.mode,
         balls: _state.balls,
         wins: widget.config.winsNeeded > 1 ? _roundWins : null,
       ),
@@ -433,6 +436,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                               slowMotionLines: AppSettingsScope.of(context).slowMotionLines,
                               slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
                               ballScale: widget.config.ballSize.scale,
+                              mode: widget.config.mode,
                               headline: headline,
                               colors: c,
                               backend: _videoExport,

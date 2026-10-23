@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../match_setup/domain/match_config.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../application/replay_video_exporter.dart';
 import '../data/video_encoder.dart';
@@ -20,6 +21,7 @@ class ExportVideoDialog extends StatefulWidget {
   final int slowMotionLines;
   final double? slowMotionBeforeWinSeconds;
   final double ballScale;
+  final MatchMode mode;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -32,6 +34,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     this.slowMotionBeforeWinSeconds,
     this.ballScale = 1.0,
+    this.mode = MatchMode.threads,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -47,6 +50,7 @@ class ExportVideoDialog extends StatefulWidget {
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
     double ballScale = 1.0,
+    MatchMode mode = MatchMode.threads,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
     required VideoExportBackend backend,
@@ -63,6 +67,7 @@ class ExportVideoDialog extends StatefulWidget {
         slowMotionLines: slowMotionLines,
         slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
         ballScale: ballScale,
+        mode: mode,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -105,6 +110,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         slowMotionLines: widget.slowMotionLines,
         slowMotionBeforeWinSeconds: widget.slowMotionBeforeWinSeconds,
         ballScale: widget.ballScale,
+        mode: widget.mode,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {

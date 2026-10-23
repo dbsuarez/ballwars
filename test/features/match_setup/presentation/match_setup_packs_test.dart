@@ -147,4 +147,22 @@ void main() {
     await pumpSetup(tester);
     expect(find.text('Large'), findsOneWidget);
   });
+
+  testWidgets('mode is passed to the match and remembered', (tester) async {
+    await pumpSetup(tester);
+    expect(find.text('Threads'), findsOneWidget);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.mode, MatchMode.arsenal);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester);
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.mode, MatchMode.arsenal);
+  });
 }

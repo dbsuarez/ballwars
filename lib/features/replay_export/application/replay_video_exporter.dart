@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../match_setup/domain/match_config.dart';
 import '../data/video_encoder.dart';
 import '../presentation/replay_frame_painter.dart';
 
@@ -54,6 +55,7 @@ class ReplayVideoExporter {
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
     double ballScale = 1.0,
+    MatchMode mode = MatchMode.threads,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
@@ -67,6 +69,7 @@ class ReplayVideoExporter {
           slowMotionLines: slowMotionLines,
           slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
           ballScale: ballScale,
+          mode: mode,
         );
     final frameDelta = speedMultiplier / fps;
 

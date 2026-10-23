@@ -42,6 +42,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   double _speedMultiplier = 1.0;
   bool _showEffects = true;
   BallSize _ballSize = BallSize.medium;
+  MatchMode _mode = MatchMode.threads;
 
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
@@ -66,6 +67,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
     final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
     final size = BallSize.byId(await DevicePrefs.read('size'));
+    final mode = MatchMode.byId(await DevicePrefs.read('mode'));
     final filter = _CategoryFilter.byName(await DevicePrefs.read('category-filter'));
     if (!mounted) return;
     setState(() {
@@ -74,6 +76,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         _category = _shown.firstOrNull?.id;
       }
       if (size != null) _ballSize = size;
+      if (mode != null) _mode = mode;
       _showEffects = effects;
       if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
       if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
@@ -235,6 +238,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         showEffects: _showEffects,
         winsNeeded: _winsNeeded,
         ballSize: _ballSize,
+        mode: _mode,
       ),
     );
   }
@@ -442,6 +446,21 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // The kind of match: the thread game, weapons only, or both.
+          SegmentedButton<MatchMode>(
+            segments: [
+              for (final m in MatchMode.values) ButtonSegment(value: m, label: Text(m.label)),
+            ],
+            selected: {_mode},
+            showSelectedIcon: false,
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            onSelectionChanged: (v) {
+              GameAudio.instance.click();
+              setState(() => _mode = v.first);
+              DevicePrefs.write('mode', v.first.id);
+            },
+          ),
+          const SizedBox(height: 8),
           SizedBox(
             height: 36,
             child: Row(

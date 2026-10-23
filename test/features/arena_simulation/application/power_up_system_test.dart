@@ -52,6 +52,10 @@ void main() {
     expect(field.length, 2);
     final r = c.powerUps!.fieldRadius;
     for (final f in field) {
+      if (f.kind.isTrap) {
+        expect(f.position.distance, closeTo(_arenaRadius - r * 1.6, 1e-9));
+        continue;
+      }
       expect(f.position.distance, lessThanOrEqualTo(_arenaRadius * PowerUpTuning.spawnMaxDistance + 1e-9));
       expect(f.position.distance, greaterThanOrEqualTo(_arenaRadius * PowerUpTuning.spawnMinDistance - 1e-9));
       for (final b in c.state.balls) {
@@ -141,7 +145,7 @@ void main() {
     expect(fieldOf(5), isNot(fieldOf(6)));
   });
 
-  test('only the chosen power-ups spawn', () {
+  test('only chosen pickups plus automatic traps spawn', () {
     final c = MatchSimulationController(
       _balls,
       arenaRadius: _arenaRadius,
@@ -149,7 +153,7 @@ void main() {
       layoutRotation: 0,
       mode: MatchMode.arsenal,
       lookAhead: false,
-      powerUpKinds: {PowerUpKind.apple, PowerUpKind.mine},
+      powerUpKinds: {PowerUpKind.apple},
     );
     for (final b in c.state.balls) {
       b.velocity = Offset.zero;
@@ -160,7 +164,33 @@ void main() {
       seen.addAll(c.powerUps!.field.map((p) => p.kind));
     }
     expect(seen, isNotEmpty);
-    expect(seen.difference({PowerUpKind.apple, PowerUpKind.mine}), isEmpty);
+    expect(
+      seen.difference({PowerUpKind.apple, ...PowerUpKind.values.where((kind) => kind.isTrap)}),
+      isEmpty,
+    );
+    expect(seen.any((kind) => kind.isTrap), isTrue);
+  });
+
+  test('traps spawn only along the arena boundary', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: _arenaRadius,
+      seed: 4,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+      powerUpKinds: {PowerUpKind.portal},
+    );
+    for (final b in c.state.balls) {
+      b.velocity = Offset.zero;
+    }
+    _run(c, PowerUpTuning.firstSpawnSteps);
+    final portal = c.powerUps!.field.single;
+    expect(portal.kind, PowerUpKind.portal);
+    expect(
+      portal.position.distance,
+      closeTo(_arenaRadius - c.powerUps!.fieldRadius * 1.6, 0.001),
+    );
   });
 
   test('choosing every power-up draws exactly like not choosing', () {

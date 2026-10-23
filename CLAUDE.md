@@ -66,7 +66,7 @@ The logo is `BallWarsLogoPainter` (`core/widgets/ball_wars_logo.dart`). `flutter
     - **All-Out:** threads are the life, and power-up hits cut threads.
   - **`PowerUpSystem`** (`application/power_up_system.dart`) is created only in Arsenal and All-Out. The controller calls `step()` right after the ball-ball collisions. It handles:
     - spawning: first at 1 s, then every 5 s for 2 balls (`PowerUpTuning.spawnInterval`: faster with more balls), at most balls + 1 on the field (`maxOnField`), the oldest removed; each spawn picks the emptiest quadrant, away from the rim; field power-ups are 0.7x the ball radius;
-    - pickups have two categories: weapons and power-ups. A ball equips one weapon at a time (new weapons replace it); power-ups apply without removing the equipped weapon. Keep the category model extensible for future dual-wielding;
+    - arena items have three categories: weapons, power-ups and traps. A ball equips one weapon at a time unless dual wield is enabled; power-ups apply without removing equipment; traps are always enabled, spawn only near the arena boundary, preserve equipment and do not increment the pickup counter;
     - guns: a 1 s aim, then projectiles;
     - contact effects: knife, shield and bash; the shield aims (`shieldAngle`) but blocks from every side;
     - apple (Arsenal: past full life up to 150, shown as gold hearts), speed, freeze, magnet and ghost; a ghost passes through balls and is immune;

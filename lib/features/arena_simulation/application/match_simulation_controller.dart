@@ -371,6 +371,7 @@ class MatchSimulationController {
   /// Returns the life actually taken.
   double damage(SimulationBall ball, double amount) {
     if (mode != MatchMode.arsenal) return 0;
+    if (amount > 0 && _absorbWithGoldenArmor(ball)) return 0;
     final crowd = _balls.length > 2
         ? math.pow(_balls.length / 2, 2).toDouble()
         : 1.0;
@@ -384,6 +385,7 @@ class MatchSimulationController {
   /// cut; a ball left with none is out at the next elimination check.
   int cutThreads(SimulationBall ball, int count, {Offset? near}) {
     if (count <= 0 || ball.fanLines.isEmpty) return 0;
+    if (_absorbWithGoldenArmor(ball)) return 0;
     final candidates = [...ball.fanLines];
     if (near != null) {
       // Stable on equal distances, so the result only depends on the match state.
@@ -405,6 +407,17 @@ class MatchSimulationController {
     });
     ball.lineCount = ball.fanLines.length;
     return cut.length;
+  }
+
+  bool _absorbWithGoldenArmor(SimulationBall ball) {
+    if (ball.goldenArmorHits <= 0) return false;
+    ball.goldenArmorHits--;
+    state.floatingTexts.spawn(
+      ball.position,
+      ball.goldenArmorHits == 0 ? 'ARMOR BROKEN!' : 'CLANG!',
+      const Color(0xFFFFD54F),
+    );
+    return true;
   }
 
   /// Simulated match time so far; stops advancing once the match is finished.
@@ -504,7 +517,13 @@ class MatchSimulationController {
       if (ball.isEliminated) continue;
 
       final previousPosition = ball.position;
-      final move = ball.velocity * dt;
+      final slowedByBubble = order.any(
+        (other) =>
+            !identical(other, ball) &&
+            other.timeBubbleLeft > 0 &&
+            (ball.position - other.position).distance < other.radius * 3,
+      );
+      final move = ball.velocity * dt * (slowedByBubble ? 0.35 : 1.0);
       // A speed boost moves the ball faster without changing its stored velocity, so it ends cleanly.
       ball.position += ball.speedLeft > 0
           ? move * PowerUpTuning.speedFactor
@@ -546,6 +565,38 @@ class MatchSimulationController {
         if (a.isEliminated || b.isEliminated) continue;
         // A ghost passes straight through other balls.
         if (a.isGhost || b.isGhost) continue;
+
+        final fieldA = a.magneticFieldLeft > 0;
+        final fieldB = b.magneticFieldLeft > 0;
+        if (fieldA || fieldB) {
+          final delta = b.position - a.position;
+          final distance = delta.distance;
+          final reach =
+              (fieldA ? a.radius * 2 : a.radius) +
+              (fieldB ? b.radius * 2 : b.radius);
+          if (distance < reach) {
+            final normal = distance == 0
+                ? const Offset(1, 0)
+                : delta / distance;
+            final speedA = math.max(a.velocity.distance, arenaRadius * 0.7);
+            final speedB = math.max(b.velocity.distance, arenaRadius * 0.7);
+            a
+              ..position -= normal * ((reach - distance) / 2)
+              ..velocity = -normal * speedA;
+            b
+              ..position += normal * ((reach - distance) / 2)
+              ..velocity = normal * speedB;
+            ballHits++;
+            damage(a, PowerUpTuning.arenaCollisionDamage);
+            damage(b, PowerUpTuning.arenaCollisionDamage);
+            _floatingTexts.spawn(
+              (a.position + b.position) / 2,
+              'MAGNETIC BOUNCE!',
+              const Color(0xFFB04CFF),
+            );
+            continue;
+          }
+        }
 
         final velocityA = a.velocity;
         final velocityB = b.velocity;

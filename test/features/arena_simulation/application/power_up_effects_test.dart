@@ -106,6 +106,82 @@ Projectile _bulletAt(
 );
 
 void main() {
+  test(
+    'portal sends its entrant to a random arena side and leaves a warp flash',
+    () {
+      final c = _match(seed: 17);
+      final a = c.state.balls[0];
+      final entrance = a.position;
+      a.equipWeapon(PowerUpKind.pistol, dualWield: false);
+
+      _give(c, a, PowerUpKind.portal);
+
+      expect(a.position, isNot(entrance));
+      expect(
+        a.position.distance,
+        closeTo(_arenaRadius - a.radius * 1.5, 0.001),
+      );
+      expect(a.held, PowerUpKind.pistol);
+      expect(c.powerUps!.portalFlashes, hasLength(1));
+      expect(c.powerUps!.portalFlashes.single.from, entrance);
+      expect(c.powerUps!.portalFlashes.single.to, a.position);
+      expect(c.powerUps!.pickups, 0);
+      expect(
+        c.state.floatingTexts.items.map((text) => text.text),
+        contains('WARP SPEED!'),
+      );
+    },
+  );
+
+  test('spike wall damages, knocks inward and preserves the weapon', () {
+    final c = _match();
+    final a = c.state.balls[0]
+      ..position = const Offset(-100, 0)
+      ..velocity = Offset.zero;
+    a.equipWeapon(PowerUpKind.shotgun, dualWield: false);
+
+    c.powerUps!.pickUp(
+      a,
+      FieldPowerUp(
+        kind: PowerUpKind.spikeWall,
+        position: a.position,
+        spawnStep: 0,
+      ),
+    );
+
+    expect(a.life, _life - PowerUpTuning.arenaDamage[PowerUpKind.spikeWall]!);
+    expect(a.velocity.dx, greaterThan(0));
+    expect(a.held, PowerUpKind.shotgun);
+    expect(c.powerUps!.slashMarks, isNotEmpty);
+    expect(c.powerUps!.pickups, 0);
+    expect(
+      c.state.floatingTexts.items.map((text) => text.text),
+      contains('OUCH! SPIKES!'),
+    );
+  });
+
+  test('golden armor blocks two hits completely, then shatters', () {
+    final c = _match();
+    final a = c.state.balls[0];
+    a.equipWeapon(PowerUpKind.pistol, dualWield: false);
+
+    _give(c, a, PowerUpKind.goldenArmor);
+    expect(a.held, PowerUpKind.pistol);
+    expect(a.goldenArmorHits, 2);
+    expect(c.damage(a, 30), 0);
+    expect(a.life, _life);
+    expect(a.goldenArmorHits, 1);
+    expect(c.damage(a, 30), 0);
+    expect(a.life, _life);
+    expect(a.goldenArmorHits, 0);
+    expect(
+      c.state.floatingTexts.items.map((text) => text.text),
+      contains('ARMOR BROKEN!'),
+    );
+    expect(c.damage(a, 30), 30);
+    expect(a.life, _life - 30);
+  });
+
   test('a knife damages on contact and is used up', () {
     final c = _match();
     final [a, b] = c.state.balls;

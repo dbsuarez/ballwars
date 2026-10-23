@@ -50,6 +50,15 @@ class SimulationBall {
   int speedLeft = 0;
   int frozenLeft = 0;
   int ghostLeft = 0;
+  int flailLeft = 0;
+  int repulsorLeft = 0;
+  int timeBubbleLeft = 0;
+  int vampireLeft = 0;
+  int mirrorCharges = 0;
+  int overchargeLeft = 0;
+  int gremlinShots = 0;
+  int magneticFieldLeft = 0;
+  int goldenArmorHits = 0;
 
   /// All-Out sword sweep: steps left of the wider cutting reach after picking up a knife.
   int sweepLeft = 0;

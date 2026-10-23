@@ -66,6 +66,13 @@ class PowerUpConfig {
     PowerUpKind.mine,
     PowerUpKind.grenade,
     PowerUpKind.hook,
+    PowerUpKind.ricochetDisc,
+    PowerUpKind.orbitingFlail,
+    PowerUpKind.threadHarpoon,
+    PowerUpKind.prismLaser,
+    PowerUpKind.swapCannon,
+    PowerUpKind.phaseMine,
+    PowerUpKind.spikeWall,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.

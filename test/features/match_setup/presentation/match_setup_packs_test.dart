@@ -242,9 +242,9 @@ void main() {
       expect(find.textContaining('Weapons'), findsNothing);
       await tester.tap(find.text('Arsenal'));
       await tester.pump();
-      expect(find.text('Weapons: All'), findsOneWidget);
+      expect(find.text('Pickups: All'), findsOneWidget);
 
-      await tester.tap(find.text('Weapons: All'));
+      await tester.tap(find.text('Pickups: All'));
       await tester.pumpAndSettle();
       // Each one says what it does, with its damage.
       expect(
@@ -262,9 +262,11 @@ void main() {
         find.widgetWithText(FilledButton, 'Done'),
       );
       // All off: nothing left, so Done waits for a pick.
-      expect(find.text('Weapons & power-ups'), findsOneWidget);
+      expect(find.text('Weapons, power-ups & traps'), findsOneWidget);
       expect(find.text('Weapons'), findsOneWidget);
-      await tester.tap(find.widgetWithText(SwitchListTile, 'All pickups'));
+      await tester.tap(
+        find.widgetWithText(SwitchListTile, 'All weapons & power-ups'),
+      );
       await tester.pump();
       expect(done().onPressed, isNull);
       expect(find.text('Pick at least one.'), findsOneWidget);
@@ -280,19 +282,21 @@ void main() {
       expect(done().onPressed, isNotNull);
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
-      expect(
-        find.text('Weapons: 1 of ${PowerUpKind.values.length}'),
-        findsOneWidget,
-      );
+      final selectableCount = PowerUpKind.values
+          .where((kind) => !kind.isTrap)
+          .length;
+      expect(find.text('Pickups: 1 of $selectableCount'), findsOneWidget);
 
       // All on again.
-      await tester.tap(find.text('Weapons: 1 of ${PowerUpKind.values.length}'));
+      await tester.tap(find.text('Pickups: 1 of $selectableCount'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(SwitchListTile, 'All pickups'));
+      await tester.tap(
+        find.widgetWithText(SwitchListTile, 'All weapons & power-ups'),
+      );
       await tester.pump();
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
-      expect(find.text('Weapons: All'), findsOneWidget);
+      expect(find.text('Pickups: All'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.shuffle));
       await tester.pump();

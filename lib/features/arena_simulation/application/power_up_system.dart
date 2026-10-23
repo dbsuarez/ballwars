@@ -50,6 +50,9 @@ class PowerUpSystem {
   /// Recent blasts, for drawing (removed after [PowerUpTuning.explosionShowSteps]).
   final List<Explosion> explosions = [];
 
+  /// Recent portal exits and entries, retained briefly for the painter.
+  final List<PortalFlash> portalFlashes = [];
+
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
 
@@ -131,18 +134,30 @@ class PowerUpSystem {
   /// without replacing equipment; a weapon replaces the one equipped weapon.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
-    pickups++;
-    if (p.kind == PowerUpKind.mine) {
+    if (p.kind == PowerUpKind.mine || p.kind == PowerUpKind.phaseMine) {
       mines.add(
         ArmedMine(
           owner: ball,
           position: p.position,
           armedStep: match.stepCount,
+          kind: p.kind,
         ),
       );
-      _yell(ball, 'MINE SET!');
+      _yell(
+        ball,
+        p.kind == PowerUpKind.phaseMine ? 'NOW YOU SEE ME!' : 'MINE SET!',
+      );
       return;
     }
+    if (p.kind == PowerUpKind.portal) {
+      _teleport(ball, p.position);
+      return;
+    }
+    if (p.kind == PowerUpKind.spikeWall) {
+      _hitSpikes(ball, p.position);
+      return;
+    }
+    pickups++;
     if (p.kind.isWeapon) {
       ball.magnetPending = false;
       // A new power-up starts its own aim (a gatling burst already firing finishes first).
@@ -165,6 +180,31 @@ class PowerUpSystem {
       case PowerUpKind.magnet:
         _pullNearest(ball);
         _yell(ball, 'MINE!');
+      case PowerUpKind.repulsor:
+        ball.repulsorLeft = PowerUpTuning.specialEffectSteps;
+        _yell(ball, 'BACK OFF!');
+      case PowerUpKind.timeBubble:
+        ball.timeBubbleLeft = PowerUpTuning.specialEffectSteps;
+        _yell(ball, 'TIME OUT!');
+      case PowerUpKind.vampire:
+        ball.vampireLeft = PowerUpTuning.specialEffectSteps;
+        _yell(ball, 'I VANT YOUR POWER!');
+      case PowerUpKind.mirror:
+        ball.mirrorCharges++;
+        _yell(ball, 'RETURN TO SENDER!');
+      case PowerUpKind.overcharge:
+        ball.overchargeLeft = PowerUpTuning.specialEffectSteps;
+        _yell(ball, 'MAXIMUM POWER!');
+      case PowerUpKind.gremlin:
+        final target = _nearestTarget(ball);
+        if (target != null) target.gremlinShots++;
+        _yell(ball, 'CHAOS MODE!');
+      case PowerUpKind.magneticField:
+        ball.magneticFieldLeft = PowerUpTuning.specialEffectSteps;
+        _yell(ball, 'NOTHING GETS THROUGH!');
+      case PowerUpKind.goldenArmor:
+        ball.goldenArmorHits = 2;
+        _yell(ball, 'GOLDEN GUARD!');
       default:
         ball.equipWeapon(p.kind, dualWield: match.dualWield);
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
@@ -174,11 +214,74 @@ class PowerUpSystem {
     }
   }
 
+  void _teleport(SimulationBall ball, Offset entrance) {
+    final safeRadius = match.arenaRadius - ball.radius * 1.5;
+    var destination = ball.position;
+    for (var attempt = 0; attempt < 12; attempt++) {
+      final side = rng.nextInt(4);
+      final angle = (side + rng.nextDoubleRange(0.18, 0.82)) * math.pi / 2;
+      final candidate = Offset(
+        math.cos(angle) * safeRadius,
+        math.sin(angle) * safeRadius,
+      );
+      if (match.state.balls.every(
+        (other) =>
+            identical(other, ball) ||
+            other.isEliminated ||
+            (other.position - candidate).distance >=
+                other.radius + ball.radius * 1.5,
+      )) {
+        destination = candidate;
+        break;
+      }
+    }
+    ball.position = destination;
+    portalFlashes.add(PortalFlash(from: entrance, to: destination));
+    _yell(ball, 'WARP SPEED!');
+  }
+
+  void _hitSpikes(SimulationBall ball, Offset at) {
+    final inward = ball.position.distance == 0
+        ? const Offset(0, 1)
+        : -ball.position / ball.position.distance;
+    ball.velocity =
+        inward * math.max(ball.velocity.distance, match.arenaRadius);
+    slashMarks.add(
+      SlashMark(
+        position: at,
+        angle: math.atan2(inward.dy, inward.dx) + math.pi / 2,
+      ),
+    );
+    if (match.mode == MatchMode.arsenal) {
+      final damage = match.damage(ball, _t.arenaDamage(PowerUpKind.spikeWall));
+      _showDamage(ball, at, damage, 0);
+    } else {
+      final cut = match.cutThreads(
+        ball,
+        _t.allOutThreads(PowerUpKind.spikeWall),
+        near: at,
+      );
+      _showDamage(ball, at, cut, 0);
+    }
+    slashes++;
+    _yell(ball, 'OUCH! SPIKES!');
+  }
+
   /// Melee on a bump between [a] and [b]: a knife hits the other ball and is used up; a shield bashes an
   /// unarmed other ball (one holding nothing) and breaks. Both sides strike with what they held when they
   /// touched, so two knives hit each other. Nothing happens if either is a ghost or already out.
   void onContact(SimulationBall a, SimulationBall b) {
     if (!_alive(a) || !_alive(b) || a.isGhost || b.isGhost) return;
+    if (a.repulsorLeft > 0 || b.repulsorLeft > 0) {
+      final delta = b.position - a.position;
+      final direction = delta.distance == 0
+          ? const Offset(1, 0)
+          : delta / delta.distance;
+      final push = match.arenaRadius * 1.4;
+      if (a.repulsorLeft > 0) b.velocity = direction * push;
+      if (b.repulsorLeft > 0) a.velocity = -direction * push;
+      _yell(a.repulsorLeft > 0 ? a : b, 'BOOM, MOVE!');
+    }
     final heldA = [...a.equippedWeapons];
     final heldB = [...b.equippedWeapons];
     for (final weapon in heldA) {
@@ -196,10 +299,17 @@ class PowerUpSystem {
     List<PowerUpKind> targetHeld,
   ) {
     final PowerUpKind kind;
-    if (weapon.isBlade) {
+    if (weapon.isBlade || weapon == PowerUpKind.orbitingFlail) {
       kind = weapon;
       slashes++;
-      _yell(attacker, weapon == PowerUpKind.sword ? 'HIYAA!' : 'SLASH!');
+      _yell(
+        attacker,
+        weapon == PowerUpKind.sword
+            ? 'HIYAA!'
+            : weapon == PowerUpKind.orbitingFlail
+            ? 'WRECKING BALL!'
+            : 'SLASH!',
+      );
     } else if (weapon == PowerUpKind.shield && targetHeld.isEmpty) {
       kind = PowerUpKind.shield;
       _yell(attacker, 'SHIELD BASH!');
@@ -239,6 +349,12 @@ class PowerUpSystem {
       e.age++;
     }
     explosions.removeWhere((e) => e.age >= PowerUpTuning.explosionShowSteps);
+    for (final flash in portalFlashes) {
+      flash.age++;
+    }
+    portalFlashes.removeWhere(
+      (flash) => flash.age >= PowerUpTuning.explosionShowSteps,
+    );
     for (final m in slashMarks) {
       m.age++;
     }
@@ -247,6 +363,12 @@ class PowerUpSystem {
       if (ball.speedLeft > 0) ball.speedLeft--;
       if (ball.ghostLeft > 0) ball.ghostLeft--;
       if (ball.sweepLeft > 0) ball.sweepLeft--;
+      if (ball.flailLeft > 0) ball.flailLeft--;
+      if (ball.repulsorLeft > 0) ball.repulsorLeft--;
+      if (ball.timeBubbleLeft > 0) ball.timeBubbleLeft--;
+      if (ball.vampireLeft > 0) ball.vampireLeft--;
+      if (ball.overchargeLeft > 0) ball.overchargeLeft--;
+      if (ball.magneticFieldLeft > 0) ball.magneticFieldLeft--;
       if (!_alive(ball)) ball.magnetPending = false;
     }
   }
@@ -309,7 +431,7 @@ class PowerUpSystem {
       );
       if (!touched) continue;
       mines.remove(mine);
-      _explode(mine.position, mine.owner, PowerUpKind.mine);
+      _explode(mine.position, mine.owner, mine.kind);
     }
   }
 
@@ -414,7 +536,7 @@ class PowerUpSystem {
         ? PowerUpKind.values
         : [
             for (final k in PowerUpKind.values)
-              if (chosen.contains(k)) k,
+              if (chosen.contains(k) || k.isTrap) k,
           ];
     if (kinds.isEmpty) return;
     final kind = kinds[rng.nextInt(kinds.length)];
@@ -437,9 +559,9 @@ class PowerUpSystem {
     final outer = match.arenaRadius * PowerUpTuning.spawnMaxDistance;
     for (var attempt = 0; attempt < 10; attempt++) {
       final angle = (quadrant + rng.nextDoubleRange(0.1, 0.9)) * math.pi / 2;
-      final distance = math.sqrt(
-        rng.nextDoubleRange(inner * inner, outer * outer),
-      );
+      final distance = kind.isTrap
+          ? match.arenaRadius - radius * 1.6
+          : math.sqrt(rng.nextDoubleRange(inner * inner, outer * outer));
       final spot = Offset(
         math.cos(angle) * distance,
         math.sin(angle) * distance,
@@ -581,6 +703,19 @@ class PowerUpSystem {
                 0,
                 speedRatio: PowerUpTuning.hookSpeedRatio,
               );
+              _yell(ball, 'COME OVER HERE!');
+            case PowerUpKind.ricochetDisc:
+              _fire(ball, target, kind, 0);
+              _yell(ball, 'BANK SHOT!');
+            case PowerUpKind.threadHarpoon:
+              _fire(ball, target, kind, 0);
+              _yell(ball, 'GIVE IT HERE!');
+            case PowerUpKind.prismLaser:
+              _fire(ball, target, kind, 0);
+              _yell(ball, 'TASTE THE RAINBOW!');
+            case PowerUpKind.swapCannon:
+              _fire(ball, target, kind, 0);
+              _yell(ball, 'SWAP INCOMING!');
             default:
               _fire(ball, target, kind, 0);
               _yell(ball, 'BANG!');
@@ -714,7 +849,10 @@ class PowerUpSystem {
     double? speedRatio,
   }) {
     final toTarget = target.position - ball.position;
-    final angle = math.atan2(toTarget.dy, toTarget.dx) + turn;
+    final sabotaged = ball.gremlinShots > 0;
+    if (sabotaged) ball.gremlinShots--;
+    final angle =
+        math.atan2(toTarget.dy, toTarget.dx) + turn + (sabotaged ? math.pi : 0);
     final direction = Offset(math.cos(angle), math.sin(angle));
     projectiles.add(
       Projectile(
@@ -737,10 +875,23 @@ class PowerUpSystem {
     if (projectiles.isEmpty) return;
     final balls = match.state.balls;
     final allOut = match.mode == MatchMode.allOut;
+    final spawned = <Projectile>[];
     for (final p in projectiles) {
       if (p.spent) continue;
       final from = p.position;
-      final to = from + p.velocity * MatchSimulationController.fixedTimestep;
+      var projectileScale = 1.0;
+      for (final ball in balls) {
+        if (ball.timeBubbleLeft > 0 &&
+            !identical(ball, p.owner) &&
+            (from - ball.position).distance < ball.radius * 3) {
+          projectileScale = 0.35;
+        }
+      }
+      final to =
+          from +
+          p.velocity *
+              MatchSimulationController.fixedTimestep *
+              projectileScale;
 
       SimulationBall? struck;
       var strikeAt = double.infinity;
@@ -748,7 +899,12 @@ class PowerUpSystem {
         if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) {
           continue;
         }
-        final t = _entry(from, to, ball.position, ball.radius);
+        final t = _entry(
+          from,
+          to,
+          ball.position,
+          ball.magneticFieldLeft > 0 ? ball.radius * 2 : ball.radius,
+        );
         if (t != null && t < strikeAt) {
           struck = ball;
           strikeAt = t;
@@ -789,6 +945,20 @@ class PowerUpSystem {
 
       p.position = end;
       if (struck != null) {
+        if (struck.magneticFieldLeft > 0 || struck.mirrorCharges > 0) {
+          final normal = end - struck.position;
+          final unit = normal.distance == 0
+              ? const Offset(1, 0)
+              : normal / normal.distance;
+          final along = p.velocity.dx * unit.dx + p.velocity.dy * unit.dy;
+          p.velocity = p.velocity - unit * (2 * along);
+          p.position += unit * 2;
+          if (struck.mirrorCharges > 0 && struck.magneticFieldLeft == 0) {
+            struck.mirrorCharges--;
+          }
+          _yell(struck, 'RETURN TO SENDER!');
+          continue;
+        }
         p.spent = true;
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
@@ -796,9 +966,39 @@ class PowerUpSystem {
           _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
         }
       } else if (end.distance >= match.arenaRadius) {
-        p.spent = true;
+        if ((p.kind == PowerUpKind.ricochetDisc ||
+                p.kind == PowerUpKind.prismLaser) &&
+            p.wallBounces == 0) {
+          final normal = end.distance == 0
+              ? const Offset(1, 0)
+              : end / end.distance;
+          final along = p.velocity.dx * normal.dx + p.velocity.dy * normal.dy;
+          p
+            ..position = normal * (match.arenaRadius - 2)
+            ..velocity -= normal * (2 * along);
+          p.wallBounces++;
+          if (p.kind == PowerUpKind.prismLaser) {
+            for (final turn in [-0.32, 0.32]) {
+              final angle = math.atan2(p.velocity.dy, p.velocity.dx) + turn;
+              spawned.add(
+                Projectile(
+                  owner: p.owner,
+                  kind: PowerUpKind.prismLaser,
+                  position: p.position,
+                  velocity:
+                      Offset(math.cos(angle), math.sin(angle)) *
+                      p.velocity.distance,
+                )..wallBounces = 1,
+              );
+            }
+            _yell(p.owner, 'SPLIT THE LIGHT!');
+          }
+        } else {
+          p.spent = true;
+        }
       }
     }
+    projectiles.addAll(spawned);
     projectiles.removeWhere((p) => p.spent);
   }
 
@@ -817,6 +1017,10 @@ class PowerUpSystem {
     int volley = 0,
   }) {
     if (target.isGhost) return;
+    if (target.magneticFieldLeft > 0) {
+      _yell(target, 'REPELLED!');
+      return;
+    }
     hits++;
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
@@ -843,12 +1047,29 @@ class PowerUpSystem {
       if (target.frozenLeft > 0) target.velocity = Offset.zero;
       return;
     }
+    if (kind == PowerUpKind.swapCannon && from != null) {
+      final oldPosition = from.position;
+      final oldVelocity = from.velocity;
+      from
+        ..position = target.position
+        ..velocity = target.velocity;
+      target
+        ..position = oldPosition
+        ..velocity = oldVelocity;
+      _yell(from, 'SWITCHEROO!');
+    }
     final bash = kind == PowerUpKind.shield;
     if (match.mode == MatchMode.arsenal) {
+      final power = (from?.overchargeLeft ?? 0) > 0 ? 1.5 : 1.0;
       final lost = match.damage(
         target,
-        (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share,
+        (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,
       );
+      if (from != null &&
+          (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {
+        from.life = math.min(_t.arenaMaxLife, from.life + lost * 0.5);
+        _yell(from, 'MINE NOW!');
+      }
       _showDamage(target, impact, lost, volley);
     } else {
       // Thread snap: the threads nearest the impact break, each with its rim spark.
@@ -864,6 +1085,11 @@ class PowerUpSystem {
       var cut = 0;
       for (final line in nearest.take(threads)) {
         if (_cutLine(target, line)) cut++;
+      }
+      if (from != null &&
+          (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {
+        match.claimFreeSlots(from, math.max(1, cut ~/ 2));
+        _yell(from, 'MINE NOW!');
       }
       _showDamage(target, impact, cut, volley);
     }

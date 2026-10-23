@@ -390,9 +390,11 @@ void main() {
         reason: 'empty selection',
       );
       expect(
-        withBalls('m.arsenal,w.zzzz,$a,$b'),
+        withBalls(
+          'm.arsenal,w.${(1 << PowerUpKind.values.length).toRadixString(36)},$a,$b',
+        ),
         isNull,
-        reason: 'bits beyond the 11 kinds',
+        reason: 'bits beyond the known kinds',
       );
     },
   );

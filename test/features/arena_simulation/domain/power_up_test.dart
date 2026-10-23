@@ -10,6 +10,10 @@ void main() {
       PowerUpKind.freeze,
       PowerUpKind.grenade,
       PowerUpKind.hook,
+      PowerUpKind.ricochetDisc,
+      PowerUpKind.threadHarpoon,
+      PowerUpKind.prismLaser,
+      PowerUpKind.swapCannon,
     };
     for (final kind in PowerUpKind.values) {
       expect(kind.label, isNotEmpty);
@@ -40,7 +44,7 @@ void main() {
     expect(PowerUpTuning.aimSteps, 60);
   });
 
-  test('pickups are categorized as either weapons or power-ups', () {
+  test('pickups are categorized as weapons, power-ups or traps', () {
     expect(
       PowerUpKind.values.where((kind) => kind.isWeapon),
       containsAll([
@@ -55,13 +59,29 @@ void main() {
       containsAll([
         PowerUpKind.apple,
         PowerUpKind.speed,
-        PowerUpKind.mine,
         PowerUpKind.magnet,
         PowerUpKind.ghost,
       ]),
     );
     expect(
-      PowerUpKind.values.every((kind) => kind.isWeapon != kind.isPowerUp),
+      PowerUpKind.values.where((kind) => kind.isTrap),
+      containsAll([
+        PowerUpKind.mine,
+        PowerUpKind.phaseMine,
+        PowerUpKind.portal,
+        PowerUpKind.spikeWall,
+      ]),
+    );
+    expect(
+      PowerUpKind.values.every(
+        (kind) =>
+            [
+              kind.isWeapon,
+              kind.isPowerUp,
+              kind.isTrap,
+            ].where((v) => v).length ==
+            1,
+      ),
       isTrue,
     );
   });

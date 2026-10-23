@@ -31,6 +31,22 @@ class PowerUpPainter {
     PowerUpKind.grenade: Color(0xFF8DBF4A),
     PowerUpKind.sword: Color(0xFFE6D3A3),
     PowerUpKind.hook: Color(0xFFFF8A3D),
+    PowerUpKind.ricochetDisc: Color(0xFF00D4FF),
+    PowerUpKind.orbitingFlail: Color(0xFF9FA8B5),
+    PowerUpKind.threadHarpoon: Color(0xFF00C9A7),
+    PowerUpKind.prismLaser: Color(0xFFFF4FD8),
+    PowerUpKind.swapCannon: Color(0xFF7C5CFF),
+    PowerUpKind.phaseMine: Color(0xFF6D35A8),
+    PowerUpKind.repulsor: Color(0xFFFF6B35),
+    PowerUpKind.timeBubble: Color(0xFF58A6FF),
+    PowerUpKind.vampire: Color(0xFFB1123B),
+    PowerUpKind.mirror: Color(0xFFC7F5FF),
+    PowerUpKind.overcharge: Color(0xFFFFD000),
+    PowerUpKind.gremlin: Color(0xFF7ED957),
+    PowerUpKind.magneticField: Color(0xFFB04CFF),
+    PowerUpKind.portal: Color(0xFF36E1FF),
+    PowerUpKind.spikeWall: Color(0xFFFF5353),
+    PowerUpKind.goldenArmor: Color(0xFFFFD54F),
   };
 
   /// The color a power-up is drawn in.
@@ -69,6 +85,30 @@ class PowerUpPainter {
       );
     }
 
+    for (final flash in p.portalFlashes) {
+      final t = flash.age / PowerUpTuning.explosionShowSteps;
+      final fade = (1 - t).clamp(0.0, 1.0);
+      final portalPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(2, r * 0.18)
+        ..color = colorOf(PowerUpKind.portal).withValues(alpha: fade);
+      for (final spot in [flash.from, flash.to]) {
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: spot,
+            width: r * (1.2 + t),
+            height: r * (2.2 + t * 0.5),
+          ),
+          portalPaint,
+        );
+      }
+      canvas.drawLine(
+        flash.from,
+        flash.to,
+        portalPaint..color = portalPaint.color.withValues(alpha: fade * 0.25),
+      );
+    }
+
     for (final item in p.field) {
       // Subtle pulse: the token breathes about once a second.
       final pulse =
@@ -88,10 +128,10 @@ class PowerUpPainter {
       final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
       _paintToken(
         canvas,
-        PowerUpKind.mine,
+        bomb.kind,
         bomb.position,
         r,
-        1,
+        bomb.kind == PowerUpKind.phaseMine ? 0.18 : 1,
         ring: bomb.owner.config.primaryColor,
       );
       canvas.drawCircle(
@@ -504,6 +544,119 @@ class PowerUpPainter {
   /// sits on its edge pointing at its target (or the way it moves), a knife points the way it moves, and
   /// a shield is held on the side it faces.
   static void paintBallEffects(Canvas canvas, SimulationBall ball) {
+    if (ball.timeBubbleLeft > 0) {
+      canvas.drawCircle(
+        ball.position,
+        ball.radius * 3,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = const Color(0xFF58A6FF).withValues(alpha: 0.55),
+      );
+    }
+    if (ball.repulsorLeft > 0) {
+      canvas.drawCircle(
+        ball.position,
+        ball.radius * 1.25,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xFFFF6B35).withValues(alpha: 0.75),
+      );
+    }
+    if (ball.vampireLeft > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: ball.position, radius: ball.radius * 1.18),
+        -math.pi / 2,
+        math.pi * 1.5,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xFFB1123B),
+      );
+    }
+    if (ball.mirrorCharges > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: ball.position, radius: ball.radius * 1.35),
+        -1.1,
+        2.2,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..color = const Color(0xFFC7F5FF),
+      );
+    }
+    if (ball.overchargeLeft > 0) {
+      for (var i = 0; i < 4; i++) {
+        final a = i * math.pi / 2 + ball.overchargeLeft * 0.1;
+        canvas.drawCircle(
+          ball.position + Offset(math.cos(a), math.sin(a)) * ball.radius * 1.35,
+          2.5,
+          Paint()..color = const Color(0xFFFFD000),
+        );
+      }
+    }
+    if (ball.gremlinShots > 0) {
+      canvas.drawCircle(
+        ball.position,
+        ball.radius * 1.12,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xFF7ED957),
+      );
+    }
+    if (ball.magneticFieldLeft > 0) {
+      final pulse = 0.72 + 0.18 * math.sin(ball.magneticFieldLeft * 0.35);
+      final radius = ball.radius * 2;
+      canvas.drawCircle(
+        ball.position,
+        radius,
+        Paint()
+          ..color = const Color(0xFF7B2CBF).withValues(alpha: 0.18 * pulse),
+      );
+      canvas.drawCircle(
+        ball.position,
+        radius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, ball.radius * 0.12)
+          ..color = const Color(0xFFD66BFF).withValues(alpha: pulse),
+      );
+      for (var i = 0; i < 6; i++) {
+        final angle = i * math.pi / 3 + ball.magneticFieldLeft * 0.08;
+        final point =
+            ball.position + Offset(math.cos(angle), math.sin(angle)) * radius;
+        canvas.drawCircle(
+          point,
+          math.max(1.5, ball.radius * 0.09),
+          Paint()..color = const Color(0xFFFF8CFF),
+        );
+      }
+    }
+    if (ball.goldenArmorHits > 0) {
+      final armor = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(3, ball.radius * 0.16)
+        ..color = const Color(0xFFFFD54F);
+      canvas.drawArc(
+        Rect.fromCircle(center: ball.position, radius: ball.radius * 1.18),
+        math.pi * 0.9,
+        math.pi * 1.2,
+        false,
+        armor,
+      );
+      for (var i = 0; i < ball.goldenArmorHits; i++) {
+        canvas.drawCircle(
+          ball.position +
+              Offset((i * 2 - 1) * ball.radius * 0.35, -ball.radius * 1.3),
+          math.max(2, ball.radius * 0.1),
+          Paint()..color = const Color(0xFFFFF3A0),
+        );
+      }
+    }
     if (ball.frozenLeft > 0) {
       canvas.drawCircle(
         ball.position,
@@ -715,6 +868,41 @@ class PowerUpPainter {
             ..close(),
           fill,
         );
+      case PowerUpKind.portal:
+        canvas.drawOval(
+          Rect.fromCenter(center: c, width: s * 1.2, height: s * 2),
+          stroke..strokeWidth = math.max(1.4, s * 0.22),
+        );
+        canvas.drawArc(
+          Rect.fromCenter(center: c, width: s * 0.7, height: s * 1.35),
+          -math.pi / 2,
+          math.pi,
+          false,
+          stroke..color = const Color(0xFFFF58D6),
+        );
+      case PowerUpKind.spikeWall:
+        final path = Path()..moveTo(at(-1, 0.7).dx, at(-1, 0.7).dy);
+        for (var i = 0; i < 4; i++) {
+          path
+            ..lineTo(at(-0.75 + i * 0.5, -0.85).dx, at(0, -0.85).dy)
+            ..lineTo(at(-0.5 + i * 0.5, 0.7).dx, at(0, 0.7).dy);
+        }
+        canvas.drawPath(path, fill);
+      case PowerUpKind.goldenArmor:
+        canvas.drawPath(
+          Path()
+            ..moveTo(at(-0.85, 0.55).dx, at(-0.85, 0.55).dy)
+            ..lineTo(at(-0.65, -0.75).dx, at(-0.65, -0.75).dy)
+            ..lineTo(at(0, -1).dx, at(0, -1).dy)
+            ..lineTo(at(0.65, -0.75).dx, at(0.65, -0.75).dy)
+            ..lineTo(at(0.85, 0.55).dx, at(0.85, 0.55).dy)
+            ..close(),
+          fill,
+        );
+      default:
+        canvas.drawCircle(c, s * 0.82, stroke);
+        canvas.drawLine(at(-0.5, -0.5), at(0.5, 0.5), stroke);
+        canvas.drawLine(at(0.5, -0.5), at(-0.5, 0.5), stroke);
     }
   }
 }

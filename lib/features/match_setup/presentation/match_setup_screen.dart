@@ -107,7 +107,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _dualWield = dualWield == '1';
       if (savedKinds.isNotEmpty &&
           savedKinds.length < PowerUpKind.values.length) {
-        _powerUps = savedKinds;
+        _powerUps = {
+          ...savedKinds.where((kind) => !kind.isTrap),
+          ...PowerUpKind.values.where((kind) => kind.isTrap),
+        };
       }
       _showEffects = effects;
       if (rounds != null && const [1, 2, 3].contains(rounds)) {
@@ -268,7 +271,12 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final chosen = await showDialog<Set<PowerUpKind>>(
       context: context,
       builder: (_) => _WeaponsDialog(
-        initial: _powerUps ?? PowerUpKind.values.toSet(),
+        initial: {
+          ...?_powerUps,
+          ...PowerUpKind.values.where((kind) => kind.isTrap),
+          if (_powerUps == null)
+            ...PowerUpKind.values.where((kind) => !kind.isTrap),
+        },
         arsenal: _mode == MatchMode.arsenal,
         config: AppSettingsScope.of(context).powerUps,
       ),
@@ -593,8 +601,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               icon: const Icon(Icons.tune_rounded, size: 18),
               label: Text(
                 _powerUps == null
-                    ? 'Weapons: All'
-                    : 'Weapons: ${_powerUps!.length} of ${PowerUpKind.values.length}',
+                    ? 'Pickups: All'
+                    : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of '
+                          '${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
               ),
             ),
             SwitchListTile(
@@ -1012,9 +1021,12 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final wide = MediaQuery.sizeOf(context).width >= 700;
     final weapons = PowerUpKind.values.where((kind) => kind.isWeapon);
     final powerUps = PowerUpKind.values.where((kind) => kind.isPowerUp);
+    final traps = PowerUpKind.values.where((kind) => kind.isTrap);
+    final selectable = PowerUpKind.values.where((kind) => !kind.isTrap);
+    final selectedCount = selectable.where(_on.contains).length;
     return AlertDialog(
       constraints: const BoxConstraints(maxWidth: 760),
-      title: const Text('Weapons & power-ups'),
+      title: const Text('Weapons, power-ups & traps'),
       contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
       content: SizedBox(
         width: 720,
@@ -1031,8 +1043,8 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
               ),
             // Switches every weapon on or off at once (then pick at least one).
             SwitchListTile(
-              title: const Text('All pickups'),
-              subtitle: _on.isEmpty
+              title: const Text('All weapons & power-ups'),
+              subtitle: selectedCount == 0
                   ? Text(
                       'Pick at least one.',
                       style: TextStyle(
@@ -1040,9 +1052,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                       ),
                     )
                   : null,
-              value: _on.length == PowerUpKind.values.length,
+              value: selectedCount == selectable.length,
               onChanged: (v) => setState(
-                () => v ? _on.addAll(PowerUpKind.values) : _on.clear(),
+                () => v ? _on.addAll(selectable) : _on.removeAll(selectable),
               ),
             ),
             const Divider(height: 1),
@@ -1052,12 +1064,15 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 children: [
                   Expanded(child: _section('Weapons', weapons)),
                   Expanded(child: _section('Power-ups', powerUps)),
+                  Expanded(child: _trapSection(traps)),
                 ],
               )
             else ...[
               _section('Weapons', weapons),
               const Divider(height: 20),
               _section('Power-ups', powerUps),
+              const Divider(height: 20),
+              _trapSection(traps),
             ],
           ],
         ),
@@ -1069,7 +1084,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
         ),
         // At least one has to stay on.
         FilledButton(
-          onPressed: _on.isEmpty ? null : () => Navigator.of(context).pop(_on),
+          onPressed: selectedCount == 0
+              ? null
+              : () => Navigator.of(context).pop(_on),
           child: const Text('Done'),
         ),
       ],
@@ -1099,6 +1116,34 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
           value: _on.contains(kind),
           onChanged: (v) =>
               setState(() => v ? _on.add(kind) : _on.remove(kind)),
+        ),
+    ],
+  );
+
+  Widget _trapSection(Iterable<PowerUpKind> kinds) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        child: Text(
+          'Traps - always on',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+      ),
+      for (final kind in kinds)
+        ListTile(
+          dense: true,
+          isThreeLine: true,
+          leading: PowerUpIcon(kind),
+          title: Text(kind.label),
+          subtitle: Text(
+            powerUpDescription(
+              kind,
+              arsenal: widget.arsenal,
+              config: widget.config,
+            ),
+          ),
+          trailing: const Icon(Icons.lock_outline_rounded, size: 18),
         ),
     ],
   );

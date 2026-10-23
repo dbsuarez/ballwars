@@ -20,7 +20,23 @@ enum PowerUpKind {
   // New kinds go last: links store the chosen kinds as a bitmask of their index.
   grenade('Grenade'),
   sword('Sword'),
-  hook('Hook');
+  hook('Hook'),
+  ricochetDisc('Ricochet Disc'),
+  orbitingFlail('Orbiting Flail'),
+  threadHarpoon('Thread Harpoon'),
+  prismLaser('Prism Laser'),
+  swapCannon('Swap Cannon'),
+  phaseMine('Phase Mine'),
+  repulsor('Repulsor'),
+  timeBubble('Time Bubble'),
+  vampire('Vampire'),
+  mirror('Mirror'),
+  overcharge('Overcharge'),
+  gremlin('Gremlin'),
+  magneticField('Magnetic Force Field'),
+  portal('Portal'),
+  spikeWall('Spike Wall'),
+  goldenArmor('Golden Armor');
 
   const PowerUpKind(this.label);
 
@@ -34,7 +50,11 @@ enum PowerUpKind {
       this == gatling ||
       this == freeze ||
       this == grenade ||
-      this == hook;
+      this == hook ||
+      this == ricochetDisc ||
+      this == threadHarpoon ||
+      this == prismLaser ||
+      this == swapCannon;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -50,10 +70,19 @@ enum PowerUpKind {
       this == freeze ||
       this == grenade ||
       this == sword ||
-      this == hook;
+      this == hook ||
+      this == ricochetDisc ||
+      this == orbitingFlail ||
+      this == threadHarpoon ||
+      this == prismLaser ||
+      this == swapCannon;
+
+  /// Traps spawn close to the arena boundary and arm when collected.
+  bool get isTrap =>
+      this == mine || this == phaseMine || this == portal || this == spikeWall;
 
   /// Power-ups apply immediately and never replace an equipped weapon.
-  bool get isPowerUp => !isWeapon;
+  bool get isPowerUp => !isWeapon && !isTrap;
 }
 
 /// A power-up lying in the arena, waiting to be picked up.
@@ -88,7 +117,8 @@ class Projectile {
   final SimulationBall owner;
   final PowerUpKind kind;
   Offset position;
-  final Offset velocity;
+  Offset velocity;
+  int wallBounces = 0;
 
   /// Shots fired as one attack (a shotgun blast, a gatling burst) share a non-zero id, so a shield
   /// that breaks on the first of them softens the rest too. 0: a single shot.
@@ -106,6 +136,16 @@ class Explosion {
   final double radius;
 
   /// Steps since it went off.
+  int age = 0;
+}
+
+/// A short-lived pair of rings marking where a portal took a ball from and
+/// where it reappeared.
+class PortalFlash {
+  PortalFlash({required this.from, required this.to});
+
+  final Offset from;
+  final Offset to;
   int age = 0;
 }
 
@@ -148,6 +188,7 @@ class ArmedMine {
     required this.owner,
     required this.position,
     required this.armedStep,
+    this.kind = PowerUpKind.mine,
   });
 
   final SimulationBall owner;
@@ -155,6 +196,7 @@ class ArmedMine {
 
   /// Simulation step at which it was set (for the blinking light).
   final int armedStep;
+  final PowerUpKind kind;
 }
 
 /// Tunable numbers for the power-ups. Tests assert in terms of these, so they can be retuned freely.
@@ -214,6 +256,7 @@ class PowerUpTuning {
   static const double speedFactor = 2.0;
   static const int freezeSteps = 120;
   static const int ghostSteps = 180;
+  static const int specialEffectSteps = 180;
 
   /// Bomb blast radius as a fraction of the arena radius.
   static const double blastRadiusRatio = 0.28;
@@ -242,6 +285,13 @@ class PowerUpTuning {
     PowerUpKind.grenade: 50,
     PowerUpKind.sword: 40,
     PowerUpKind.hook: 30,
+    PowerUpKind.ricochetDisc: 25,
+    PowerUpKind.orbitingFlail: 20,
+    PowerUpKind.threadHarpoon: 20,
+    PowerUpKind.prismLaser: 18,
+    PowerUpKind.swapCannon: 10,
+    PowerUpKind.phaseMine: 40,
+    PowerUpKind.spikeWall: 25,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -260,6 +310,13 @@ class PowerUpTuning {
     PowerUpKind.grenade: 10,
     PowerUpKind.sword: 30,
     PowerUpKind.hook: 12,
+    PowerUpKind.ricochetDisc: 10,
+    PowerUpKind.orbitingFlail: 8,
+    PowerUpKind.threadHarpoon: 12,
+    PowerUpKind.prismLaser: 7,
+    PowerUpKind.swapCannon: 4,
+    PowerUpKind.phaseMine: 18,
+    PowerUpKind.spikeWall: 10,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -326,6 +383,31 @@ String powerUpDescription(
       'Pulls the nearest power-up (or the next one) straight to the ball.',
     PowerUpKind.ghost =>
       'For ${secs(config.ghostSteps)} passes through balls and can\'t be hit.',
+    PowerUpKind.ricochetDisc =>
+      '$aim fires a wall-bouncing disc: ${dmg(kind)}.',
+    PowerUpKind.orbitingFlail => 'Smashes the next ball touched: ${dmg(kind)}.',
+    PowerUpKind.threadHarpoon => '$aim steals threads or drains ${dmg(kind)}.',
+    PowerUpKind.prismLaser =>
+      '$aim fires a beam that splits after a wall bounce: ${dmg(kind)}.',
+    PowerUpKind.swapCannon =>
+      '$aim swaps positions with its target: ${dmg(kind)}.',
+    PowerUpKind.phaseMine => 'Sets a hidden proximity mine: ${dmg(kind)}.',
+    PowerUpKind.repulsor => 'Greatly repels balls on contact for 3 s.',
+    PowerUpKind.timeBubble => 'Slows nearby opponents and projectiles for 3 s.',
+    PowerUpKind.vampire =>
+      'Converts part of dealt damage into health or threads for 3 s.',
+    PowerUpKind.mirror => 'Reflects the next incoming projectile.',
+    PowerUpKind.overcharge => 'Empowers both equipped weapons for 3 s.',
+    PowerUpKind.gremlin =>
+      'Makes the nearest opponent fire its next shot backward.',
+    PowerUpKind.magneticField =>
+      'A 2x purple force field repels balls and every attack for 3 s.',
+    PowerUpKind.portal =>
+      'A boundary trap that teleports the ball entering it to a random side of the arena.',
+    PowerUpKind.spikeWall =>
+      'A boundary hazard that deals ${dmg(kind)} and knocks the ball inward.',
+    PowerUpKind.goldenArmor =>
+      'Completely blocks the next two damaging hits without replacing weapons.',
   };
 }
 

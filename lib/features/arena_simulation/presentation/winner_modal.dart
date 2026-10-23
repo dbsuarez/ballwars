@@ -62,6 +62,10 @@ class WinnerModal extends StatefulWidget {
     this.onSlowAnswer,
   });
 
+  /// How long the confetti falls before it stops (its last second fades out). Then nothing on the card
+  /// animates, so phones stop redrawing it.
+  static const Duration confettiDuration = Duration(seconds: 13);
+
   @override
   State<WinnerModal> createState() => _WinnerModalState();
 }
@@ -86,7 +90,7 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
       curve: const Interval(0, 0.6, curve: Curves.easeOut),
     );
     _controller.forward();
-    _confetti = AnimationController(duration: const Duration(minutes: 10), vsync: this)..forward();
+    _confetti = AnimationController(duration: WinnerModal.confettiDuration, vsync: this)..forward();
   }
 
   @override
@@ -183,7 +187,12 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
               child: RepaintBoundary(
                 child: AnimatedBuilder(
                   animation: _confetti,
-                  builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value * 600)),
+                  builder: (context, _) {
+                    final seconds = _confetti.value * WinnerModal.confettiDuration.inMilliseconds / 1000;
+                    final left = WinnerModal.confettiDuration.inMilliseconds / 1000 - seconds;
+                    if (left <= 0) return const SizedBox.shrink();
+                    return CustomPaint(painter: ConfettiPainter(seconds, opacity: left.clamp(0.0, 1.0)));
+                  },
                 ),
               ),
             ),

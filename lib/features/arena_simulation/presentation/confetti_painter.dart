@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 /// Falling confetti for the winner card (app and exported video). Fully
 /// determined by [time] (seconds), so video frames render the same every
 /// export; pieces wrap around and keep falling for as long as it's shown.
+/// [opacity] fades it out (the winner card stops it after a while).
 class ConfettiPainter extends CustomPainter {
   final double time;
+  final double opacity;
 
-  ConfettiPainter(this.time);
+  ConfettiPainter(this.time, {this.opacity = 1});
 
   static const List<Color> _colors = [
     Color(0xFFFF3B30),
@@ -49,14 +51,14 @@ class ConfettiPainter extends CustomPainter {
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(time * p.spin + p.phase);
-      paint.color = p.color.withValues(alpha: 0.9);
+      paint.color = p.color.withValues(alpha: 0.9 * opacity);
       canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: w, height: h), paint);
       canvas.restore();
     }
   }
 
   @override
-  bool shouldRepaint(ConfettiPainter oldDelegate) => oldDelegate.time != time;
+  bool shouldRepaint(ConfettiPainter oldDelegate) => oldDelegate.time != time || oldDelegate.opacity != opacity;
 }
 
 class _Piece {

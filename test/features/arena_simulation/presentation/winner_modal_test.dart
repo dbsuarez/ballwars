@@ -47,4 +47,13 @@ void main() {
     await pump(tester);
     expect(find.text('Game running slow?'), findsNothing);
   });
+
+  testWidgets('the confetti falls for a while, fades and stops, so the card stops redrawing', (tester) async {
+    await pump(tester);
+    expect(find.byType(CustomPaint), findsWidgets);
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pump(WinnerModal.confettiDuration);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.hasRunningAnimations, isFalse);
+  });
 }

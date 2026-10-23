@@ -334,4 +334,69 @@ void main() {
     expect(repo.submissions, {'g1': true});
     expect(find.textContaining('Submitted'), findsOneWidget);
   });
+
+  testWidgets('the admin can make a group a new main category of its own', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final repo = _FakeGroups([
+      CustomGroup(id: 'g1', name: 'Barkada', isPublic: true, ownerId: 'someone', balls: [_groupBall('c', 'Juan')]),
+    ]);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo, allGroups: true, packRepository: packs())));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Group options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add to main category…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New category'));
+    await tester.pumpAndSettle();
+    expect(repo.links, {'g1': CustomGroup.ownCategory});
+  });
+
+  testWidgets('a group made its own main category shows under Default', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: MatchSetupScreen(
+        packRepository: packs(),
+        customGroups: _FakeGroups(const [], extras: [
+          CustomGroup(
+            id: 'g8',
+            name: 'Barkada',
+            isPublic: true,
+            packId: CustomGroup.ownCategory,
+            balls: [_groupBall('c', 'Juan'), _groupBall('d', 'Maria')],
+          ),
+        ]),
+        onStartBattle: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownMenu<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Barkada').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Juan'), findsOneWidget);
+  });
+
+  testWidgets("Everyone's groups are A-Z and searchable by group or ball name", (tester) async {
+    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final repo = _FakeGroups([
+      CustomGroup(id: 'g1', name: 'Zoo', isPublic: true, ownerId: 'x', balls: [_groupBall('a', 'Lion')]),
+      CustomGroup(id: 'g2', name: 'anime', isPublic: true, ownerId: 'x', balls: [_groupBall('b', 'Goku')]),
+      CustomGroup(id: 'g3', name: 'Barkada', isPublic: true, ownerId: 'x', balls: [_groupBall('c', 'Juan')]),
+    ]);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo, allGroups: true, packRepository: packs())));
+    await tester.pumpAndSettle();
+    final ys = [for (final n in ['anime', 'Barkada', 'Zoo']) tester.getTopLeft(find.textContaining(n).first).dy];
+    expect(ys, orderedEquals([...ys]..sort()));
+
+    await tester.enterText(find.byType(TextField), 'goku');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('anime'), findsOneWidget);
+    expect(find.textContaining('Zoo'), findsNothing);
+  });
 }

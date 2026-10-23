@@ -26,6 +26,10 @@ class CustomGroup {
 
   static const String ballIdPrefix = 'group:';
 
+  /// [packId] for a group the admin made a main category of its own (under
+  /// Default in Match Setup, named after the group).
+  static const String ownCategory = 'own';
+
   static String ballId(String uuid) => '$ballIdPrefix$uuid';
 
   static bool isGroupBall(String id) => id.startsWith(ballIdPrefix);

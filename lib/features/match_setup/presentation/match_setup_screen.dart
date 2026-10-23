@@ -93,7 +93,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Groups the admin added to built-in categories (see [CustomGroup.packId]).
   List<CustomGroup> _packExtras = const [];
 
-  /// The built-in packs with the admin's extra balls appended.
+  /// The built-in packs with the admin's extra balls appended, plus groups
+  /// the admin made main categories of their own.
   List<BallPack> get _packsWithExtras => [
         for (final pack in _packs)
           BallPack(
@@ -106,6 +107,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 if (g.packId == pack.id) ...g.balls,
             ],
           ),
+        for (final g in _packExtras)
+          if (g.packId == CustomGroup.ownCategory && g.balls.isNotEmpty)
+            // Not 'group:<id>': the same group may also be listed as Mine/Shared.
+            BallPack(id: 'main:${g.id}', name: g.name, balls: g.balls),
       ];
 
   Future<void> _load() async {

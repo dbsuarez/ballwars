@@ -58,6 +58,15 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   String? _error;
   bool _busy = false;
 
+  // Everyone's groups: search by group or ball name.
+  final TextEditingController _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
   CustomGroupRepository get _edits => widget.editRepository ?? widget.repository;
 
   @override
@@ -99,12 +108,9 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           _packs = packs;
           _packLinks = links;
           _submitted = submitted;
-          // Admin: submitted groups first, so they're easy to review.
+          // Admin: A-Z (the search box narrows it down as it grows).
           if (widget.allGroups) {
-            _groups = [
-              ...groups.where((g) => submitted.contains(g.id)),
-              ...groups.where((g) => !submitted.contains(g.id)),
-            ];
+            _groups = [...groups]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
           }
         });
       }
@@ -191,15 +197,10 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   }
 
   Future<void> _addToPack(CustomGroup group) async {
+    final packs = [..._packs]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final packId = await showDialog<String>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: Text('Add "${group.name}" to'),
-        children: [
-          for (final pack in _packs)
-            SimpleDialogOption(onPressed: () => Navigator.of(context).pop(pack.id), child: Text(pack.name)),
-        ],
-      ),
+      builder: (context) => _PackPickerDialog(groupName: group.name, packs: packs),
     );
     if (packId == null) return;
     await _run(() => _edits.linkToPack(group.id, packId));
@@ -214,7 +215,19 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     }
   }
 
-  String _packName(String packId) => _packs.where((p) => p.id == packId).firstOrNull?.name ?? packId;
+  String _packName(String packId) => packId == CustomGroup.ownCategory
+      ? 'main categories'
+      : _packs.where((p) => p.id == packId).firstOrNull?.name ?? packId;
+
+  /// Everyone's groups narrowed by the search box (group or ball names).
+  List<CustomGroup> _matching(List<CustomGroup> groups) {
+    final q = _query.text.trim().toLowerCase();
+    if (q.isEmpty) return groups;
+    return [
+      for (final g in groups)
+        if (g.name.toLowerCase().contains(q) || g.balls.any((b) => b.name.toLowerCase().contains(q))) g,
+    ];
+  }
 
   void _share(CustomGroup group) {
     Clipboard.setData(ClipboardData(text: ReplayLink.groupUri(group.id).toString()));
@@ -283,7 +296,20 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                   children: [
-                    for (final g in groups)
+                    if (widget.allGroups)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TextField(
+                          controller: _query,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Search groups or balls',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    for (final g in widget.allGroups ? _matching(groups) : groups)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _groupCard(
@@ -390,7 +416,9 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'In ${_packName(_packLinks[group.id]!)} for everyone',
+                _packLinks[group.id] == CustomGroup.ownCategory
+                    ? 'A main category for everyone'
+                    : 'In ${_packName(_packLinks[group.id]!)} for everyone',
                 style: AppText.ui(13, FontWeight.w600, color: c.text),
               ),
             ),
@@ -460,6 +488,79 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Add to main category": a new category of its own (named after the
+/// group), or one of the built-in ones, A-Z with a search box.
+class _PackPickerDialog extends StatefulWidget {
+  final String groupName;
+  final List<BallPack> packs;
+
+  const _PackPickerDialog({required this.groupName, required this.packs});
+
+  @override
+  State<_PackPickerDialog> createState() => _PackPickerDialogState();
+}
+
+class _PackPickerDialogState extends State<_PackPickerDialog> {
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    final q = _search.text.trim().toLowerCase();
+    final packs = [
+      for (final p in widget.packs)
+        if (q.isEmpty || p.name.toLowerCase().contains(q)) p,
+    ];
+    return AlertDialog(
+      title: Text('Add "${widget.groupName}" to'),
+      contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      content: SizedBox(
+        width: 360,
+        height: 420,
+        child: Column(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_box_outlined),
+              title: const Text('New category'),
+              subtitle: Text('"${widget.groupName}" becomes a main category for everyone'),
+              onTap: () => Navigator.of(context).pop(CustomGroup.ownCategory),
+            ),
+            const Divider(),
+            TextField(
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search categories', isDense: true),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: packs.isEmpty
+                  ? Center(child: Text('No category matches.', style: AppText.ui(13, FontWeight.w500, color: c.muted)))
+                  : ListView(
+                      children: [
+                        for (final p in packs)
+                          ListTile(
+                            dense: true,
+                            title: Text(p.name),
+                            trailing: Text('${p.balls.length}', style: AppText.mono(12, color: c.muted)),
+                            onTap: () => Navigator.of(context).pop(p.id),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel'))],
     );
   }
 }

@@ -8,7 +8,6 @@ import '../domain/particle_system.dart';
 import 'ball_face_painter.dart';
 import 'power_up_painter.dart';
 import 'ball_face_expression.dart';
-import '../domain/power_up.dart';
 import '../../match_setup/domain/match_config.dart';
 
 class ArenaPainter extends CustomPainter {
@@ -40,9 +39,6 @@ class ArenaPainter extends CustomPainter {
 
   /// Pictures, or smiley faces (cosmetic).
   final BallLook look;
-
-  /// Faces look: the smiley's radius as a share of the ball's.
-  static const double smileyScale = 0.55;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -315,20 +311,10 @@ class ArenaPainter extends CustomPainter {
         ),
     );
 
-    BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
     if (look == BallLook.faces) {
-      // Health: life in Arsenal (no threads), otherwise the share of starting threads left.
-      final health = ball.startLines > 0 ? ball.lineCount / ball.startLines : ball.life / PowerUpTuning.arenaLife;
-      // A smaller smiley beside the ball's picture, overlapping it a little, on the same base line.
-      final s = ball.radius * smileyScale;
-      paintSmiley(
-        canvas,
-        ball,
-        health,
-        state.balls,
-        center: ball.position + Offset(ball.radius + s * 0.45, ball.radius - s),
-        radius: s,
-      );
+      paintSmiley(canvas, ball, faceHealth(ball), state.balls);
+    } else {
+      BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
     }
     PowerUpPainter.paintBallEffects(canvas, ball);
     if (ball.isGhost) canvas.restore();

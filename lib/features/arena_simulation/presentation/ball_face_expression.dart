@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 
 /// The "Faces" ball look: a classic smiley in the ball's own color, with white eyes whose pupils follow
@@ -36,9 +37,15 @@ Offset pupilOffset(SimulationBall ball, List<SimulationBall> balls, double eyeRa
   return to * (0.35 * eyeRadius / length);
 }
 
+/// A ball's health for its face: life in Arsenal (no threads), otherwise the share of its starting
+/// threads left.
+double faceHealth(SimulationBall ball) =>
+    ball.startLines > 0 ? ball.lineCount / ball.startLines : ball.life / PowerUpTuning.arenaLife;
+
 /// Draws [ball]'s smiley: the ball's color, two white eyes with black pupils (or squeezed shut on a
-/// fresh hit), brows only when worried or hurt, and a black mouth arc. By default it fills the ball; with
-/// [center] and [radius] it is drawn there instead (beside the ball's picture), with a dark outline.
+/// fresh hit), brows only when worried or hurt, and a black mouth arc. By default it fills the ball (the
+/// arena); with [center] and [radius] it is drawn there instead (beside the picture in the VS header),
+/// with a dark outline.
 void paintSmiley(
   Canvas canvas,
   SimulationBall ball,

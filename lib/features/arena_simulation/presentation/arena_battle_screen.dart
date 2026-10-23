@@ -8,6 +8,7 @@ import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'power_up_sprites.dart';
+import 'ball_face_expression.dart';
 import 'arena_canvas.dart';
 import 'scoreboard_overlay.dart';
 import 'widgets/match_status_header.dart';
@@ -571,7 +572,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                         padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
                         child: ListenableBuilder(
                           listenable: _frame,
-                          builder: (context, _) => _VersusHeader(balls: _state.balls, compact: true),
+                          builder: (context, _) => _VersusHeader(balls: _state.balls, compact: true, look: widget.config.look),
                         ),
                       ),
                       Expanded(child: arena),
@@ -610,7 +611,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                             const SizedBox(height: 8),
                             ListenableBuilder(
                               listenable: _frame,
-                              builder: (context, _) => _VersusHeader(balls: _state.balls),
+                              builder: (context, _) => _VersusHeader(balls: _state.balls, look: widget.config.look),
                             ),
                             const SizedBox(height: 28),
                             MatchStatusHeader(
@@ -651,7 +652,13 @@ class _VersusHeader extends StatelessWidget {
   final List<SimulationBall> balls;
   final bool compact;
 
-  const _VersusHeader({required this.balls, this.compact = false});
+  /// Faces: each picture gets a small live smiley beside it (the arena shows only the smileys).
+  final BallLook look;
+
+  const _VersusHeader({required this.balls, this.compact = false, this.look = BallLook.pictures});
+
+  /// The smiley's diameter as a share of the picture's.
+  static const double smileyScale = 0.55;
 
   @override
   Widget build(BuildContext context) {
@@ -672,7 +679,24 @@ class _VersusHeader extends StatelessWidget {
               duration: const Duration(milliseconds: 300),
               child: Column(
                 children: [
-                  CircularBallPreview(ball: balls[i].config, size: size),
+                  if (look == BallLook.faces)
+                    // The picture with its smiley at its lower right, overlapping a little, same base line.
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircularBallPreview(ball: balls[i].config, size: size),
+                        Positioned(
+                          right: -size * smileyScale * 0.45,
+                          bottom: 0,
+                          child: CustomPaint(
+                            size: Size.square(size * smileyScale),
+                            painter: _SmileyPainter(balls[i], balls),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    CircularBallPreview(ball: balls[i].config, size: size),
                   SizedBox(height: compact ? 4 : 10),
                   Text(
                     balls[i].config.name,
@@ -694,6 +718,27 @@ class _VersusHeader extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A ball's live smiley (expression and eyes as in the arena), for the VS header.
+class _SmileyPainter extends CustomPainter {
+  _SmileyPainter(this.ball, this.balls);
+
+  final SimulationBall ball;
+  final List<SimulationBall> balls;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintSmiley(
+    canvas,
+    ball,
+    faceHealth(ball),
+    balls,
+    center: size.center(Offset.zero),
+    radius: size.shortestSide / 2,
+  );
+
+  @override
+  bool shouldRepaint(_SmileyPainter old) => true;
 }
 
 /// The red X over the eliminated ball while it flashes (same as the video).

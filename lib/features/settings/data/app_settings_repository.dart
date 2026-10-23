@@ -21,7 +21,7 @@ abstract class AdminAuth {
   Future<bool> isAdmin();
 
   /// Signs in with email and password; throws if wrong or not an admin.
-  Future<void> signIn(String email, String password);
+  Future<void> signIn(String email, String password, {bool rememberMe = false});
 
   /// Signs out of the admin account (the device's own account stays).
   Future<void> signOut();
@@ -112,13 +112,15 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 /// The admin signs in on a second, separate Supabase client. The app's main
 /// client keeps this device's anonymous session, which owns its groups and
 /// the groups it added, so signing in or out as admin never orphans them.
-/// The admin session is kept in device storage across restarts.
+/// The admin session is kept across restarts only with "Remember me".
 class SupabaseAdminAuth implements AdminAuth {
   /// Use for admin-only work (saving settings, editing anyone's groups).
   final SupabaseClient client = SupabaseClient(SupabaseConfig.url, SupabaseConfig.publishableKey);
 
   static const String _sessionKey = 'admin-session';
+  static const String _rememberKey = 'admin-remember-me';
   Future<void>? _restored;
+  bool _rememberSession = false;
 
   SupabaseAdminAuth() {
     client.auth.onAuthStateChange.listen((state) {
@@ -126,13 +128,18 @@ class SupabaseAdminAuth implements AdminAuth {
       if (state.event == AuthChangeEvent.signedOut) {
         DevicePrefs.write(_sessionKey, '');
       } else if (session != null) {
-        DevicePrefs.write(_sessionKey, jsonEncode(session.toJson()));
+        DevicePrefs.write(_sessionKey, _rememberSession ? jsonEncode(session.toJson()) : '');
       }
     }, onError: (Object _) {});
   }
 
   /// Brings back the saved admin session (once).
   Future<void> _restore() => _restored ??= () async {
+        _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
+        if (!_rememberSession) {
+          await DevicePrefs.write(_sessionKey, '');
+          return;
+        }
         final saved = await DevicePrefs.read(_sessionKey);
         if (saved == null || saved.isEmpty) return;
         try {
@@ -160,11 +167,20 @@ class SupabaseAdminAuth implements AdminAuth {
   }
 
   @override
-  Future<void> signIn(String email, String password) async {
-    await client.auth.signInWithPassword(email: email.trim(), password: password);
-    if (!await isAdmin()) {
-      await client.auth.signOut();
-      throw StateError('That account is not an admin.');
+  Future<void> signIn(String email, String password, {bool rememberMe = false}) async {
+    _rememberSession = rememberMe;
+    await DevicePrefs.write(_rememberKey, rememberMe ? '1' : '');
+    try {
+      await client.auth.signInWithPassword(email: email.trim(), password: password);
+      if (!await isAdmin()) {
+        await client.auth.signOut();
+        throw StateError('That account is not an admin.');
+      }
+    } catch (_) {
+      _rememberSession = false;
+      await DevicePrefs.write(_sessionKey, '');
+      await DevicePrefs.write(_rememberKey, '');
+      rethrow;
     }
   }
 
@@ -174,6 +190,8 @@ class SupabaseAdminAuth implements AdminAuth {
       await client.auth.signOut();
     } finally {
       await DevicePrefs.write(_sessionKey, '');
+      await DevicePrefs.write(_rememberKey, '');
+      _rememberSession = false;
     }
   }
 }

@@ -24,13 +24,52 @@ class _Admin implements AdminAuth {
   String? get email => 'admin@example.com';
 
   @override
-  Future<void> signIn(String email, String password) async {}
+  Future<void> signIn(String email, String password, {bool rememberMe = false}) async {}
 
   @override
   Future<void> signOut() async {}
 }
 
+class _SignedOutAdmin implements AdminAuth {
+  bool signedIn = false;
+  bool? remembered;
+
+  @override
+  String? get email => signedIn ? 'admin@example.com' : null;
+  @override
+  Future<bool> isAdmin() async => signedIn;
+  @override
+  Future<void> signIn(String email, String password, {bool rememberMe = false}) async {
+    signedIn = true;
+    remembered = rememberMe;
+  }
+  @override
+  Future<void> signOut() async => signedIn = false;
+}
+
 void main() {
+  testWidgets('admin sign-in offers Remember me and passes the choice', (tester) async {
+    final auth = _SignedOutAdmin();
+    await tester.pumpWidget(
+      AppSettingsScope(
+        settings: ValueNotifier(AppSettings.defaults),
+        repository: _FakeRepo(),
+        adminAuth: auth,
+        child: MaterialApp(theme: AppTheme.build(AppPalettes.midnight), home: const SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Admin sign-in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remember me'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'admin@example.com');
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'secret');
+    await tester.tap(find.text('Remember me'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+    expect(auth.remembered, isTrue);
+  });
+
   testWidgets('the admin picks the match music for everyone and can play each track', (tester) async {
     tester.view.physicalSize = const Size(1080, 4000);
     tester.view.devicePixelRatio = 2;

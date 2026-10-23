@@ -76,10 +76,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signIn() async {
-    final result = await showDialog<(String, String)>(context: context, builder: (_) => const _SignInDialog());
+    final result = await showDialog<(String, String, bool)>(context: context, builder: (_) => const _SignInDialog());
     if (result == null) return;
     await _run(() async {
-      await _scope!.adminAuth!.signIn(result.$1, result.$2);
+      await _scope!.adminAuth!.signIn(result.$1, result.$2, rememberMe: result.$3);
       if (mounted) setState(() => _isAdmin = true);
     });
   }
@@ -611,6 +611,7 @@ class _SignInDialog extends StatefulWidget {
 class _SignInDialogState extends State<_SignInDialog> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -619,7 +620,7 @@ class _SignInDialogState extends State<_SignInDialog> {
     super.dispose();
   }
 
-  void _submit() => Navigator.of(context).pop((_email.text, _password.text));
+  void _submit() => Navigator.of(context).pop((_email.text, _password.text, _rememberMe));
 
   @override
   Widget build(BuildContext context) {
@@ -641,6 +642,14 @@ class _SignInDialogState extends State<_SignInDialog> {
             autofillHints: const [AutofillHints.password],
             decoration: const InputDecoration(labelText: 'Password'),
             onSubmitted: (_) => _submit(),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text('Remember me'),
+            subtitle: const Text('Stay signed in on this device'),
+            value: _rememberMe,
+            onChanged: (value) => setState(() => _rememberMe = value ?? false),
           ),
         ],
       ),

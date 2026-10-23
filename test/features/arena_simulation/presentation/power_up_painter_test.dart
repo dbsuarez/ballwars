@@ -6,6 +6,7 @@ import 'package:ballwars/features/arena_simulation/application/match_simulation_
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_painter.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
+import 'package:ballwars/features/arena_simulation/presentation/power_up_pixel_art.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
@@ -127,6 +128,26 @@ void main() {
         reason: '${kind.label} painted a transparent icon',
       );
       image.dispose();
+    }
+  });
+
+  test('every item has a complete hand-authored 16 by 16 sprite', () {
+    expect(pixelIcons.keys.toSet(), PowerUpKind.values.toSet());
+    for (final kind in PowerUpKind.values) {
+      final rows = pixelIcons[kind]!;
+      expect(rows, hasLength(pixelSize), reason: kind.label);
+      for (final row in rows) {
+        expect(row.length, pixelSize, reason: '${kind.label}: $row');
+        expect(
+          row.runes.every(
+            (pixel) =>
+                pixelPalette.containsKey(String.fromCharCode(pixel)) ||
+                pixel == 46,
+          ),
+          isTrue,
+          reason: '${kind.label}: $row',
+        );
+      }
     }
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_battle_screen.dart';
+import 'package:ballwars/features/arena_simulation/presentation/arena_canvas.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
@@ -101,5 +102,18 @@ void main() {
     expect(find.text('Exit'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the arena fills its space on phones and wide screens', (tester) async {
+    for (final size in const [Size(390, 844), Size(1280, 800)]) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(_app(const MatchConfig(contestants: _balls)));
+      await tester.pump();
+      final arena = tester.getSize(find.byType(ArenaCanvas));
+      expect(arena.shortestSide, greaterThan(300), reason: '$size');
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+    tester.view.reset();
   });
 }

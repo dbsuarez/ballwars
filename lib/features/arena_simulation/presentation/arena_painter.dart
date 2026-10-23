@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class ArenaPainter extends CustomPainter {
     this.showEffects = true,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
+    super.repaint,
   });
 
   @override
@@ -68,33 +70,54 @@ class ArenaPainter extends CustomPainter {
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
   }
 
+  // Performance: no blur filters anywhere in the arena (they are among the
+  // most expensive things a phone GPU draws, every frame). Glows are faked
+  // with wider translucent strokes or radial gradients, sparks are plain dots.
+
   void _paintRim(Canvas canvas) {
-    final paint = Paint()
+    // A soft halo (two wide translucent strokes) under the crisp rim.
+    final halo = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..color = rimColor
-      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2.0);
-    canvas.drawCircle(Offset.zero, arenaRadius, paint);
+      ..color = rimColor.withValues(alpha: 0.12);
+    canvas.drawCircle(Offset.zero, arenaRadius, halo..strokeWidth = 6.5);
+    canvas.drawCircle(Offset.zero, arenaRadius, halo..strokeWidth = 4.5);
+    canvas.drawCircle(
+      Offset.zero,
+      arenaRadius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = rimColor,
+    );
   }
 
-  /// Paints every ball's lines: rim anchor to the owner's center.
-  /// Plain strokes for now; glow/haze effects come later.
+  /// Paints every ball's lines: rim anchor to the owner's center. One batch
+  /// of plain line segments per ball (drawRawPoints): far cheaper than a
+  /// stroked path, which has to be tessellated on the CPU every frame.
   void _paintFanLines(Canvas canvas) {
     for (final ball in state.balls) {
       if (ball.isEliminated || ball.fanLines.isEmpty) continue;
 
-      final path = Path();
+      final points = Float32List(ball.fanLines.length * 4);
+      var n = 0;
       for (final line in ball.fanLines) {
         if (!line.isActive) continue;
-        path.moveTo(line.startPoint.dx, line.startPoint.dy);
-        path.lineTo(ball.position.dx, ball.position.dy);
+        points[n++] = line.startPoint.dx;
+        points[n++] = line.startPoint.dy;
+        points[n++] = ball.position.dx;
+        points[n++] = ball.position.dy;
       }
+      if (n == 0) continue;
 
       final paint = Paint()
-        ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.butt
         ..color = ball.config.primaryColor.withValues(alpha: 0.85);
-      canvas.drawPath(path, paint);
+      canvas.drawRawPoints(
+        ui.PointMode.lines,
+        n == points.length ? points : Float32List.sublistView(points, 0, n),
+        paint,
+      );
     }
   }
 
@@ -140,8 +163,7 @@ class ArenaPainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = beamColor.withValues(alpha: alpha)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.0);
+      ..color = beamColor.withValues(alpha: alpha);
 
     if (state.beamPhase == 2) {
       // Dotted line - draw segments
@@ -188,8 +210,7 @@ class ArenaPainter extends CustomPainter {
 
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = target.config.primaryColor.withValues(alpha: 0.4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+      ..color = target.config.primaryColor.withValues(alpha: 0.4);
     canvas.drawPath(path, paint);
   }
 
@@ -199,10 +220,11 @@ class ArenaPainter extends CustomPainter {
         final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
         final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
         final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
-        final paint = Paint()
-          ..color = sparkColor.withValues(alpha: lifeRatio)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
-        canvas.drawCircle(particle.position, particle.baseRadius * lifeRatio, paint);
+        canvas.drawCircle(
+          particle.position,
+          particle.baseRadius * lifeRatio,
+          Paint()..color = sparkColor.withValues(alpha: lifeRatio),
+        );
       } else if (particle is RimArcParticle) {
         // Render thin white arc along rim
         final (startPt, endPt) = particle.getArcSegment();
@@ -210,8 +232,7 @@ class ArenaPainter extends CustomPainter {
         final paint = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0
-          ..color = Colors.white.withValues(alpha: lifeRatio)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
+          ..color = Colors.white.withValues(alpha: lifeRatio);
         canvas.drawLine(startPt, endPt, paint);
       }
     }
@@ -226,28 +247,43 @@ class ArenaPainter extends CustomPainter {
     final glowRadius = ball.radius + _ballGlowPadding;
     final effectiveGlowRadius = edgeDist < glowRadius ? glowRadius * (edgeDist / glowRadius).clamp(0.0, 1.0) : glowRadius;
 
-    final glowPaint = Paint()
-      ..color = ball.config.glowColor.withValues(alpha: 0.6)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6.0);
-    canvas.drawCircle(ball.position, effectiveGlowRadius, glowPaint);
+    // Glow: a radial gradient fading out from the ball's edge (instead of an
+    // outer blur).
+    final glowOuter = effectiveGlowRadius + 6.0;
+    final edge = (ball.radius / glowOuter).clamp(0.0, 1.0);
+    final glow = ball.config.glowColor;
+    canvas.drawCircle(
+      ball.position,
+      glowOuter,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          ball.position,
+          glowOuter,
+          [glow.withValues(alpha: 0.45), glow.withValues(alpha: 0.45), glow.withValues(alpha: 0)],
+          [0, edge, 1],
+        ),
+    );
 
     BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
   }
 
+  // Laid-out "+N LINES" labels, reused across frames. Opacity is rounded to
+  // 1/16 steps so a fading label is laid out a handful of times, not per frame.
+  static final Map<String, TextPainter> _textCache = {};
+
   void _paintFloatingText(Canvas canvas) {
     for (final text in state.floatingTexts.items) {
-      final textPainter = TextPainter(
+      final alpha = (text.opacity.clamp(0.0, 1.0) * 16).round() / 16;
+      final key = '${text.text}|${text.color.toARGB32()}|$alpha';
+      final painter = _textCache[key] ??= TextPainter(
         text: TextSpan(
           text: text.text,
-          style: TextStyle(
-            color: text.color.withValues(alpha: text.opacity),
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: text.color.withValues(alpha: alpha), fontSize: 16, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      textPainter.paint(canvas, text.position);
+      if (_textCache.length > 200) _textCache.remove(_textCache.keys.first);
+      painter.paint(canvas, text.position);
     }
   }
 

@@ -11,7 +11,6 @@ import '../domain/match_colors.dart';
 import '../domain/particle_system.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
-import '../domain/territory_engine.dart';
 
 /// Runs a match on the thread-cutting rules from the reference video:
 ///
@@ -273,27 +272,16 @@ class MatchSimulationController {
     }
   }
 
+  /// Simulation steps taken so far (the screen repaints when it changes).
+  int get stepCount => _stepCount;
+
   SimulationState get state => SimulationState(
         balls: _balls,
-        territory: _createLegacyTerritoryForCompat(),
         particles: _particles,
         floatingTexts: _floatingTexts,
         status: _status,
         winnerId: _winnerId,
       );
-
-  // Legacy territory for test compatibility - maps active fan lines to sectors
-  TerritoryEngine _createLegacyTerritoryForCompat() {
-    final territory = TerritoryEngine();
-    for (final ball in _balls) {
-      for (final line in ball.fanLines) {
-        if (line.isActive) {
-          territory.claimSector(ball.config.id, _sectorIndexAt(line.rimAngle));
-        }
-      }
-    }
-    return territory;
-  }
 
   void tick(double realDeltaSeconds) {
     if (_status == MatchStatus.finished) {
@@ -593,12 +581,5 @@ class MatchSimulationController {
       _claimSlot(ball, slot);
     }
     return toClaim.length;
-  }
-
-  int _sectorIndexAt(double angle) {
-    final normalized = angle < 0 ? angle + 2 * math.pi : angle;
-    final total = TerritoryEngine.totalSectors;
-    final index = (normalized / (2 * math.pi / total)).round();
-    return index % total;
   }
 }

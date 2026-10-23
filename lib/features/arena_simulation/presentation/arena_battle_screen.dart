@@ -32,7 +32,7 @@ class ArenaBattleScreen extends StatefulWidget {
   State<ArenaBattleScreen> createState() => _ArenaBattleScreenState();
 }
 
-class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProviderStateMixin {
+class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   static const double _arenaRadius = 260.0;
 
   late MatchSimulationController _controller;
@@ -53,6 +53,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   bool _askSlow = false;
 
   final GameAudio _audio = GameAudio.instance;
+
+  // Performance: each frame bumps [_frame] instead of calling setState, so
+  // only the arena (repaint) and the few live readouts (scores, timer,
+  // badges) update; nothing else rebuilds. The arena repaints only when the
+  // simulation stepped, or effects are still animating (at most ~60 fps):
+  // the simulation runs at 60 steps/s, so painting at a 120-144 Hz display
+  // rate would mostly redraw identical frames.
+  final ValueNotifier<int> _frame = ValueNotifier(0);
+  int _paintedStep = -1;
+  Duration _lastPaint = Duration.zero;
+  static const Duration _minFrameGap = Duration(microseconds: 16000);
   // Hit counts already played as sounds.
   int _heardWallHits = 0;
   int _heardBallHits = 0;
@@ -78,6 +89,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ticker = createTicker(_onTick)..start();
     _dissolveController = AnimationController(duration: _loserShowDuration, vsync: this);
     EffectsPrefs.askWhenSlow().then((ask) {
@@ -166,12 +178,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       _heardBallHits = _controller.ballHits;
       _audio.collide();
     }
+    _state = _controller.state;
     _audio.slowMotion = _state.status == MatchStatus.slowMotion;
 
     // Check for win condition and start dissolve animation
     final isFinished = _state.winnerId != null;
     if (isFinished && !_endPending && !_showDissolve && !_dissolveComplete) {
-      _endPending = true;
+      setState(() => _endPending = true); // Dims the header right away.
       _audio.stopMusic();
       final generation = _matchGeneration;
       bool current() => mounted && generation == _matchGeneration;
@@ -202,9 +215,26 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       });
     }
 
-    setState(() {
-      _state = _controller.state;
-    });
+    final stepped = _controller.stepCount != _paintedStep;
+    final animating = _state.floatingTexts.items.isNotEmpty || (_showEffects && _state.particles.particles.isNotEmpty);
+    if (stepped || (animating && elapsed - _lastPaint >= _minFrameGap)) {
+      _paintedStep = _controller.stepCount;
+      _lastPaint = elapsed;
+      _frame.value++;
+    }
+  }
+
+  /// Locked phone or app in the background: frames stop by themselves, but
+  /// the music would keep playing. On return the next frame is not counted
+  /// (no time jump) and the music resumes unless the match is paused.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _skipNextDelta = true;
+      if (!_isPaused) _audio.resumeMusic();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _audio.pauseMusic();
+    }
   }
 
   /// Copies a link that replays this exact match in the web app: a short
@@ -260,8 +290,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     _dissolveController.dispose();
+    _frame.dispose();
     _audio.stopMusic();
     super.dispose();
   }
@@ -322,10 +354,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
         alignment: Alignment.centerLeft,
         child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(
-            _formatTime(_controller.elapsedSeconds),
-            key: const Key('match-timer'),
-            style: AppText.mono(28, color: c.text),
+          child: ListenableBuilder(
+            listenable: _frame,
+            builder: (context, _) => Text(
+              _formatTime(_controller.elapsedSeconds),
+              key: const Key('match-timer'),
+              style: AppText.mono(28, color: c.text),
+            ),
           ),
         ),
       ),
@@ -336,9 +371,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       tooltip: _isPaused ? 'Play' : 'Pause',
       onPressed: _togglePause,
     );
-    final scoreboard = ScoreboardOverlay(
-      balls: _state.balls,
-      wins: widget.config.winsNeeded > 1 ? _roundWins : null,
+    final scoreboard = ListenableBuilder(
+      listenable: _frame,
+      builder: (context, _) => ScoreboardOverlay(
+        balls: _state.balls,
+        wins: widget.config.winsNeeded > 1 ? _roundWins : null,
+      ),
     );
 
     return Scaffold(
@@ -353,15 +391,26 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: ArenaCanvas(
-                      state: _state,
-                      arenaRadius: _arenaRadius,
-                      rimAngle: _rimAngle,
-                      showEffects: _showEffects,
+                    child: RepaintBoundary(
+                      child: ArenaCanvas(
+                        state: _state,
+                        arenaRadius: _arenaRadius,
+                        rimAngle: _rimAngle,
+                        showEffects: _showEffects,
+                        repaint: _frame,
+                      ),
                     ),
                   ),
-                  if (_state.status == MatchStatus.slowMotion)
-                    const Align(alignment: Alignment.topCenter, child: SlowMotionBadge()),
+                  // Positioned like the arena: a non-positioned child would
+                  // size the Stack (to nothing, while there's no badge).
+                  Positioned.fill(
+                    child: ListenableBuilder(
+                      listenable: _frame,
+                      builder: (context, _) => _state.status == MatchStatus.slowMotion
+                          ? const Align(alignment: Alignment.topCenter, child: SlowMotionBadge())
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -440,7 +489,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
-                        child: _VersusHeader(balls: _state.balls, compact: true),
+                        child: ListenableBuilder(
+                          listenable: _frame,
+                          builder: (context, _) => _VersusHeader(balls: _state.balls, compact: true),
+                        ),
                       ),
                       Expanded(child: arena),
                       Padding(padding: const EdgeInsets.fromLTRB(24, 4, 24, 8), child: scoreboard),
@@ -476,7 +528,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                           children: [
                             Align(alignment: Alignment.centerLeft, child: leave),
                             const SizedBox(height: 8),
-                            _VersusHeader(balls: _state.balls),
+                            ListenableBuilder(
+                              listenable: _frame,
+                              builder: (context, _) => _VersusHeader(balls: _state.balls),
+                            ),
                             const SizedBox(height: 28),
                             MatchStatusHeader(
                               headline: headline,

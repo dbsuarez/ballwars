@@ -10,6 +10,8 @@ import '../../ball_management/domain/custom_ball.dart';
 class BallFacePainter {
   BallFacePainter._();
 
+  static final Map<String, TextPainter> _initials = {};
+
   static void paint(
     Canvas canvas,
     Offset center,
@@ -32,11 +34,19 @@ class BallFacePainter {
           ..color = ball.primaryColor,
       );
     } else if (image != null) {
+      // The image fills the circle through an image shader: no clip (a clip
+      // per ball per frame is costly on phone GPUs).
+      final fit = Matrix4.identity()
+        ..translateByDouble(rect.left, rect.top, 0, 1)
+        ..scaleByDouble(rect.width / image.width, rect.height / image.height, 1, 1);
       canvas.drawCircle(center, radius, Paint()..color = ball.primaryColor);
-      canvas.save();
-      canvas.clipPath(Path()..addOval(rect));
-      _drawImage(canvas, image, rect);
-      canvas.restore();
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..filterQuality = FilterQuality.medium
+          ..shader = ImageShader(image, TileMode.clamp, TileMode.clamp, fit.storage),
+      );
     } else {
       canvas.drawCircle(center, radius, Paint()..color = ball.primaryColor);
       // White equator band and red core band
@@ -56,13 +66,16 @@ class BallFacePainter {
           ..strokeWidth = radius * 0.1
           ..color = Colors.red.withValues(alpha: 0.9),
       );
-      final initial = TextPainter(
+      final letter = ball.name.isNotEmpty ? ball.name.substring(0, 1).toUpperCase() : '?';
+      // Laid out once per letter and size, not every frame.
+      final initial = _initials['$letter|${radius.toStringAsFixed(1)}'] ??= TextPainter(
         text: TextSpan(
-          text: ball.name.isNotEmpty ? ball.name.substring(0, 1).toUpperCase() : '?',
+          text: letter,
           style: TextStyle(color: Colors.white, fontSize: radius, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
+      if (_initials.length > 200) _initials.remove(_initials.keys.first);
       initial.paint(canvas, center - Offset(initial.width / 2, initial.height / 2));
     }
 

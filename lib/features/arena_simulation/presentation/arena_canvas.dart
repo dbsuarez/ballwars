@@ -9,12 +9,16 @@ class ArenaCanvas extends StatelessWidget {
   final double rimAngle;
   final bool showEffects;
 
+  /// Repaints the arena when it notifies, without rebuilding any widgets.
+  final Listenable? repaint;
+
   const ArenaCanvas({
     super.key,
     required this.state,
     required this.arenaRadius,
     required this.rimAngle,
     this.showEffects = true,
+    this.repaint,
   });
 
   @override
@@ -30,6 +34,7 @@ class ArenaCanvas extends StatelessWidget {
           showEffects: showEffects,
           background: c.background,
           rimColor: c.text,
+          repaint: repaint,
         ),
         size: Size.infinite,
       ),

@@ -168,9 +168,13 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
         if (widget.showEffects)
           Positioned.fill(
             child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _confetti,
-                builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value * 600)),
+              // Its own layer: the falling confetti repaints every frame, the
+              // watermark and the card behind it don't have to.
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _confetti,
+                  builder: (context, _) => CustomPaint(painter: ConfettiPainter(_confetti.value * 600)),
+                ),
               ),
             ),
           ),

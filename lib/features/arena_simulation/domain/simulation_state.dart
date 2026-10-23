@@ -1,14 +1,12 @@
 import 'floating_text.dart';
 import 'particle_system.dart';
 import 'simulation_ball.dart';
-import 'territory_engine.dart';
 import 'fan_line.dart';
 
 enum MatchStatus { running, slowMotion, beamAttack, finished }
 
 class SimulationState {
   final List<SimulationBall> balls;
-  final TerritoryEngine territory;
   final ParticleSystem particles;
   final FloatingTextManager floatingTexts;
   final MatchStatus status;
@@ -22,7 +20,6 @@ class SimulationState {
 
   const SimulationState({
     required this.balls,
-    required this.territory,
     required this.particles,
     required this.floatingTexts,
     required this.status,

@@ -36,7 +36,13 @@ class ReplayLink {
     required this.contestants,
     this.showEffects = true,
     this.ballSize = BallSize.medium,
+    this.mode = MatchMode.threads,
   });
+
+  /// Changes the match, so it travels as a leading `m.<id>` token in the ball
+  /// list (none for Threads). Apps that predate modes reject the unknown
+  /// `m.` prefix, so a mode link never plays back as the wrong game there.
+  final MatchMode mode;
 
   /// [presets] are balls every copy of the app has; they are linked by id.
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
@@ -46,10 +52,11 @@ class ReplayLink {
       if (b.id.startsWith(_groupPrefix)) return 'g.${b.id.substring(_groupPrefix.length)}';
       return 'c.${_encodeCustom(b)}';
     });
+    final tokens = [if (mode != MatchMode.threads) '$_modePrefix${mode.id}', ...balls];
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
-    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size&balls=${balls.join(',')}';
+    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size&balls=${tokens.join(',')}';
     return Uri.parse('${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query');
   }
 
@@ -70,6 +77,12 @@ class ReplayLink {
     final seed = int.tryParse(params['seed'] ?? '');
     final speed = double.tryParse(params['speed'] ?? '1') ?? 1.0;
     final tokens = (params['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
+    var mode = MatchMode.threads;
+    if (tokens.isNotEmpty && tokens.first.startsWith(_modePrefix)) {
+      final parsedMode = MatchMode.byId(tokens.removeAt(0).substring(_modePrefix.length));
+      if (parsedMode == null) return null;
+      mode = parsedMode;
+    }
     if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) return null;
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
     final ballSize = params['size'] == null ? BallSize.medium : BallSize.byId(params['size']);
@@ -87,6 +100,7 @@ class ReplayLink {
       contestants: contestants,
       showEffects: params['fx'] != '0',
       ballSize: ballSize,
+      mode: mode,
     );
   }
 
@@ -149,6 +163,7 @@ class ReplayLink {
       if (isGroupToken(t)) '$_groupPrefix${t.substring(2)}',
   ];
 
+  static const String _modePrefix = 'm.';
   static const String _packPrefix = 'pack:';
   static const String _groupPrefix = 'group:';
 

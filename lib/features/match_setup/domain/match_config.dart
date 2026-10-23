@@ -20,6 +20,21 @@ enum BallSize {
   static BallSize? byId(String? id) => values.where((s) => s.id == id).firstOrNull;
 }
 
+/// How a match is played. Threads is the original line-cutting game; the
+/// others add power-ups. It changes the match, so replay links carry it ([id]).
+enum MatchMode {
+  threads('threads', 'Threads'),
+  arsenal('arsenal', 'Arsenal'),
+  allOut('allout', 'All-Out');
+
+  final String id;
+  final String label;
+
+  const MatchMode(this.id, this.label);
+
+  static MatchMode? byId(String? id) => values.where((m) => m.id == id).firstOrNull;
+}
+
 class MatchConfig {
   final List<CustomBall> contestants;
   final double speedMultiplier;
@@ -34,6 +49,8 @@ class MatchConfig {
 
   final BallSize ballSize;
 
+  final MatchMode mode;
+
   const MatchConfig({
     required this.contestants,
     this.speedMultiplier = 1.0,
@@ -41,5 +58,6 @@ class MatchConfig {
     this.winsNeeded = 1,
     this.winCondition = WinCondition.domination,
     this.ballSize = BallSize.medium,
+    this.mode = MatchMode.threads,
   });
 }

@@ -149,6 +149,34 @@ void main() {
     });
   });
 
+  test('mode travels as a ball-list token; Threads links have none', () {
+    final ids = {for (final b in _presets) b.id};
+    const app = 'https://dbsuarez.github.io/ballwars/';
+    final uri = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.allOut,
+    ).toUri(presetIds: ids, appUrl: app);
+    expect(uri.queryParameters['balls'], startsWith('m.allout,'));
+    final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
+    expect(parsed.mode, MatchMode.allOut);
+    expect(parsed.contestants, hasLength(2));
+
+    final threads = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]])
+        .toUri(presetIds: ids, appUrl: app);
+    expect(threads.queryParameters['balls'], isNot(contains('m.')));
+  });
+
+  test('an unknown mode token is rejected', () {
+    ReplayLink? parse(String balls) =>
+        ReplayLink.fromUri(Uri.parse('https://x/?seed=1&balls=$balls'), presets: _presets);
+    final two = 'p.${_presets[0].id},p.${_presets[1].id}';
+    expect(parse('m.laser,$two'), isNull);
+    expect(parse(two)!.mode, MatchMode.threads);
+    expect(parse('m.arsenal,$two')!.mode, MatchMode.arsenal);
+  });
+
   test('ball size travels in the link; old links are medium; unknown sizes are rejected', () {
     final link = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], ballSize: BallSize.large);
     final uri = link.toUri(presetIds: {for (final b in _presets) b.id}, appUrl: 'https://dbsuarez.github.io/ballwars/');

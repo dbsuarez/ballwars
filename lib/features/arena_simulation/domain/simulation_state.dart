@@ -1,3 +1,4 @@
+import '../application/power_up_system.dart';
 import 'floating_text.dart';
 import 'particle_system.dart';
 import 'simulation_ball.dart';
@@ -18,6 +19,9 @@ class SimulationState {
   final int beamPhase; // 0=inactive, 1=solid, 2=dotted, 3=haze
   final double beamTimer;
 
+  /// The match's power-ups (field, projectiles, bombs) for painting; null in Threads mode.
+  final PowerUpSystem? powerUps;
+
   const SimulationState({
     required this.balls,
     required this.particles,
@@ -28,6 +32,7 @@ class SimulationState {
     this.beamTarget,
     this.beamPhase = 0,
     this.beamTimer = 0.0,
+    this.powerUps,
   });
 
   // All active fan lines across all balls (for rendering)

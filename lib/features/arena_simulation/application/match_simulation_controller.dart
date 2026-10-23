@@ -1,16 +1,20 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show mergeSort;
 import 'package:flutter/material.dart';
 import '../../../core/utils/ball_image_loader.dart';
 import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../match_setup/domain/match_config.dart';
 import '../domain/arena_physics_engine.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
 import '../domain/match_colors.dart';
 import '../domain/particle_system.dart';
+import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
+import 'power_up_system.dart';
 
 /// Runs a match on the thread-cutting rules from the reference video:
 ///
@@ -24,6 +28,11 @@ import '../domain/simulation_state.dart';
 ///   If an opponent's line comes first in a direction, nothing is claimed
 ///   that way.
 /// - A ball with no lines left is eliminated; the last ball standing wins.
+///
+/// [mode] picks the match rules. [MatchMode.threads] is exactly the above. [MatchMode.allOut] keeps the
+/// threads and adds power-ups ([powerUps]) whose hits cut threads ([cutThreads]). [MatchMode.arsenal] has
+/// no threads at all: no starting slots, no claims on wall hits, no cutting; each ball has a life bar
+/// ([SimulationBall.life], [damage]) and is out at 0.
 class MatchSimulationController {
   static const double fixedTimestep = 1 / 60;
   static const int maxStepsPerFrame = 10;
@@ -107,6 +116,13 @@ class MatchSimulationController {
   /// match, like the seed.
   final double ballScale;
 
+  /// The rules this match is played by.
+  final MatchMode mode;
+
+  /// The power-ups of an Arsenal or All-Out match; null in Threads mode.
+  PowerUpSystem? get powerUps => _powerUps;
+  PowerUpSystem? _powerUps;
+
   /// The step on which the match ends (null without a look-ahead, or if it
   /// hit its limit).
   int? get predictedFinishStep => _finishStep;
@@ -130,6 +146,7 @@ class MatchSimulationController {
     this.slowMotionBeforeWinSeconds,
     this.lookAhead = true,
     this.ballScale = 1.0,
+    this.mode = MatchMode.threads,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (lookAhead && (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
       // Same seed and setup: the steps are identical (slow motion only
@@ -144,6 +161,7 @@ class MatchSimulationController {
         slowMotionLines: slowMotionLines,
         lookAhead: false,
         ballScale: ballScale,
+        mode: mode,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished && ahead._stepCount < _maxPredictedSteps) {
@@ -207,7 +225,14 @@ class MatchSimulationController {
       );
     });
 
-    _assignStartingSlots();
+    if (mode == MatchMode.arsenal) {
+      for (final ball in _balls) {
+        ball.life = PowerUpTuning.arenaLife;
+      }
+    } else {
+      _assignStartingSlots();
+    }
+    if (mode != MatchMode.threads) _powerUps = PowerUpSystem(this, _rng);
   }
 
   double _startAngle(int index, int count) => _layoutRotation + (2 * math.pi / count) * index;
@@ -258,6 +283,38 @@ class MatchSimulationController {
     ));
   }
 
+  /// Number of rim slots no ball owns.
+  int get freeSlotCount => _slotOwners.where((owner) => owner == null).length;
+
+  /// Arsenal: takes [amount] life off [ball], never below 0 (it is out at the next elimination check).
+  /// Does nothing in the other modes, where the threads are the life (see [cutThreads]).
+  void damage(SimulationBall ball, double amount) {
+    if (mode != MatchMode.arsenal) return;
+    ball.life = math.max(0, ball.life - amount);
+  }
+
+  /// Cuts up to [count] of [ball]'s threads and frees their rim slots, the ones anchored nearest to
+  /// [near] first when it is given (otherwise in the order the ball holds them). Returns how many were
+  /// cut; a ball left with none is out at the next elimination check.
+  int cutThreads(SimulationBall ball, int count, {Offset? near}) {
+    if (count <= 0 || ball.fanLines.isEmpty) return 0;
+    final candidates = [...ball.fanLines];
+    if (near != null) {
+      // Stable on equal distances, so the result only depends on the match state.
+      final distance = {for (final line in candidates) line: (line.startPoint - near).distanceSquared};
+      mergeSort(candidates, compare: (a, b) => distance[a]!.compareTo(distance[b]!));
+    }
+    final cut = candidates.take(count).toSet();
+    ball.fanLines.removeWhere((line) {
+      if (!cut.contains(line)) return false;
+      line.isActive = false;
+      _freeSlot(line);
+      return true;
+    });
+    ball.lineCount = ball.fanLines.length;
+    return cut.length;
+  }
+
   /// Simulated match time so far; stops advancing once the match is finished.
   /// The last ball knocked out (the runner-up), once a match is decided.
   String? get lastEliminatedId => _lastEliminatedId;
@@ -281,6 +338,7 @@ class MatchSimulationController {
         floatingTexts: _floatingTexts,
         status: _status,
         winnerId: _winnerId,
+        powerUps: _powerUps,
       );
 
   void tick(double realDeltaSeconds) {
@@ -315,6 +373,8 @@ class MatchSimulationController {
     // Lines deactivated from outside the step (e.g. tests) free their slots.
     _pruneInactiveLines();
     final linesAtStart = {for (final ball in _balls) ball: ball.fanLines.length};
+    final arsenal = mode == MatchMode.arsenal;
+    final lifeAtStart = arsenal ? {for (final ball in _balls) ball: ball.life} : null;
 
     // Who goes first rotates every step, so no contestant always wins ties
     // (e.g. two wall hits racing for the same free run).
@@ -341,9 +401,11 @@ class MatchSimulationController {
         // Update ball rotation from collision
         ball.rotation += collision.normal.dx * 0.1;
 
-        final claimed = _claimFromWallHit(ball, collision.contactPoint);
-        if (claimed > 0) {
-          _floatingTexts.spawn(collision.contactPoint, '+$claimed LINES', ball.config.primaryColor);
+        if (!arsenal) {
+          final claimed = _claimFromWallHit(ball, collision.contactPoint);
+          if (claimed > 0) {
+            _floatingTexts.spawn(collision.contactPoint, '+$claimed LINES', ball.config.primaryColor);
+          }
         }
       }
     }
@@ -376,6 +438,9 @@ class MatchSimulationController {
       }
     }
 
+    // Power-ups (Arsenal and All-Out): spawn, pick up, aim, fire, hit.
+    _powerUps?.step();
+
     // 3. Lines follow their owner
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
@@ -384,8 +449,8 @@ class MatchSimulationController {
       }
     }
 
-    // 4. Cutting: any opponent body overlapping a line cuts it
-    for (final cutter in _balls) {
+    // 4. Cutting: any opponent body overlapping a line cuts it (Arsenal has no lines to cut)
+    for (final cutter in arsenal ? const <SimulationBall>[] : _balls) {
       if (cutter.isEliminated) continue;
 
       for (final target in _balls) {
@@ -418,12 +483,12 @@ class MatchSimulationController {
       }
     }
 
-    // 5. Elimination check: ball eliminated when all its lines are cut
+    // 5. Elimination check: ball eliminated when all its lines are cut (Arsenal: its life is gone)
     final eliminatedNow = <SimulationBall>[];
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
 
-      if (ball.fanLines.isEmpty) {
+      if (arsenal ? ball.life <= 0 : ball.fanLines.isEmpty) {
         ball.isEliminated = true;
         eliminatedNow.add(ball);
         _floatingTexts.spawn(ball.position, 'ELIMINATED', ball.config.primaryColor);
@@ -435,9 +500,16 @@ class MatchSimulationController {
     if (activeBalls.isEmpty && eliminatedNow.isNotEmpty && _balls.length > 1) {
       // Everyone left lost their last line in the same step: the one that
       // held the most lines at the start of the step survives (seeded coin
-      // flip on a tie), so a match never ends without a winner.
-      final best = eliminatedNow.map((b) => linesAtStart[b]!).reduce(math.max);
-      final tied = eliminatedNow.where((b) => linesAtStart[b] == best).toList();
+      // flip on a tie), so a match never ends without a winner. In Arsenal
+      // it is the most life at the start of the step.
+      final List<SimulationBall> tied;
+      if (lifeAtStart != null) {
+        final best = eliminatedNow.map((b) => lifeAtStart[b]!).reduce(math.max);
+        tied = eliminatedNow.where((b) => lifeAtStart[b] == best).toList();
+      } else {
+        final best = eliminatedNow.map((b) => linesAtStart[b]!).reduce(math.max);
+        tied = eliminatedNow.where((b) => linesAtStart[b] == best).toList();
+      }
       final survivor = tied[_rng.nextInt(tied.length)];
       survivor.isEliminated = false;
       activeBalls = [survivor];
@@ -464,7 +536,9 @@ class MatchSimulationController {
         // From here the low ball stays low until it is knocked out.
         endgame = _stepCount + 1 >= _settledEndgameStep!;
       } else {
-        endgame = activeBalls.length == 2 &&
+        // Arsenal has no lines (its slow motion is decided by the look-ahead).
+        endgame = !arsenal &&
+            activeBalls.length == 2 &&
             slowMotionLines > 0 &&
             activeBalls.any((b) => b.fanLines.length <= slowMotionLines);
       }

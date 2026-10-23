@@ -429,6 +429,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             powerUps: link.powerUps,
             tuning: link.tuning,
             dualWield: link.dualWield,
+            endlessBattle: link.endlessBattle,
             showEffects: link.showEffects,
             look: look,
           ),

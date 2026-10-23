@@ -447,4 +447,29 @@ void main() {
       );
     },
   );
+
+  test('Endless Battle travels only with Arsenal replay links', () {
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+    );
+    final uri = link.toUri(presetIds: {for (final b in _presets) b.id});
+    expect(uri.queryParameters['endless'], '1');
+    expect(
+      ReplayLink.fromUri(uri, presets: _presets)!.endlessBattle,
+      isTrue,
+    );
+
+    final balls = 'p.${_presets[0].id},p.${_presets[1].id}';
+    expect(
+      ReplayLink.fromUri(
+        Uri.parse('https://x/?seed=1&endless=1&balls=$balls'),
+        presets: _presets,
+      ),
+      isNull,
+    );
+  });
 }

@@ -12,18 +12,31 @@ class ScoreboardOverlay extends StatelessWidget {
 
   /// Round wins by ball id; null for a single-round match.
   final Map<String, int>? wins;
+  final Map<String, int>? eliminations;
 
   final MatchMode mode;
 
-  const ScoreboardOverlay({super.key, required this.balls, this.wins, this.mode = MatchMode.threads});
+  const ScoreboardOverlay({
+    super.key,
+    required this.balls,
+    this.wins,
+    this.eliminations,
+    this.mode = MatchMode.threads,
+  });
 
   /// Health as hearts out of 10, rounded to the nearest half heart. Arsenal life above full (from an
   /// apple) counts past 10.
   double _hearts(SimulationBall ball) {
     if (ball.isEliminated) return 0;
     final ratio = mode == MatchMode.arsenal
-        ? (ball.life / PowerUpTuning.arenaLife).clamp(0.0, PowerUpTuning.arenaMaxLife / PowerUpTuning.arenaLife)
-        : (ball.startLines == 0 ? 0.0 : ball.lineCount / ball.startLines).clamp(0.0, 1.0);
+        ? (ball.life / PowerUpTuning.arenaLife).clamp(
+            0.0,
+            PowerUpTuning.arenaMaxLife / PowerUpTuning.arenaLife,
+          )
+        : (ball.startLines == 0 ? 0.0 : ball.lineCount / ball.startLines).clamp(
+            0.0,
+            1.0,
+          );
     return (ratio * 20).round() / 2;
   }
 
@@ -47,12 +60,26 @@ class ScoreboardOverlay extends StatelessWidget {
                         ball.config.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.ui(14, FontWeight.w700, color: ball.isEliminated ? c.muted : c.text),
+                        style: AppText.ui(
+                          14,
+                          FontWeight.w700,
+                          color: ball.isEliminated ? c.muted : c.text,
+                        ),
                       ),
                     ),
+                    if (eliminations != null) ...[
+                      Text(
+                        '${eliminations![ball.config.id] ?? 0} KOs',
+                        style: AppText.mono(12, color: c.muted),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     if (mode == MatchMode.arsenal) ...[
                       if (wins != null) ...[
-                        Text(_winsDetail(ball), style: AppText.mono(11, color: c.muted)),
+                        Text(
+                          _winsDetail(ball),
+                          style: AppText.mono(11, color: c.muted),
+                        ),
                         const SizedBox(width: 8),
                       ],
                       CircularLifeMeter(
@@ -61,18 +88,27 @@ class ScoreboardOverlay extends StatelessWidget {
                         trackColor: c.border,
                       ),
                     ] else
-                      Text(_detail(ball), style: AppText.mono(12, color: c.muted)),
+                      Text(
+                        _detail(ball),
+                        style: AppText.mono(12, color: c.muted),
+                      ),
                   ],
                 ),
                 if (mode == MatchMode.allOut) ...[
                   const SizedBox(height: 8),
-                  HeartsRow(hearts: _hearts(ball), color: ball.config.primaryColor, empty: c.border)
+                  HeartsRow(
+                    hearts: _hearts(ball),
+                    color: ball.config.primaryColor,
+                    empty: c.border,
+                  ),
                 ] else if (mode == MatchMode.threads) ...[
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
                     child: LinearProgressIndicator(
-                      value: ball.lineCount.clamp(0, kRimSlotCount) / kRimSlotCount,
+                      value:
+                          ball.lineCount.clamp(0, kRimSlotCount) /
+                          kRimSlotCount,
                       color: ball.config.primaryColor,
                       backgroundColor: c.border,
                       minHeight: 4,
@@ -165,13 +201,21 @@ class HeartsRow extends StatelessWidget {
   final Color color;
   final Color empty;
 
-  const HeartsRow({super.key, required this.hearts, required this.color, required this.empty});
+  const HeartsRow({
+    super.key,
+    required this.hearts,
+    required this.color,
+    required this.empty,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 14,
-      child: CustomPaint(painter: _HeartsPainter(hearts, color, empty), size: Size.infinite),
+      child: CustomPaint(
+        painter: _HeartsPainter(hearts, color, empty),
+        size: Size.infinite,
+      ),
     );
   }
 }
@@ -185,8 +229,22 @@ class _HeartsPainter extends CustomPainter {
 
   static Path _heart(Offset c, double s) => Path()
     ..moveTo(c.dx, c.dy + s * 0.85)
-    ..cubicTo(c.dx - s * 1.1, c.dy + s * 0.1, c.dx - s * 0.75, c.dy - s * 0.9, c.dx, c.dy - s * 0.35)
-    ..cubicTo(c.dx + s * 0.75, c.dy - s * 0.9, c.dx + s * 1.1, c.dy + s * 0.1, c.dx, c.dy + s * 0.85)
+    ..cubicTo(
+      c.dx - s * 1.1,
+      c.dy + s * 0.1,
+      c.dx - s * 0.75,
+      c.dy - s * 0.9,
+      c.dx,
+      c.dy - s * 0.35,
+    )
+    ..cubicTo(
+      c.dx + s * 0.75,
+      c.dy - s * 0.9,
+      c.dx + s * 1.1,
+      c.dy + s * 0.1,
+      c.dx,
+      c.dy + s * 0.85,
+    )
     ..close();
 
   @override
@@ -216,7 +274,9 @@ class _HeartsPainter extends CustomPainter {
       final extra = (hearts - 10 - i).clamp(0.0, 1.0);
       if (extra > 0) {
         canvas.save();
-        if (extra < 1) canvas.clipRect(Rect.fromLTRB(c.dx - s * 1.2, 0, c.dx, size.height));
+        if (extra < 1) {
+          canvas.clipRect(Rect.fromLTRB(c.dx - s * 1.2, 0, c.dx, size.height));
+        }
         canvas.drawPath(path, _gold);
         canvas.restore();
       }
@@ -226,5 +286,6 @@ class _HeartsPainter extends CustomPainter {
   static final Paint _gold = Paint()..color = const Color(0xFFFFC83D);
 
   @override
-  bool shouldRepaint(_HeartsPainter old) => old.hearts != hearts || old.color != color || old.empty != empty;
+  bool shouldRepaint(_HeartsPainter old) =>
+      old.hearts != hearts || old.color != color || old.empty != empty;
 }

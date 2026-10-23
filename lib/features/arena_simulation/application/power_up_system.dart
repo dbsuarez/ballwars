@@ -603,7 +603,9 @@ class PowerUpSystem {
     final outer = match.arenaRadius * PowerUpTuning.spawnMaxDistance;
     for (var attempt = 0; attempt < 10; attempt++) {
       final angle = (quadrant + rng.nextDoubleRange(0.1, 0.9)) * math.pi / 2;
-      final distance = kind.isTrap
+      final distance = kind == PowerUpKind.spikeWall
+          ? match.arenaRadius - radius * 0.38
+          : kind.isTrap
           ? match.arenaRadius - radius * 1.6
           : math.sqrt(rng.nextDoubleRange(inner * inner, outer * outer));
       final spot = Offset(
@@ -1130,6 +1132,7 @@ class PowerUpSystem {
       final lost = match.damage(
         target,
         (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,
+        attacker: from,
       );
       if (from != null &&
           (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {

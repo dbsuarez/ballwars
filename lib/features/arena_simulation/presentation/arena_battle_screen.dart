@@ -159,6 +159,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       powerUpKinds: widget.config.powerUps,
       tuning: widget.config.tuning,
       dualWield: widget.config.dualWield,
+      endlessBattle: widget.config.endlessBattle,
     );
     _roundCounted = replaySeed != null;
     _state = _controller.state;
@@ -314,6 +315,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       powerUps: widget.config.powerUps,
       tuning: widget.config.tuning,
       dualWield: widget.config.dualWield,
+      endlessBattle: widget.config.endlessBattle,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -489,6 +491,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         mode: widget.config.mode,
         balls: _state.balls,
         wins: widget.config.winsNeeded > 1 ? _roundWins : null,
+        eliminations: widget.config.endlessBattle
+            ? _controller.eliminations
+            : null,
       ),
     );
 

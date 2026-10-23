@@ -95,6 +95,8 @@ class MatchSimulationController {
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
   String? _lastEliminatedId;
+  final Map<String, int> eliminations = {};
+  final Map<SimulationBall, SimulationBall> _lastDamageBy = {};
 
   /// [layoutRotation] fixes where ball 0 starts (radians); by default the
   /// whole starting layout is rotated by a seeded random angle.
@@ -141,6 +143,7 @@ class MatchSimulationController {
   /// The power-up numbers (the admin's settings, or a replay link's). Part of the match, like the seed.
   final PowerUpConfig tuning;
   final bool dualWield;
+  final bool endlessBattle;
 
   /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
   static const int hurtFlashSteps = 18;
@@ -175,8 +178,10 @@ class MatchSimulationController {
     this.powerUpKinds,
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
+    this.endlessBattle = false,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
-    if (lookAhead &&
+    if (!endlessBattle &&
+        lookAhead &&
         (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
       // Same seed and setup: the steps are identical (slow motion only
       // changes playback), so its timeline is this match's.
@@ -194,6 +199,7 @@ class MatchSimulationController {
         powerUpKinds: powerUpKinds,
         tuning: tuning,
         dualWield: dualWield,
+        endlessBattle: endlessBattle,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished &&
@@ -369,7 +375,11 @@ class MatchSimulationController {
   /// don't stretch them out: one spawn every 5 s has to feed every ball, and crowded balls move slower.
   ///
   /// Returns the life actually taken.
-  double damage(SimulationBall ball, double amount) {
+  double damage(
+    SimulationBall ball,
+    double amount, {
+    SimulationBall? attacker,
+  }) {
     if (mode != MatchMode.arsenal) return 0;
     if (amount > 0 && _absorbWithGoldenArmor(ball)) return 0;
     final crowd = _balls.length > 2
@@ -377,6 +387,9 @@ class MatchSimulationController {
         : 1.0;
     final before = ball.life;
     ball.life = math.max(0, ball.life - amount * crowd);
+    if (ball.life < before && attacker != null && !identical(ball, attacker)) {
+      _lastDamageBy[ball] = attacker;
+    }
     return before - ball.life;
   }
 
@@ -587,8 +600,8 @@ class MatchSimulationController {
               ..position += normal * ((reach - distance) / 2)
               ..velocity = normal * speedB;
             ballHits++;
-            damage(a, PowerUpTuning.arenaCollisionDamage);
-            damage(b, PowerUpTuning.arenaCollisionDamage);
+            damage(a, PowerUpTuning.arenaCollisionDamage, attacker: b);
+            damage(b, PowerUpTuning.arenaCollisionDamage, attacker: a);
             _floatingTexts.spawn(
               (a.position + b.position) / 2,
               'MAGNETIC BOUNCE!',
@@ -617,8 +630,8 @@ class MatchSimulationController {
           b.rotation -= impactAngle * 0.05;
 
           // In Arsenal, every genuine ball-to-ball bounce hurts both balls.
-          damage(a, PowerUpTuning.arenaCollisionDamage);
-          damage(b, PowerUpTuning.arenaCollisionDamage);
+          damage(a, PowerUpTuning.arenaCollisionDamage, attacker: b);
+          damage(b, PowerUpTuning.arenaCollisionDamage, attacker: a);
 
           // Melee power-ups (knife, shield bash) strike on contact.
           _powerUps?.onContact(a, b);
@@ -691,6 +704,21 @@ class MatchSimulationController {
       }
     }
 
+    if (endlessBattle && eliminatedNow.isNotEmpty) {
+      for (final ball in eliminatedNow) {
+        final attacker = _lastDamageBy.remove(ball);
+        if (attacker != null) {
+          eliminations.update(
+            attacker.config.id,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+        }
+        _respawn(ball);
+      }
+      eliminatedNow.clear();
+    }
+
     // 6. Win condition: last ball with >=1 line wins
     var activeBalls = _balls.where((b) => !b.isEliminated).toList();
     if (activeBalls.isEmpty && eliminatedNow.isNotEmpty && _balls.length > 1) {
@@ -752,6 +780,21 @@ class MatchSimulationController {
     for (final ball in _balls) {
       ball.lineCount = ball.fanLines.length;
     }
+  }
+
+  void _respawn(SimulationBall ball) {
+    final angle = _rng.nextDoubleRange(0, 2 * math.pi);
+    final radial = Offset(math.cos(angle), math.sin(angle));
+    final heading = angle + math.pi + _rng.nextDoubleRange(-0.4, 0.4);
+    ball
+      ..isEliminated = false
+      ..life = PowerUpTuning.arenaLife
+      ..position = radial * (arenaRadius * startRadiusMax)
+      ..velocity =
+          Offset(math.cos(heading), math.sin(heading)) *
+          _cruiseSpeed(ball.config) *
+          _crowdSpeedFactor(_balls.length);
+    _floatingTexts.spawn(ball.position, 'RESPAWN!', ball.config.primaryColor);
   }
 
   /// Keeps the bounce directions from the elastic collision but applies only

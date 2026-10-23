@@ -42,6 +42,7 @@ class ReplayLink {
 
   /// Whether this match allows two equipped weapons (`dw=1`).
   final bool dualWield;
+  final bool endlessBattle;
 
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
@@ -57,6 +58,7 @@ class ReplayLink {
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
+    this.endlessBattle = false,
   });
 
   static const String _weaponsPrefix = 'w.';
@@ -111,8 +113,11 @@ class ReplayLink {
     final encoded = mode == MatchMode.threads ? null : tuning.encode();
     final t = encoded == null ? '' : '&t=$encoded';
     final dw = mode != MatchMode.threads && dualWield ? '&dw=1' : '';
+    final endless = mode == MatchMode.arsenal && endlessBattle
+        ? '&endless=1'
+        : '';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -176,6 +181,9 @@ class ReplayLink {
     final dualWield = params['dw'] == '1';
     if (params.containsKey('dw') && params['dw'] != '1') return null;
     if (mode == MatchMode.threads && dualWield) return null;
+    final endlessBattle = params['endless'] == '1';
+    if (params.containsKey('endless') && params['endless'] != '1') return null;
+    if (mode != MatchMode.arsenal && endlessBattle) return null;
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
@@ -204,6 +212,7 @@ class ReplayLink {
       powerUps: powerUps,
       tuning: tuning,
       dualWield: dualWield,
+      endlessBattle: endlessBattle,
     );
   }
 

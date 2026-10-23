@@ -6,6 +6,7 @@ import 'package:ballwars/features/arena_simulation/domain/fan_line.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
+import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
 const _arenaRadius = 260.0;
 
@@ -33,6 +34,29 @@ void _aimAtWall(SimulationBall ball, double degrees) {
 }
 
 void main() {
+  test('Endless Battle respawns a destroyed ball and credits the attacker', () {
+    final controller = MatchSimulationController(
+      _twoBalls(),
+      arenaRadius: _arenaRadius,
+      seed: 1,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+      lookAhead: false,
+    );
+    final a = _ball(controller, 'a');
+    final b = _ball(controller, 'b');
+
+    controller.damage(b, 100, attacker: a);
+    controller.tick(1 / 60);
+
+    expect(b.isEliminated, isFalse);
+    expect(b.life, 100);
+    expect(controller.eliminations, {'a': 1});
+    expect(controller.state.status, MatchStatus.running);
+    expect(controller.state.winnerId, isNull);
+  });
+
   test('two balls start owning one half of the rim each', () {
     final controller = MatchSimulationController(_twoBalls(), arenaRadius: _arenaRadius, layoutRotation: 0, seed: 1);
     final a = _ball(controller, 'a');

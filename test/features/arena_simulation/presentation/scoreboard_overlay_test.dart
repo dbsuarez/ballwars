@@ -45,6 +45,23 @@ void main() {
     );
   });
 
+  testWidgets('Endless Battle scoreboard shows each ball knockout count', (tester) async {
+    final balls = [_ball('a', 0)..life = 100, _ball('b', 0)..life = 100];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScoreboardOverlay(
+            balls: balls,
+            mode: MatchMode.arsenal,
+            eliminations: const {'a': 3},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('3 KOs'), findsOneWidget);
+    expect(find.text('0 KOs'), findsOneWidget);
+  });
+
   testWidgets('circular life remains visible on a narrow scoreboard', (tester) async {
     tester.view.physicalSize = const Size(220, 400);
     tester.view.devicePixelRatio = 1;

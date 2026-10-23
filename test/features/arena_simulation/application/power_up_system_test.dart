@@ -274,7 +274,7 @@ void main() {
     );
     expect(
       c.powerUps!.spikeWalls.single.position.distance,
-      closeTo(_arenaRadius - c.powerUps!.fieldRadius * 1.6, 0.001),
+      closeTo(_arenaRadius - c.powerUps!.fieldRadius * 0.38, 0.001),
     );
   });
 

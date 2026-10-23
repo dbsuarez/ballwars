@@ -77,6 +77,9 @@ class MatchConfig {
   /// Whether balls can equip two weapons instead of one.
   final bool dualWield;
 
+  /// Arsenal-only: eliminated balls respawn and the battle tracks knockouts.
+  final bool endlessBattle;
+
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
 
@@ -94,6 +97,7 @@ class MatchConfig {
     this.question,
     this.powerUps,
     this.dualWield = false,
+    this.endlessBattle = false,
     this.tuning = PowerUpConfig.defaults,
     this.mode = MatchMode.threads,
   });

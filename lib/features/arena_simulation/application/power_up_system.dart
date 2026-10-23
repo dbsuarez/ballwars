@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../domain/fan_line.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 import 'match_simulation_controller.dart';
@@ -34,6 +36,9 @@ class PowerUpSystem {
 
   /// Dropped bombs waiting to explode.
   final List<PendingBomb> bombs = [];
+
+  /// Recent blasts, for drawing (removed after [PowerUpTuning.explosionShowSteps]).
+  final List<Explosion> explosions = [];
 
   /// How many power-ups balls have picked up so far (the screen plays a sound when it goes up).
   int pickups = 0;
@@ -73,6 +78,7 @@ class PowerUpSystem {
     _countDown();
     _explodeBombs();
     _pickUpTouched();
+    _sweep();
     _updateFrozen();
     _moveProjectiles();
     _aimAndFire();
@@ -107,6 +113,8 @@ class PowerUpSystem {
         _pullNearest(ball);
       default:
         ball.held = p.kind;
+        // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
+        if (p.kind == PowerUpKind.knife && match.mode == MatchMode.allOut) ball.sweepLeft = PowerUpTuning.sweepSteps;
     }
   }
 
@@ -143,11 +151,17 @@ class PowerUpSystem {
   bool _alive(SimulationBall ball) =>
       !ball.isEliminated && (match.mode == MatchMode.arsenal ? ball.life > 0 : ball.fanLines.isNotEmpty);
 
-  /// Counts the speed boosts and ghosts down; a ball that is out drops its waiting magnet.
+  /// Counts the speed boosts, ghosts and sweeps down, ages blasts; a ball that is out drops its waiting
+  /// magnet.
   void _countDown() {
+    for (final e in explosions) {
+      e.age++;
+    }
+    explosions.removeWhere((e) => e.age >= PowerUpTuning.explosionShowSteps);
     for (final ball in match.state.balls) {
       if (ball.speedLeft > 0) ball.speedLeft--;
       if (ball.ghostLeft > 0) ball.ghostLeft--;
+      if (ball.sweepLeft > 0) ball.sweepLeft--;
       if (!_alive(ball)) ball.magnetPending = false;
     }
   }
@@ -193,6 +207,19 @@ class PowerUpSystem {
       if (--bomb.fuseSteps > 0) continue;
       bombs.remove(bomb);
       blasts++;
+      explosions.add(Explosion(position: bomb.position, radius: radius));
+      // All-Out bomb blast: every thread passing through the blast is cut, from every ball but ghosts.
+      if (match.mode == MatchMode.allOut) {
+        for (final ball in match.state.balls) {
+          if (!_alive(ball) || ball.isGhost) continue;
+          for (final line in List.of(ball.fanLines)) {
+            if (MathUtils.distancePointToSegmentSquared(bomb.position, line.startPoint, ball.position) <=
+                radius * radius) {
+              _cutLine(ball, line);
+            }
+          }
+        }
+      }
       for (final ball in match.state.balls) {
         if (!_alive(ball)) continue;
         final offset = ball.position - bomb.position;
@@ -415,7 +442,7 @@ class PowerUpSystem {
           for (final line in List.of(ball.fanLines)) {
             // Rim anchors are unique, so the thread nearest a thread's own anchor is that thread.
             if (_crosses(from, end, line.startPoint, ball.position)) {
-              match.cutThreads(ball, 1, near: line.startPoint);
+              _cutLine(ball, line);
             }
           }
         }
@@ -462,13 +489,51 @@ class PowerUpSystem {
     if (match.mode == MatchMode.arsenal) {
       match.damage(target, (bash ? PowerUpTuning.arenaShieldBash : PowerUpTuning.arenaDamage[kind] ?? 0) * share);
     } else {
-      final threads = bash ? PowerUpTuning.allOutShieldBash : PowerUpTuning.allOutThreads[kind] ?? 0;
-      match.cutThreads(target, (threads * share).round(), near: impact);
+      // Thread snap: the threads nearest the impact break, each with its rim spark.
+      final threads = ((bash ? PowerUpTuning.allOutShieldBash : PowerUpTuning.allOutThreads[kind] ?? 0) * share).round();
+      final nearest = [...target.fanLines]
+        ..sort((x, y) => (x.startPoint - impact).distanceSquared.compareTo((y.startPoint - impact).distanceSquared));
+      for (final line in nearest.take(threads)) {
+        _cutLine(target, line);
+      }
     }
     match.state.particles.spawnBlood(
       origin: impact,
       direction: target.position - (from?.position ?? impact),
       color: target.config.primaryColor,
+      rng: rng,
+    );
+  }
+
+  /// All-Out sword sweep: while [SimulationBall.sweepLeft] runs, a ball cuts every opponent thread that
+  /// passes within [PowerUpTuning.sweepReach] times its radius (wider than its body). Ghosts on either side
+  /// are left alone: a ghost cuts nothing and its threads can't be cut.
+  void _sweep() {
+    if (match.mode != MatchMode.allOut) return;
+    final balls = match.state.balls;
+    for (final cutter in balls) {
+      if (cutter.sweepLeft == 0 || !_alive(cutter) || cutter.isGhost) continue;
+      final reach = cutter.radius * PowerUpTuning.sweepReach;
+      for (final target in balls) {
+        if (identical(target, cutter) || !_alive(target) || target.isGhost) continue;
+        for (final line in List.of(target.fanLines)) {
+          if (MathUtils.distancePointToSegmentSquared(cutter.position, line.startPoint, target.position) <=
+              reach * reach) {
+            _cutLine(target, line);
+          }
+        }
+      }
+    }
+  }
+
+  /// Cuts [line] of [ball] (rim anchors are unique, so the thread nearest its own anchor is that thread)
+  /// with a spark leaving the rim, like a body cut.
+  void _cutLine(SimulationBall ball, FanLine line) {
+    if (match.cutThreads(ball, 1, near: line.startPoint) == 0) return;
+    match.state.particles.spawnRimArcs(
+      origin: line.startPoint,
+      normal: Offset(math.cos(line.rimAngle), math.sin(line.rimAngle)),
+      arenaRadius: match.arenaRadius,
       rng: rng,
     );
   }

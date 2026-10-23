@@ -27,6 +27,9 @@ class SimulationBall {
   int speedLeft = 0;
   int frozenLeft = 0;
   int ghostLeft = 0;
+
+  /// All-Out sword sweep: steps left of the wider cutting reach after picking up a knife.
+  int sweepLeft = 0;
   bool magnetPending = false;
 
   /// Direction a held shield faces, in radians: it turns toward the biggest threat (see

@@ -50,6 +50,17 @@ class Projectile {
 }
 
 /// A bomb that has been dropped and will explode when its fuse runs out.
+/// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
+class Explosion {
+  Explosion({required this.position, required this.radius});
+
+  final Offset position;
+  final double radius;
+
+  /// Steps since it went off.
+  int age = 0;
+}
+
 class PendingBomb {
   PendingBomb({required this.owner, required this.position, required this.fuseSteps});
 
@@ -91,6 +102,14 @@ class PowerUpTuning {
 
   /// Bomb blast radius as a fraction of the arena radius.
   static const double bombRadiusRatio = 0.28;
+
+  /// How long a blast stays on screen (steps).
+  static const int explosionShowSteps = 30;
+
+  /// All-Out sword sweep: steps after a knife pickup during which the holder cuts with a wider reach,
+  /// [sweepReach] times its radius.
+  static const int sweepSteps = 60;
+  static const double sweepReach = 1.8;
 
   /// Share of a hit's damage a shield absorbs.
   static const double shieldBlock = 0.75;

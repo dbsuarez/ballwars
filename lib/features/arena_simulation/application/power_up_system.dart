@@ -61,6 +61,12 @@ class PowerUpSystem {
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
   final Map<SimulationBall, Offset> _frozenVelocity = {};
 
+  // Volleys: shots fired as one attack share an id; a shield that breaks on one of them softens the
+  // rest of that volley too (see [_hit]).
+  int _lastVolley = 0;
+  final Map<SimulationBall, int> _burstVolley = {};
+  final Map<SimulationBall, int> _shieldedVolley = {};
+
   /// Fastest a held shield turns toward its threat, in radians per step.
   static const double _shieldTurnPerStep = 0.25;
 
@@ -357,7 +363,8 @@ class PowerUpSystem {
           ..burstLeft = 0;
         continue;
       }
-      if (ball.frozenLeft > 0) continue;
+      // A frozen ball can't shoot; a ghost is purely defensive, so it holds its aim until it's solid.
+      if (ball.frozenLeft > 0 || ball.isGhost) continue;
       final bursting = ball.burstLeft > 0;
       if (!bursting && ball.held?.isGun != true) continue;
       final target = _nearestTarget(ball);
@@ -372,7 +379,7 @@ class PowerUpSystem {
       if (ball.aimLeft > 0) continue;
 
       if (bursting) {
-        _fire(ball, target, PowerUpKind.gatling, 0);
+        _fire(ball, target, PowerUpKind.gatling, 0, volley: _burstVolley[ball] ?? 0);
         ball.burstLeft--;
       } else {
         final kind = ball.held!;
@@ -381,7 +388,8 @@ class PowerUpSystem {
           case PowerUpKind.shotgun:
             _fireShotgun(ball, target);
           case PowerUpKind.gatling:
-            _fire(ball, target, kind, 0);
+            _burstVolley[ball] = ++_lastVolley;
+            _fire(ball, target, kind, 0, volley: _lastVolley);
             ball.burstLeft = PowerUpTuning.gatlingRounds - 1;
           default:
             _fire(ball, target, kind, 0);
@@ -400,15 +408,16 @@ class PowerUpSystem {
   void _fireShotgun(SimulationBall ball, SimulationBall target) {
     const count = PowerUpTuning.shotgunPellets;
     const spread = PowerUpTuning.shotgunSpread;
+    final volley = ++_lastVolley;
     for (var i = 0; i < count; i++) {
       final edge = i == 0 || i == count - 1;
       final jitter = edge ? 0.0 : rng.nextDoubleRange(-_pelletJitter, _pelletJitter);
-      _fire(ball, target, PowerUpKind.shotgun, -spread / 2 + spread * i / (count - 1) + jitter);
+      _fire(ball, target, PowerUpKind.shotgun, -spread / 2 + spread * i / (count - 1) + jitter, volley: volley);
     }
   }
 
   /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
-  void _fire(SimulationBall ball, SimulationBall target, PowerUpKind kind, double turn) {
+  void _fire(SimulationBall ball, SimulationBall target, PowerUpKind kind, double turn, {int volley = 0}) {
     final toTarget = target.position - ball.position;
     final angle = math.atan2(toTarget.dy, toTarget.dx) + turn;
     final direction = Offset(math.cos(angle), math.sin(angle));
@@ -417,6 +426,7 @@ class PowerUpSystem {
       kind: kind,
       position: ball.position + direction * ball.radius,
       velocity: direction * (match.arenaRadius * PowerUpTuning.bulletSpeedRatio),
+      volley: volley,
     ));
     shots++;
   }
@@ -460,7 +470,7 @@ class PowerUpSystem {
       p.position = end;
       if (struck != null) {
         p.spent = true;
-        _hit(struck, p.kind, at: end, from: p.owner);
+        _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
       } else if (end.distance >= match.arenaRadius) {
         p.spent = true;
       }
@@ -475,16 +485,21 @@ class PowerUpSystem {
   /// in the target's color. A freeze shot instead stops the target for [PowerUpTuning.freezeSteps] steps
   /// (shortened the same way by a shield). [kind] [PowerUpKind.shield] is a shield bash. [from] is the
   /// attacker (null for a bomb: the splash then flies away from [at]).
-  void _hit(SimulationBall target, PowerUpKind kind, {Offset? at, SimulationBall? from}) {
+  void _hit(SimulationBall target, PowerUpKind kind, {Offset? at, SimulationBall? from, int volley = 0}) {
     if (target.isGhost) return;
     hits++;
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
     var share = 1.0;
+    final shielded = match.mode == MatchMode.arsenal ? 1 - PowerUpTuning.shieldBlock : PowerUpTuning.allOutShieldKeep;
     if (target.held == PowerUpKind.shield) {
       target.held = null;
       blocks++;
-      share = match.mode == MatchMode.arsenal ? 1 - PowerUpTuning.shieldBlock : PowerUpTuning.allOutShieldKeep;
+      share = shielded;
+      // One attack is the whole volley: its other shots are blocked the same way.
+      if (volley != 0) _shieldedVolley[target] = volley;
+    } else if (volley != 0 && _shieldedVolley[target] == volley) {
+      share = shielded;
     }
     if (kind == PowerUpKind.freeze) {
       final steps = (PowerUpTuning.freezeSteps * share).round();

@@ -485,4 +485,38 @@ void main() {
     final toZ = z.position - y.position;
     expect(math.atan2(shot.velocity.dy, shot.velocity.dx), closeTo(math.atan2(toZ.dy, toZ.dx), 1e-9));
   });
+
+  test('a shield softens a whole volley: every pellet of one shotgun blast is blocked the same way', () {
+    final c = _match();
+    final a = c.state.balls[0];
+    final b = c.state.balls[1];
+    b.held = PowerUpKind.shield;
+    // Three pellets of one blast, all hitting B in the same step.
+    for (final dy in [-6.0, 0.0, 6.0]) {
+      c.powerUps!.projectiles.add(Projectile(
+        owner: a,
+        kind: PowerUpKind.shotgun,
+        position: b.position + Offset(-b.radius - 2, dy),
+        velocity: const Offset(600, 0),
+        volley: 7,
+      ));
+    }
+    _run(c, 1);
+    final pellet = PowerUpTuning.arenaDamage[PowerUpKind.shotgun]!;
+    expect(b.life, closeTo(_life - 3 * pellet * (1 - PowerUpTuning.shieldBlock), 1e-9));
+    expect(b.held, isNull);
+  });
+
+  test('a ghost holding a gun does not aim or fire until the ghost wears off', () {
+    final c = _match();
+    final a = c.state.balls[0];
+    a
+      ..held = PowerUpKind.pistol
+      ..ghostLeft = PowerUpTuning.aimSteps + 30;
+    _run(c, PowerUpTuning.aimSteps + 20);
+    expect(c.powerUps!.shots, 0);
+    expect(a.held, PowerUpKind.pistol);
+    _run(c, 10 + PowerUpTuning.aimSteps + 2);
+    expect(c.powerUps!.shots, 1);
+  });
 }

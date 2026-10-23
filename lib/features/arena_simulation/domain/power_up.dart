@@ -38,18 +38,27 @@ class FieldPowerUp {
 
 /// A bullet or pellet in flight.
 class Projectile {
-  Projectile({required this.owner, required this.kind, required this.position, required this.velocity});
+  Projectile({
+    required this.owner,
+    required this.kind,
+    required this.position,
+    required this.velocity,
+    this.volley = 0,
+  });
 
   final SimulationBall owner;
   final PowerUpKind kind;
   Offset position;
   final Offset velocity;
 
+  /// Shots fired as one attack (a shotgun blast, a gatling burst) share a non-zero id, so a shield
+  /// that breaks on the first of them softens the rest too. 0: a single shot.
+  final int volley;
+
   /// Set once it has hit something or left the arena.
   bool spent = false;
 }
 
-/// A bomb that has been dropped and will explode when its fuse runs out.
 /// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
 class Explosion {
   Explosion({required this.position, required this.radius});
@@ -61,6 +70,7 @@ class Explosion {
   int age = 0;
 }
 
+/// A bomb that has been dropped and will explode when its fuse runs out.
 class PendingBomb {
   PendingBomb({required this.owner, required this.position, required this.fuseSteps});
 

@@ -394,6 +394,14 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                 style: AppText.ui(13, FontWeight.w600, color: c.text),
               ),
             ),
+          if (widget.allGroups && inMyCategories == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: Text(
+                'Yours: always in your categories',
+                style: AppText.ui(13, FontWeight.w600, color: c.muted),
+              ),
+            ),
           if (inMyCategories != null)
             Row(
               children: [

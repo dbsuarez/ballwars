@@ -267,6 +267,21 @@ void main() {
     expect(repo.links, {'g1': 'anime'});
   });
 
+  testWidgets("Everyone's groups: a switch for others' groups, a note on your own", (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final repo = _FakeGroups([
+      CustomGroup(id: 'g1', name: 'Family', isPublic: true, ownerId: 'me', balls: [_groupBall('a', 'Rinna')]),
+      CustomGroup(id: 'g2', name: 'RPG Games', isPublic: true, ownerId: 'someone', balls: [_groupBall('b', 'Zelda')]),
+    ]);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo, allGroups: true, packRepository: packs())));
+    await tester.pumpAndSettle();
+    expect(find.text('Yours: always in your categories'), findsOneWidget);
+    expect(find.text('In my categories'), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+  });
+
   testWidgets('players submit their own group for the main categories', (tester) async {
     tester.view.physicalSize = const Size(1080, 2000);
     tester.view.devicePixelRatio = 2;

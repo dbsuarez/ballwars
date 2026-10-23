@@ -242,6 +242,9 @@ class MatchSimulationController {
       }
     } else {
       _assignStartingSlots();
+      for (final ball in _balls) {
+        ball.startLines = ball.fanLines.length;
+      }
     }
     if (mode != MatchMode.threads) _powerUps = PowerUpSystem(this, _rng);
   }

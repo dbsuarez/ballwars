@@ -6,6 +6,7 @@ import '../domain/simulation_state.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/particle_system.dart';
 import 'ball_face_painter.dart';
+import 'power_up_painter.dart';
 
 class ArenaPainter extends CustomPainter {
   final SimulationState state;
@@ -47,6 +48,7 @@ class ArenaPainter extends CustomPainter {
     _paintRim(canvas);
     _paintFanLines(canvas);
     _paintBeamAttack(canvas);
+    PowerUpPainter.paint(canvas, state, arenaRadius, showEffects: showEffects);
     if (showEffects) _paintParticles(canvas);
     // Depth order: sort balls by distance from center (farthest drawn first = behind)
     final sortedBalls = List<SimulationBall>.from(state.balls)
@@ -240,6 +242,13 @@ class ArenaPainter extends CustomPainter {
 
   void _paintSingleBall(Canvas canvas, SimulationBall ball) {
     if (ball.isEliminated) return;
+    // A ghost is drawn see-through (a layer only while the effect lasts, which is rare).
+    if (ball.isGhost) {
+      canvas.saveLayer(
+        Rect.fromCircle(center: ball.position, radius: ball.radius + _ballGlowPadding + 8),
+        Paint()..color = const Color(0x66000000),
+      );
+    }
 
     // Glow with edge compression (glow compresses against arena edge instead of clipping)
     final distToCenter = ball.position.distance;
@@ -265,6 +274,8 @@ class ArenaPainter extends CustomPainter {
     );
 
     BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
+    PowerUpPainter.paintBallEffects(canvas, ball);
+    if (ball.isGhost) canvas.restore();
   }
 
   // Laid-out "+N LINES" labels, reused across frames. Opacity is rounded to

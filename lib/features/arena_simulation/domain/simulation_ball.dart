@@ -30,6 +30,9 @@ class SimulationBall {
 
   /// All-Out sword sweep: steps left of the wider cutting reach after picking up a knife.
   int sweepLeft = 0;
+
+  /// Threads held at the start of the match (All-Out hearts show the share left).
+  int startLines = 0;
   bool magnetPending = false;
 
   /// Direction a held shield faces, in radians: it turns toward the biggest threat (see

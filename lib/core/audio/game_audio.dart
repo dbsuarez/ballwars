@@ -233,7 +233,7 @@ class GameAudio with WidgetsBindingObserver {
 
   void _startMenu({bool restart = false}) {
     _guard(() async {
-      final menu = _menu ??= AudioPlayer()..setReleaseMode(ReleaseMode.loop);
+      final menu = _menu ??= _newPlayer()..setReleaseMode(ReleaseMode.loop);
       if (!restart && menu.state == PlayerState.paused) {
         await menu.resume();
         return;
@@ -282,7 +282,7 @@ class GameAudio with WidgetsBindingObserver {
 
   void _startMusic({bool restart = false}) {
     _guard(() async {
-      final music = _music ??= AudioPlayer()..setReleaseMode(ReleaseMode.loop);
+      final music = _music ??= _newPlayer()..setReleaseMode(ReleaseMode.loop);
       if (!restart && music.state == PlayerState.paused) {
         await music.resume();
         return;
@@ -305,7 +305,7 @@ class GameAudio with WidgetsBindingObserver {
     _previewing = track.asset;
     _guard(() async => _menu?.pause());
     _guard(() async {
-      final player = _preview ??= AudioPlayer();
+      final player = _preview ??= _newPlayer();
       await player.stop();
       await player.setReleaseMode(ReleaseMode.stop);
       await player.play(AssetSource(track.asset), volume: 0.6);
@@ -342,6 +342,12 @@ class GameAudio with WidgetsBindingObserver {
     _voices.putIfAbsent(name, () => _Voices(name)).play(volume);
   }
 
+  /// A player without position updates. By default audioplayers polls the playback position on every
+  /// frame while a player plays (FramePositionUpdater): it keeps the app drawing at the screen's full rate
+  /// (120 Hz) even on still screens and sends a platform call per frame, which on Android runs on the
+  /// same thread as the app and made every screen slow while music played. Nothing here reads positions.
+  static AudioPlayer _newPlayer() => AudioPlayer()..positionUpdater = null;
+
   static void _guard(Future<void> Function() action) {
     unawaited(action().catchError((Object e) => debugPrint('GameAudio: $e')));
   }
@@ -358,7 +364,7 @@ class _Voices {
   _Voices(this.name);
 
   void play(double volume) {
-    if (_players.length < _count) _players.add(AudioPlayer());
+    if (_players.length < _count) _players.add(GameAudio._newPlayer());
     final player = _players[_next++ % _players.length];
     GameAudio._guard(() => player.play(AssetSource('sounds/$name.wav'), volume: volume, mode: PlayerMode.lowLatency));
   }

@@ -202,7 +202,7 @@ void main() {
     expect(started!.question, 'Will it rain?');
   });
 
-  testWidgets('weapons can be chosen for power-up modes; at least one stays on', (tester) async {
+  testWidgets('weapons can be chosen for power-up modes; All switches every one; Done needs at least one', (tester) async {
     await pumpSetup(tester);
     expect(find.textContaining('Weapons'), findsNothing);
     await tester.tap(find.text('Arsenal'));
@@ -211,23 +211,39 @@ void main() {
 
     await tester.tap(find.text('Weapons: All'));
     await tester.pumpAndSettle();
-    // Switch every kind off: the last one can't be switched off.
     // Each one says what it does, with its damage.
     expect(find.text(powerUpDescription(PowerUpKind.pistol, arsenal: true)), findsOneWidget);
     expect(find.textContaining('one shot: ${PowerUpTuning.arenaDamage[PowerUpKind.pistol]!.round()} damage'), findsOneWidget);
-    for (final kind in PowerUpKind.values) {
-      final tile = find.widgetWithText(SwitchListTile, kind.label);
-      await tester.scrollUntilVisible(tile, 80, scrollable: find.byType(Scrollable).last);
-      await tester.tap(tile);
-      await tester.pump();
-    }
+
+    FilledButton done() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'));
+    // All off: nothing left, so Done waits for a pick.
+    await tester.tap(find.widgetWithText(SwitchListTile, 'All weapons'));
+    await tester.pump();
+    expect(done().onPressed, isNull);
+    expect(find.text('Pick at least one.'), findsOneWidget);
+
+    final first = find.widgetWithText(SwitchListTile, PowerUpKind.values.first.label);
+    await tester.ensureVisible(first);
+    await tester.pumpAndSettle();
+    await tester.tap(first);
+    await tester.pump();
+    expect(done().onPressed, isNotNull);
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.text('Weapons: 1 of ${PowerUpKind.values.length}'), findsOneWidget);
 
+    // All on again.
+    await tester.tap(find.text('Weapons: 1 of ${PowerUpKind.values.length}'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(SwitchListTile, 'All weapons'));
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Weapons: All'), findsOneWidget);
+
     await tester.tap(find.byIcon(Icons.shuffle));
     await tester.pump();
     await tester.tap(find.text('Start'));
-    expect(started!.powerUps, {PowerUpKind.values.last});
+    expect(started!.powerUps, isNull);
   });
 }

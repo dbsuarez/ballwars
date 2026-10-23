@@ -839,7 +839,7 @@ enum _CategoryFilter {
 }
 
 /// Which power-ups can spawn: a switch per power-up with its icon and what it does (damage in life for
-/// Arsenal, in lines for All-Out). At least one stays on.
+/// Arsenal, in lines for All-Out), and an All switch. Done needs at least one on.
 class _WeaponsDialog extends StatefulWidget {
   final Set<PowerUpKind> initial;
   final bool arsenal;
@@ -869,6 +869,16 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                 child: Text(crowdNote, style: Theme.of(context).textTheme.bodySmall),
               ),
+            // Switches every weapon on or off at once (then pick at least one).
+            SwitchListTile(
+              title: const Text('All weapons'),
+              subtitle: _on.isEmpty
+                  ? Text('Pick at least one.', style: TextStyle(color: Theme.of(context).colorScheme.error))
+                  : null,
+              value: _on.length == PowerUpKind.values.length,
+              onChanged: (v) => setState(() => v ? _on.addAll(PowerUpKind.values) : _on.clear()),
+            ),
+            const Divider(height: 1),
             for (final kind in PowerUpKind.values)
               SwitchListTile(
                 dense: true,
@@ -877,17 +887,15 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 title: Text(kind.label),
                 subtitle: Text(powerUpDescription(kind, arsenal: widget.arsenal, config: widget.config)),
                 value: _on.contains(kind),
-                // The last one on can't be switched off.
-                onChanged: _on.contains(kind) && _on.length == 1
-                    ? null
-                    : (v) => setState(() => v ? _on.add(kind) : _on.remove(kind)),
+                onChanged: (v) => setState(() => v ? _on.add(kind) : _on.remove(kind)),
               ),
           ],
         ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(_on), child: const Text('Done')),
+        // At least one has to stay on.
+        FilledButton(onPressed: _on.isEmpty ? null : () => Navigator.of(context).pop(_on), child: const Text('Done')),
       ],
     );
   }

@@ -72,4 +72,13 @@ void main() {
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
     });
   });
+
+  testWidgets('on a wide screen it is as wide as Home and Settings (440), not the whole window', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await open(tester, PowerUpConfig.defaults, () async {
+      expect(tester.getSize(find.byType(Scaffold).last).width, 440);
+    });
+  });
 }

@@ -68,47 +68,56 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
     for (final f in PowerUpConfig.fields) {
       groups.putIfAbsent(f.group, () => []).add(f);
     }
-    return Scaffold(
-      appBar: AppBar(title: const Text('Power-up numbers')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          Text(
-            'For everyone\'s Arsenal and All-Out matches. Shared replays keep the numbers they were played '
-            'with. Values outside the allowed range are clamped.',
-            style: AppText.ui(13, FontWeight.w500, color: c.muted, height: 1.4),
-          ),
-          for (final entry in groups.entries) ...[
-            const SizedBox(height: 22),
-            Text(entry.key.toUpperCase(), style: AppText.mono(12, color: c.muted)),
-            const SizedBox(height: 8),
-            for (final f in entry.value)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: TextField(
-                  key: ValueKey('tuning-${f.id}'),
-                  controller: _text[f.id],
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: f.label,
-                    suffixText: _unit(f),
-                    isDense: true,
-                    helperText:
-                        'Default ${_format(f, f.defaultValue)}${_unit(f)} - ${_format(f, f.min)} to ${_format(f, f.max)}',
-                  ),
+    // As wide as Home's and Settings' column on big screens, so switching between them feels even.
+    return ColoredBox(
+      color: c.background,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Power-up numbers')),
+            body: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                Text(
+                  'For everyone\'s Arsenal and All-Out matches. Shared replays keep the numbers they were played '
+                  'with. Values outside the allowed range are clamped.',
+                  style: AppText.ui(13, FontWeight.w500, color: c.muted, height: 1.4),
                 ),
-              ),
-          ],
-          const SizedBox(height: 18),
-          OutlinedButton(onPressed: _restoreDefaults, child: const Text('Restore defaults')),
-          const SizedBox(height: 10),
-          FilledButton(
-            onPressed: config == null ? null : () => Navigator.of(context).pop(config),
-            child: const Text('Save for everyone'),
+                for (final entry in groups.entries) ...[
+                  const SizedBox(height: 22),
+                  Text(entry.key.toUpperCase(), style: AppText.mono(12, color: c.muted)),
+                  const SizedBox(height: 8),
+                  for (final f in entry.value)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: TextField(
+                        key: ValueKey('tuning-${f.id}'),
+                        controller: _text[f.id],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: f.label,
+                          suffixText: _unit(f),
+                          isDense: true,
+                          helperText:
+                              'Default ${_format(f, f.defaultValue)}${_unit(f)} - ${_format(f, f.min)} to ${_format(f, f.max)}',
+                        ),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 18),
+                OutlinedButton(onPressed: _restoreDefaults, child: const Text('Restore defaults')),
+                const SizedBox(height: 10),
+                FilledButton(
+                  onPressed: config == null ? null : () => Navigator.of(context).pop(config),
+                  child: const Text('Save for everyone'),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -140,19 +140,16 @@ void main() {
       ..velocity = Offset.zero;
     a.equipWeapon(PowerUpKind.shotgun, dualWield: false);
 
-    c.powerUps!.pickUp(
-      a,
-      FieldPowerUp(
-        kind: PowerUpKind.spikeWall,
-        position: a.position,
-        spawnStep: 0,
-      ),
+    c.powerUps!.spikeWalls.add(
+      SpikeWall(position: a.position, angle: 0, spawnStep: 0),
     );
+    _run(c, 1);
 
     expect(a.life, _life - PowerUpTuning.arenaDamage[PowerUpKind.spikeWall]!);
     expect(a.velocity.dx, greaterThan(0));
     expect(a.held, PowerUpKind.shotgun);
     expect(c.powerUps!.slashMarks, isNotEmpty);
+    expect(c.powerUps!.spikeWalls, isEmpty);
     expect(c.powerUps!.pickups, 0);
     expect(
       c.state.floatingTexts.items.map((text) => text.text),

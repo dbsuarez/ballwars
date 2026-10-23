@@ -149,6 +149,22 @@ class PortalFlash {
   int age = 0;
 }
 
+/// A physical row of spikes placed near the arena boundary. Unlike pickup
+/// tokens, balls collide with the row directly.
+class SpikeWall {
+  SpikeWall({
+    required this.position,
+    required this.angle,
+    required this.spawnStep,
+    this.spikeCount = 6,
+  });
+
+  final Offset position;
+  final double angle;
+  final int spawnStep;
+  final int spikeCount;
+}
+
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or
 /// [stepsLeft] runs out), then takes the uppercut and is thrown off at [speed] in a random direction.
 class HookPull {
@@ -405,7 +421,7 @@ String powerUpDescription(
     PowerUpKind.portal =>
       'A boundary trap that teleports the ball entering it to a random side of the arena.',
     PowerUpKind.spikeWall =>
-      'A boundary hazard that deals ${dmg(kind)} and knocks the ball inward.',
+      'A row of 6 boundary spikes that deals ${dmg(kind)} and knocks the ball inward.',
     PowerUpKind.goldenArmor =>
       'Completely blocks the next two damaging hits without replacing weapons.',
   };

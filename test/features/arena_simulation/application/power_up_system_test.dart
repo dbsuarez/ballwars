@@ -193,6 +193,41 @@ void main() {
     );
   });
 
+  test('spike wall spawns as a six-spike arena hazard, not a pickup', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: _arenaRadius,
+      seed: 4,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+      powerUpKinds: {PowerUpKind.spikeWall},
+    );
+    for (final b in c.state.balls) {
+      b.velocity = Offset.zero;
+    }
+    for (var i = 0; i < 60 * 60 && c.powerUps!.spikeWalls.isEmpty; i++) {
+      c.tick(1 / 60);
+      c.state.balls[0]
+        ..position = const Offset(-60, 0)
+        ..velocity = Offset.zero;
+      c.state.balls[1]
+        ..position = const Offset(60, 0)
+        ..velocity = Offset.zero;
+    }
+
+    expect(
+      c.powerUps!.field.where((item) => item.kind == PowerUpKind.spikeWall),
+      isEmpty,
+    );
+    expect(c.powerUps!.spikeWalls, hasLength(1));
+    expect(c.powerUps!.spikeWalls.single.spikeCount, greaterThanOrEqualTo(6));
+    expect(
+      c.powerUps!.spikeWalls.single.position.distance,
+      closeTo(_arenaRadius - c.powerUps!.fieldRadius * 1.6, 0.001),
+    );
+  });
+
   test('choosing every power-up draws exactly like not choosing', () {
     List<PowerUpKind> kinds(Set<PowerUpKind>? chosen) {
       final c = MatchSimulationController(

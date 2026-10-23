@@ -53,6 +53,9 @@ class PowerUpSystem {
   /// Recent portal exits and entries, retained briefly for the painter.
   final List<PortalFlash> portalFlashes = [];
 
+  /// Physical spike rows in the arena. They are hazards, never pickups.
+  final List<SpikeWall> spikeWalls = [];
+
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
 
@@ -115,6 +118,7 @@ class PowerUpSystem {
   void step() {
     _countDown();
     _triggerMines();
+    _triggerSpikeWalls();
     _pickUpTouched();
     _sweep();
     _updateFrozen();
@@ -151,10 +155,6 @@ class PowerUpSystem {
     }
     if (p.kind == PowerUpKind.portal) {
       _teleport(ball, p.position);
-      return;
-    }
-    if (p.kind == PowerUpKind.spikeWall) {
-      _hitSpikes(ball, p.position);
       return;
     }
     pickups++;
@@ -265,6 +265,27 @@ class PowerUpSystem {
     }
     slashes++;
     _yell(ball, 'OUCH! SPIKES!');
+  }
+
+  void _triggerSpikeWalls() {
+    if (spikeWalls.isEmpty) return;
+    for (final wall in List<SpikeWall>.of(spikeWalls)) {
+      final tangent = Offset(-math.sin(wall.angle), math.cos(wall.angle));
+      final halfLength = fieldRadius * 0.48 * (wall.spikeCount - 1);
+      final start = wall.position - tangent * halfLength;
+      final end = wall.position + tangent * halfLength;
+      for (final ball in match.state.balls) {
+        if (!_alive(ball) || ball.isGhost) continue;
+        final reach = ball.radius + fieldRadius * 0.48;
+        if (MathUtils.distancePointToSegmentSquared(ball.position, start, end) >
+            reach * reach) {
+          continue;
+        }
+        spikeWalls.remove(wall);
+        _hitSpikes(ball, wall.position);
+        break;
+      }
+    }
   }
 
   /// Melee on a bump between [a] and [b]: a knife hits the other ball and is used up; a shield bashes an
@@ -549,6 +570,9 @@ class PowerUpSystem {
     for (final b in mines) {
       taken[quadrantOf(b.position)]++;
     }
+    for (final wall in spikeWalls) {
+      taken[quadrantOf(wall.position)]++;
+    }
     final fewest = taken.reduce(math.min);
     final open = [
       for (var q = 0; q < 4; q++)
@@ -573,8 +597,20 @@ class PowerUpSystem {
                 (b.position - spot).distance >= b.radius + radius,
           ) &&
           field.every((f) => (f.position - spot).distance >= 2 * radius) &&
-          mines.every((b) => (b.position - spot).distance >= 2 * radius);
+          mines.every((b) => (b.position - spot).distance >= 2 * radius) &&
+          spikeWalls.every(
+            (wall) => (wall.position - spot).distance >= 4 * radius,
+          );
       if (!clear) continue;
+      if (kind == PowerUpKind.spikeWall) {
+        spikeWalls.add(
+          SpikeWall(position: spot, angle: angle, spawnStep: number),
+        );
+        if (spikeWalls.length > PowerUpTuning.maxOnField(_ballCount)) {
+          spikeWalls.removeAt(0);
+        }
+        return;
+      }
       final spawned = FieldPowerUp(
         kind: kind,
         position: spot,

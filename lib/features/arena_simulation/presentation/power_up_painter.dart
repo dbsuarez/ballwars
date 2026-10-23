@@ -123,6 +123,34 @@ class PowerUpPainter {
       );
     }
 
+    for (final wall in p.spikeWalls) {
+      final radial = Offset(math.cos(wall.angle), math.sin(wall.angle));
+      final tangent = Offset(-radial.dy, radial.dx);
+      final spacing = r * 0.96;
+      final start = -(wall.spikeCount - 1) / 2;
+      for (var i = 0; i < wall.spikeCount; i++) {
+        final base = wall.position + tangent * ((start + i) * spacing);
+        final left = base - tangent * r * 0.42 + radial * r * 0.38;
+        final right = base + tangent * r * 0.42 + radial * r * 0.38;
+        final tip = base - radial * r * 0.9;
+        canvas.drawPath(
+          Path()
+            ..moveTo(left.dx, left.dy)
+            ..lineTo(tip.dx, tip.dy)
+            ..lineTo(right.dx, right.dy)
+            ..close(),
+          Paint()..color = colorOf(PowerUpKind.spikeWall),
+        );
+        canvas.drawLine(
+          left,
+          right,
+          Paint()
+            ..strokeWidth = math.max(1.5, r * 0.12)
+            ..color = const Color(0xFF681F2A),
+        );
+      }
+    }
+
     for (final bomb in p.mines) {
       // Armed: ringed in its owner's color, with a red light blinking twice a second.
       final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;

@@ -62,17 +62,19 @@ All of the following comes from stepping through the frames. Implemented in `Mat
 
 | Mode | Balls | Wins by start | chi² | Median | p90 | Unfinished | Power-up used |
 |---|---|---|---|---|---|---|---|
-| Arsenal | 2 | 146 / 154 | 0.21 | 33.8 s | 67.0 s | 0 | 100% |
-| Arsenal | 3 | 112 / 88 / 100 | 2.88 | 33.6 s | 67.2 s | 0 | 100% |
-| Arsenal | 4 | 70 / 68 / 75 / 87 | 2.91 | 32.8 s | 58.9 s | 0 | 100% |
-| All-Out | 2 | 146 / 154 | 0.21 | 8.3 s | 21.6 s | 0 | 94% |
-| All-Out | 3 | 96 / 100 / 104 | 0.32 | 8.2 s | 19.9 s | 0 | 97% |
-| All-Out | 4 | 71 / 81 / 72 / 76 | 0.83 | 5.9 s | 17.8 s | 0 | 87% |
+| Arsenal | 2 | 146 / 154 | 0.21 | 52.5 s | 104.3 s | 0 | 100% |
+| Arsenal | 3 | 97 / 98 / 105 | 0.38 | 40.9 s | 73.2 s | 0 | 100% |
+| Arsenal | 4 | 72 / 73 / 76 / 79 | 0.40 | 35.7 s | 60.8 s | 0 | 100% |
+| All-Out | 2 | 140 / 160 | 1.33 | 8.8 s | 22.5 s | 0 | 94% |
+| All-Out | 3 | 96 / 105 / 99 | 0.42 | 9.8 s | 21.6 s | 0 | 97% |
+| All-Out | 4 | 69 / 72 / 82 / 77 | 1.31 | 6.2 s | 21.6 s | 0 | 87% |
+
+With the owner's damage values (pistol 10, shotgun 10, gatling 15, knife 20, sword 40, mine 50, grenade 50, bash 5, shield blocks 25%) and the grenade and sword in the spawn pool. These are the defaults; the admin can change them in Settings (POWER-UPS).
 
 Times are game time; on screen, playback also speeds up by 0.25x per full minute (up to 2x), which doesn't change the match.
 
 Tuning that got there, starting from the plan's values:
-- **Arsenal damage:** about 4x the plan's (pistol 50, shotgun 12 per pellet, gatling 15 per round, knife 70, bomb 80, shield bash 30).
+- **Arsenal damage:** first tuned to about 4x the plan's; then set by the owner (see above).
 - **Crowded Arsenal:** damage is multiplied by `(count / 2)^2` (3 balls 2.25, 4 balls 4), because one spawn every 5 s has to feed every ball and crowded balls move slower. With `count / 2` the 3- and 4-ball medians were 62 s and 67 s. All chi-square values stay under 7.81 (3 degrees of freedom, p = 0.05).
 - **Spawns:** the first at 1 s, then every 5 s with 2 balls, 3.3 s with 3 and 2.5 s with 4. At most balls + 1 lie on the field; armed bombs don't count. Each spawn goes to the emptiest quadrant, between 0.2 and 0.68 arena radii from the center. Power-ups are 0.7x the ball radius, so they follow the ball size.
 - **Bombs** are proximity mines: armed by the first touch, set off by an opponent, harmless to their owner.

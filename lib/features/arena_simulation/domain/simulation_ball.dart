@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import 'fan_line.dart';
+import 'power_up.dart';
 
 class SimulationBall {
   final CustomBall config;
@@ -16,6 +17,26 @@ class SimulationBall {
 
   // Lines from this ball to the rim slots it owns
   final List<FanLine> fanLines = [];
+
+  // Power-up state (Arsenal and All-Out modes; unused in Threads)
+  /// Life points in Arsenal mode (set to `PowerUpTuning.arenaLife` there).
+  double life = 0;
+
+  /// The power-up carried, waiting to be used.
+  PowerUpKind? held;
+  int speedLeft = 0;
+  int frozenLeft = 0;
+  int ghostLeft = 0;
+  bool magnetPending = false;
+
+  /// Steps left of aiming before a gun fires at [aimTarget].
+  int aimLeft = 0;
+  SimulationBall? aimTarget;
+
+  /// Gatling rounds still to fire.
+  int burstLeft = 0;
+
+  bool get isGhost => ghostLeft > 0;
 
   SimulationBall({
     required this.config,

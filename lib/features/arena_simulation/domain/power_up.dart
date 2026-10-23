@@ -260,6 +260,9 @@ class PowerUpTuning {
   /// one (probe: with the first at 5 s only about half of All-Out matches did).
   static const int firstSpawnSteps = 60;
 
+  /// Traps do not enter the spawn pool until one minute into the match.
+  static const int trapStartSteps = 60 * 60;
+
   /// Pick-up radius of a field power-up, as a fraction of the balls' radius (so it follows the chosen
   /// ball size, a little smaller than a ball).
   static const double fieldRadiusRatio = 0.7;

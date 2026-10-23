@@ -96,6 +96,15 @@ class PowerUpConfig {
       unit: TuningUnit.seconds,
     ),
     TuningField(
+      'trapStart',
+      'Traps start after',
+      _spawning,
+      PowerUpTuning.trapStartSteps / 60,
+      min: 0,
+      max: 600,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
       'fieldSize',
       'Power-up size (x ball)',
       _spawning,
@@ -104,7 +113,15 @@ class PowerUpConfig {
       max: 1.5,
       unit: TuningUnit.ratio,
     ),
-    TuningField('aim', 'Aim time', _guns, PowerUpTuning.aimSteps / 60, min: 0, max: 5, unit: TuningUnit.seconds),
+    TuningField(
+      'aim',
+      'Aim time',
+      _guns,
+      PowerUpTuning.aimSteps / 60,
+      min: 0,
+      max: 5,
+      unit: TuningUnit.seconds,
+    ),
     TuningField(
       'bulletSpeed',
       'Bullet speed (arena radii/s)',
@@ -123,8 +140,24 @@ class PowerUpConfig {
       max: 5,
       unit: TuningUnit.ratio,
     ),
-    TuningField('pellets', 'Shotgun pellets', _guns, PowerUpTuning.shotgunPellets, min: 2, max: 30, integer: true),
-    TuningField('rounds', 'Gatling rounds', _guns, PowerUpTuning.gatlingRounds, min: 1, max: 50, integer: true),
+    TuningField(
+      'pellets',
+      'Shotgun pellets',
+      _guns,
+      PowerUpTuning.shotgunPellets,
+      min: 2,
+      max: 30,
+      integer: true,
+    ),
+    TuningField(
+      'rounds',
+      'Gatling rounds',
+      _guns,
+      PowerUpTuning.gatlingRounds,
+      min: 1,
+      max: 50,
+      integer: true,
+    ),
     for (final kind in damageKinds)
       TuningField(
         'dmg.${kind.name}',
@@ -134,7 +167,14 @@ class PowerUpConfig {
         min: 0,
         max: 200,
       ),
-    TuningField('bash', 'Shield bash', _arsenal, PowerUpTuning.arenaShieldBash, min: 0, max: 200),
+    TuningField(
+      'bash',
+      'Shield bash',
+      _arsenal,
+      PowerUpTuning.arenaShieldBash,
+      min: 0,
+      max: 200,
+    ),
     TuningField(
       'block',
       'Shield blocks',
@@ -144,8 +184,22 @@ class PowerUpConfig {
       max: 100,
       unit: TuningUnit.percent,
     ),
-    TuningField('heal', 'Apple heals', _arsenal, PowerUpTuning.arenaAppleHeal, min: 0, max: 200),
-    TuningField('maxLife', 'Most life (apples)', _arsenal, PowerUpTuning.arenaMaxLife, min: 100, max: 200),
+    TuningField(
+      'heal',
+      'Apple heals',
+      _arsenal,
+      PowerUpTuning.arenaAppleHeal,
+      min: 0,
+      max: 200,
+    ),
+    TuningField(
+      'maxLife',
+      'Most life (apples)',
+      _arsenal,
+      PowerUpTuning.arenaMaxLife,
+      min: 100,
+      max: 200,
+    ),
     for (final kind in damageKinds)
       TuningField(
         'lines.${kind.name}',
@@ -156,7 +210,15 @@ class PowerUpConfig {
         max: 180,
         integer: true,
       ),
-    TuningField('lines.bash', 'Shield bash', _allOut, PowerUpTuning.allOutShieldBash, min: 0, max: 180, integer: true),
+    TuningField(
+      'lines.bash',
+      'Shield bash',
+      _allOut,
+      PowerUpTuning.allOutShieldBash,
+      min: 0,
+      max: 180,
+      integer: true,
+    ),
     TuningField(
       'keep',
       'Shield keeps lines lost at',
@@ -219,7 +281,9 @@ class PowerUpConfig {
       ? ' (per round)'
       : '';
 
-  static final Map<String, TuningField> _byId = {for (final f in fields) f.id: f};
+  static final Map<String, TuningField> _byId = {
+    for (final f in fields) f.id: f,
+  };
 
   /// The field with [id], or null.
   static TuningField? field(String id) => _byId[id];
@@ -236,10 +300,13 @@ class PowerUpConfig {
   // --- Typed values used by the match ---
 
   int get firstSpawnSteps => _steps('firstSpawn');
+  int get trapStartSteps => _steps('trapStart');
 
   /// Steps between spawns for [ballCount] balls (more balls, more often), as [PowerUpTuning.spawnInterval].
   int spawnInterval(int ballCount) =>
-      (_steps('spawnEvery') * 2 / (ballCount < 2 ? 2 : ballCount)).round().clamp(1, 1 << 30);
+      (_steps('spawnEvery') * 2 / (ballCount < 2 ? 2 : ballCount))
+          .round()
+          .clamp(1, 1 << 30);
 
   double get fieldRadiusRatio => value('fieldSize').toDouble();
   int get aimSteps => _steps('aim');
@@ -249,16 +316,18 @@ class PowerUpConfig {
   int get gatlingRounds => value('rounds').toInt();
 
   /// Arsenal life lost per hit of [kind] (0 for kinds that do no damage).
-  double arenaDamage(PowerUpKind kind) =>
-      _byId.containsKey('dmg.${kind.name}') ? value('dmg.${kind.name}').toDouble() : 0;
+  double arenaDamage(PowerUpKind kind) => _byId.containsKey('dmg.${kind.name}')
+      ? value('dmg.${kind.name}').toDouble()
+      : 0;
   double get arenaShieldBash => value('bash').toDouble();
   double get shieldBlock => _share('block');
   double get arenaAppleHeal => value('heal').toDouble();
   double get arenaMaxLife => value('maxLife').toDouble();
 
   /// All-Out lines cut per hit of [kind] (0 for kinds that do no damage).
-  int allOutThreads(PowerUpKind kind) =>
-      _byId.containsKey('lines.${kind.name}') ? value('lines.${kind.name}').toInt() : 0;
+  int allOutThreads(PowerUpKind kind) => _byId.containsKey('lines.${kind.name}')
+      ? value('lines.${kind.name}').toInt()
+      : 0;
   int get allOutShieldBash => value('lines.bash').toInt();
   double get allOutShieldKeep => _share('keep');
   int get allOutAppleSlots => value('appleLines').toInt();
@@ -293,13 +362,17 @@ class PowerUpConfig {
     if (json is! Map) return config;
     for (final entry in json.entries) {
       final value = entry.value;
-      if (entry.key is String && value is num && value.isFinite) config = config.withValue(entry.key as String, value);
+      if (entry.key is String && value is num && value.isFinite) {
+        config = config.withValue(entry.key as String, value);
+      }
     }
     return config;
   }
 
   /// For a link: the changed values as base64url JSON, or null when everything is default.
-  String? encode() => isDefault ? null : base64Url.encode(utf8.encode(jsonEncode(toJson()))).replaceAll('=', '');
+  String? encode() => isDefault
+      ? null
+      : base64Url.encode(utf8.encode(jsonEncode(toJson()))).replaceAll('=', '');
 
   /// Strict, for links (they come from anywhere): null when [text] isn't something [encode] could have made
   /// (bad encoding, unknown keys, non-numbers or values out of range).
@@ -313,7 +386,13 @@ class PowerUpConfig {
       for (final entry in json.entries) {
         final f = entry.key is String ? _byId[entry.key] : null;
         final value = entry.value;
-        if (f == null || value is! num || !value.isFinite || value < f.min || value > f.max) return null;
+        if (f == null ||
+            value is! num ||
+            !value.isFinite ||
+            value < f.min ||
+            value > f.max) {
+          return null;
+        }
         if (f.integer && value != value.roundToDouble()) return null;
         config = config.withValue(f.id, value);
       }
@@ -330,5 +409,7 @@ class PowerUpConfig {
       overrides.entries.every((e) => other.overrides[e.key] == e.value);
 
   @override
-  int get hashCode => Object.hashAllUnordered(overrides.entries.map((e) => Object.hash(e.key, e.value)));
+  int get hashCode => Object.hashAllUnordered(
+    overrides.entries.map((e) => Object.hash(e.key, e.value)),
+  );
 }

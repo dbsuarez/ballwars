@@ -16,6 +16,7 @@ void main() {
     const d = PowerUpConfig.defaults;
     expect(d.isDefault, isTrue);
     expect(d.firstSpawnSteps, PowerUpTuning.firstSpawnSteps);
+    expect(d.trapStartSteps, PowerUpTuning.trapStartSteps);
     for (final n in [2, 3, 4]) {
       expect(d.spawnInterval(n), PowerUpTuning.spawnInterval(n));
     }

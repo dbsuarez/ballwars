@@ -65,6 +65,18 @@ void main() {
     expect(result.overrides.length, 1);
   });
 
+  testWidgets('trap deployment starts at one minute and can be changed', (
+    tester,
+  ) async {
+    final result = await open(tester, PowerUpConfig.defaults, () async {
+      final input = await field(tester, 'trapStart');
+      expect(find.text('60'), findsWidgets);
+      await tester.enterText(input, '90');
+      await save(tester);
+    });
+    expect(result!.trapStartSteps, 90 * 60);
+  });
+
   testWidgets('damage rows show icon, label and value inline', (tester) async {
     await open(tester, PowerUpConfig.defaults, () async {
       final value = await field(tester, 'dmg.pistol');

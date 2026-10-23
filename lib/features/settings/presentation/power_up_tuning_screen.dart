@@ -66,7 +66,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
   }
 
   static IconData _genericIcon(TuningField f) => switch (f.id) {
-    'firstSpawn' || 'spawnEvery' => Icons.schedule_rounded,
+    'firstSpawn' || 'spawnEvery' || 'trapStart' => Icons.schedule_rounded,
     'fieldSize' => Icons.radio_button_checked_rounded,
     'aim' => Icons.gps_fixed_rounded,
     'bulletSpeed' => Icons.trending_flat_rounded,

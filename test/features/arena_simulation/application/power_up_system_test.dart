@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/application/power_up_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
@@ -154,6 +155,7 @@ void main() {
       mode: MatchMode.arsenal,
       lookAhead: false,
       powerUpKinds: {PowerUpKind.apple},
+      tuning: PowerUpConfig.defaults.withValue('trapStart', 1),
     );
     for (final b in c.state.balls) {
       b.velocity = Offset.zero;
@@ -171,6 +173,40 @@ void main() {
     expect(seen.any((kind) => kind.isTrap), isTrue);
   });
 
+  test('traps wait one minute by default and their start time is configurable', () {
+    MatchSimulationController trapsOnly(PowerUpConfig tuning) {
+      final c = MatchSimulationController(
+        _balls,
+        arenaRadius: _arenaRadius,
+        seed: 4,
+        layoutRotation: 0,
+        mode: MatchMode.arsenal,
+        lookAhead: false,
+        powerUpKinds: const {},
+        tuning: tuning,
+      );
+      for (final ball in c.state.balls) {
+        ball.velocity = Offset.zero;
+      }
+      return c;
+    }
+
+    final defaults = trapsOnly(PowerUpConfig.defaults);
+    _run(defaults, PowerUpTuning.trapStartSteps - 1);
+    expect(defaults.powerUps!.portals, isEmpty);
+    expect(defaults.powerUps!.spikeWalls, isEmpty);
+
+    final immediate = trapsOnly(
+      PowerUpConfig.defaults.withValue('trapStart', 0),
+    );
+    _run(immediate, PowerUpTuning.firstSpawnSteps);
+    expect(
+      immediate.powerUps!.portals.length +
+          immediate.powerUps!.spikeWalls.length,
+      1,
+    );
+  });
+
   test('traps spawn only along the arena boundary', () {
     final c = MatchSimulationController(
       _balls,
@@ -180,6 +216,7 @@ void main() {
       mode: MatchMode.arsenal,
       lookAhead: false,
       powerUpKinds: {PowerUpKind.portal},
+      tuning: PowerUpConfig.defaults.withValue('trapStart', 0),
     );
     for (final b in c.state.balls) {
       b.velocity = Offset.zero;
@@ -205,6 +242,7 @@ void main() {
       mode: MatchMode.arsenal,
       lookAhead: false,
       powerUpKinds: {PowerUpKind.spikeWall},
+      tuning: PowerUpConfig.defaults.withValue('trapStart', 0),
     );
     for (final b in c.state.balls) {
       b.velocity = Offset.zero;

@@ -573,8 +573,11 @@ class PowerUpSystem {
             for (final k in PowerUpKind.values)
               if (chosen.contains(k) || k.isTrap) k,
           ];
-    if (kinds.isEmpty) return;
-    final kind = kinds[rng.nextInt(kinds.length)];
+    final eligibleKinds = number < _t.trapStartSteps
+        ? kinds.where((kind) => !kind.isTrap).toList()
+        : kinds;
+    if (eligibleKinds.isEmpty) return;
+    final kind = eligibleKinds[rng.nextInt(eligibleKinds.length)];
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);

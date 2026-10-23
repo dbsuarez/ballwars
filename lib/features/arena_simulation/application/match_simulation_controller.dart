@@ -286,6 +286,31 @@ class MatchSimulationController {
   /// Number of rim slots no ball owns.
   int get freeSlotCount => _slotOwners.where((owner) => owner == null).length;
 
+  /// Claims up to [count] free rim slots for [ball] (the All-Out apple), the ones nearest the ball's own
+  /// direction from the center first. Returns how many were claimed: 0 when no slot is free.
+  int claimFreeSlots(SimulationBall ball, int count) {
+    if (count <= 0) return 0;
+    final free = [
+      for (var slot = 0; slot < rimSlotCount; slot++)
+        if (_slotOwners[slot] == null) slot,
+    ];
+    if (free.isEmpty) return 0;
+    final facing = math.atan2(ball.position.dy, ball.position.dx);
+    double gap(int slot) {
+      final d = (_slotAngle(slot) - facing).abs() % (2 * math.pi);
+      return math.min(d, 2 * math.pi - d);
+    }
+
+    // Stable on equal gaps (slot order), so the result only depends on the match state.
+    mergeSort(free, compare: (a, b) => gap(a).compareTo(gap(b)));
+    final claimed = free.take(count).toList();
+    for (final slot in claimed) {
+      _claimSlot(ball, slot);
+    }
+    ball.lineCount = ball.fanLines.length;
+    return claimed.length;
+  }
+
   /// Arsenal: takes [amount] life off [ball], never below 0 (it is out at the next elimination check).
   /// Does nothing in the other modes, where the threads are the life (see [cutThreads]).
   void damage(SimulationBall ball, double amount) {
@@ -387,7 +412,9 @@ class MatchSimulationController {
       if (ball.isEliminated) continue;
 
       final previousPosition = ball.position;
-      ball.position += ball.velocity * dt;
+      final move = ball.velocity * dt;
+      // A speed boost moves the ball faster without changing its stored velocity, so it ends cleanly.
+      ball.position += ball.speedLeft > 0 ? move * PowerUpTuning.speedFactor : move;
       final collision = _physics.resolveWallCollision(ball, previousPosition: previousPosition);
       if (collision != null) {
         wallHits++;
@@ -416,6 +443,8 @@ class MatchSimulationController {
         final a = order[i];
         final b = order[j];
         if (a.isEliminated || b.isEliminated) continue;
+        // A ghost passes straight through other balls.
+        if (a.isGhost || b.isGhost) continue;
 
         final velocityA = a.velocity;
         final velocityB = b.velocity;
@@ -434,6 +463,9 @@ class MatchSimulationController {
           final impactAngle = math.atan2(result.normal.dy, result.normal.dx);
           a.rotation += impactAngle * 0.05;
           b.rotation -= impactAngle * 0.05;
+
+          // Melee power-ups (knife, shield bash) strike on contact.
+          _powerUps?.onContact(a, b);
         }
       }
     }
@@ -449,12 +481,13 @@ class MatchSimulationController {
       }
     }
 
-    // 4. Cutting: any opponent body overlapping a line cuts it (Arsenal has no lines to cut)
+    // 4. Cutting: any opponent body overlapping a line cuts it (Arsenal has no lines to cut). A ghost's
+    // body cuts nothing and its own lines can't be cut.
     for (final cutter in arsenal ? const <SimulationBall>[] : _balls) {
-      if (cutter.isEliminated) continue;
+      if (cutter.isEliminated || cutter.isGhost) continue;
 
       for (final target in _balls) {
-        if (target.isEliminated) continue;
+        if (target.isEliminated || target.isGhost) continue;
         if (identical(target, cutter)) continue;
 
         final cut = _cutLinesCrossedBy(cutter, target);
@@ -512,6 +545,8 @@ class MatchSimulationController {
       }
       final survivor = tied[_rng.nextInt(tied.length)];
       survivor.isEliminated = false;
+      // An Arsenal survivor keeps one point of life, so its life bar isn't empty.
+      if (arsenal && survivor.life <= 0) survivor.life = 1;
       activeBalls = [survivor];
     }
     final knockedOut = eliminatedNow.where((b) => b.isEliminated);

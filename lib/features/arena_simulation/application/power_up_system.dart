@@ -7,10 +7,15 @@ import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 import 'match_simulation_controller.dart';
 
-/// Runs the power-ups of an Arsenal or All-Out match: spawning, pick-up, aiming, projectiles and bombs.
+/// Runs the power-ups of an Arsenal or All-Out match: spawning, pick-up, aiming, projectiles, bombs and
+/// the personal effects (apple, speed, ghost, magnet, shield).
 ///
-/// The controller creates one (never in Threads mode) and calls [step] once per simulation step, right
-/// after the ball-ball collisions. All randomness comes from the match's [rng], drawn only inside [step].
+/// The controller creates one (never in Threads mode), calls [onContact] for every ball-ball bump and
+/// [step] once per simulation step, right after the ball-ball collisions. All randomness comes from the
+/// match's [rng], drawn only inside the simulation step.
+///
+/// Guns, the knife and the shield are held ([SimulationBall.held]) until used, and picking up another of
+/// them replaces the one held. Apple, speed, ghost, bomb and magnet act at once and leave it alone.
 class PowerUpSystem {
   PowerUpSystem(this.match, this.rng);
 
@@ -39,8 +44,20 @@ class PowerUpSystem {
   /// Weapon hits landed on balls so far (the screen plays a sound when it goes up).
   int hits = 0;
 
+  /// Knife hits landed so far (the screen plays a sound when it goes up).
+  int slashes = 0;
+
+  /// Bombs exploded so far (the screen plays a sound when it goes up).
+  int blasts = 0;
+
+  /// Hits a shield blocked so far (the screen plays a sound when it goes up).
+  int blocks = 0;
+
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
   final Map<SimulationBall, Offset> _frozenVelocity = {};
+
+  /// Fastest a held shield turns toward its threat, in radians per step.
+  static const double _shieldTurnPerStep = 0.25;
 
   /// Largest seeded turn of an inner shotgun pellet off its place in the fan, in radians.
   static const double _pelletJitter = 0.03;
@@ -49,7 +66,12 @@ class PowerUpSystem {
   double get fieldRadius => match.arenaRadius * PowerUpTuning.fieldRadiusRatio;
 
   /// Advances the power-ups by one simulation step.
+  ///
+  /// Timers count down first, so an effect picked up in step N lasts its full count from step N + 1 on
+  /// (a bomb picked up in step N explodes in step N + [PowerUpTuning.bombFuseSteps]).
   void step() {
+    _countDown();
+    _explodeBombs();
     _pickUpTouched();
     _updateFrozen();
     _moveProjectiles();
@@ -57,33 +79,176 @@ class PowerUpSystem {
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
     if (number % PowerUpTuning.spawnIntervalSteps == 0) _spawn(number);
+    _turnShields();
   }
 
-  /// Gives [ball] the power-up [p] in place of whatever it held, and takes [p] off the field.
+  /// Gives [ball] the power-up [p] and takes [p] off the field. A held kind replaces whatever [ball]
+  /// held; the others act at once.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
-    ball.held = p.kind;
-    // A new power-up starts its own aim (a gatling burst already firing finishes first).
-    if (ball.burstLeft == 0) {
-      ball
-        ..aimLeft = 0
-        ..aimTarget = null;
-    }
     field.remove(p);
     pickups++;
+    switch (p.kind) {
+      case PowerUpKind.apple:
+        _eatApple(ball);
+      case PowerUpKind.speed:
+        ball.speedLeft = PowerUpTuning.speedSteps;
+      case PowerUpKind.ghost:
+        ball.ghostLeft = PowerUpTuning.ghostSteps;
+      case PowerUpKind.bomb:
+        bombs.add(PendingBomb(owner: ball, position: ball.position, fuseSteps: PowerUpTuning.bombFuseSteps));
+      case PowerUpKind.magnet:
+        _pullNearest(ball);
+      default:
+        ball.held = p.kind;
+        // A new power-up starts its own aim (a gatling burst already firing finishes first).
+        if (ball.burstLeft == 0) {
+          ball
+            ..aimLeft = 0
+            ..aimTarget = null;
+        }
+    }
   }
+
+  /// Melee on a bump between [a] and [b]: a knife hits the other ball and is used up; a shield bashes an
+  /// unarmed other ball (one holding nothing) and breaks. Both sides strike with what they held when they
+  /// touched, so two knives hit each other. Nothing happens if either is a ghost or already out.
+  void onContact(SimulationBall a, SimulationBall b) {
+    if (!_alive(a) || !_alive(b) || a.isGhost || b.isGhost) return;
+    final heldA = a.held;
+    final heldB = b.held;
+    _melee(a, heldA, b, heldB);
+    _melee(b, heldB, a, heldA);
+  }
+
+  void _melee(SimulationBall attacker, PowerUpKind? weapon, SimulationBall target, PowerUpKind? targetHeld) {
+    final PowerUpKind kind;
+    if (weapon == PowerUpKind.knife) {
+      kind = PowerUpKind.knife;
+      slashes++;
+    } else if (weapon == PowerUpKind.shield && targetHeld == null) {
+      kind = PowerUpKind.shield;
+    } else {
+      return;
+    }
+    if (attacker.held == weapon) attacker.held = null;
+    final toAttacker = attacker.position - target.position;
+    final distance = toAttacker.distance;
+    final at = distance > 0 ? target.position + toAttacker * (target.radius / distance) : target.position;
+    _hit(target, kind, at: at, from: attacker);
+  }
+
+  /// True while [ball] is still in the match: not eliminated, and not already at 0 life (Arsenal) or out
+  /// of threads (All-Out) earlier in this step, before the elimination check has marked it.
+  bool _alive(SimulationBall ball) =>
+      !ball.isEliminated && (match.mode == MatchMode.arsenal ? ball.life > 0 : ball.fanLines.isNotEmpty);
+
+  /// Counts the speed boosts and ghosts down; a ball that is out drops its waiting magnet.
+  void _countDown() {
+    for (final ball in match.state.balls) {
+      if (ball.speedLeft > 0) ball.speedLeft--;
+      if (ball.ghostLeft > 0) ball.ghostLeft--;
+      if (!_alive(ball)) ball.magnetPending = false;
+    }
+  }
+
+  /// Arsenal: heals [PowerUpTuning.arenaAppleHeal], up to full life. All-Out: claims up to
+  /// [PowerUpTuning.allOutAppleSlots] free rim slots with the "+N LINES" pop (none when none are free).
+  /// Either way a green sparkle bursts from the ball.
+  void _eatApple(SimulationBall ball) {
+    if (match.mode == MatchMode.arsenal) {
+      ball.life = math.min(PowerUpTuning.arenaLife, ball.life + PowerUpTuning.arenaAppleHeal);
+    } else {
+      final claimed = match.claimFreeSlots(ball, PowerUpTuning.allOutAppleSlots);
+      if (claimed > 0) match.state.floatingTexts.spawn(ball.position, '+$claimed LINES', ball.config.primaryColor);
+    }
+    match.state.particles.spawnSparkle(origin: ball.position, rng: rng);
+  }
+
+  /// The magnet pulls the nearest field power-up straight onto [ball] (it is picked up next step as
+  /// usual). With the field empty, the next one to spawn is pulled instead.
+  void _pullNearest(SimulationBall ball) {
+    FieldPowerUp? nearest;
+    var best = double.infinity;
+    for (final p in field) {
+      final distance = (p.position - ball.position).distanceSquared;
+      if (distance < best) {
+        nearest = p;
+        best = distance;
+      }
+    }
+    if (nearest == null) {
+      ball.magnetPending = true;
+    } else {
+      nearest.position = ball.position;
+    }
+  }
+
+  /// Bombs burn down their fuse and explode, hitting every ball whose body is within
+  /// [PowerUpTuning.bombRadiusRatio] arena radii of the bomb, its owner included (ghosts are spared).
+  void _explodeBombs() {
+    if (bombs.isEmpty) return;
+    final radius = match.arenaRadius * PowerUpTuning.bombRadiusRatio;
+    for (final bomb in List.of(bombs)) {
+      if (--bomb.fuseSteps > 0) continue;
+      bombs.remove(bomb);
+      blasts++;
+      for (final ball in match.state.balls) {
+        if (!_alive(ball)) continue;
+        final offset = ball.position - bomb.position;
+        final distance = offset.distance;
+        if (distance - ball.radius > radius) continue;
+        // The side of the ball facing the bomb, so the splash flies away from the blast.
+        final at = distance > ball.radius
+            ? bomb.position + offset * ((distance - ball.radius) / distance)
+            : bomb.position;
+        _hit(ball, PowerUpKind.bomb, at: at);
+      }
+    }
+  }
+
+  /// Turns every held shield toward its biggest threat: the nearest enemy projectile coming at it, else
+  /// the nearest opponent. Only shows where it braces; a shield blocks from every side.
+  void _turnShields() {
+    for (final ball in match.state.balls) {
+      if (ball.held != PowerUpKind.shield || !_alive(ball)) continue;
+      final threat = _incoming(ball)?.position ?? _nearestTarget(ball)?.position;
+      if (threat == null) continue;
+      final toThreat = threat - ball.position;
+      final want = math.atan2(toThreat.dy, toThreat.dx);
+      final turn = _wrap(want - ball.shieldAngle).clamp(-_shieldTurnPerStep, _shieldTurnPerStep);
+      ball.shieldAngle = _wrap(ball.shieldAngle + turn);
+    }
+  }
+
+  /// The nearest projectile not fired by [ball] that is still moving toward it, or null.
+  Projectile? _incoming(SimulationBall ball) {
+    Projectile? best;
+    var bestDistance = double.infinity;
+    for (final p in projectiles) {
+      if (p.spent || identical(p.owner, ball)) continue;
+      final toBall = ball.position - p.position;
+      if (toBall.dx * p.velocity.dx + toBall.dy * p.velocity.dy <= 0) continue;
+      final distance = toBall.distanceSquared;
+      if (distance < bestDistance) {
+        best = p;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /// [angle] wrapped into -pi..pi.
+  static double _wrap(double angle) => (angle + math.pi) % (2 * math.pi) - math.pi;
 
   void _pickUpTouched() {
     if (field.isEmpty) return;
     final radius = fieldRadius;
     for (final ball in match.state.balls) {
-      if (ball.isEliminated) continue;
-      // At most one per step, so a second one in reach is not used up unseen.
-      for (final p in field) {
-        if ((p.position - ball.position).distance < ball.radius + radius) {
-          pickUp(ball, p);
-          break;
-        }
-      }
+      if (!_alive(ball)) continue;
+      // At most one per step, so a second one in reach is not used up unseen. The index is found first,
+      // so [field] is never changed while it is being walked.
+      final index = field.indexWhere((p) => (p.position - ball.position).distance < ball.radius + radius);
+      if (index >= 0) pickUp(ball, field[index]);
     }
   }
 
@@ -99,8 +264,16 @@ class PowerUpSystem {
       final clear = balls.every((b) => b.isEliminated || (b.position - spot).distance >= b.radius + radius) &&
           field.every((f) => (f.position - spot).distance >= 2 * radius);
       if (!clear) continue;
-      field.add(FieldPowerUp(kind: kind, position: spot, spawnStep: number));
+      final spawned = FieldPowerUp(kind: kind, position: spot, spawnStep: number);
+      field.add(spawned);
       if (field.length > PowerUpTuning.maxOnField) field.removeAt(0);
+      // A waiting magnet pulls it straight in.
+      for (final ball in balls) {
+        if (!ball.magnetPending || !_alive(ball)) continue;
+        ball.magnetPending = false;
+        spawned.position = ball.position;
+        break;
+      }
       return;
     }
   }
@@ -119,12 +292,12 @@ class PowerUpSystem {
     }
   }
 
-  /// The nearest opponent of [ball] a gun can aim at (not out, not a ghost), or null.
+  /// The nearest opponent of [ball] a gun can aim at (still in the match, not a ghost), or null.
   SimulationBall? _nearestTarget(SimulationBall ball) {
     SimulationBall? best;
     var bestDistance = double.infinity;
     for (final other in match.state.balls) {
-      if (identical(other, ball) || other.isEliminated || other.isGhost) continue;
+      if (identical(other, ball) || !_alive(other) || other.isGhost) continue;
       final distance = (other.position - ball.position).distanceSquared;
       if (distance < bestDistance) {
         best = other;
@@ -135,11 +308,12 @@ class PowerUpSystem {
   }
 
   /// Guns aim at the nearest opponent for [PowerUpTuning.aimSteps] steps, then fire. A gatling then
-  /// fires its other rounds one every [PowerUpTuning.gatlingIntervalSteps] steps. Balls that are out or
-  /// frozen neither aim nor fire (bullets already in flight still fly).
+  /// fires its other rounds one every [PowerUpTuning.gatlingIntervalSteps] steps. Balls that are out
+  /// (or lost their last life or thread earlier this step) or frozen neither aim nor fire (bullets
+  /// already in flight still fly).
   void _aimAndFire() {
     for (final ball in match.state.balls) {
-      if (ball.isEliminated) {
+      if (!_alive(ball)) {
         ball
           ..aimLeft = 0
           ..aimTarget = null
@@ -257,23 +431,37 @@ class PowerUpSystem {
     projectiles.removeWhere((p) => p.spent);
   }
 
-  /// Every weapon hit lands here. Arsenal takes life off [target], All-Out snaps its threads nearest the
-  /// impact point [at]; both splash "blood" in the target's color. A freeze shot instead stops the target
-  /// for [PowerUpTuning.freezeSteps] steps. [from] is the attacker.
+  /// Every weapon hit lands here (bullets, pellets, freeze shots, knife, shield bash, bomb). A ghost can't
+  /// be hit at all. A held shield absorbs [PowerUpTuning.shieldBlock] of the hit, then breaks. Arsenal
+  /// takes life off [target], All-Out snaps its threads nearest the impact point [at]; both splash "blood"
+  /// in the target's color. A freeze shot instead stops the target for [PowerUpTuning.freezeSteps] steps
+  /// (shortened the same way by a shield). [kind] [PowerUpKind.shield] is a shield bash. [from] is the
+  /// attacker (null for a bomb: the splash then flies away from [at]).
   void _hit(SimulationBall target, PowerUpKind kind, {Offset? at, SimulationBall? from}) {
+    if (target.isGhost) return;
     hits++;
     final impact = at ?? target.position;
+    var share = 1.0;
+    if (target.held == PowerUpKind.shield) {
+      target.held = null;
+      blocks++;
+      share = 1 - PowerUpTuning.shieldBlock;
+    }
     if (kind == PowerUpKind.freeze) {
-      if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
-      target
-        ..frozenLeft = PowerUpTuning.freezeSteps
-        ..velocity = Offset.zero;
+      final steps = (PowerUpTuning.freezeSteps * share).round();
+      if (steps > target.frozenLeft) {
+        if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
+        target.frozenLeft = steps;
+      }
+      if (target.frozenLeft > 0) target.velocity = Offset.zero;
       return;
     }
+    final bash = kind == PowerUpKind.shield;
     if (match.mode == MatchMode.arsenal) {
-      match.damage(target, PowerUpTuning.arenaDamage[kind] ?? 0);
+      match.damage(target, (bash ? PowerUpTuning.arenaShieldBash : PowerUpTuning.arenaDamage[kind] ?? 0) * share);
     } else {
-      match.cutThreads(target, PowerUpTuning.allOutThreads[kind] ?? 0, near: impact);
+      final threads = bash ? PowerUpTuning.allOutShieldBash : PowerUpTuning.allOutThreads[kind] ?? 0;
+      match.cutThreads(target, (threads * share).round(), near: impact);
     }
     match.state.particles.spawnBlood(
       origin: impact,

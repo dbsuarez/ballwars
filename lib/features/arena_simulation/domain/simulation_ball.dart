@@ -29,6 +29,10 @@ class SimulationBall {
   int ghostLeft = 0;
   bool magnetPending = false;
 
+  /// Direction a held shield faces, in radians: it turns toward the biggest threat (see
+  /// `PowerUpSystem`). Blocking works from every side; this only shows where it braces.
+  double shieldAngle = 0;
+
   /// Steps left of aiming before a gun fires at [aimTarget].
   int aimLeft = 0;
   SimulationBall? aimTarget;

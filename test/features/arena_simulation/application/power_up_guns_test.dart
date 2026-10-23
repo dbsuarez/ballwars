@@ -172,7 +172,7 @@ void main() {
   test('bullets from an eliminated ball still fly; it fires nothing new', () {
     // Killed mid-aim: nothing is fired.
     final c = _match(count: 3);
-    final [a, b, _] = c.state.balls;
+    final a = c.state.balls.first;
     a.held = PowerUpKind.pistol;
     _run(c, PowerUpTuning.aimSteps ~/ 2);
     a.isEliminated = true;
@@ -182,14 +182,14 @@ void main() {
 
     // Killed with a bullet in flight: it still lands.
     final d = _match(count: 3);
-    final [holder, target, _] = d.state.balls;
+    final [holder, target, bystander] = d.state.balls;
     holder.held = PowerUpKind.pistol;
     _run(d, PowerUpTuning.aimSteps);
     final bullet = d.powerUps!.projectiles.single;
     holder.isEliminated = true;
     _runUntilSpent(d, bullet);
     expect(target.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!);
-    expect(b.life, PowerUpTuning.arenaLife);
+    expect(bystander.life, PowerUpTuning.arenaLife);
   });
 
   test('freeze ray stops the target for freezeSteps steps', () {

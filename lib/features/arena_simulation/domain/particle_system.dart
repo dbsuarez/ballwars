@@ -76,6 +76,9 @@ class RimArcParticle extends BaseParticle {
 class ParticleSystem {
   final List<BaseParticle> _particles = [];
 
+  /// Color of the sparkle burst when a ball takes an apple.
+  static const Color sparkleColor = Color(0xFF4ADE80);
+
   List<BaseParticle> get particles => List.unmodifiable(_particles);
 
   void spawnBurst({
@@ -125,6 +128,26 @@ class ParticleSystem {
         lifespan: rng.nextDoubleRange(0.25, 0.5),
         color: color,
         baseRadius: rng.nextDoubleRange(1.5, 3.5),
+      ));
+    }
+  }
+
+  /// Spawns a burst of small green sparkles all around [origin], when a ball takes an apple.
+  void spawnSparkle({
+    required Offset origin,
+    required SeededRandom rng,
+  }) {
+    final count = 14 + rng.nextInt(7); // 14..20
+
+    for (var i = 0; i < count; i++) {
+      final angle = rng.nextDoubleRange(0, 2 * math.pi);
+      final speed = rng.nextDoubleRange(40.0, 160.0);
+      _particles.add(Particle(
+        position: origin,
+        velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
+        lifespan: rng.nextDoubleRange(0.3, 0.6),
+        color: sparkleColor,
+        baseRadius: rng.nextDoubleRange(1.2, 2.8),
       ));
     }
   }

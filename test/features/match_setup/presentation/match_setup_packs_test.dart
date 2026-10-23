@@ -118,4 +118,18 @@ void main() {
     expect(find.text('First to 2'), findsOneWidget);
     expect(find.text('2×'), findsOneWidget);
   });
+
+  testWidgets('Clear removes every picked ball', (tester) async {
+    await pumpSetup(tester);
+    expect(find.text('Clear'), findsNothing);
+    await tester.tap(find.text('Nike'));
+    await tester.tap(find.text('Puma'));
+    await tester.pump();
+    expect(find.text('2/4'), findsOneWidget);
+
+    await tester.tap(find.text('Clear'));
+    await tester.pump();
+    expect(find.text('0/4'), findsOneWidget);
+    expect(find.text('Clear'), findsNothing);
+  });
 }

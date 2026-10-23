@@ -12,7 +12,10 @@ import 'app_settings_scope.dart';
 class SettingsScreen extends StatefulWidget {
   final CustomGroupRepository? customGroups;
 
-  const SettingsScreen({super.key, this.customGroups});
+  /// [customGroups] through the admin's session: edits to anyone's groups.
+  final CustomGroupRepository? adminGroups;
+
+  const SettingsScreen({super.key, this.customGroups, this.adminGroups});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -83,6 +86,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await _scope!.adminAuth!.signOut();
         if (mounted) setState(() => _isAdmin = false);
       });
+
+  Future<void> _cleanUpImages() async {
+    var removed = 0;
+    await _run(() async => removed = await widget.adminGroups!.cleanUpUnusedImages());
+    if (mounted && _message == null) {
+      setState(() => _message = removed == 0 ? 'No unused images.' : 'Removed $removed unused images.');
+    }
+  }
 
   void _togglePreview(MusicTrack track) {
     final audio = GameAudio.instance;
@@ -312,11 +323,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (widget.customGroups != null)
               _Section(
                 title: 'GROUPS',
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => MyGroupsScreen(repository: widget.customGroups!, allGroups: true)),
-                  ),
-                  child: const Text("Everyone's groups"),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MyGroupsScreen(
+                            repository: widget.customGroups!,
+                            editRepository: widget.adminGroups,
+                            allGroups: true,
+                          ),
+                        ),
+                      ),
+                      child: const Text("Everyone's groups"),
+                    ),
+                    if (widget.adminGroups != null) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton(
+                        onPressed: _busy ? null : _cleanUpImages,
+                        child: const Text('Clean up unused images'),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             _Section(

@@ -17,11 +17,22 @@ Future<void> main() async {
   // Local setup only (no network); sign-in happens when a group is first used.
   await Supabase.initialize(url: SupabaseConfig.url, publishableKey: SupabaseConfig.publishableKey);
   final client = Supabase.instance.client;
+  // Older versions signed the admin in on this client, replacing the device's
+  // anonymous account. The admin now has a session of their own (see
+  // SupabaseAdminAuth), so put this client back to an anonymous one.
+  final user = client.auth.currentUser;
+  if (user != null && !user.isAnonymous) {
+    try {
+      await client.auth.signOut();
+    } catch (_) {}
+  }
+  final admin = SupabaseAdminAuth();
   runApp(
     BallWarsApp(
       customGroups: SupabaseCustomGroupRepository(client),
-      settingsRepository: SupabaseAppSettingsRepository(client),
-      adminAuth: SupabaseAdminAuth(client),
+      adminGroups: SupabaseCustomGroupRepository(admin.client),
+      settingsRepository: SupabaseAppSettingsRepository(client, writer: admin.client),
+      adminAuth: admin,
       shortLinks: SupabaseShortLinkRepository(client),
       syncOffline: true,
     ),

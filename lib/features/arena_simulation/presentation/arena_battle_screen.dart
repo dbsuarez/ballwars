@@ -435,6 +435,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                           ],
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+                        child: _VersusHeader(balls: _state.balls, compact: true),
+                      ),
                       Expanded(child: arena),
                       Padding(padding: const EdgeInsets.fromLTRB(24, 4, 24, 8), child: scoreboard),
                       Padding(
@@ -502,17 +506,19 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   }
 }
 
-/// Wide screens: the contestants side by side, "A VS B (VS C ...)", at the
-/// top of the right panel. Knocked-out balls fade.
+/// The contestants side by side, "A VS B (VS C ...)": big at the top of the
+/// right panel on wide screens, [compact] above the arena on phones.
+/// Knocked-out balls fade.
 class _VersusHeader extends StatelessWidget {
   final List<SimulationBall> balls;
+  final bool compact;
 
-  const _VersusHeader({required this.balls});
+  const _VersusHeader({required this.balls, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
-    final size = balls.length <= 2 ? 96.0 : 64.0;
+    final size = compact ? (balls.length <= 2 ? 40.0 : 32.0) : (balls.length <= 2 ? 96.0 : 64.0);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -520,7 +526,7 @@ class _VersusHeader extends StatelessWidget {
           if (i > 0)
             Padding(
               padding: EdgeInsets.only(top: size / 2 - 10),
-              child: Text('VS', style: AppText.mono(16, color: c.muted, letterSpacing: 1.5)),
+              child: Text('VS', style: AppText.mono(compact ? 12 : 16, color: c.muted, letterSpacing: 1.5)),
             ),
           Expanded(
             child: AnimatedOpacity(
@@ -529,13 +535,18 @@ class _VersusHeader extends StatelessWidget {
               child: Column(
                 children: [
                   CircularBallPreview(ball: balls[i].config, size: size),
-                  const SizedBox(height: 10),
+                  SizedBox(height: compact ? 4 : 10),
                   Text(
                     balls[i].config.name,
-                    maxLines: 2,
+                    maxLines: compact ? 1 : 2,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.ui(balls.length <= 2 ? 16 : 13, FontWeight.w700, color: c.text, height: 1.2),
+                    style: AppText.ui(
+                      compact ? 12 : (balls.length <= 2 ? 16 : 13),
+                      FontWeight.w700,
+                      color: c.text,
+                      height: 1.2,
+                    ),
                   ),
                 ],
               ),

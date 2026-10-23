@@ -32,6 +32,10 @@ abstract class CustomGroupRepository {
   /// This device's user id, once signed in (null before).
   String? get userId;
 
+  /// Admin: deletes uploaded images no ball uses any more (left behind when
+  /// a delete's storage cleanup failed). Returns how many were removed.
+  Future<int> cleanUpUnusedImages();
+
   Future<CustomGroup> createGroup(String name);
 
   Future<void> renameGroup(String groupId, String name);
@@ -84,8 +88,9 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   Future<List<CustomGroup>> myGroups() async {
-    final rows = await _offline('groups:mine', () async {
-      final uid = await _userId();
+    // Cached per account, so another account's groups never show up here.
+    final uid = _client.auth.currentUser?.id ?? await _userId();
+    final rows = await _offline('groups:mine:$uid', () async {
       return _client
           .from('ball_groups')
           .select(_groupColumns)
@@ -113,8 +118,8 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   Future<List<CustomGroup>> savedGroups() async {
-    final rows = await _offline('groups:saved', () async {
-      await _userId();
+    final uid = _client.auth.currentUser?.id ?? await _userId();
+    final rows = await _offline('groups:saved:$uid', () async {
       // RLS limits saved_groups to this user's rows; !inner keeps only the
       // groups that have one.
       return _client
@@ -263,6 +268,17 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
     await _images.uploadBinary(path, png, fileOptions: const FileOptions(contentType: 'image/png'));
     return path;
+  }
+
+  @override
+  Future<int> cleanUpUnusedImages() async {
+    // Listed by the database (migration 007, admin only), deleted through the
+    // Storage API: storage files can't be removed from SQL.
+    final names = [for (final name in await _client.rpc('orphan_ball_images') as List) name as String];
+    for (var i = 0; i < names.length; i += 100) {
+      await _images.remove(names.sublist(i, math.min(i + 100, names.length)));
+    }
+    return names.length;
   }
 
   @override

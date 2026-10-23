@@ -15,10 +15,16 @@ import 'ball_editor_sheet.dart';
 /// With [allGroups] (admin) it lists every user's groups instead, each with a
 /// switch that puts it in the admin's own categories.
 class MyGroupsScreen extends StatefulWidget {
+  /// This device's own account: its groups and the groups it added.
   final CustomGroupRepository repository;
+
+  /// Where edits go when set: the admin's session in [allGroups] mode, which
+  /// may change anyone's groups. The "In my categories" switches still use
+  /// [repository], since they belong to this device.
+  final CustomGroupRepository? editRepository;
   final bool allGroups;
 
-  const MyGroupsScreen({super.key, required this.repository, this.allGroups = false});
+  const MyGroupsScreen({super.key, required this.repository, this.editRepository, this.allGroups = false});
 
   @override
   State<MyGroupsScreen> createState() => _MyGroupsScreenState();
@@ -32,6 +38,8 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   String? _error;
   bool _busy = false;
 
+  CustomGroupRepository get _edits => widget.editRepository ?? widget.repository;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +49,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   Future<void> _reload() async {
     setState(() => _error = null);
     try {
-      final groups = widget.allGroups ? await widget.repository.allGroups() : await widget.repository.myGroups();
+      final groups = widget.allGroups ? await _edits.allGroups() : await widget.repository.myGroups();
       List<CustomGroup> saved;
       try {
         saved = await widget.repository.savedGroups();
@@ -114,23 +122,23 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   Future<void> _rename(CustomGroup group) async {
     final name = (await _askName(title: 'Rename group', initial: group.name))?.trim();
     if (name == null || name.isEmpty || name == group.name) return;
-    await _run(() => widget.repository.renameGroup(group.id, name));
+    await _run(() => _edits.renameGroup(group.id, name));
   }
 
   Future<void> _deleteGroup(CustomGroup group) async {
     if (!await _confirm('Delete "${group.name}" and its ${group.balls.length} balls?')) return;
-    await _run(() => widget.repository.deleteGroup(group));
+    await _run(() => _edits.deleteGroup(group));
   }
 
   Future<void> _addBall(CustomGroup group) async {
-    final added = await BallEditorSheet.show(context, groupId: group.id, repository: widget.repository);
+    final added = await BallEditorSheet.show(context, groupId: group.id, repository: _edits);
     if (added != null) await _reload();
   }
 
   Future<void> _editBall(CustomGroup group, CustomBall ball) async {
-    final result = await BallEditorSheet.show(context, groupId: group.id, repository: widget.repository, existing: ball);
+    final result = await BallEditorSheet.show(context, groupId: group.id, repository: _edits, existing: ball);
     if (result == BallEditorSheet.deleted) {
-      await _run(() => widget.repository.deleteBall(ball));
+      await _run(() => _edits.deleteBall(ball));
     } else if (result != null) {
       await _reload();
     }
@@ -148,7 +156,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
 
   Future<void> _deleteBall(CustomBall ball) async {
     if (!await _confirm('Delete "${ball.name}"?')) return;
-    await _run(() => widget.repository.deleteBall(ball));
+    await _run(() => _edits.deleteBall(ball));
   }
 
   @override

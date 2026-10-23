@@ -26,6 +26,9 @@ class BallWarsApp extends StatefulWidget {
   /// User-made groups (Supabase); null hides My Groups (e.g. in tests).
   final CustomGroupRepository? customGroups;
 
+  /// The same groups through the admin's session, for editing anyone's.
+  final CustomGroupRepository? adminGroups;
+
   /// App-wide settings and the admin login; null keeps the defaults.
   final AppSettingsRepository? settingsRepository;
   final AdminAuth? adminAuth;
@@ -40,6 +43,7 @@ class BallWarsApp extends StatefulWidget {
   const BallWarsApp({
     super.key,
     this.customGroups,
+    this.adminGroups,
     this.settingsRepository,
     this.adminAuth,
     this.shortLinks,
@@ -56,7 +60,8 @@ class _BallWarsAppState extends State<BallWarsApp> {
   // Built-in packs (Streaming, Countries, ...), loaded once and shared.
   final BallPackRepository _packs = BallPackRepository();
 
-  /// (downloaded, to download) while the startup sync runs.
+  /// (downloaded, to download) while ball images are saved for offline play
+  /// in the background; null once done.
   final ValueNotifier<(int, int)?> _progress = ValueNotifier(null);
   late final Future<void> _ready = _prepare();
 
@@ -69,13 +74,22 @@ class _BallWarsAppState extends State<BallWarsApp> {
 
   void _applyMusic() => GameAudio.instance.track = MusicTrack.byId(_settings.value.musicId);
 
+  /// Waits only for the settings (theme, headline) and the pack catalog;
+  /// the ball images then download in the background while Home shows their
+  /// progress, so a slow host never holds up the start.
   Future<void> _prepare() async {
-    await _loadSettings();
+    await Future.wait([
+      _loadSettings(),
+      if (widget.syncOffline) _packs.load().then((_) {}, onError: (Object _) {}),
+    ]);
     if (!widget.syncOffline) return;
-    await OfflineSync(
-      packs: _packs,
-      groups: widget.customGroups,
-    ).run(onProgress: (done, total) => _progress.value = (done, total));
+    OfflineSync(packs: _packs, groups: widget.customGroups)
+        .run(onProgress: (done, total) {
+          if (mounted) _progress.value = (done, total);
+        })
+        .whenComplete(() {
+          if (mounted) _progress.value = null;
+        });
   }
 
   Future<void> _loadSettings() async {
@@ -111,8 +125,14 @@ class _BallWarsAppState extends State<BallWarsApp> {
           home: FutureBuilder<void>(
             future: _ready,
             builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done
-                ? _HomeScreen(packs: _packs, customGroups: widget.customGroups, shortLinks: widget.shortLinks)
-                : _LoadingScreen(progress: _progress),
+                ? _HomeScreen(
+                    packs: _packs,
+                    customGroups: widget.customGroups,
+                    adminGroups: widget.adminGroups,
+                    shortLinks: widget.shortLinks,
+                    offlineProgress: _progress,
+                  )
+                : const _LoadingScreen(),
           ),
         ),
       ),
@@ -120,12 +140,10 @@ class _BallWarsAppState extends State<BallWarsApp> {
   }
 }
 
-/// Shown at startup while the settings load and ball images download. The
-/// logo sits where the native splash screen has it, so one follows the other.
+/// Shown at startup while the settings and pack catalog load. The logo sits
+/// where the native splash screen has it, so one follows the other.
 class _LoadingScreen extends StatelessWidget {
-  final ValueListenable<(int, int)?> progress;
-
-  const _LoadingScreen({required this.progress});
+  const _LoadingScreen();
 
   @override
   Widget build(BuildContext context) {
@@ -146,35 +164,9 @@ class _LoadingScreen extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 280),
-                child: ValueListenableBuilder<(int, int)?>(
-                  valueListenable: progress,
-                  builder: (context, p, _) {
-                    final downloading = p != null && p.$2 > 0;
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          downloading ? 'Saving balls for offline play' : 'Loading',
-                          style: AppText.ui(13, FontWeight.w600, color: c.muted),
-                        ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: downloading ? p.$1 / p.$2 : null,
-                            minHeight: 4,
-                            color: c.text,
-                            backgroundColor: c.surfaceHigh,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          downloading ? '${p.$1} / ${p.$2}' : '',
-                          style: AppText.mono(12, color: c.muted),
-                        ),
-                      ],
-                    );
-                  },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(minHeight: 4, color: c.text, backgroundColor: c.surfaceHigh),
                 ),
               ),
             ),
@@ -185,12 +177,60 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
+/// Home's "Saving balls for offline… 120/359" line while images download.
+class _OfflineProgress extends StatelessWidget {
+  final ValueListenable<(int, int)?> progress;
+
+  const _OfflineProgress(this.progress);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return ValueListenableBuilder<(int, int)?>(
+      valueListenable: progress,
+      builder: (context, p, _) {
+        if (p == null || p.$2 == 0 || p.$1 >= p.$2) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Saving balls for offline…', style: AppText.ui(12, FontWeight.w600, color: c.muted)),
+                  ),
+                  Text('${p.$1}/${p.$2}', style: AppText.mono(11, color: c.muted)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: p.$1 / p.$2,
+                  minHeight: 2,
+                  color: c.muted,
+                  backgroundColor: c.surfaceHigh,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _HomeScreen extends StatefulWidget {
   final BallPackRepository packs;
   final CustomGroupRepository? customGroups;
+  final CustomGroupRepository? adminGroups;
   final ShortLinkRepository? shortLinks;
 
-  const _HomeScreen({required this.packs, this.customGroups, this.shortLinks});
+  /// Background download of ball images (null when not syncing).
+  final ValueListenable<(int, int)?>? offlineProgress;
+
+  const _HomeScreen({required this.packs, this.customGroups, this.adminGroups, this.shortLinks, this.offlineProgress});
 
   @override
   State<_HomeScreen> createState() => _HomeScreenState();
@@ -357,11 +397,16 @@ class _HomeScreenState extends State<_HomeScreen> {
                         icon: const Icon(Icons.tune),
                         onPressed: () {
                           GameAudio.instance.click();
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => SettingsScreen(customGroups: customGroups)));
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SettingsScreen(customGroups: customGroups, adminGroups: widget.adminGroups),
+                            ),
+                          );
                         },
                       ),
                     ],
                   ),
+                  if (widget.offlineProgress != null) _OfflineProgress(widget.offlineProgress!),
                   Expanded(
                     child: Center(
                       child: AspectRatio(

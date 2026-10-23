@@ -49,16 +49,22 @@ class ReplayLink {
   /// The replay in [uri], or null if it isn't a valid replay link.
   /// [packBalls] maps online ball ids (`pack:streaming/netflix`,
   /// `group:<uuid>`) to balls; links using them resolve only if they're here.
+  ///
+  /// Links come from anywhere, so everything is checked before a match is
+  /// built from it: 2-4 balls, a finite speed in [minSpeed]..[maxSpeed], sane
+  /// custom-ball values and a bounded size. Anything else gives null.
   static ReplayLink? fromUri(
     Uri uri, {
     required List<CustomBall> presets,
     Map<String, CustomBall> packBalls = const {},
   }) {
+    if (uri.query.length + uri.fragment.length > maxLinkLength) return null;
     final params = _params(uri);
     final seed = int.tryParse(params['seed'] ?? '');
     final speed = double.tryParse(params['speed'] ?? '1') ?? 1.0;
     final tokens = (params['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
-    if (seed == null || tokens.length < 2) return null;
+    if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) return null;
+    if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
 
     final contestants = <CustomBall>[];
     for (var i = 0; i < tokens.length; i++) {
@@ -134,6 +140,17 @@ class ReplayLink {
   static Map<String, String> _params(Uri uri) =>
       uri.fragment.startsWith('/replay') ? Uri.parse(uri.fragment).queryParameters : uri.queryParameters;
 
+  static const int minBalls = 2;
+  static const int maxBalls = 4;
+  static const double minSpeed = 0.25;
+  static const double maxSpeed = 4;
+
+  /// Longest accepted query (four custom balls fit easily).
+  static const int maxLinkLength = 4096;
+  static const int maxNameLength = 40;
+
+  static bool _within(double v, double min, double max) => v.isFinite && v >= min && v <= max;
+
   static CustomBall? _decodeBall(String token, int index, List<CustomBall> presets, Map<String, CustomBall> packBalls) {
     if (token.startsWith('p.')) {
       final id = token.substring(2);
@@ -146,13 +163,20 @@ class ReplayLink {
       final raw = token.substring(2);
       final padded = raw.padRight((raw.length + 3) ~/ 4 * 4, '=');
       final data = jsonDecode(utf8.decode(base64Url.decode(padded))) as Map<String, dynamic>;
+      final name = (data['n'] as String).trim();
+      final baseSpeed = (data['s'] as num).toDouble();
+      final mass = (data['m'] as num).toDouble();
+      // Within 4x either way of the defaults; anything else is not from the app.
+      if (name.isEmpty || name.length > maxNameLength) return null;
+      if (!_within(baseSpeed, CustomBall.defaultBaseSpeed / 4, CustomBall.defaultBaseSpeed * 4)) return null;
+      if (!_within(mass, 0.25, 4)) return null;
       return CustomBall(
         id: 'link-$index',
-        name: data['n'] as String,
+        name: name,
         primaryColor: Color(data['p'] as int),
         glowColor: Color(data['g'] as int),
-        baseSpeed: (data['s'] as num).toDouble(),
-        mass: (data['m'] as num).toDouble(),
+        baseSpeed: baseSpeed,
+        mass: mass,
       );
     } catch (_) {
       return null;

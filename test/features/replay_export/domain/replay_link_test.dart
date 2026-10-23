@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
@@ -110,5 +111,40 @@ void main() {
     expect(ReplayLink.fromUri(off, presets: _presets)!.showEffects, isFalse);
     expect(ReplayLink.fromUri(on, presets: _presets)!.showEffects, isTrue);
   });
-}
 
+  group('crafted links are rejected', () {
+    ReplayLink? parse(String query) =>
+        ReplayLink.fromUri(Uri.parse('https://dbsuarez.github.io/ballwars/?$query'), presets: _presets);
+    String custom(Map<String, Object> data) =>
+        'c.${base64Url.encode(utf8.encode(jsonEncode({'n': 'X', 'p': 0xFFFF0000, 'g': 0xFFFF8888, 's': 320, 'm': 1, ...data}))).replaceAll('=', '')}';
+    final two = 'p.${_presets[0].id},p.${_presets[1].id}';
+
+    test('a valid link still parses', () {
+      expect(parse('seed=1&speed=1&balls=$two'), isNotNull);
+      expect(parse('seed=1&speed=1&balls=$two,${custom({})}'), isNotNull);
+    });
+
+    test('ball count must be 2-4', () {
+      final five = List.filled(5, 'p.${_presets[0].id}').join(',');
+      expect(parse('seed=1&balls=p.${_presets[0].id}'), isNull);
+      expect(parse('seed=1&balls=$five'), isNull);
+    });
+
+    test('speed must be finite and in range', () {
+      for (final speed in ['-1', '0', 'NaN', 'Infinity', '1e9', '0.1']) {
+        expect(parse('seed=1&speed=$speed&balls=$two'), isNull, reason: speed);
+      }
+    });
+
+    test('custom balls need sane mass, speed and name', () {
+      expect(parse('seed=1&balls=$two,${custom({'m': 1000})}'), isNull);
+      expect(parse('seed=1&balls=$two,${custom({'s': -5})}'), isNull);
+      expect(parse('seed=1&balls=$two,${custom({'n': 'x' * 200})}'), isNull);
+      expect(parse('seed=1&balls=$two,${custom({'n': '  '})}'), isNull);
+    });
+
+    test('oversized links are rejected before parsing', () {
+      expect(parse('seed=1&balls=$two&pad=${'a' * 5000}'), isNull);
+    });
+  });
+}

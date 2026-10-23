@@ -24,6 +24,9 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
 
   @override
   Future<String> create(Map<String, String> replayQuery) async {
+    // Links are tied to the device's (anonymous) account, which the database
+    // uses to limit how many one device can make (migration 007).
+    if (_client.auth.currentUser == null) await _client.auth.signInAnonymously();
     // 62^7 codes: a clash is very unlikely, but retry a few times anyway.
     for (var attempt = 0; attempt < 4; attempt++) {
       final code = _newCode();

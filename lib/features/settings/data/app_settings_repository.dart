@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/config/supabase_config.dart';
+import '../../../core/offline/device_prefs.dart';
 import '../../../core/offline/offline_store.dart';
 import '../domain/app_settings.dart';
 
@@ -20,7 +22,7 @@ abstract class AdminAuth {
   /// Signs in with email and password; throws if wrong or not an admin.
   Future<void> signIn(String email, String password);
 
-  /// Signs out; the device goes back to an anonymous account when needed.
+  /// Signs out of the admin account (the device's own account stays).
   Future<void> signOut();
 
   String? get email;
@@ -28,6 +30,9 @@ abstract class AdminAuth {
 
 class SupabaseAppSettingsRepository implements AppSettingsRepository {
   final SupabaseClient _client;
+
+  /// Saves go through the admin's client (see [SupabaseAdminAuth.client]).
+  final SupabaseClient _writer;
 
   // The watermark columns come with migration 003; until it has been run
   // they are missing and are neither read nor written.
@@ -37,7 +42,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   // And the slow-motion column (migration 006).
   bool _hasSlowMotionColumn = false;
 
-  SupabaseAppSettingsRepository(this._client);
+  SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer}) : _writer = writer ?? _client;
 
   @override
   Future<AppSettings> load() async {
@@ -76,7 +81,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 
   @override
   Future<void> save(AppSettings settings) async {
-    final updated = await _client
+    final updated = await _writer
         .from('app_settings')
         .update({
           'headline': settings.headline.trim(),
@@ -95,20 +100,51 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   }
 }
 
+/// The admin signs in on a second, separate Supabase client. The app's main
+/// client keeps this device's anonymous session, which owns its groups and
+/// the groups it added, so signing in or out as admin never orphans them.
+/// The admin session is kept in device storage across restarts.
 class SupabaseAdminAuth implements AdminAuth {
-  final SupabaseClient _client;
+  /// Use for admin-only work (saving settings, editing anyone's groups).
+  final SupabaseClient client = SupabaseClient(SupabaseConfig.url, SupabaseConfig.publishableKey);
 
-  SupabaseAdminAuth(this._client);
+  static const String _sessionKey = 'admin-session';
+  Future<void>? _restored;
+
+  SupabaseAdminAuth() {
+    client.auth.onAuthStateChange.listen((state) {
+      final session = state.session;
+      if (state.event == AuthChangeEvent.signedOut) {
+        DevicePrefs.write(_sessionKey, '');
+      } else if (session != null) {
+        DevicePrefs.write(_sessionKey, jsonEncode(session.toJson()));
+      }
+    }, onError: (Object _) {});
+  }
+
+  /// Brings back the saved admin session (once).
+  Future<void> _restore() => _restored ??= () async {
+        final saved = await DevicePrefs.read(_sessionKey);
+        if (saved == null || saved.isEmpty) return;
+        try {
+          await client.auth.recoverSession(saved);
+        } on AuthException {
+          await DevicePrefs.write(_sessionKey, ''); // Expired or revoked.
+        } catch (_) {
+          // Offline: keep it for next time.
+        }
+      }();
 
   @override
-  String? get email => _client.auth.currentUser?.email;
+  String? get email => client.auth.currentUser?.email;
 
   @override
   Future<bool> isAdmin() async {
-    final user = _client.auth.currentUser;
+    await _restore();
+    final user = client.auth.currentUser;
     if (user == null || user.isAnonymous) return false;
     try {
-      return await _client.rpc('is_admin') as bool? ?? false;
+      return await client.rpc('is_admin') as bool? ?? false;
     } catch (_) {
       return false;
     }
@@ -116,13 +152,19 @@ class SupabaseAdminAuth implements AdminAuth {
 
   @override
   Future<void> signIn(String email, String password) async {
-    await _client.auth.signInWithPassword(email: email.trim(), password: password);
+    await client.auth.signInWithPassword(email: email.trim(), password: password);
     if (!await isAdmin()) {
-      await _client.auth.signOut();
+      await client.auth.signOut();
       throw StateError('That account is not an admin.');
     }
   }
 
   @override
-  Future<void> signOut() => _client.auth.signOut();
+  Future<void> signOut() async {
+    try {
+      await client.auth.signOut();
+    } finally {
+      await DevicePrefs.write(_sessionKey, '');
+    }
+  }
 }

@@ -154,6 +154,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     });
   }
 
+  void _clearPicks() {
+    GameAudio.instance.click();
+    setState(_selected.clear);
+  }
+
   void _randomMatchup() {
     final pool = [..._categoryBalls]..shuffle(_random);
     if (pool.length < 2) return;
@@ -378,6 +383,16 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                           ],
                         ),
                 ),
+                if (_selected.isNotEmpty)
+                  TextButton(
+                    onPressed: _clearPicks,
+                    style: TextButton.styleFrom(
+                      foregroundColor: c.muted,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      minimumSize: const Size(0, 36),
+                    ),
+                    child: const Text('Clear'),
+                  ),
               ],
             ),
           ),

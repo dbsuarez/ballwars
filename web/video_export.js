@@ -9,6 +9,7 @@
   const MAX_QUEUE = 8;
 
   let session = null;
+  let lastUrl = null; // The latest finished video (see finish).
 
   async function pickConfig(width, height, fps) {
     for (const codec of CODECS) {
@@ -77,7 +78,11 @@
       s.frame++;
     },
 
-    /** Finishes the MP4 and returns a blob: URL for it. */
+    /**
+     * Finishes the MP4 and returns a blob: URL for it. The previous export's
+     * URL is released here, so at most one video stays in memory (the current
+     * one stays valid for Save and Share).
+     */
     async finish() {
       const s = current();
       await s.encoder.flush();
@@ -85,7 +90,9 @@
       s.muxer.finalize();
       session = null;
       if (s.error) throw s.error;
-      return URL.createObjectURL(new Blob([s.target.buffer], { type: 'video/mp4' }));
+      if (lastUrl) URL.revokeObjectURL(lastUrl);
+      lastUrl = URL.createObjectURL(new Blob([s.target.buffer], { type: 'video/mp4' }));
+      return lastUrl;
     },
 
     cancel() {

@@ -339,10 +339,14 @@ class MatchSimulationController {
   ///
   /// Crowded matches hit harder (x (count / 2)^2: 3 balls 2.25, 4 balls 4), so the extra eliminations
   /// don't stretch them out: one spawn every 5 s has to feed every ball, and crowded balls move slower.
-  void damage(SimulationBall ball, double amount) {
-    if (mode != MatchMode.arsenal) return;
+  ///
+  /// Returns the life actually taken.
+  double damage(SimulationBall ball, double amount) {
+    if (mode != MatchMode.arsenal) return 0;
     final crowd = _balls.length > 2 ? math.pow(_balls.length / 2, 2).toDouble() : 1.0;
+    final before = ball.life;
     ball.life = math.max(0, ball.life - amount * crowd);
+    return before - ball.life;
   }
 
   /// Cuts up to [count] of [ball]'s threads and frees their rim slots, the ones anchored nearest to
@@ -384,6 +388,16 @@ class MatchSimulationController {
   /// Simulation steps taken so far (the screen repaints when it changes).
   int get stepCount => _stepCount;
 
+  /// Playback gets [speedUpPerMinute] faster for every full minute of game time, up to [maxSpeedUp], so
+  /// long matches don't drag. Playback only: the steps are the same, so the outcome and replays are too.
+  /// Slow motion ignores it.
+  static const double speedUpPerMinute = 0.25;
+  static const double maxSpeedUp = 2.0;
+
+  /// The current playback speed-up (1 in the first minute).
+  double get playbackSpeedUp =>
+      math.min(maxSpeedUp, 1 + speedUpPerMinute * (_stepCount * fixedTimestep / 60).floor());
+
   SimulationState get state => SimulationState(
         balls: _balls,
         particles: _particles,
@@ -391,6 +405,7 @@ class MatchSimulationController {
         status: _status,
         winnerId: _winnerId,
         powerUps: _powerUps,
+        step: _stepCount,
       );
 
   void tick(double realDeltaSeconds) {
@@ -402,7 +417,7 @@ class MatchSimulationController {
     }
 
     _elapsedSeconds += realDeltaSeconds;
-    final timeScale = _status == MatchStatus.slowMotion ? slowMotionTimeScale : 1.0;
+    final timeScale = _status == MatchStatus.slowMotion ? slowMotionTimeScale : playbackSpeedUp;
     _accumulator += realDeltaSeconds * timeScale;
 
     // Cap accumulator to prevent spiral of death

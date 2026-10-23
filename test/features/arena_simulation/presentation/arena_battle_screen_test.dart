@@ -50,14 +50,14 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('the timer counts match time and Restart resets it', (tester) async {
+  testWidgets('the timer counts match time and New match resets it', (tester) async {
     await tester.pumpWidget(_app(const MatchConfig(contestants: _balls), seed: 3));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('0:00.0'), findsNothing);
 
-    await tester.tap(find.text('Restart'));
+    await tester.tap(find.text('New match'));
     await tester.pump();
     expect(find.text('0:00.0'), findsOneWidget);
     expect(find.text('90 lines'), findsNWidgets(2));
@@ -65,15 +65,15 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('winner card: "wins!", and both Restart (beside it) and Play again work', (tester) async {
+  testWidgets('winner card: "wins!", and New match (beside it) and Play again work', (tester) async {
     await tester.pumpWidget(_app(const MatchConfig(contestants: _balls), seed: 3));
     await tester.pump();
 
     await _playUntilWinnerCard(tester);
     expect(find.text('wins!'), findsOneWidget);
-    // The screen's own Restart stays tappable under the card.
-    expect(find.text('Restart').hitTestable(), findsOneWidget);
-    await tester.tap(find.text('Restart'));
+    // The screen's own New match stays tappable under the card.
+    expect(find.text('New match').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('New match'));
     await tester.pump();
     expect(find.text('Exit'), findsNothing);
     expect(find.text('0:00.0'), findsOneWidget);
@@ -83,6 +83,26 @@ void main() {
     await tester.pump();
     expect(find.text('Exit'), findsNothing);
     expect(find.text('0:00.0'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Replay plays the same match again: same winner, same match time', (tester) async {
+    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls), seed: 3));
+    await tester.pump();
+
+    await _playUntilWinnerCard(tester);
+    final time = tester.widget<Text>(find.textContaining('match time')).data;
+    final winner = tester.widget<Text>(find.text('wins!').first);
+    expect(winner, isNotNull);
+    final names = [for (final b in _balls) if (find.text(b.name).evaluate().isNotEmpty) b.name];
+    await tester.tap(find.text('Replay'));
+    await tester.pump();
+    expect(find.text('0:00.0'), findsOneWidget);
+
+    await _playUntilWinnerCard(tester);
+    expect(tester.widget<Text>(find.textContaining('match time')).data, time);
+    expect([for (final b in _balls) if (find.text(b.name).evaluate().isNotEmpty) b.name], names);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

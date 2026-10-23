@@ -22,6 +22,9 @@ class SimulationState {
   /// The match's power-ups (field, projectiles, bombs) for painting; null in Threads mode.
   final PowerUpSystem? powerUps;
 
+  /// Simulation steps taken so far (drives the power-ups' pulse and the bombs' blink).
+  final int step;
+
   const SimulationState({
     required this.balls,
     required this.particles,
@@ -33,6 +36,7 @@ class SimulationState {
     this.beamPhase = 0,
     this.beamTimer = 0.0,
     this.powerUps,
+    this.step = 0,
   });
 
   // All active fan lines across all balls (for rendering)

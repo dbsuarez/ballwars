@@ -14,7 +14,12 @@ class WinnerModal extends StatefulWidget {
 
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
+
+  /// Replay: watch this exact match again.
   final VoidCallback onReplay;
+
+  /// Play again (or Start over in a series): a new simulation.
+  final VoidCallback onPlayAgain;
   final VoidCallback onExit;
 
   /// Shows a SAVE VIDEO button when set (only where video export works).
@@ -45,6 +50,7 @@ class WinnerModal extends StatefulWidget {
     this.durationSeconds,
     this.question,
     required this.onReplay,
+    required this.onPlayAgain,
     required this.onExit,
     this.onSaveVideo,
     this.onShareLink,
@@ -269,7 +275,7 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                       if (widget.onNextRound != null)
                         FilledButton(onPressed: widget.onNextRound, child: const Text('Next round'))
                       else
-                        FilledButton(onPressed: widget.onReplay, child: const Text('Play again')),
+                        FilledButton(onPressed: widget.onPlayAgain, child: const Text('Play again')),
                       const SizedBox(height: 10),
                       // Up to four secondary actions share one row: tighter padding.
                       OutlinedButtonTheme(
@@ -285,12 +291,10 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                         ),
                         child: Row(
                           children: [
-                            if (widget.onNextRound != null) ...[
-                              Expanded(
-                                child: OutlinedButton(onPressed: widget.onReplay, child: const Text('Restart')),
-                              ),
-                              const SizedBox(width: 10),
-                            ],
+                            Expanded(
+                              child: OutlinedButton(onPressed: widget.onReplay, child: const Text('Replay')),
+                            ),
+                            const SizedBox(width: 10),
                             if (widget.onSaveVideo != null) ...[
                               Expanded(
                                 child: OutlinedButton(onPressed: widget.onSaveVideo, child: const Text('Save video')),
@@ -309,6 +313,11 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                           ],
                         ),
                       ),
+                      if (widget.onNextRound != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: TextButton(onPressed: widget.onPlayAgain, child: const Text('Start over')),
+                        ),
                       if (widget.onSlowAnswer != null && !_slowAnswered) _slowPrompt(c),
                     ],
                   ),

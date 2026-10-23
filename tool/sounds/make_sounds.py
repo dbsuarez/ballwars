@@ -144,6 +144,14 @@ def shot():
     return pulse(np.geomspace(1400, 380, n), n, 0.25) * env(n, release=0.02, decay=0.04, sustain=0.1)
 
 
+def gatling():
+    """Gatling round: a short dry tat, lower and harder than the pistol."""
+    n = samples(0.06)
+    tat = pulse(np.geomspace(520, 180, n), n, 0.5) * env(n, release=0.015, decay=0.025, sustain=0.0)
+    crack = noise(n, rate=9000, seed=23) * env(n, release=0.01, decay=0.015, sustain=0.0)
+    return tat * 0.6 + crack * 0.5
+
+
 def shotgun():
     """A wide blast: noise burst over a low thump."""
     n = samples(0.22)
@@ -209,6 +217,7 @@ if __name__ == '__main__':
     save('win.wav', win(), 0.8)
     save('shot.wav', shot(), 0.5)
     save('shotgun.wav', shotgun(), 0.65)
+    save('gatling.wav', gatling(), 0.55)
     save('slash.wav', slash(), 0.5)
     save('shield.wav', shield(), 0.5)
     save('bomb.wav', bomb(), 0.75)

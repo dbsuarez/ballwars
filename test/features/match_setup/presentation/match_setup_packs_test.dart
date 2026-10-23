@@ -64,7 +64,7 @@ void main() {
     expect(started, isNull);
   });
 
-  testWidgets('the category dropdown switches categories and picks can be mixed', (tester) async {
+  testWidgets('switching categories clears the picks, so a match never mixes categories', (tester) async {
     await pumpSetup(tester);
     await tester.tap(find.text('Nike'));
     await pickCategory(tester, 'Countries');
@@ -74,9 +74,14 @@ void main() {
     await tester.tap(find.text('Philippines'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
+    expect(started, isNull); // Nike was cleared: one ball only.
 
-    expect(started!.contestants.map((b) => b.name), ['Nike', 'Philippines']);
-    expect(started!.contestants.first.id, 'pack:shoes/nike');
+    await tester.enterText(find.widgetWithText(TextField, 'Search'), 'country 3');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Country 3'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start'));
+    expect(started!.contestants.map((b) => b.name), ['Philippines', 'Country 3']);
   });
 
   testWidgets('random matchup picks two balls from the current category', (tester) async {
@@ -207,8 +212,13 @@ void main() {
     await tester.tap(find.text('Weapons: All'));
     await tester.pumpAndSettle();
     // Switch every kind off: the last one can't be switched off.
+    // Each one says what it does, with its damage.
+    expect(find.text(powerUpDescription(PowerUpKind.pistol, arsenal: true)), findsOneWidget);
+    expect(find.textContaining('${PowerUpTuning.arenaDamage[PowerUpKind.pistol]!.round()} damage'), findsOneWidget);
     for (final kind in PowerUpKind.values) {
-      await tester.tap(find.widgetWithText(SwitchListTile, kind.label));
+      final tile = find.widgetWithText(SwitchListTile, kind.label);
+      await tester.scrollUntilVisible(tile, 80, scrollable: find.byType(Scrollable).last);
+      await tester.tap(tile);
       await tester.pump();
     }
     await tester.tap(find.text('Done'));

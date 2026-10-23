@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
+import 'package:ballwars/features/arena_simulation/application/power_up_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
@@ -36,7 +39,7 @@ void _run(MatchSimulationController c, int steps) {
 }
 
 void main() {
-  test('the first power-up spawns early, then one every 300 steps, at a free spot inside the arena', () {
+  test('the first power-up spawns early, then one every 300 steps, away from the rim and clear of balls', () {
     final c = _arsenal();
     _run(c, PowerUpTuning.firstSpawnSteps - 1);
     expect(c.powerUps!.field, isEmpty);
@@ -47,20 +50,73 @@ void main() {
     _run(c, 1);
     final field = c.powerUps!.field;
     expect(field.length, 2);
-    final r = _arenaRadius * PowerUpTuning.fieldRadiusRatio;
-    expect(field.first.position.distance, lessThanOrEqualTo(_arenaRadius - r));
-    for (final b in c.state.balls) {
-      expect((b.position - field.first.position).distance, greaterThanOrEqualTo(b.radius + r));
+    final r = c.powerUps!.fieldRadius;
+    for (final f in field) {
+      expect(f.position.distance, lessThanOrEqualTo(_arenaRadius * PowerUpTuning.spawnMaxDistance + 1e-9));
+      expect(f.position.distance, greaterThanOrEqualTo(_arenaRadius * PowerUpTuning.spawnMinDistance - 1e-9));
+      for (final b in c.state.balls) {
+        expect((b.position - f.position).distance, greaterThanOrEqualTo(b.radius + r));
+      }
     }
   });
 
-  test('at most 3 on the field; a 4th removes the oldest', () {
+  test('power-ups are a little smaller than the balls, at every ball size', () {
+    for (final scale in [0.6, 1.0, 1.25]) {
+      final c = MatchSimulationController(_balls,
+          arenaRadius: _arenaRadius, seed: 1, mode: MatchMode.arsenal, lookAhead: false, ballScale: scale);
+      final ball = c.state.balls.first.radius;
+      expect(c.powerUps!.fieldRadius, closeTo(ball * PowerUpTuning.fieldRadiusRatio, 1e-9));
+      expect(c.powerUps!.fieldRadius, lessThan(ball));
+    }
+  });
+
+  test('more balls: more power-ups on the field (balls + 1) and faster spawns; a new one removes the oldest', () {
+    for (final n in [2, 3, 4]) {
+      final balls = [
+        for (var i = 0; i < n; i++)
+          CustomBall(id: 'b$i', name: 'B$i', primaryColor: Colors.primaries[i], glowColor: Colors.white),
+      ];
+      final c = MatchSimulationController(balls,
+          arenaRadius: _arenaRadius, seed: 1, mode: MatchMode.arsenal, lookAhead: false, layoutRotation: 0);
+      // Balls far out on the rim, still, so they pick nothing up.
+      for (var i = 0; i < n; i++) {
+        final angle = 2 * math.pi * (i + 0.5) / n;
+        c.state.balls[i]
+          ..velocity = Offset.zero
+          ..position = Offset(math.cos(angle), math.sin(angle)) * (_arenaRadius - c.state.balls[i].radius - 1);
+      }
+      final interval = PowerUpTuning.spawnInterval(n);
+      expect(interval, (PowerUpTuning.spawnIntervalSteps * 2 / n).round());
+      final max = PowerUpTuning.maxOnField(n);
+      expect(max, n + 1);
+      _run(c, PowerUpTuning.firstSpawnSteps + interval * max);
+      final field = c.powerUps!.field;
+      expect(field.length, max, reason: '$n balls');
+      expect(field.first.spawnStep, PowerUpTuning.firstSpawnSteps + interval, reason: '$n balls');
+    }
+  });
+
+  test('each spawn goes to an empty quadrant, so they never pile up on one side', () {
+    for (var seed = 1; seed <= 5; seed++) {
+      final c = _arsenal(seed: seed);
+      for (final b in c.state.balls) {
+        b.position = Offset(b.position.dx.sign * (_arenaRadius - b.radius - 1), 0);
+      }
+      _run(c, PowerUpTuning.firstSpawnSteps + PowerUpTuning.spawnIntervalSteps * 2);
+      final quadrants = [for (final f in c.powerUps!.field) PowerUpSystem.quadrantOf(f.position)];
+      expect(quadrants.length, 3, reason: 'seed $seed');
+      expect(quadrants.toSet().length, 3, reason: 'seed $seed');
+    }
+  });
+
+  test('a spawn with no clear spot is skipped', () {
     final c = _arsenal();
-    // Spawns at first, first + interval, ... : after the 4th, the oldest left is the 2nd.
-    _run(c, PowerUpTuning.firstSpawnSteps + PowerUpTuning.spawnIntervalSteps * 3);
-    final field = c.powerUps!.field;
-    expect(field.length, PowerUpTuning.maxOnField);
-    expect(field.first.spawnStep, PowerUpTuning.firstSpawnSteps + PowerUpTuning.spawnIntervalSteps);
+    // One ball covering the whole arena: nowhere is clear.
+    c.state.balls.first
+      ..position = Offset.zero
+      ..radius = _arenaRadius;
+    _run(c, PowerUpTuning.firstSpawnSteps + PowerUpTuning.spawnIntervalSteps);
+    expect(c.powerUps!.field, isEmpty);
   });
 
   test('touching a power-up picks it up and replaces the held one', () {

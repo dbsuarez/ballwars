@@ -77,6 +77,37 @@ class ArenaPainter extends CustomPainter {
         background,
       ]);
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
+    _paintGrid(canvas);
+  }
+
+  /// Squares across the arena floor, [gridCells] across the diameter.
+  static const int gridCells = 16;
+
+  // Grid line endpoints per arena radius (each line is a chord, so no clip is needed).
+  static final Map<double, Float32List> _gridCache = {};
+
+  /// A faint square grid on the floor: one batched drawRawPoints call, chords cached per arena size.
+  void _paintGrid(Canvas canvas) {
+    final points = _gridCache[arenaRadius] ??= () {
+      final r = arenaRadius;
+      final step = 2 * r / gridCells;
+      final list = <double>[];
+      for (var i = 1; i < gridCells; i++) {
+        final x = -r + i * step;
+        final half = math.sqrt(math.max(0, r * r - x * x));
+        list
+          ..addAll([x, -half, x, half])
+          ..addAll([-half, x, half, x]);
+      }
+      return Float32List.fromList(list);
+    }();
+    canvas.drawRawPoints(
+      ui.PointMode.lines,
+      points,
+      Paint()
+        ..strokeWidth = 1
+        ..color = rimColor.withValues(alpha: 0.06),
+    );
   }
 
   // Performance: no blur filters anywhere in the arena (they are among the
@@ -252,7 +283,8 @@ class ArenaPainter extends CustomPainter {
     // A ghost is drawn see-through (a layer only while the effect lasts, which is rare).
     if (ball.isGhost) {
       canvas.saveLayer(
-        Rect.fromCircle(center: ball.position, radius: ball.radius + _ballGlowPadding + 8),
+        // Room for the held weapon, drawn just past the edge.
+        Rect.fromCircle(center: ball.position, radius: ball.radius * 2 + _ballGlowPadding),
         Paint()..color = const Color(0x66000000),
       );
     }
@@ -307,7 +339,7 @@ class ArenaPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       if (_textCache.length > 200) _textCache.remove(_textCache.keys.first);
-      painter.paint(canvas, text.position);
+      painter.paint(canvas, text.position - Offset(painter.width / 2, painter.height / 2));
     }
   }
 

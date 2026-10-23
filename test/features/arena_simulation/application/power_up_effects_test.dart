@@ -178,12 +178,11 @@ void main() {
     expect(a.shieldAngle, closeTo(math.atan2(toBullet.dy, toBullet.dx), 1e-6));
   });
 
-  test('any pickup drops the held power-up, timed and instant kinds included', () {
+  test('any pickup drops the held power-up, timed and instant kinds included (arming a bomb does not)', () {
     for (final kind in [
       PowerUpKind.apple,
       PowerUpKind.speed,
       PowerUpKind.ghost,
-      PowerUpKind.bomb,
       PowerUpKind.magnet,
       PowerUpKind.shield,
     ]) {
@@ -214,13 +213,15 @@ void main() {
     expect(b.held, isNull);
   });
 
-  test('apple heals 25 in Arsenal, capped at 100', () {
+  test('apple heals 25 in Arsenal, past full life up to the max', () {
     final c = _match();
     final a = c.state.balls.first;
-    a.life = _life - PowerUpTuning.arenaAppleHeal + 15;
     _give(c, a, PowerUpKind.apple);
-    expect(a.life, _life);
+    expect(a.life, _life + PowerUpTuning.arenaAppleHeal);
     expect(a.held, isNull);
+    a.life = PowerUpTuning.arenaMaxLife - 5;
+    _give(c, a, PowerUpKind.apple);
+    expect(a.life, PowerUpTuning.arenaMaxLife);
 
     a.life = _life / 2;
     _give(c, a, PowerUpKind.apple);
@@ -303,7 +304,7 @@ void main() {
 
     final bullet = _bulletAt(b, a);
     c.powerUps!.projectiles.add(bullet);
-    c.powerUps!.bombs.add(PendingBomb(owner: b, position: a.position, fuseSteps: 1));
+    c.powerUps!.bombs.add(ArmedBomb(owner: b, position: a.position, armedStep: 0));
     _run(c, 1);
     expect(bullet.spent, isFalse);
     expect(a.life, _life);
@@ -345,43 +346,66 @@ void main() {
     expect(g.fanLines.length + o.fanLines.length, lessThan(gLines + oLines));
   });
 
-  test('a bomb explodes after 60 steps and hits everyone in range including its owner', () {
+  test('a bomb is armed where it lies by the first ball to touch it, and only an opponent sets it off', () {
     final c = _match(count: 3);
     final [a, b, other] = c.state.balls;
-    a.position = const Offset(-100, 0);
+    a
+      ..position = const Offset(-100, 0)
+      ..held = PowerUpKind.knife;
     b.position = const Offset(-100 + 60, 0);
+    final field = c.powerUps!.field;
     _give(c, a, PowerUpKind.bomb);
-    expect(a.held, isNull);
+    // Arming doesn't cost the held power-up, and the armed bomb leaves the field (no limit slot).
+    expect(a.held, PowerUpKind.knife);
+    expect(field, isEmpty);
     final bomb = c.powerUps!.bombs.single;
+    expect(bomb.owner, a);
     expect(bomb.position, a.position);
-    expect(bomb.fuseSteps, PowerUpTuning.bombFuseSteps);
-    expect(PowerUpTuning.bombRadiusRatio * _arenaRadius + b.radius, greaterThan(60));
 
-    _run(c, PowerUpTuning.bombFuseSteps - 1);
+    // Its owner sitting on it never sets it off.
+    _run(c, 120);
     expect(c.powerUps!.blasts, 0);
     expect(a.life, _life);
+
+    // An opponent touching it does, at once; the owner is spared even in range.
+    b.position = bomb.position + const Offset(10, 0);
+    a.position = bomb.position - const Offset(40, 0);
     _run(c, 1);
     expect(c.powerUps!.blasts, 1);
     expect(c.powerUps!.bombs, isEmpty);
     // 3 balls: crowded Arsenal damage is x2.25 (never below 0).
-    final blast = math.max(0.0, _life - PowerUpTuning.arenaDamage[PowerUpKind.bomb]! * 2.25);
-    expect(a.life, blast);
-    expect(b.life, blast);
+    expect(b.life, math.max(0.0, _life - PowerUpTuning.arenaDamage[PowerUpKind.bomb]! * 2.25));
+    expect(a.life, _life);
     expect(other.life, _life);
+    expect(c.state.floatingTexts.items.map((t) => t.text), contains('KABOOM!'));
   });
 
-  test('one bomb killing the last two still leaves a winner', () {
-    final blast = PowerUpTuning.arenaDamage[PowerUpKind.bomb]!;
-    // Unequal life before the blast: the one with more life at the start of the step survives, with 1.
+  test('a bomb whose owner is out is gone', () {
+    final c = _match(count: 3);
+    final [a, b, _] = c.state.balls;
+    c.powerUps!.bombs.add(ArmedBomb(owner: a, position: const Offset(0, -150), armedStep: 0));
+    a.isEliminated = true;
+    _run(c, 1);
+    expect(c.powerUps!.bombs, isEmpty);
+    b.position = const Offset(0, -150);
+    _run(c, 1);
+    expect(c.powerUps!.blasts, 0);
+  });
+
+  test('two balls shooting each other out in one step still leave a winner', () {
+    final shot = PowerUpTuning.arenaDamage[PowerUpKind.pistol]!;
+    // Unequal life before the hits: the one with more life at the start of the step survives, with 1.
     final c = _match();
     final [a, b] = c.state.balls;
     a
       ..position = const Offset(-40, 0)
-      ..life = blast - 10;
+      ..life = shot - 10;
     b
       ..position = const Offset(40, 0)
-      ..life = blast - 5;
-    c.powerUps!.bombs.add(PendingBomb(owner: a, position: Offset.zero, fuseSteps: 1));
+      ..life = shot - 5;
+    c.powerUps!.projectiles
+      ..add(_bulletAt(b, a))
+      ..add(_bulletAt(a, b));
     _run(c, 1);
     expect(c.state.status, MatchStatus.finished);
     expect(c.state.winnerId, b.config.id);
@@ -396,11 +420,13 @@ void main() {
       final [x, y] = d.state.balls;
       x
         ..position = const Offset(-40, 0)
-        ..life = blast;
+        ..life = shot;
       y
         ..position = const Offset(40, 0)
-        ..life = blast;
-      d.powerUps!.bombs.add(PendingBomb(owner: x, position: Offset.zero, fuseSteps: 1));
+        ..life = shot;
+      d.powerUps!.projectiles
+        ..add(_bulletAt(y, x))
+        ..add(_bulletAt(x, y));
       _run(d, 1);
       expect(d.state.status, MatchStatus.finished);
       expect(d.state.winnerId, isNotNull);

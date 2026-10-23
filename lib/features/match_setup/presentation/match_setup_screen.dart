@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/presentation/power_up_painter.dart';
+import '../../arena_simulation/presentation/power_up_sprites.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
@@ -200,6 +202,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     DevicePrefs.write('category-filter', filter.name);
     setState(() {
       _filter = filter;
+      _selected.clear();
       _category = _shown.firstOrNull?.id;
       _categoryText.text = _shown.firstOrNull?.name ?? '';
       _search.clear();
@@ -233,7 +236,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     GameAudio.instance.click();
     final chosen = await showDialog<Set<PowerUpKind>>(
       context: context,
-      builder: (_) => _WeaponsDialog(initial: _powerUps ?? PowerUpKind.values.toSet()),
+      builder: (_) => _WeaponsDialog(
+        initial: _powerUps ?? PowerUpKind.values.toSet(),
+        arsenal: _mode == MatchMode.arsenal,
+      ),
     );
     if (chosen == null || !mounted) return;
     final all = chosen.length == PowerUpKind.values.length;
@@ -403,6 +409,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             // current category rather than showing an empty one.
             if (id == null) return;
             setState(() {
+              // A match never mixes categories: a new category starts with no picks.
+              if (id != _category) _selected.clear();
               _category = id;
               _search.clear();
             });
@@ -825,11 +833,13 @@ enum _CategoryFilter {
   static _CategoryFilter? byName(String? name) => values.where((f) => f.name == name).firstOrNull;
 }
 
-/// Which power-ups can spawn: a switch per power-up with its icon. At least one stays on.
+/// Which power-ups can spawn: a switch per power-up with its icon and what it does (damage in life for
+/// Arsenal, in lines for All-Out). At least one stays on.
 class _WeaponsDialog extends StatefulWidget {
   final Set<PowerUpKind> initial;
+  final bool arsenal;
 
-  const _WeaponsDialog({required this.initial});
+  const _WeaponsDialog({required this.initial, required this.arsenal});
 
   @override
   State<_WeaponsDialog> createState() => _WeaponsDialogState();
@@ -848,14 +858,27 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
         child: ListView(
           shrinkWrap: true,
           children: [
+            if (widget.arsenal)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Text(crowdNote, style: Theme.of(context).textTheme.bodySmall),
+              ),
             for (final kind in PowerUpKind.values)
               SwitchListTile(
                 dense: true,
-                secondary: SizedBox.square(
-                  dimension: 28,
-                  child: CustomPaint(painter: _GlyphPainter(kind)),
+                isThreeLine: true,
+                secondary: SvgPicture.asset(
+                  PowerUpSprites.assetOf(kind),
+                  width: 32,
+                  height: 32,
+                  colorFilter: ColorFilter.mode(PowerUpPainter.colorOf(kind), BlendMode.srcIn),
+                  placeholderBuilder: (_) => SizedBox.square(
+                    dimension: 32,
+                    child: CustomPaint(painter: _GlyphPainter(kind)),
+                  ),
                 ),
                 title: Text(kind.label),
+                subtitle: Text(powerUpDescription(kind, arsenal: widget.arsenal)),
                 value: _on.contains(kind),
                 // The last one on can't be switched off.
                 onChanged: _on.contains(kind) && _on.length == 1

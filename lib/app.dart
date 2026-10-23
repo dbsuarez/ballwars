@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/audio/game_audio.dart';
+import 'core/offline/device_prefs.dart';
 import 'core/offline/offline_sync.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/ball_wars_logo.dart';
@@ -346,6 +347,8 @@ class _HomeScreenState extends State<_HomeScreen> {
     }
     final link = ReplayLink.fromUri(uri, presets: LocalBallRepository.presets, packBalls: extraBalls);
     if (link == null) return;
+    // The ball look is the viewer's own choice (cosmetic, not in links).
+    final look = BallLook.byName(await DevicePrefs.read('look')) ?? BallLook.pictures;
     // endOfFrame (not addPostFrameCallback): after the awaits above the first
     // frame is long done and an idle screen never draws another one, so a
     // post-frame callback would never run. endOfFrame schedules a frame.
@@ -362,6 +365,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             question: link.question,
             powerUps: link.powerUps,
             showEffects: link.showEffects,
+            look: look,
           ),
           seed: link.seed,
         ),

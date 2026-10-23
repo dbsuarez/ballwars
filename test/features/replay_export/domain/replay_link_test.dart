@@ -176,6 +176,10 @@ void main() {
     expect(parse('m.laser,$two'), isNull);
     expect(parse(two)!.mode, MatchMode.threads);
     expect(parse('m.arsenal,$two')!.mode, MatchMode.arsenal);
+    // Old '#/replay?' links carry the mode the same way.
+    final legacy = ReplayLink.fromUri(Uri.parse('https://x/#/replay?seed=1&balls=m.allout,$two'), presets: _presets);
+    expect(legacy!.mode, MatchMode.allOut);
+    expect(legacy.contestants.length, 2);
   });
 
   test('ball size travels in the link; old links are medium; unknown sizes are rejected', () {

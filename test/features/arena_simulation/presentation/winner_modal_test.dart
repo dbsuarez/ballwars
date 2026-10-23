@@ -15,7 +15,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
         home: Scaffold(
-          body: WinnerModal(winner: winner, onReplay: () {}, onExit: () {}, onSlowAnswer: onSlowAnswer),
+          body: WinnerModal(winner: winner, onReplay: () {}, onPlayAgain: () {}, onExit: () {}, onSlowAnswer: onSlowAnswer),
         ),
       ),
     );

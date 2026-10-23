@@ -18,13 +18,14 @@ class ScoreboardOverlay extends StatelessWidget {
 
   const ScoreboardOverlay({super.key, required this.balls, this.wins, this.mode = MatchMode.threads});
 
-  /// Health as hearts out of 10, rounded to the nearest half heart.
+  /// Health as hearts out of 10, rounded to the nearest half heart. Arsenal life above full (from an
+  /// apple) counts past 10.
   double _hearts(SimulationBall ball) {
     if (ball.isEliminated) return 0;
     final ratio = mode == MatchMode.arsenal
-        ? ball.life / PowerUpTuning.arenaLife
-        : (ball.startLines == 0 ? 0.0 : ball.lineCount / ball.startLines);
-    return (ratio.clamp(0.0, 1.0) * 20).round() / 2;
+        ? (ball.life / PowerUpTuning.arenaLife).clamp(0.0, PowerUpTuning.arenaMaxLife / PowerUpTuning.arenaLife)
+        : (ball.startLines == 0 ? 0.0 : ball.lineCount / ball.startLines).clamp(0.0, 1.0);
+    return (ratio * 20).round() / 2;
   }
 
   @override
@@ -88,7 +89,7 @@ class ScoreboardOverlay extends StatelessWidget {
 }
 
 /// 10 hearts in [color], [hearts] of them filled (halves allowed), the rest as outlines; they empty from
-/// the right.
+/// the right. Hearts past 10 (extra life from an apple) turn the first hearts gold.
 class HeartsRow extends StatelessWidget {
   final double hearts;
   final Color color;
@@ -142,8 +143,17 @@ class _HeartsPainter extends CustomPainter {
           canvas.restore();
         }
       }
+      final extra = (hearts - 10 - i).clamp(0.0, 1.0);
+      if (extra > 0) {
+        canvas.save();
+        if (extra < 1) canvas.clipRect(Rect.fromLTRB(c.dx - s * 1.2, 0, c.dx, size.height));
+        canvas.drawPath(path, _gold);
+        canvas.restore();
+      }
     }
   }
+
+  static final Paint _gold = Paint()..color = const Color(0xFFFFC83D);
 
   @override
   bool shouldRepaint(_HeartsPainter old) => old.hearts != hearts || old.color != color || old.empty != empty;

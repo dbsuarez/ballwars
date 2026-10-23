@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../data/video_encoder.dart';
@@ -90,6 +91,7 @@ class ReplayVideoExporter {
 
     final match = newMatch();
     await match.preloadImages();
+    if (mode != MatchMode.threads) await PowerUpSprites.load();
     await encoder.start(width: width, height: height, fps: fps);
 
     var written = 0;

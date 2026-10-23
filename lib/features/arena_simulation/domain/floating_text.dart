@@ -5,7 +5,8 @@ class FloatingText {
 
   Offset position;
   double age;
-  final String text;
+  /// Can grow while it shows (a volley's damage adds up in one label).
+  String text;
   final Color color;
 
   FloatingText({
@@ -25,8 +26,10 @@ class FloatingTextManager {
 
   List<FloatingText> get items => List.unmodifiable(_items);
 
-  void spawn(Offset position, String text, Color color) {
-    _items.add(FloatingText(position: position, text: text, color: color));
+  FloatingText spawn(Offset position, String text, Color color) {
+    final item = FloatingText(position: position, text: text, color: color);
+    _items.add(item);
+    return item;
   }
 
   void update(double dt) {

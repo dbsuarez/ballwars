@@ -7,6 +7,7 @@ import '../application/match_simulation_controller.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import '../../match_setup/domain/match_config.dart';
+import 'power_up_sprites.dart';
 import 'arena_canvas.dart';
 import 'scoreboard_overlay.dart';
 import 'widgets/match_status_header.dart';
@@ -69,6 +70,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
   int _heardBallHits = 0;
   // Power-up events already played as sounds (shots, hits, slashes, blocks, blasts, pickups).
   var _heardPowerUps = (0, 0, 0, 0, 0, 0);
+  var _heardGatling = 0;
 
   // Null where this platform can't export video yet (hides SAVE VIDEO).
   final VideoExportBackend? _videoExport = createVideoExportBackend();
@@ -129,9 +131,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     }
   }
 
-  void _initMatch() {
+  /// Seed of the first round: the link's seed, until Play again starts fresh matches.
+  late int? _seedBase = widget.seed;
+
+  /// Starts a match. [replaySeed] re-runs a finished match exactly (Replay); it isn't counted again.
+  void _initMatch({int? replaySeed}) {
     // A fixed seed (replay link) gives each round its own fixed seed.
-    final seed = widget.seed == null ? null : widget.seed! + _round - 1;
+    final seed = replaySeed ?? (_seedBase == null ? null : _seedBase! + _round - 1);
     _controller = MatchSimulationController(
       widget.config.contestants,
       arenaRadius: _arenaRadius,
@@ -143,7 +149,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       mode: widget.config.mode,
       powerUpKinds: widget.config.powerUps,
     );
-    _roundCounted = false;
+    _roundCounted = replaySeed != null;
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
@@ -156,8 +162,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     _heardWallHits = 0;
     _heardBallHits = 0;
     _heardPowerUps = (0, 0, 0, 0, 0, 0);
+    _heardGatling = 0;
     _audio.startMusic();
     _matchGeneration++;
+    if (widget.config.mode != MatchMode.threads) {
+      PowerUpSprites.load().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
     _controller.preloadImages().then((_) {
       if (mounted) setState(() {});
     });
@@ -237,7 +249,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     final p = _controller.powerUps;
     if (p == null) return;
     final (shots, hits, slashes, blocks, blasts, pickups) = _heardPowerUps;
-    if (p.shots > shots) p.shots - shots >= 5 ? _audio.shotgun() : _audio.shot();
+    if (p.gatlingShots > _heardGatling) {
+      _audio.gatling();
+    } else if (p.shots > shots) {
+      p.shots - shots >= 5 ? _audio.shotgun() : _audio.shot();
+    }
+    _heardGatling = p.gatlingShots;
     if (p.hits > hits) _audio.hit();
     if (p.slashes > slashes) _audio.slash();
     if (p.blocks > blocks) _audio.shield();
@@ -287,14 +304,27 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
     _isPaused ? _audio.pauseMusic() : _audio.resumeMusic();
   }
 
-  /// RETRY: start the whole series over.
-  void _replay() {
+  /// Play again / New match: a new simulation (new seeds, even for a match opened from a link), and the
+  /// series starts over.
+  void _playAgain() {
     _audio.click();
     setState(() {
       _isPaused = false;
+      _seedBase = null;
       _round = 1;
       _roundWins.clear();
       _initMatch();
+    });
+  }
+
+  /// Replay: watch the match that just ended again, exactly as it played (same seed; the round isn't
+  /// counted twice).
+  void _replay() {
+    _audio.click();
+    final seed = _controller.seed;
+    setState(() {
+      _isPaused = false;
+      _initMatch(replaySeed: seed);
     });
   }
 
@@ -377,16 +407,35 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
           fit: BoxFit.scaleDown,
           child: ListenableBuilder(
             listenable: _frame,
-            builder: (context, _) => Text(
-              _formatTime(_controller.elapsedSeconds),
-              key: const Key('match-timer'),
-              style: AppText.mono(28, color: c.text),
-            ),
+            builder: (context, _) {
+              final speedUp = _controller.playbackSpeedUp;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    _formatTime(_controller.elapsedSeconds),
+                    key: const Key('match-timer'),
+                    style: AppText.mono(28, color: c.text),
+                  ),
+                  // Long matches play faster each minute (playback only).
+                  if (speedUp > 1 && _state.status != MatchStatus.slowMotion)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(
+                        'x${speedUp == speedUp.roundToDouble() ? speedUp.round() : speedUp}',
+                        key: const Key('speed-up'),
+                        style: AppText.mono(14, color: c.muted),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
-    final restart = OutlinedButton(onPressed: _replay, child: const Text('Restart'));
+    final restart = OutlinedButton(onPressed: _playAgain, child: const Text('New match'));
     final pause = IconButton(
       icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),
       tooltip: _isPaused ? 'Play' : 'Pause',
@@ -474,6 +523,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                       _copyReplayLink();
                     },
                     onReplay: _replay,
+                    onPlayAgain: _playAgain,
                     round: widget.config.winsNeeded > 1 ? _round : null,
                     seriesOver: _seriesOver,
                     onNextRound: _seriesOver ? null : _nextRound,

@@ -205,6 +205,8 @@ class GameAudio with WidgetsBindingObserver {
 
   void shotgun() => _play('shotgun', 0.6, gap: 120);
 
+  void gatling() => _play('gatling', 0.5, gap: 60);
+
   void slash() => _play('slash', 0.55, gap: 80);
 
   void shield() => _play('shield', 0.5, gap: 120);

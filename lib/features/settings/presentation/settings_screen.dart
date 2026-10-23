@@ -3,7 +3,9 @@ import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/presentation/my_groups_screen.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
 import '../domain/app_settings.dart';
+import 'power_up_tuning_screen.dart';
 import 'app_settings_scope.dart';
 
 /// Settings. Players see only the admin sign-in; once the admin signs in
@@ -341,6 +343,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ],
                             );
                           },
+                        ),
+                      ),
+                      _Section(
+                        title: 'POWER-UPS',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              settings.powerUps.isDefault
+                                  ? 'Damage, times and spawning for Arsenal and All-Out: all at their defaults.'
+                                  : 'Damage, times and spawning for Arsenal and All-Out: '
+                                        '${settings.powerUps.overrides.length} changed from the defaults.',
+                              style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                              onPressed: _busy
+                                  ? null
+                                  : () async {
+                                      final config = await Navigator.of(context).push<PowerUpConfig>(
+                                        MaterialPageRoute(
+                                          builder: (_) => PowerUpTuningScreen(initial: settings.powerUps),
+                                        ),
+                                      );
+                                      if (config == null || !mounted || config == settings.powerUps) return;
+                                      await _save(
+                                        AppSettingsScope.of(this.context).copyWith(powerUps: config),
+                                        done: 'Power-up numbers saved for everyone.',
+                                      );
+                                    },
+                              child: const Text('Edit power-up numbers'),
+                            ),
+                          ],
                         ),
                       ),
                       _Section(

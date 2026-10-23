@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
@@ -59,6 +60,7 @@ class ReplayVideoExporter {
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
+    PowerUpConfig tuning = PowerUpConfig.defaults,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
@@ -74,6 +76,7 @@ class ReplayVideoExporter {
           ballScale: ballScale,
           mode: mode,
           powerUpKinds: powerUps,
+          tuning: tuning,
         );
     final frameDelta = speedMultiplier / fps;
 

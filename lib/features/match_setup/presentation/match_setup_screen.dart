@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
+import '../../settings/presentation/app_settings_scope.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
@@ -237,6 +239,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       builder: (_) => _WeaponsDialog(
         initial: _powerUps ?? PowerUpKind.values.toSet(),
         arsenal: _mode == MatchMode.arsenal,
+        config: AppSettingsScope.of(context).powerUps,
       ),
     );
     if (chosen == null || !mounted) return;
@@ -276,6 +279,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mode: _mode,
         look: _look,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
+        // The admin's power-up numbers; part of the match (and of its replay link).
+        tuning: _mode == MatchMode.threads
+            ? PowerUpConfig.defaults
+            : AppSettingsScope.of(context).powerUps,
         // Only for matches with Yes or No balls.
         question: _selected.keys.any((id) => id.startsWith('pack:$_decisionPack/'))
             ? ReplayLink.cleanQuestion(_question.text)
@@ -836,8 +843,9 @@ enum _CategoryFilter {
 class _WeaponsDialog extends StatefulWidget {
   final Set<PowerUpKind> initial;
   final bool arsenal;
+  final PowerUpConfig config;
 
-  const _WeaponsDialog({required this.initial, required this.arsenal});
+  const _WeaponsDialog({required this.initial, required this.arsenal, required this.config});
 
   @override
   State<_WeaponsDialog> createState() => _WeaponsDialogState();
@@ -867,7 +875,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 isThreeLine: true,
                 secondary: PowerUpIcon(kind),
                 title: Text(kind.label),
-                subtitle: Text(powerUpDescription(kind, arsenal: widget.arsenal)),
+                subtitle: Text(powerUpDescription(kind, arsenal: widget.arsenal, config: widget.config)),
                 value: _on.contains(kind),
                 // The last one on can't be switched off.
                 onChanged: _on.contains(kind) && _on.length == 1

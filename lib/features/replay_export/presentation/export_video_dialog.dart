@@ -4,6 +4,7 @@ import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
 import '../application/replay_video_exporter.dart';
 import '../data/video_encoder.dart';
 import 'replay_frame_painter.dart';
@@ -24,6 +25,7 @@ class ExportVideoDialog extends StatefulWidget {
   final double ballScale;
   final MatchMode mode;
   final Set<PowerUpKind>? powerUps;
+  final PowerUpConfig tuning;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -38,6 +40,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
     this.powerUps,
+    this.tuning = PowerUpConfig.defaults,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -55,6 +58,7 @@ class ExportVideoDialog extends StatefulWidget {
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
+    PowerUpConfig tuning = PowerUpConfig.defaults,
     BallLook look = BallLook.pictures,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
@@ -74,6 +78,7 @@ class ExportVideoDialog extends StatefulWidget {
         ballScale: ballScale,
         mode: mode,
         powerUps: powerUps,
+        tuning: tuning,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -119,6 +124,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         ballScale: widget.ballScale,
         mode: widget.mode,
         powerUps: widget.powerUps,
+        tuning: widget.tuning,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {

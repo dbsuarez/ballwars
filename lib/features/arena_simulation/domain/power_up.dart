@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'power_up_config.dart';
 import 'simulation_ball.dart';
 
 /// The power-ups a ball can pick up in the Arsenal and All-Out match modes.
@@ -206,42 +207,42 @@ class PowerUpTuning {
 }
 
 /// What [kind] does, with its numbers from [PowerUpTuning], for the weapons list in Match Setup.
-/// [arsenal]: damage in life (Arsenal); otherwise in lines (All-Out). Damage is for 2 balls (see
-/// [crowdNote]).
-String powerUpDescription(PowerUpKind kind, {required bool arsenal}) {
+/// [arsenal]: damage in life (Arsenal); otherwise in lines (All-Out), with [config]'s numbers. Damage is for
+/// 2 balls (see [crowdNote]).
+String powerUpDescription(PowerUpKind kind, {required bool arsenal, PowerUpConfig config = PowerUpConfig.defaults}) {
   String secs(int steps) {
     final s = steps / 60;
     return s == s.roundToDouble() ? '${s.round()} s' : '${s.toStringAsFixed(1)} s';
   }
 
   String dmg(PowerUpKind k) => arsenal
-      ? '${PowerUpTuning.arenaDamage[k]!.round()} damage'
-      : '${PowerUpTuning.allOutThreads[k]} lines';
-  final aim = 'Aims ${secs(PowerUpTuning.aimSteps)}, then';
-  final block = (PowerUpTuning.shieldBlock * 100).round();
+      ? '${config.arenaDamage(k).round()} damage'
+      : '${config.allOutThreads(k)} lines';
+  final aim = 'Aims ${secs(config.aimSteps)}, then';
+  final block = (config.shieldBlock * 100).round();
   return switch (kind) {
     PowerUpKind.pistol => '$aim fires one shot: ${dmg(kind)}.',
-    PowerUpKind.shotgun => '$aim fires a fan of ${PowerUpTuning.shotgunPellets} pellets: ${dmg(kind)} each.',
-    PowerUpKind.gatling => '$aim fires ${PowerUpTuning.gatlingRounds} rounds: ${dmg(kind)} each.',
+    PowerUpKind.shotgun => '$aim fires a fan of ${config.shotgunPellets} pellets: ${dmg(kind)} each.',
+    PowerUpKind.gatling => '$aim fires ${config.gatlingRounds} rounds: ${dmg(kind)} each.',
     PowerUpKind.knife => 'Carried until it stabs the next ball it touches: ${dmg(kind)}.',
     PowerUpKind.sword => 'Carried until it slashes the next ball it touches: ${dmg(kind)}.',
     PowerUpKind.grenade => '$aim throws it where the target is: ${dmg(kind)} to everyone near where it '
         'blows up but the thrower.',
     PowerUpKind.shield => arsenal
         ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '
-            '${PowerUpTuning.arenaShieldBash.round()} damage.'
-        : 'Halves the lines lost to the next hit. Bashes an unarmed ball: '
-            '${PowerUpTuning.allOutShieldBash} lines.',
+            '${config.arenaShieldBash.round()} damage.'
+        : 'Keeps the lines lost to the next hit at ${(config.allOutShieldKeep * 100).round()}%. Bashes an unarmed ball: '
+            '${config.allOutShieldBash} lines.',
     PowerUpKind.apple => arsenal
-        ? 'Heals ${PowerUpTuning.arenaAppleHeal.round()} life, even past full '
-            '(up to ${PowerUpTuning.arenaMaxLife.round()}).'
-        : 'Adds up to ${PowerUpTuning.allOutAppleSlots} lines from free rim spots.',
-    PowerUpKind.speed => '${PowerUpTuning.speedFactor.round()}x speed for ${secs(PowerUpTuning.speedSteps)}.',
-    PowerUpKind.freeze => '$aim freezes the target for ${secs(PowerUpTuning.freezeSteps)}. No damage.',
+        ? 'Heals ${config.arenaAppleHeal.round()} life, even past full '
+            '(up to ${config.arenaMaxLife.round()}).'
+        : 'Adds up to ${config.allOutAppleSlots} lines from free rim spots.',
+    PowerUpKind.speed => '${PowerUpTuning.speedFactor.round()}x speed for ${secs(config.speedSteps)}.',
+    PowerUpKind.freeze => '$aim freezes the target for ${secs(config.freezeSteps)}. No damage.',
     PowerUpKind.mine => 'The first ball to touch it sets it as a mine. It explodes when an opponent touches it: '
         '${dmg(kind)} to everyone nearby but its owner.',
     PowerUpKind.magnet => 'Pulls the nearest power-up (or the next one) straight to the ball.',
-    PowerUpKind.ghost => 'For ${secs(PowerUpTuning.ghostSteps)} passes through balls and can\'t be hit.',
+    PowerUpKind.ghost => 'For ${secs(config.ghostSteps)} passes through balls and can\'t be hit.',
   };
 }
 

@@ -28,7 +28,7 @@ flutter test
 ```
 
 - **Releases:** pushing to `master` deploys the web app to GitHub Pages. Pushing a `v*` tag builds a signed APK and attaches it to a GitHub Release.
-- **Supabase:** run the SQL files in `supabase/migrations/` in order (001-010) in the SQL editor. Enable anonymous sign-ins, and add the admin account to the `admins` table (see `002`).
+- **Supabase:** run the SQL files in `supabase/migrations/` in order (001-011) in the SQL editor. Enable anonymous sign-ins, and add the admin account to the `admins` table (see `002`).
 - **Generated assets:**
   - `node tool/build_packs.mjs` rebuilds the ball packs.
   - `python tool/sounds/make_sounds.py` rebuilds the sounds and music.

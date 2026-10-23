@@ -1,3 +1,4 @@
+import '../../arena_simulation/domain/power_up_config.dart';
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
@@ -42,6 +43,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   // And the slow-motion column (migration 006), and Home music (009).
   bool _hasSlowMotionColumn = false;
   bool _hasMenuMusicColumn = false;
+  bool _hasPowerUpsColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer}) : _writer = writer ?? _client;
 
@@ -70,6 +72,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasMusicColumn = row.containsKey('music');
     _hasSlowMotionColumn = row.containsKey('slow_motion_lines');
     _hasMenuMusicColumn = row.containsKey('menu_music');
+    _hasPowerUpsColumn = row.containsKey('power_ups');
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
@@ -79,6 +82,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       menuMusicId: row['menu_music'] as String? ?? AppSettings.defaultMenuMusic,
       slowMotionLines: (row['slow_motion_lines'] as num?)?.toInt() ?? AppSettings.defaultSlowMotionLines,
       slowMotionBeforeWinSeconds: (row['slow_motion_before_win'] as num?)?.toDouble(),
+      powerUps: PowerUpConfig.fromJson(row['power_ups']),
     );
   }
 
@@ -95,6 +99,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasMenuMusicColumn) 'menu_music': settings.menuMusicId,
           if (_hasSlowMotionColumn) 'slow_motion_lines': settings.slowMotionLines,
           if (_hasSlowMotionColumn) 'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
+          if (_hasPowerUpsColumn) 'power_ups': settings.powerUps.toJson(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)

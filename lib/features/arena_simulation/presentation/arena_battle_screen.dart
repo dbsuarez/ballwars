@@ -148,6 +148,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       ballScale: widget.config.ballSize.scale,
       mode: widget.config.mode,
       powerUpKinds: widget.config.powerUps,
+      tuning: widget.config.tuning,
     );
     _roundCounted = replaySeed != null;
     _state = _controller.state;
@@ -282,6 +283,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       mode: widget.config.mode,
       question: widget.config.question,
       powerUps: widget.config.powerUps,
+      tuning: widget.config.tuning,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -513,6 +515,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                               mode: widget.config.mode,
                               look: widget.config.look,
                               powerUps: widget.config.powerUps,
+                              tuning: widget.config.tuning,
                               headline: headline,
                               colors: c,
                               backend: _videoExport,

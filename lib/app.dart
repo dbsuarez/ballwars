@@ -364,6 +364,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             mode: link.mode,
             question: link.question,
             powerUps: link.powerUps,
+            tuning: link.tuning,
             showEffects: link.showEffects,
             look: look,
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
 import '../../match_setup/domain/match_config.dart';
 
 /// Where the web app is hosted (GitHub Pages). Links made outside a browser
@@ -35,6 +36,10 @@ class ReplayLink {
   /// `w.<base36 bitmask>` token after the mode token; old apps reject it like `m.`.
   final Set<PowerUpKind>? powerUps;
 
+  /// Power-up modes: the power-up numbers the match was played with. Part of the match, so the changed
+  /// values travel as `t=` ([PowerUpConfig.encode]); old links without it use the defaults.
+  final PowerUpConfig tuning;
+
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
 
@@ -47,6 +52,7 @@ class ReplayLink {
     this.mode = MatchMode.threads,
     this.question,
     this.powerUps,
+    this.tuning = PowerUpConfig.defaults,
   });
 
   static const String _weaponsPrefix = 'w.';
@@ -87,7 +93,10 @@ class ReplayLink {
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
     final q = question == null ? '' : '&q=${Uri.encodeQueryComponent(question!)}';
-    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q&balls=${tokens.join(',')}';
+    final encoded = mode == MatchMode.threads ? null : tuning.encode();
+    final t = encoded == null ? '' : '&t=$encoded';
+    final query =
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t&balls=${tokens.join(',')}';
     return Uri.parse('${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query');
   }
 
@@ -126,6 +135,14 @@ class ReplayLink {
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
     final ballSize = params['size'] == null ? BallSize.medium : BallSize.byId(params['size']);
     if (ballSize == null) return null;
+    var tuning = PowerUpConfig.defaults;
+    final t = params['t'];
+    if (t != null) {
+      // Only with a power-up mode, and only something PowerUpConfig.encode could have made.
+      final decoded = mode == MatchMode.threads ? null : PowerUpConfig.decode(t);
+      if (decoded == null) return null;
+      tuning = decoded;
+    }
 
     final contestants = <CustomBall>[];
     for (var i = 0; i < tokens.length; i++) {
@@ -142,6 +159,7 @@ class ReplayLink {
       mode: mode,
       question: cleanQuestion(params['q']),
       powerUps: powerUps,
+      tuning: tuning,
     );
   }
 

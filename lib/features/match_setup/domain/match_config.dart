@@ -1,5 +1,6 @@
 import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
 
 enum WinCondition { domination, timeAttack }
 
@@ -70,6 +71,9 @@ class MatchConfig {
   /// Power-up modes: the power-ups that can spawn; null for all of them.
   final Set<PowerUpKind>? powerUps;
 
+  /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
+  final PowerUpConfig tuning;
+
   /// Yes or No: the question the match answers (shown instead of the headline), or null.
   final String? question;
 
@@ -83,6 +87,7 @@ class MatchConfig {
     this.look = BallLook.pictures,
     this.question,
     this.powerUps,
+    this.tuning = PowerUpConfig.defaults,
     this.mode = MatchMode.threads,
   });
 }

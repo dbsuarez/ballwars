@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/data/local_ball_repository.dart';
@@ -241,5 +242,32 @@ void main() {
     expect(withBalls('w.3,$a,$b'), isNull, reason: 'w. needs a power-up mode');
     expect(withBalls('m.arsenal,w.0,$a,$b'), isNull, reason: 'empty selection');
     expect(withBalls('m.arsenal,w.zzzz,$a,$b'), isNull, reason: 'bits beyond the 11 kinds');
+  });
+
+  test('power-up numbers travel in the link; threads links and bad values are rejected', () {
+    final tuning = PowerUpConfig.defaults.withValue('dmg.pistol', 33).withValue('aim', 0.5);
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      tuning: tuning,
+    );
+    final uri = link.toUri(presetIds: {for (final b in _presets) b.id});
+    expect(uri.queryParameters['t'], tuning.encode());
+    final back = ReplayLink.fromUri(uri, presets: _presets)!;
+    expect(back.tuning, tuning);
+
+    // Defaults add nothing, so older apps keep reading these links.
+    final plain = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], mode: MatchMode.arsenal)
+        .toUri(presetIds: {for (final b in _presets) b.id});
+    expect(plain.queryParameters.containsKey('t'), isFalse);
+    expect(ReplayLink.fromUri(plain, presets: _presets)!.tuning, PowerUpConfig.defaults);
+
+    final two = 'p.${_presets[0].id},p.${_presets[1].id}';
+    ReplayLink? parse(String query) => ReplayLink.fromUri(Uri.parse('https://x/?$query'), presets: _presets);
+    expect(parse('seed=1&t=${tuning.encode()}&balls=$two'), isNull, reason: 'threads match with numbers');
+    expect(parse('seed=1&t=garbage!&balls=m.arsenal,$two'), isNull);
+    expect(parse('seed=1&t=${PowerUpConfig(const {'dmg.pistol': 5000}).encode()}&balls=m.arsenal,$two'), isNull);
   });
 }

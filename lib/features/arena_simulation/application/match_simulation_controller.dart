@@ -12,6 +12,7 @@ import '../domain/floating_text.dart';
 import '../domain/match_colors.dart';
 import '../domain/particle_system.dart';
 import '../domain/power_up.dart';
+import '../domain/power_up_config.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import 'power_up_system.dart';
@@ -135,6 +136,9 @@ class MatchSimulationController {
   /// the seed.
   final Set<PowerUpKind>? powerUpKinds;
 
+  /// The power-up numbers (the admin's settings, or a replay link's). Part of the match, like the seed.
+  final PowerUpConfig tuning;
+
   /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
   static const int hurtFlashSteps = 18;
 
@@ -166,6 +170,7 @@ class MatchSimulationController {
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
     this.powerUpKinds,
+    this.tuning = PowerUpConfig.defaults,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (lookAhead && (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
       // Same seed and setup: the steps are identical (slow motion only
@@ -182,6 +187,7 @@ class MatchSimulationController {
         ballScale: ballScale,
         mode: mode,
         powerUpKinds: powerUpKinds,
+        tuning: tuning,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished && ahead._stepCount < _maxPredictedSteps) {

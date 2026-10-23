@@ -7,6 +7,7 @@ import '../../match_setup/domain/match_config.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
 import '../domain/power_up.dart';
+import '../domain/power_up_config.dart';
 import '../domain/simulation_ball.dart';
 import 'match_simulation_controller.dart';
 
@@ -33,6 +34,9 @@ class PowerUpSystem {
 
   /// The match's random source.
   final SeededRandom rng;
+
+  /// The match's power-up numbers.
+  PowerUpConfig get _t => match.tuning;
 
   /// Power-ups lying in the arena.
   final List<FieldPowerUp> field = [];
@@ -92,7 +96,7 @@ class PowerUpSystem {
   static const double _pelletJitter = 0.03;
 
   /// Pick-up radius of a field power-up: a little smaller than the balls, so it follows the ball size.
-  late final double fieldRadius = match.state.balls.first.radius * PowerUpTuning.fieldRadiusRatio;
+  late final double fieldRadius = match.state.balls.first.radius * _t.fieldRadiusRatio;
 
   /// How many balls the match started with (spawn rate and field limit follow it).
   late final int _ballCount = match.state.balls.length;
@@ -111,8 +115,8 @@ class PowerUpSystem {
     _aimAndFire();
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
-    if (number >= PowerUpTuning.firstSpawnSteps &&
-        (number - PowerUpTuning.firstSpawnSteps) % PowerUpTuning.spawnInterval(_ballCount) == 0) {
+    if (number >= _t.firstSpawnSteps &&
+        (number - _t.firstSpawnSteps) % _t.spawnInterval(_ballCount) == 0) {
       _spawn(number);
     }
     _turnShields();
@@ -142,10 +146,10 @@ class PowerUpSystem {
         _eatApple(ball);
         _yell(ball, 'YUM!');
       case PowerUpKind.speed:
-        ball.speedLeft = PowerUpTuning.speedSteps;
+        ball.speedLeft = _t.speedSteps;
         _yell(ball, 'ZOOM!');
       case PowerUpKind.ghost:
-        ball.ghostLeft = PowerUpTuning.ghostSteps;
+        ball.ghostLeft = _t.ghostSteps;
         _yell(ball, 'BOO!');
       case PowerUpKind.magnet:
         _pullNearest(ball);
@@ -215,15 +219,15 @@ class PowerUpSystem {
     }
   }
 
-  /// Arsenal: heals [PowerUpTuning.arenaAppleHeal], on top of full life up to [PowerUpTuning.arenaMaxLife].
+  /// Arsenal: heals [_t.arenaAppleHeal], on top of full life up to [_t.arenaMaxLife].
   /// All-Out: claims up to
-  /// [PowerUpTuning.allOutAppleSlots] free rim slots with the "+N LINES" pop (none when none are free).
+  /// [_t.allOutAppleSlots] free rim slots with the "+N LINES" pop (none when none are free).
   /// Either way a green sparkle bursts from the ball.
   void _eatApple(SimulationBall ball) {
     if (match.mode == MatchMode.arsenal) {
-      ball.life = math.min(PowerUpTuning.arenaMaxLife, ball.life + PowerUpTuning.arenaAppleHeal);
+      ball.life = math.min(_t.arenaMaxLife, ball.life + _t.arenaAppleHeal);
     } else {
-      final claimed = match.claimFreeSlots(ball, PowerUpTuning.allOutAppleSlots);
+      final claimed = match.claimFreeSlots(ball, _t.allOutAppleSlots);
       if (claimed > 0) match.state.floatingTexts.spawn(ball.position, '+$claimed LINES', ball.config.primaryColor);
     }
     match.state.particles.spawnSparkle(origin: ball.position, rng: rng);
@@ -270,10 +274,10 @@ class PowerUpSystem {
   }
 
   /// A blast at [at] (a mine or a grenade): hits every ball but [owner] whose body is within
-  /// [PowerUpTuning.blastRadiusRatio] arena radii (ghosts are spared), as [kind]. In All-Out it also cuts
+  /// [_t.blastRadiusRatio] arena radii (ghosts are spared), as [kind]. In All-Out it also cuts
   /// every thread passing through it, from every ball but the owner and ghosts.
   void _explode(Offset at, SimulationBall owner, PowerUpKind kind) {
-    final radius = match.arenaRadius * PowerUpTuning.blastRadiusRatio;
+    final radius = match.arenaRadius * _t.blastRadiusRatio;
     final balls = match.state.balls;
     blasts++;
     explosions.add(Explosion(position: at, radius: radius));
@@ -430,7 +434,7 @@ class PowerUpSystem {
     return best;
   }
 
-  /// Guns aim at the nearest opponent for [PowerUpTuning.aimSteps] steps, then fire. A gatling then
+  /// Guns aim at the nearest opponent for [_t.aimSteps] steps, then fire. A gatling then
   /// fires its other rounds one every [PowerUpTuning.gatlingIntervalSteps] steps. Balls that are out
   /// (or lost their last life or thread earlier this step) or frozen neither aim nor fire (bullets
   /// already in flight still fly).
@@ -454,7 +458,7 @@ class PowerUpSystem {
         if (!bursting) ball.aimLeft = 0;
         continue;
       }
-      if (!bursting && ball.aimLeft == 0) ball.aimLeft = PowerUpTuning.aimSteps;
+      if (!bursting && ball.aimLeft == 0) ball.aimLeft = _t.aimSteps;
       ball.aimLeft--;
       if (ball.aimLeft > 0) continue;
 
@@ -473,7 +477,7 @@ class PowerUpSystem {
             _burstVolley[ball] = ++_lastVolley;
             _fire(ball, target, kind, 0, volley: _lastVolley);
             gatlingShots++;
-            ball.burstLeft = PowerUpTuning.gatlingRounds - 1;
+            ball.burstLeft = _t.gatlingRounds - 1;
             _yell(ball, 'RATATAT!');
           case PowerUpKind.freeze:
             _fire(ball, target, kind, 0);
@@ -494,10 +498,10 @@ class PowerUpSystem {
     }
   }
 
-  /// Fans [PowerUpTuning.shotgunPellets] pellets evenly over [PowerUpTuning.shotgunSpread]. The inner
+  /// Fans [_t.shotgunPellets] pellets evenly over [PowerUpTuning.shotgunSpread]. The inner
   /// pellets get a seeded jitter of up to [_pelletJitter]; the two outer ones mark the fan's edges.
   void _fireShotgun(SimulationBall ball, SimulationBall target) {
-    const count = PowerUpTuning.shotgunPellets;
+    final count = _t.shotgunPellets;
     const spread = PowerUpTuning.shotgunSpread;
     final volley = ++_lastVolley;
     for (var i = 0; i < count; i++) {
@@ -517,7 +521,7 @@ class PowerUpSystem {
       owner: ball,
       kind: PowerUpKind.grenade,
       position: ball.position + direction * ball.radius,
-      velocity: direction * (match.arenaRadius * PowerUpTuning.grenadeSpeedRatio),
+      velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
       landAt: target.position,
     ));
     shots++;
@@ -532,7 +536,7 @@ class PowerUpSystem {
       owner: ball,
       kind: kind,
       position: ball.position + direction * ball.radius,
-      velocity: direction * (match.arenaRadius * PowerUpTuning.bulletSpeedRatio),
+      velocity: direction * (match.arenaRadius * _t.bulletSpeedRatio),
       volley: volley,
     ));
     shots++;
@@ -602,10 +606,10 @@ class PowerUpSystem {
   }
 
   /// Every weapon hit lands here (bullets, pellets, freeze shots, knife, shield bash, bomb). A ghost can't
-  /// be hit at all. A held shield absorbs part of the hit, then breaks: [PowerUpTuning.shieldBlock] of it
-  /// in Arsenal, while in All-Out only [PowerUpTuning.allOutShieldKeep] of the threads are lost. Arsenal
+  /// be hit at all. A held shield absorbs part of the hit, then breaks: [_t.shieldBlock] of it
+  /// in Arsenal, while in All-Out only [_t.allOutShieldKeep] of the threads are lost. Arsenal
   /// takes life off [target], All-Out snaps its threads nearest the impact point [at]; both splash "blood"
-  /// in the target's color. A freeze shot instead stops the target for [PowerUpTuning.freezeSteps] steps
+  /// in the target's color. A freeze shot instead stops the target for [_t.freezeSteps] steps
   /// (shortened the same way by a shield). [kind] [PowerUpKind.shield] is a shield bash. [from] is the
   /// attacker (null for a bomb: the splash then flies away from [at]).
   void _hit(SimulationBall target, PowerUpKind kind, {Offset? at, SimulationBall? from, int volley = 0}) {
@@ -614,7 +618,7 @@ class PowerUpSystem {
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
     var share = 1.0;
-    final shielded = match.mode == MatchMode.arsenal ? 1 - PowerUpTuning.shieldBlock : PowerUpTuning.allOutShieldKeep;
+    final shielded = match.mode == MatchMode.arsenal ? 1 - _t.shieldBlock : _t.allOutShieldKeep;
     if (target.held == PowerUpKind.shield) {
       target.held = null;
       blocks++;
@@ -626,7 +630,7 @@ class PowerUpSystem {
       share = shielded;
     }
     if (kind == PowerUpKind.freeze) {
-      final steps = (PowerUpTuning.freezeSteps * share).round();
+      final steps = (_t.freezeSteps * share).round();
       if (steps > target.frozenLeft) {
         if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
         target.frozenLeft = steps;
@@ -638,12 +642,12 @@ class PowerUpSystem {
     if (match.mode == MatchMode.arsenal) {
       final lost = match.damage(
         target,
-        (bash ? PowerUpTuning.arenaShieldBash : PowerUpTuning.arenaDamage[kind] ?? 0) * share,
+        (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share,
       );
       _showDamage(target, impact, lost, volley);
     } else {
       // Thread snap: the threads nearest the impact break, each with its rim spark.
-      final threads = ((bash ? PowerUpTuning.allOutShieldBash : PowerUpTuning.allOutThreads[kind] ?? 0) * share).round();
+      final threads = ((bash ? _t.allOutShieldBash : _t.allOutThreads(kind)) * share).round();
       final nearest = [...target.fanLines]
         ..sort((x, y) => (x.startPoint - impact).distanceSquared.compareTo((y.startPoint - impact).distanceSquared));
       var cut = 0;

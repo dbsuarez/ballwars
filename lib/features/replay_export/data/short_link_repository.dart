@@ -42,6 +42,8 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
           if (replayQuery['size'] != null) 'size': replayQuery['size'],
           // Likewise only when present (migration 010).
           if (replayQuery['q'] != null) 'question': replayQuery['q'],
+          // Power-up numbers (migration 011); only when changed, so older databases still work.
+          if (replayQuery['t'] != null) 'tuning': replayQuery['t'],
         });
         return code;
       } on PostgrestException catch (e) {
@@ -61,6 +63,7 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
       if (row['effects'] == false) 'fx': '0',
       if (row['size'] != null && row['size'] != 'm') 'size': row['size'] as String,
       if (row['question'] != null) 'q': row['question'] as String,
+      if (row['tuning'] != null) 't': row['tuning'] as String,
       'balls': row['balls'] as String,
     };
   }

@@ -1,5 +1,7 @@
+import '../../arena_simulation/domain/power_up_config.dart';
+
 /// App-wide settings, set by the admin and shown to everyone
-/// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005, 006 and 009).
+/// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005, 006, 009 and 011).
 class AppSettings {
   /// Big title over the arena and in videos, e.g. "WHO WINS?".
   final String headline;
@@ -25,6 +27,9 @@ class AppSettings {
   /// (predicted, see MatchSimulationController.slowMotionBeforeWinSeconds).
   final double? slowMotionBeforeWinSeconds;
 
+  /// The power-up numbers for Arsenal and All-Out matches (only the changed values are stored).
+  final PowerUpConfig powerUps;
+
   const AppSettings({
     this.headline = defaultHeadline,
     this.themeId = 'midnight',
@@ -34,6 +39,7 @@ class AppSettings {
     this.menuMusicId = defaultMenuMusic,
     this.slowMotionLines = defaultSlowMotionLines,
     this.slowMotionBeforeWinSeconds,
+    this.powerUps = PowerUpConfig.defaults,
   });
 
   static const String defaultHeadline = 'WHO WINS?';
@@ -53,6 +59,7 @@ class AppSettings {
     String? menuMusicId,
     int? slowMotionLines,
     double? Function()? slowMotionBeforeWinSeconds,
+    PowerUpConfig? powerUps,
   }) =>
       AppSettings(
         headline: headline ?? this.headline,
@@ -64,5 +71,6 @@ class AppSettings {
         slowMotionLines: slowMotionLines ?? this.slowMotionLines,
         slowMotionBeforeWinSeconds:
             slowMotionBeforeWinSeconds == null ? this.slowMotionBeforeWinSeconds : slowMotionBeforeWinSeconds(),
+        powerUps: powerUps ?? this.powerUps,
       );
 }

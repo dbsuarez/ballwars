@@ -10,7 +10,7 @@ Ball battles in a circular arena. Pick 2–4 balls: brands, flags or your own pi
 - **Built-in packs:** streaming services, AI, cars, consoles, fast food, every country flag and more.
 - **Your own groups:** upload pictures, crop them in a circle and make your own categories. Share a group with a link so friends can add it to their categories (tagged *Shared*; your own are tagged *Mine*). Submit a group, and the admin can add it to a main category for everyone.
 - **Three kinds of match:** *Threads* (the classic line-cutting game), *Arsenal* (power-ups and weapons with a hearts life bar) and *All-Out* (both: threads are the life and bullets cut them). Power-ups: pistol, shotgun, Gatling, knife, shield, apple, speed boost, freeze ray, bomb, magnet and ghost.
-- **Match options:** one round or first to 2 or 3, speed, effects, and ball size (Smallest to Large).
+- **Match options:** one round or first to 2 or 3, speed, effects, ball size (Smallest to Large), which weapons can spawn, and a ball look: pictures or smiley faces that track their opponents and wince when hit. With the Yes or No pack you can type the question the match answers.
 - **Replays:** share a short link to a match, or save it as a 9:16 MP4 video (web and Android).
 - **Offline play:** on first start the app downloads every ball image to the device; after that it works without a connection.
 - **8-bit sound:** original chiptune music (five match tracks and five calm Home tracks), plus bounce, hit, knockout and winner sounds. Music and sound effects each have their own on/off switch in Match Setup.
@@ -28,7 +28,7 @@ flutter test
 ```
 
 - **Releases:** pushing to `master` deploys the web app to GitHub Pages. Pushing a `v*` tag builds a signed APK and attaches it to a GitHub Release.
-- **Supabase:** run the SQL files in `supabase/migrations/` in order (001-009) in the SQL editor. Enable anonymous sign-ins, and add the admin account to the `admins` table (see `002`).
+- **Supabase:** run the SQL files in `supabase/migrations/` in order (001-010) in the SQL editor. Enable anonymous sign-ins, and add the admin account to the `admins` table (see `002`).
 - **Generated assets:**
   - `node tool/build_packs.mjs` rebuilds the ball packs.
   - `python tool/sounds/make_sounds.py` rebuilds the sounds and music.

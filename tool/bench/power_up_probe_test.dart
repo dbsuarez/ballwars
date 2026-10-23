@@ -51,12 +51,14 @@ void main() {
             'median=${median.toStringAsFixed(1)}s p90=${p90.toStringAsFixed(1)}s unfinished=$unfinished '
             'powerUpsUsed=${(100 * used / _seeds).toStringAsFixed(0)}%');
       }
-      final sw = Stopwatch()..start();
-      for (var seed = 1; seed <= 10; seed++) {
-        MatchSimulationController(all.take(2).toList(), arenaRadius: 300, seed: seed, mode: mode);
+      for (final n in [2, 4]) {
+        final sw = Stopwatch()..start();
+        for (var seed = 1; seed <= 10; seed++) {
+          MatchSimulationController(all.take(n).toList(), arenaRadius: 300, seed: seed, mode: mode);
+        }
+        // ignore: avoid_print
+        print('${mode.label} n=$n look-ahead: ${(sw.elapsedMilliseconds / 10).toStringAsFixed(0)} ms per match');
       }
-      // ignore: avoid_print
-      print('${mode.label} look-ahead: ${(sw.elapsedMilliseconds / 10).toStringAsFixed(0)} ms per match');
     }
   }, timeout: const Timeout(Duration(minutes: 20)));
 }

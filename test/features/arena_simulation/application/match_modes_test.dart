@@ -291,6 +291,6 @@ void main() {
     two.damage(two.state.balls[0], 10);
     crowd.damage(crowd.state.balls[0], 10);
     expect(PowerUpTuning.arenaLife - two.state.balls[0].life, 10);
-    expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 20);
+    expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 40);
   });
 }

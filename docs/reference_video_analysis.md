@@ -62,16 +62,16 @@ All of the following comes from stepping through the frames. Implemented in `Mat
 
 | Mode | Balls | Wins by start | chi² | Median | p90 | Unfinished | Power-up used |
 |---|---|---|---|---|---|---|---|
-| Arsenal | 2 | 140 / 160 | 1.33 | 42.9 s | 84.7 s | 0 | 100% |
-| Arsenal | 3 | 112 / 104 / 84 | 4.16 | 62.3 s | 123.0 s | 0 | 100% |
-| Arsenal | 4 | 73 / 87 / 68 / 72 | 2.75 | 67.5 s | 120.1 s | 0 | 100% |
-| All-Out | 2 | 152 / 148 | 0.05 | 9.4 s | 23.4 s | 0 | 82% |
-| All-Out | 3 | 107 / 103 / 90 | 1.58 | 11.9 s | 29.9 s | 0 | 89% |
-| All-Out | 4 | 76 / 71 / 75 / 78 | 0.35 | 5.5 s | 25.9 s | 0 | 76% |
+| Arsenal | 2 | 144 / 156 | 0.48 | 41.9 s | 87.2 s | 0 | 100% |
+| Arsenal | 3 | 98 / 109 / 93 | 1.34 | 52.1 s | 105.1 s | 0 | 100% |
+| Arsenal | 4 | 70 / 83 / 60 / 87 | 6.11 | 50.8 s | 96.2 s | 0 | 100% |
+| All-Out | 2 | 152 / 148 | 0.05 | 9.4 s | 23.7 s | 0 | 82% |
+| All-Out | 3 | 108 / 103 / 89 | 1.94 | 11.9 s | 29.9 s | 0 | 89% |
+| All-Out | 4 | 75 / 71 / 76 / 78 | 0.35 | 5.5 s | 26.4 s | 0 | 76% |
 
 Tuning that got there, starting from the plan's values:
 - **Arsenal damage:** about 4x the plan's (pistol 50, shotgun 12 per pellet, gatling 15 per round, knife 70, bomb 80, shield bash 30).
-- **Crowded Arsenal:** damage is multiplied by `count / 2`, because one spawn every 5 s has to feed every ball.
+- **Crowded Arsenal:** damage is multiplied by `(count / 2)^2` (3 balls 2.25, 4 balls 4), because one spawn every 5 s has to feed every ball and crowded balls move slower. With `count / 2` the 3- and 4-ball medians were 62 s and 67 s. All chi-square values stay under 7.81 (3 degrees of freedom, p = 0.05).
 - **First spawn:** at 1 s, then every 5 s.
 
-All-Out matches last about as long as Threads matches (the threads rules dominate). The look-ahead costs about 6 ms per match on this PC.
+All-Out matches last about as long as Threads matches (the threads rules dominate). The look-ahead costs about 5-7 ms per match on this PC, with 2 or 4 balls.

@@ -1,58 +1,79 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../domain/power_up.dart';
-import 'power_up_painter.dart';
+import 'power_up_pixel_art.dart';
 
-/// The power-up icons (game-icons.net SVGs in `assets/powerups`, CC BY 3.0) turned into images once, each
-/// tinted in its power-up's color, so painting a frame only blits them ([Canvas.drawImageRect]): no SVG
-/// parsing or path filling per frame.
+/// The power-up icons ([pixelIcons], 16 x 16 pixel art) turned into small images once, so painting a frame
+/// only blits them ([Canvas.drawImageRect] with nearest-neighbor scaling keeps the pixels crisp).
 ///
 /// [load] runs once per app; until it finishes (and in tests that skip it) [of] returns null and the
-/// painter draws its simple vector glyphs instead.
+/// painter draws its simple vector glyphs instead. [paintIcon] draws an icon straight from its pixels,
+/// for widgets such as Match Setup's weapons list.
 class PowerUpSprites {
   PowerUpSprites._();
-
-  /// Width and height of each image in pixels (sharp up to about 64 logical px on a 2x screen).
-  static const int size = 128;
 
   static final Map<PowerUpKind, ui.Image> _images = {};
   static Future<void>? _loading;
 
-  /// The asset path of [kind]'s icon (also used by Match Setup's weapons list).
-  static String assetOf(PowerUpKind kind) => 'assets/powerups/${kind.name}.svg';
-
-  /// [kind]'s image, or null before [load] has finished.
+  /// [kind]'s image (16 x 16 px), or null before [load] has finished.
   static ui.Image? of(PowerUpKind kind) => _images[kind];
 
-  /// Loads every icon (once; later calls return the same future). Failures leave that icon out.
+  /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
 
   static Future<void> _loadAll() async {
     for (final kind in PowerUpKind.values) {
-      try {
-        final svg = await rootBundle.loadString(assetOf(kind));
-        final info = await vg.loadPicture(SvgStringLoader(svg), null);
-        final recorder = ui.PictureRecorder();
-        final canvas = Canvas(recorder);
-        final scale = size / info.size.longestSide;
-        canvas.saveLayer(
-          Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
-          Paint()..colorFilter = ColorFilter.mode(PowerUpPainter.colorOf(kind), BlendMode.srcIn),
+      final recorder = ui.PictureRecorder();
+      paintIcon(Canvas(recorder), kind, const Rect.fromLTWH(0, 0, pixelSize * 1.0, pixelSize * 1.0));
+      final picture = recorder.endRecording();
+      _images[kind] = await picture.toImage(pixelSize, pixelSize);
+      picture.dispose();
+    }
+  }
+
+  /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).
+  static void paintIcon(Canvas canvas, PowerUpKind kind, Rect rect) {
+    final rows = pixelIcons[kind];
+    if (rows == null) return;
+    final cell = Size(rect.width / pixelSize, rect.height / pixelSize);
+    final paint = Paint()..isAntiAlias = false;
+    for (var y = 0; y < rows.length; y++) {
+      final row = rows[y];
+      for (var x = 0; x < row.length; x++) {
+        final color = pixelPalette[row[x]];
+        if (color == null) continue;
+        paint.color = color;
+        canvas.drawRect(
+          Rect.fromLTWH(rect.left + x * cell.width, rect.top + y * cell.height, cell.width, cell.height),
+          paint,
         );
-        canvas.scale(scale, scale);
-        canvas.drawPicture(info.picture);
-        canvas.restore();
-        info.picture.dispose();
-        final picture = recorder.endRecording();
-        _images[kind] = await picture.toImage(size, size);
-        picture.dispose();
-      } catch (_) {
-        // Keeps the vector glyph for this one.
       }
     }
   }
+}
+
+/// A power-up's pixel-art icon as a widget.
+class PowerUpIcon extends StatelessWidget {
+  final PowerUpKind kind;
+  final double size;
+
+  const PowerUpIcon(this.kind, {super.key, this.size = 32});
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size.square(size), painter: _IconPainter(kind));
+}
+
+class _IconPainter extends CustomPainter {
+  final PowerUpKind kind;
+
+  _IconPainter(this.kind);
+
+  @override
+  void paint(Canvas canvas, Size size) => PowerUpSprites.paintIcon(canvas, kind, Offset.zero & size);
+
+  @override
+  bool shouldRepaint(_IconPainter old) => old.kind != kind;
 }

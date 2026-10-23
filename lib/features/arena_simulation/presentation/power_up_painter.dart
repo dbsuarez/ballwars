@@ -12,7 +12,7 @@ import 'power_up_sprites.dart';
 /// per-ball looks ([paintBallEffects]: the held weapon or shield on the ball, frozen tint).
 ///
 /// Flat style and cheap to draw (see CLAUDE.md "Painting performance"): no blur filters, icons are
-/// pre-tinted images ([PowerUpSprites]), bullets are one batched drawRawPoints call.
+/// pixel-art images ([PowerUpSprites]), bullets are one batched drawRawPoints call.
 class PowerUpPainter {
   PowerUpPainter._();
 
@@ -135,27 +135,40 @@ class PowerUpPainter {
     }
   }
 
-  /// A power-up token: dark disc, colored ring ([ring] if given) at [ringAlpha], and the icon.
+  /// A power-up token drawn like a small ball: a white ball with a ring in the power-up's color ([ring]
+  /// instead if given, e.g. an armed mine's owner) at [ringAlpha], a soft glow, and the icon inside.
   static void _paintToken(Canvas canvas, PowerUpKind kind, Offset c, double r, double ringAlpha, {Color? ring}) {
-    final color = colorOf(kind);
-    canvas.drawCircle(c, r, Paint()..color = const Color(0xFF15151A));
+    final color = ring ?? colorOf(kind);
+    canvas.drawCircle(
+      c,
+      r * 1.5,
+      Paint()
+        ..shader = ui.Gradient.radial(c, r * 1.5, [
+          color.withValues(alpha: 0.35 * ringAlpha),
+          color.withValues(alpha: 0),
+        ], [
+          0.6,
+          1,
+        ]),
+    );
+    canvas.drawCircle(c, r, Paint()..color = const Color(0xFFF4F4F2));
     canvas.drawCircle(
       c,
       r,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(1.5, r * 0.12)
-        ..color = (ring ?? color).withValues(alpha: ringAlpha),
+        ..strokeWidth = math.max(1.5, r * 0.14)
+        ..color = Color.lerp(const Color(0xFFF4F4F2), color, 0.4 + 0.6 * ringAlpha)!,
     );
     final sprite = PowerUpSprites.of(kind);
     if (sprite == null) {
       drawGlyph(canvas, kind, c, r * 0.62);
     } else {
-      _drawSprite(canvas, sprite, c, r * 0.72, 0);
+      _drawSprite(canvas, sprite, c, r * 0.68, 0);
     }
   }
 
-  static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.medium;
+  static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
 
   /// Draws [image] centered at [c], [half] in half-size. The icon is first turned so its own direction
   /// [iconAngle] lies along +x, then mirrored top-to-bottom if [flip] (so a gun pointing left isn't upside
@@ -186,12 +199,7 @@ class PowerUpPainter {
   /// The direction, in radians, each weapon icon points in as drawn in its SVG (guns: the muzzle; knife:
   /// the tip). Weapons are turned from it to point where they are used.
   static const Map<PowerUpKind, double> _iconAngle = {
-    PowerUpKind.pistol: 0,
-    PowerUpKind.shotgun: -math.pi / 4,
-    PowerUpKind.gatling: 0,
-    PowerUpKind.freeze: 0,
-    PowerUpKind.knife: math.pi / 4,
-    PowerUpKind.grenade: 0,
+    PowerUpKind.knife: -math.pi / 4,
     PowerUpKind.sword: -math.pi / 4,
   };
 

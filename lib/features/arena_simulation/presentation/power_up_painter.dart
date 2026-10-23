@@ -30,6 +30,7 @@ class PowerUpPainter {
     PowerUpKind.ghost: Color(0xFFC9B8F0),
     PowerUpKind.grenade: Color(0xFF8DBF4A),
     PowerUpKind.sword: Color(0xFFE6D3A3),
+    PowerUpKind.hook: Color(0xFFFF8A3D),
   };
 
   /// The color a power-up is drawn in.
@@ -95,6 +96,18 @@ class PowerUpPainter {
       final points = Float32List(p.projectiles.length * 2);
       var n = 0;
       for (final shot in p.projectiles) {
+        if (shot.kind == PowerUpKind.hook) {
+          // The hook flying out on its chain.
+          _paintChain(canvas, shot.owner.position, shot.position);
+          final sprite = PowerUpSprites.of(PowerUpKind.hook);
+          final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
+          if (sprite == null) {
+            drawGlyph(canvas, PowerUpKind.hook, shot.position, r * 0.6);
+          } else {
+            _drawSprite(canvas, sprite, shot.position, r * 0.8, angle, flip: shot.velocity.dx < 0);
+          }
+          continue;
+        }
         if (shot.landAt != null) {
           // A grenade in flight: its icon, tumbling.
           final sprite = PowerUpSprites.of(PowerUpKind.grenade);
@@ -118,6 +131,11 @@ class PowerUpPainter {
       );
     }
 
+    // Hooked balls on their chain, being reeled in.
+    for (final h in p.pulls) {
+      _paintChain(canvas, h.owner.position, h.target.position);
+    }
+
     for (final m in p.slashMarks) {
       // Two quick strokes across the cut, fading out.
       final fade = (1 - m.age / PowerUpTuning.slashShowSteps).clamp(0.0, 1.0);
@@ -133,6 +151,33 @@ class PowerUpPainter {
         canvas.drawLine(o - along, o + along, paint);
       }
     }
+  }
+
+  static final Paint _chainPaint = Paint()
+    ..strokeWidth = 2.5
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0xFFB0B4BC);
+
+  /// A chain from [from] to [to]: short dashes, one batched call.
+  static void _paintChain(Canvas canvas, Offset from, Offset to) {
+    final d = to - from;
+    final length = d.distance;
+    if (length < 1) return;
+    final unit = d / length;
+    const link = 7.0;
+    final count = (length / link).floor();
+    final points = Float32List(count * 4);
+    var n = 0;
+    for (var i = 0; i < count; i++) {
+      final a = from + unit * (i * link);
+      final b = from + unit * (i * link + link * 0.6);
+      points
+        ..[n++] = a.dx
+        ..[n++] = a.dy
+        ..[n++] = b.dx
+        ..[n++] = b.dy;
+    }
+    canvas.drawRawPoints(ui.PointMode.lines, points, _chainPaint);
   }
 
   /// A power-up token drawn like a small ball: a white ball with a ring in the power-up's color ([ring]
@@ -347,6 +392,16 @@ class PowerUpPainter {
       case PowerUpKind.grenade:
         canvas.drawOval(Rect.fromCenter(center: at(0, 0.2), width: s * 1.3, height: s * 1.5), fill);
         canvas.drawLine(at(-0.2, -0.6), at(0.5, -0.9), stroke);
+      case PowerUpKind.hook:
+        canvas.drawLine(at(-0.9, 0), at(0.6, 0), stroke);
+        canvas.drawPath(
+          Path()
+            ..moveTo(at(0.95, 0).dx, at(0.95, 0).dy)
+            ..lineTo(at(0.45, -0.45).dx, at(0.45, -0.45).dy)
+            ..lineTo(at(0.45, 0.45).dx, at(0.45, 0.45).dy)
+            ..close(),
+          fill,
+        );
       case PowerUpKind.sword:
         canvas.drawLine(at(-0.85, 0.85), at(0.9, -0.9), stroke);
         canvas.drawLine(at(-0.75, 0.25), at(-0.25, 0.75), stroke);

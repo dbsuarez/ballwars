@@ -19,7 +19,8 @@ enum PowerUpKind {
   ghost('Ghost'),
   // New kinds go last: links store the chosen kinds as a bitmask of their index.
   grenade('Grenade'),
-  sword('Sword');
+  sword('Sword'),
+  hook('Hook');
 
   const PowerUpKind(this.label);
 
@@ -27,7 +28,8 @@ enum PowerUpKind {
   final String label;
 
   /// True for the kinds that aim at an opponent and shoot.
-  bool get isGun => this == pistol || this == shotgun || this == gatling || this == freeze || this == grenade;
+  bool get isGun =>
+      this == pistol || this == shotgun || this == gatling || this == freeze || this == grenade || this == hook;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -80,6 +82,19 @@ class Explosion {
 
   /// Steps since it went off.
   int age = 0;
+}
+
+/// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or
+/// [stepsLeft] runs out), then takes the uppercut and is thrown off at [speed] in a random direction.
+class HookPull {
+  HookPull({required this.owner, required this.target, required this.speed, required this.stepsLeft});
+
+  final SimulationBall owner;
+  final SimulationBall target;
+
+  /// The target's speed before it was hooked (px/s), given back when it is thrown.
+  final double speed;
+  int stepsLeft;
 }
 
 /// A knife slash, kept for [PowerUpTuning.slashShowSteps] steps so it can be drawn.
@@ -145,6 +160,15 @@ class PowerUpTuning {
 
   /// Grenade speed in arena radii per second (slower than a bullet: it is thrown).
   static const double grenadeSpeedRatio = 0.7;
+
+  /// Hook: chain speed out, and how fast a hooked ball is reeled in (arena radii per second).
+  static const double hookSpeedRatio = 1.6;
+  static const double hookPullRatio = 1.4;
+
+  /// Hook: longest reel-in (steps) before the uppercut lands anyway, and how long the thrown ball flies
+  /// at the speed boost's pace.
+  static const int hookMaxPullSteps = 120;
+  static const int hookThrowSteps = 40;
   static const int shotgunPellets = 10;
 
   /// Total spread of the shotgun fan, in radians.
@@ -182,6 +206,7 @@ class PowerUpTuning {
     PowerUpKind.mine: 50,
     PowerUpKind.grenade: 50,
     PowerUpKind.sword: 40,
+    PowerUpKind.hook: 30,
   };
   static const double arenaShieldBash = 5;
   static const double arenaAppleHeal = 25;
@@ -198,6 +223,7 @@ class PowerUpTuning {
     PowerUpKind.mine: 10,
     PowerUpKind.grenade: 10,
     PowerUpKind.sword: 30,
+    PowerUpKind.hook: 12,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -239,6 +265,8 @@ String powerUpDescription(PowerUpKind kind, {required bool arsenal, PowerUpConfi
         : 'Adds up to ${config.allOutAppleSlots} lines from free rim spots.',
     PowerUpKind.speed => '${PowerUpTuning.speedFactor.round()}x speed for ${secs(config.speedSteps)}.',
     PowerUpKind.freeze => '$aim freezes the target for ${secs(config.freezeSteps)}. No damage.',
+    PowerUpKind.hook => '$aim throws a hook on a chain. A hit pulls the opponent in ("COME OVER HERE!"), '
+        'uppercuts it for ${dmg(kind)} and throws it away.',
     PowerUpKind.mine => 'The first ball to touch it sets it as a mine. It explodes when an opponent touches it: '
         '${dmg(kind)} to everyone nearby but its owner.',
     PowerUpKind.magnet => 'Pulls the nearest power-up (or the next one) straight to the ball.',

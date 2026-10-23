@@ -231,4 +231,49 @@ void main() {
     expect(_texts(c), contains('HIYAA!'));
     expect(c.powerUps!.slashMarks, isNotEmpty);
   });
+
+  test('a hook pulls the opponent in ("COME OVER HERE!"), uppercuts it and throws it away', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.hook;
+    b.velocity = const Offset(0, 50);
+    _run(c, PowerUpTuning.aimSteps);
+    expect(c.powerUps!.projectiles.single.kind, PowerUpKind.hook);
+    for (var i = 0; i < 120 && c.powerUps!.pulls.isEmpty; i++) {
+      _run(c, 1);
+    }
+    expect(c.powerUps!.pulls.single.target, b);
+    expect(_texts(c), contains('COME OVER HERE!'));
+
+    // Reeled in: the gap shrinks every step, and the hooked ball doesn't move on its own.
+    var gap = (a.position - b.position).distance;
+    _run(c, 3);
+    expect((a.position - b.position).distance, lessThan(gap));
+    gap = (a.position - b.position).distance;
+
+    for (var i = 0; i < PowerUpTuning.hookMaxPullSteps && c.powerUps!.pulls.isNotEmpty; i++) {
+      _run(c, 1);
+    }
+    expect(c.powerUps!.pulls, isEmpty);
+    expect(_texts(c), contains('UPPERCUT!'));
+    expect(b.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.hook]!);
+    // Thrown: moving again at its old speed, with a short burst.
+    expect(b.velocity.distance, closeTo(50, 1e-6));
+    expect(b.speedLeft, greaterThan(0));
+  });
+
+  test('a shield blocks a hook (and breaks); nothing is pulled', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.hook;
+    b.held = PowerUpKind.shield;
+    _run(c, PowerUpTuning.aimSteps);
+    for (var i = 0; i < 120 && c.powerUps!.projectiles.isNotEmpty; i++) {
+      _run(c, 1);
+    }
+    expect(c.powerUps!.pulls, isEmpty);
+    expect(b.held, isNull);
+    expect(b.life, PowerUpTuning.arenaLife);
+    expect(_texts(c), contains('BLOCKED!'));
+  });
 }

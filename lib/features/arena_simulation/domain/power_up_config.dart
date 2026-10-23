@@ -65,6 +65,7 @@ class PowerUpConfig {
     PowerUpKind.sword,
     PowerUpKind.mine,
     PowerUpKind.grenade,
+    PowerUpKind.hook,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.

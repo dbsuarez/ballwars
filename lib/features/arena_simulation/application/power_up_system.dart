@@ -53,6 +53,9 @@ class PowerUpSystem {
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
 
+  /// Balls being reeled in by a hook.
+  final List<HookPull> pulls = [];
+
   /// How many power-ups balls have picked up so far (the screen plays a sound when it goes up).
   int pickups = 0;
 
@@ -112,6 +115,7 @@ class PowerUpSystem {
     _sweep();
     _updateFrozen();
     _moveProjectiles();
+    _reelIn();
     _aimAndFire();
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
@@ -485,6 +489,8 @@ class PowerUpSystem {
           case PowerUpKind.grenade:
             _throwGrenade(ball, target);
             _yell(ball, 'FIRE IN THE HOLE!');
+          case PowerUpKind.hook:
+            _fire(ball, target, kind, 0, speedRatio: PowerUpTuning.hookSpeedRatio);
           default:
             _fire(ball, target, kind, 0);
             _yell(ball, 'BANG!');
@@ -495,6 +501,65 @@ class PowerUpSystem {
       } else {
         ball.aimTarget = null;
       }
+    }
+  }
+
+  /// A hook caught [target]: a held shield blocks it (and breaks); otherwise [owner] yells and starts
+  /// reeling it in. A ball already on a hook isn't caught again.
+  void _catch(SimulationBall owner, SimulationBall target) {
+    if (!_alive(owner) || !_alive(target) || target.isGhost) return;
+    if (target.held == PowerUpKind.shield) {
+      target.held = null;
+      blocks++;
+      _yell(target, 'BLOCKED!');
+      return;
+    }
+    if (pulls.any((h) => identical(h.target, target) || identical(h.target, owner))) return;
+    hits++;
+    _yell(owner, 'COME OVER HERE!');
+    pulls.add(HookPull(
+      owner: owner,
+      target: target,
+      speed: target.velocity.distance,
+      stepsLeft: PowerUpTuning.hookMaxPullSteps,
+    ));
+    target.velocity = Offset.zero;
+  }
+
+  /// Hooked balls move straight toward their owner. Once they touch (or the reel-in runs out) the owner
+  /// uppercuts: a hook hit (damage or lines, through [_hit]), then the target is thrown in a seeded random
+  /// direction at its old speed, with a short speed burst. A pull ends early when either ball is out or
+  /// the target turns ghost.
+  void _reelIn() {
+    if (pulls.isEmpty) return;
+    final pull = match.arenaRadius * PowerUpTuning.hookPullRatio * MatchSimulationController.fixedTimestep;
+    for (final h in List.of(pulls)) {
+      final owner = h.owner;
+      final target = h.target;
+      if (!_alive(owner) || !_alive(target) || target.isGhost) {
+        pulls.remove(h);
+        continue;
+      }
+      final toOwner = owner.position - target.position;
+      final gap = toOwner.distance - owner.radius - target.radius;
+      h.stepsLeft--;
+      if (gap > 2 && h.stepsLeft > 0) {
+        target
+          ..position += toOwner / toOwner.distance * math.min(pull, gap - 1)
+          ..velocity = Offset.zero;
+        continue;
+      }
+      pulls.remove(h);
+      final distance = toOwner.distance;
+      final at = distance > 0 ? target.position + toOwner * (target.radius / distance) : target.position;
+      _yell(owner, 'UPPERCUT!');
+      slashMarks.add(SlashMark(position: at, angle: -math.pi / 2));
+      _hit(target, PowerUpKind.hook, at: at, from: owner);
+      final angle = rng.nextDoubleRange(0, 2 * math.pi);
+      final speed = h.speed > 0 ? h.speed : match.arenaRadius * 0.5;
+      target
+        ..velocity = Offset(math.cos(angle), math.sin(angle)) * speed
+        ..speedLeft = math.max(target.speedLeft, PowerUpTuning.hookThrowSteps);
     }
   }
 
@@ -528,7 +593,14 @@ class PowerUpSystem {
   }
 
   /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
-  void _fire(SimulationBall ball, SimulationBall target, PowerUpKind kind, double turn, {int volley = 0}) {
+  void _fire(
+    SimulationBall ball,
+    SimulationBall target,
+    PowerUpKind kind,
+    double turn, {
+    int volley = 0,
+    double? speedRatio,
+  }) {
     final toTarget = target.position - ball.position;
     final angle = math.atan2(toTarget.dy, toTarget.dx) + turn;
     final direction = Offset(math.cos(angle), math.sin(angle));
@@ -536,7 +608,7 @@ class PowerUpSystem {
       owner: ball,
       kind: kind,
       position: ball.position + direction * ball.radius,
-      velocity: direction * (match.arenaRadius * _t.bulletSpeedRatio),
+      velocity: direction * (match.arenaRadius * (speedRatio ?? _t.bulletSpeedRatio)),
       volley: volley,
     ));
     shots++;
@@ -582,7 +654,8 @@ class PowerUpSystem {
         continue;
       }
 
-      if (allOut) {
+      // A hook's chain doesn't cut threads.
+      if (allOut && p.kind != PowerUpKind.hook) {
         for (final ball in balls) {
           if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) continue;
           for (final line in List.of(ball.fanLines)) {
@@ -597,7 +670,11 @@ class PowerUpSystem {
       p.position = end;
       if (struck != null) {
         p.spent = true;
-        _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+        if (p.kind == PowerUpKind.hook) {
+          _catch(p.owner, struck);
+        } else {
+          _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+        }
       } else if (end.distance >= match.arenaRadius) {
         p.spent = true;
       }

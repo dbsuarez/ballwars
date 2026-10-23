@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
+import '../../arena_simulation/domain/power_up.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../data/video_encoder.dart';
@@ -56,6 +57,7 @@ class ReplayVideoExporter {
     double? slowMotionBeforeWinSeconds,
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
+    Set<PowerUpKind>? powerUps,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
@@ -70,6 +72,7 @@ class ReplayVideoExporter {
           slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
           ballScale: ballScale,
           mode: mode,
+          powerUpKinds: powerUps,
         );
     final frameDelta = speedMultiplier / fps;
 

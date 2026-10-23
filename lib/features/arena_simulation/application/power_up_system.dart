@@ -284,7 +284,13 @@ class PowerUpSystem {
   }
 
   void _spawn(int number) {
-    final kind = PowerUpKind.values[rng.nextInt(PowerUpKind.values.length)];
+    // Uniform over the chosen kinds; with all of them chosen this draws exactly as before.
+    final chosen = match.powerUpKinds;
+    final kinds = chosen == null || chosen.length == PowerUpKind.values.length
+        ? PowerUpKind.values
+        : [for (final k in PowerUpKind.values) if (chosen.contains(k)) k];
+    if (kinds.isEmpty) return;
+    final kind = kinds[rng.nextInt(kinds.length)];
     final radius = fieldRadius;
     final reach = match.arenaRadius - radius;
     final balls = match.state.balls;

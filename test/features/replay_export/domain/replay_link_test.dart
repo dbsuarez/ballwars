@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/data/local_ball_repository.dart';
@@ -207,5 +208,34 @@ void main() {
     final q = ReplayLink.fromUri(messy, presets: _presets)!.question!;
     expect(q.contains('\n'), isFalse);
     expect(q.length, lessThanOrEqualTo(100));
+  });
+
+  test('chosen power-ups travel as a w. token; all chosen adds none; bad tokens are rejected', () {
+    const app = 'https://dbsuarez.github.io/ballwars/';
+    final ids = {for (final b in _presets) b.id};
+    final some = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      powerUps: {PowerUpKind.knife, PowerUpKind.bomb},
+    ).toUri(presetIds: ids, appUrl: app);
+    final tokens = some.queryParameters['balls']!.split(',');
+    expect(tokens[0], 'm.arsenal');
+    expect(tokens[1], startsWith('w.'));
+    expect(ReplayLink.fromUri(some, presets: _presets)!.powerUps, {PowerUpKind.knife, PowerUpKind.bomb});
+
+    final all = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], mode: MatchMode.arsenal)
+        .toUri(presetIds: ids, appUrl: app);
+    expect(all.queryParameters['balls']!.contains('w.'), isFalse);
+    expect(ReplayLink.fromUri(all, presets: _presets)!.powerUps, isNull);
+
+    ReplayLink? withBalls(String balls) =>
+        ReplayLink.fromUri(Uri.parse('$app?seed=1&balls=$balls'), presets: _presets);
+    final a = 'p.${_presets[0].id}';
+    final b = 'p.${_presets[1].id}';
+    expect(withBalls('w.3,$a,$b'), isNull, reason: 'w. needs a power-up mode');
+    expect(withBalls('m.arsenal,w.0,$a,$b'), isNull, reason: 'empty selection');
+    expect(withBalls('m.arsenal,w.zzzz,$a,$b'), isNull, reason: 'bits beyond the 11 kinds');
   });
 }

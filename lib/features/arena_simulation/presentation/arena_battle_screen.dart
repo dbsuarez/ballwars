@@ -141,6 +141,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
       ballScale: widget.config.ballSize.scale,
       mode: widget.config.mode,
+      powerUpKinds: widget.config.powerUps,
     );
     _roundCounted = false;
     _state = _controller.state;
@@ -263,6 +264,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       ballSize: widget.config.ballSize,
       mode: widget.config.mode,
       question: widget.config.question,
+      powerUps: widget.config.powerUps,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -461,6 +463,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                               ballScale: widget.config.ballSize.scale,
                               mode: widget.config.mode,
                               look: widget.config.look,
+                              powerUps: widget.config.powerUps,
                               headline: headline,
                               colors: c,
                               backend: _videoExport,

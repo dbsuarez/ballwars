@@ -360,6 +360,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             ballSize: link.ballSize,
             mode: link.mode,
             question: link.question,
+            powerUps: link.powerUps,
             showEffects: link.showEffects,
           ),
           seed: link.seed,

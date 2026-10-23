@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../arena_simulation/domain/power_up.dart';
 import '../../match_setup/domain/match_config.dart';
 
 /// Where the web app is hosted (GitHub Pages). Links made outside a browser
@@ -30,6 +31,10 @@ class ReplayLink {
   /// medium; older links are medium).
   final BallSize ballSize;
 
+  /// Power-up modes: the chosen power-ups (null for all). Part of the match, so it travels as a
+  /// `w.<base36 bitmask>` token after the mode token; old apps reject it like `m.`.
+  final Set<PowerUpKind>? powerUps;
+
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
 
@@ -41,7 +46,12 @@ class ReplayLink {
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
     this.question,
+    this.powerUps,
   });
+
+  static const String _weaponsPrefix = 'w.';
+
+  static int _mask(Set<PowerUpKind> kinds) => kinds.fold(0, (m, k) => m | (1 << k.index));
 
   /// Longest question kept (the rest is cut).
   static const int maxQuestionLength = 100;
@@ -66,7 +76,13 @@ class ReplayLink {
       if (b.id.startsWith(_groupPrefix)) return 'g.${b.id.substring(_groupPrefix.length)}';
       return 'c.${_encodeCustom(b)}';
     });
-    final tokens = [if (mode != MatchMode.threads) '$_modePrefix${mode.id}', ...balls];
+    final chosen = powerUps;
+    final tokens = [
+      if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
+      if (mode != MatchMode.threads && chosen != null && chosen.length < PowerUpKind.values.length)
+        '$_weaponsPrefix${_mask(chosen).toRadixString(36)}',
+      ...balls,
+    ];
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
@@ -98,6 +114,14 @@ class ReplayLink {
       if (parsedMode == null) return null;
       mode = parsedMode;
     }
+    Set<PowerUpKind>? powerUps;
+    if (tokens.isNotEmpty && tokens.first.startsWith(_weaponsPrefix)) {
+      final mask = int.tryParse(tokens.removeAt(0).substring(_weaponsPrefix.length), radix: 36);
+      final all = (1 << PowerUpKind.values.length) - 1;
+      // Only with a power-up mode, never empty, no unknown kinds.
+      if (mode == MatchMode.threads || mask == null || mask <= 0 || mask & ~all != 0) return null;
+      powerUps = {for (final k in PowerUpKind.values) if (mask & (1 << k.index) != 0) k};
+    }
     if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) return null;
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
     final ballSize = params['size'] == null ? BallSize.medium : BallSize.byId(params['size']);
@@ -117,6 +141,7 @@ class ReplayLink {
       ballSize: ballSize,
       mode: mode,
       question: cleanQuestion(params['q']),
+      powerUps: powerUps,
     );
   }
 

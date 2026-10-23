@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/core/offline/offline_store.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
@@ -194,5 +195,29 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Start'));
     expect(started!.question, 'Will it rain?');
+  });
+
+  testWidgets('weapons can be chosen for power-up modes; at least one stays on', (tester) async {
+    await pumpSetup(tester);
+    expect(find.textContaining('Weapons'), findsNothing);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    expect(find.text('Weapons: All'), findsOneWidget);
+
+    await tester.tap(find.text('Weapons: All'));
+    await tester.pumpAndSettle();
+    // Switch every kind off: the last one can't be switched off.
+    for (final kind in PowerUpKind.values) {
+      await tester.tap(find.widgetWithText(SwitchListTile, kind.label));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Weapons: 1 of ${PowerUpKind.values.length}'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.powerUps, {PowerUpKind.values.last});
   });
 }

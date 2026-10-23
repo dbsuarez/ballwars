@@ -131,6 +131,10 @@ class MatchSimulationController {
     return slowMotionLines > 0 ? arsenalBeforeWinSeconds : null;
   }
 
+  /// The power-ups that can spawn (Arsenal / All-Out); null for all of them. Part of the match, like
+  /// the seed.
+  final Set<PowerUpKind>? powerUpKinds;
+
   /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
   static const int hurtFlashSteps = 18;
 
@@ -161,6 +165,7 @@ class MatchSimulationController {
     this.lookAhead = true,
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
+    this.powerUpKinds,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (lookAhead && (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
       // Same seed and setup: the steps are identical (slow motion only
@@ -176,6 +181,7 @@ class MatchSimulationController {
         lookAhead: false,
         ballScale: ballScale,
         mode: mode,
+        powerUpKinds: powerUpKinds,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished && ahead._stepCount < _maxPredictedSteps) {

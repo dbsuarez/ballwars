@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/presentation/power_up_painter.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
@@ -49,6 +51,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   MatchMode _mode = MatchMode.threads;
   BallLook _look = BallLook.pictures;
 
+  /// Power-up modes: the chosen power-ups, null for all.
+  Set<PowerUpKind>? _powerUps;
+
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
   int _winsNeeded = 1;
@@ -74,6 +79,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final size = BallSize.byId(await DevicePrefs.read('size'));
     final mode = MatchMode.byId(await DevicePrefs.read('mode'));
     final look = BallLook.byName(await DevicePrefs.read('look'));
+    final savedKinds = {
+      for (final name in (await DevicePrefs.read('power-ups') ?? '').split(','))
+        ...PowerUpKind.values.where((k) => k.name == name),
+    };
     final filter = _CategoryFilter.byName(await DevicePrefs.read('category-filter'));
     if (!mounted) return;
     setState(() {
@@ -84,6 +93,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       if (size != null) _ballSize = size;
       if (mode != null) _mode = mode;
       if (look != null) _look = look;
+      if (savedKinds.isNotEmpty && savedKinds.length < PowerUpKind.values.length) _powerUps = savedKinds;
       _showEffects = effects;
       if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
       if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
@@ -218,6 +228,19 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     });
   }
 
+  /// Opens the weapons list; the choice is remembered on the device.
+  Future<void> _chooseWeapons() async {
+    GameAudio.instance.click();
+    final chosen = await showDialog<Set<PowerUpKind>>(
+      context: context,
+      builder: (_) => _WeaponsDialog(initial: _powerUps ?? PowerUpKind.values.toSet()),
+    );
+    if (chosen == null || !mounted) return;
+    final all = chosen.length == PowerUpKind.values.length;
+    setState(() => _powerUps = all ? null : chosen);
+    DevicePrefs.write('power-ups', [for (final k in chosen) k.name].join(','));
+  }
+
   void _clearPicks() {
     GameAudio.instance.click();
     setState(_selected.clear);
@@ -248,6 +271,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ballSize: _ballSize,
         mode: _mode,
         look: _look,
+        powerUps: _mode == MatchMode.threads ? null : _powerUps,
         // Only for matches with Yes or No balls.
         question: _selected.keys.any((id) => id.startsWith('pack:$_decisionPack/'))
             ? ReplayLink.cleanQuestion(_question.text)
@@ -486,6 +510,16 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               DevicePrefs.write('mode', v.first.id);
             },
           ),
+          if (_mode != MatchMode.threads) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _chooseWeapons,
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: Text(
+                _powerUps == null ? 'Weapons: All' : 'Weapons: ${_powerUps!.length} of ${PowerUpKind.values.length}',
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           SizedBox(
             height: 36,
@@ -789,4 +823,64 @@ enum _CategoryFilter {
   const _CategoryFilter(this.label, this.tag);
 
   static _CategoryFilter? byName(String? name) => values.where((f) => f.name == name).firstOrNull;
+}
+
+/// Which power-ups can spawn: a switch per power-up with its icon. At least one stays on.
+class _WeaponsDialog extends StatefulWidget {
+  final Set<PowerUpKind> initial;
+
+  const _WeaponsDialog({required this.initial});
+
+  @override
+  State<_WeaponsDialog> createState() => _WeaponsDialogState();
+}
+
+class _WeaponsDialogState extends State<_WeaponsDialog> {
+  late final Set<PowerUpKind> _on = {...widget.initial};
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Weapons'),
+      contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+      content: SizedBox(
+        width: 360,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final kind in PowerUpKind.values)
+              SwitchListTile(
+                dense: true,
+                secondary: SizedBox.square(
+                  dimension: 28,
+                  child: CustomPaint(painter: _GlyphPainter(kind)),
+                ),
+                title: Text(kind.label),
+                value: _on.contains(kind),
+                // The last one on can't be switched off.
+                onChanged: _on.contains(kind) && _on.length == 1
+                    ? null
+                    : (v) => setState(() => v ? _on.add(kind) : _on.remove(kind)),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.of(context).pop(_on), child: const Text('Done')),
+      ],
+    );
+  }
+}
+
+class _GlyphPainter extends CustomPainter {
+  final PowerUpKind kind;
+
+  _GlyphPainter(this.kind);
+
+  @override
+  void paint(Canvas canvas, Size size) => PowerUpPainter.drawGlyph(canvas, kind, size.center(Offset.zero), size.shortestSide * 0.42);
+
+  @override
+  bool shouldRepaint(_GlyphPainter old) => old.kind != kind;
 }

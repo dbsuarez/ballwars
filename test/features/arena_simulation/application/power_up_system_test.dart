@@ -84,4 +84,51 @@ void main() {
     expect(fieldOf(5), fieldOf(5));
     expect(fieldOf(5), isNot(fieldOf(6)));
   });
+
+  test('only the chosen power-ups spawn', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: _arenaRadius,
+      seed: 4,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+      powerUpKinds: {PowerUpKind.apple, PowerUpKind.bomb},
+    );
+    for (final b in c.state.balls) {
+      b.velocity = Offset.zero;
+    }
+    final seen = <PowerUpKind>{};
+    for (var i = 0; i < 60 * 40; i++) {
+      c.tick(1 / 60);
+      seen.addAll(c.powerUps!.field.map((p) => p.kind));
+    }
+    expect(seen, isNotEmpty);
+    expect(seen.difference({PowerUpKind.apple, PowerUpKind.bomb}), isEmpty);
+  });
+
+  test('choosing every power-up draws exactly like not choosing', () {
+    List<PowerUpKind> kinds(Set<PowerUpKind>? chosen) {
+      final c = MatchSimulationController(
+        _balls,
+        arenaRadius: _arenaRadius,
+        seed: 9,
+        layoutRotation: 0,
+        mode: MatchMode.arsenal,
+        lookAhead: false,
+        powerUpKinds: chosen,
+      );
+      for (final b in c.state.balls) {
+        b.velocity = Offset.zero;
+      }
+      final out = <PowerUpKind>[];
+      for (var i = 0; i < 60 * 30; i++) {
+        c.tick(1 / 60);
+        if (c.powerUps!.field.isNotEmpty) out.add(c.powerUps!.field.last.kind);
+      }
+      return out;
+    }
+
+    expect(kinds(PowerUpKind.values.toSet()), kinds(null));
+  });
 }

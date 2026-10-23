@@ -55,3 +55,23 @@ All of the following comes from stepping through the frames. Implemented in `Mat
 - **Loser dissolve.** The eliminated ball fades into a translucent disc over a few frames (f1620-1628).
 - **Win card.** The winner's ball scales up to the center with the country name in heavy white caps, a small gold trophy/star, then `FOLLOW @...` and `NEXT BATTLE >` in small caps. No fade-out.
 - **HUD.** `WHO WINS?` (heavy white caps) and `ROUND 1` (red) at the top for the whole video. No scores, percentages or health bars on screen.
+
+## Power-up modes (probe, 2026-10-23)
+
+`flutter test tool/bench/power_up_probe_test.dart`: 300 seeds per row, arena radius 300, no slow motion. The chi-square limits are 3.84 / 5.99 / 7.81 for 2 / 3 / 4 balls.
+
+| Mode | Balls | Wins by start | chi² | Median | p90 | Unfinished | Power-up used |
+|---|---|---|---|---|---|---|---|
+| Arsenal | 2 | 140 / 160 | 1.33 | 42.9 s | 84.7 s | 0 | 100% |
+| Arsenal | 3 | 112 / 104 / 84 | 4.16 | 62.3 s | 123.0 s | 0 | 100% |
+| Arsenal | 4 | 73 / 87 / 68 / 72 | 2.75 | 67.5 s | 120.1 s | 0 | 100% |
+| All-Out | 2 | 152 / 148 | 0.05 | 9.4 s | 23.4 s | 0 | 82% |
+| All-Out | 3 | 107 / 103 / 90 | 1.58 | 11.9 s | 29.9 s | 0 | 89% |
+| All-Out | 4 | 76 / 71 / 75 / 78 | 0.35 | 5.5 s | 25.9 s | 0 | 76% |
+
+Tuning that got there, starting from the plan's values:
+- **Arsenal damage:** about 4x the plan's (pistol 50, shotgun 12 per pellet, gatling 15 per round, knife 70, bomb 80, shield bash 30).
+- **Crowded Arsenal:** damage is multiplied by `count / 2`, because one spawn every 5 s has to feed every ball.
+- **First spawn:** at 1 s, then every 5 s.
+
+All-Out matches last about as long as Threads matches (the threads rules dominate). The look-ahead costs about 6 ms per match on this PC.

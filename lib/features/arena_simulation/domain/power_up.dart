@@ -75,6 +75,10 @@ class PowerUpTuning {
 
   /// Steps between two spawns (60 steps = 1 s).
   static const int spawnIntervalSteps = 300;
+
+  /// The first power-up comes after 1 s (then one every [spawnIntervalSteps]), so even short matches see
+  /// one (probe: with the first at 5 s only about half of All-Out matches did).
+  static const int firstSpawnSteps = 60;
   static const int maxOnField = 3;
 
   /// Pick-up radius of a field power-up, as a fraction of the arena radius.
@@ -116,13 +120,13 @@ class PowerUpTuning {
 
   /// Arsenal mode: life lost per hit (shotgun per pellet, gatling per round).
   static const Map<PowerUpKind, double> arenaDamage = {
-    PowerUpKind.pistol: 12,
-    PowerUpKind.shotgun: 3,
-    PowerUpKind.gatling: 4,
-    PowerUpKind.knife: 25,
-    PowerUpKind.bomb: 30,
+    PowerUpKind.pistol: 50,
+    PowerUpKind.shotgun: 12,
+    PowerUpKind.gatling: 15,
+    PowerUpKind.knife: 70,
+    PowerUpKind.bomb: 80,
   };
-  static const double arenaShieldBash = 8;
+  static const double arenaShieldBash = 30;
   static const double arenaAppleHeal = 25;
 
   /// All-Out mode: threads (rim slots) lost per hit.

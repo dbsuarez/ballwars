@@ -324,9 +324,13 @@ class MatchSimulationController {
 
   /// Arsenal: takes [amount] life off [ball], never below 0 (it is out at the next elimination check).
   /// Does nothing in the other modes, where the threads are the life (see [cutThreads]).
+  ///
+  /// Crowded matches hit harder (x count / 2: 3 balls 1.5, 4 balls 2), so the extra eliminations don't
+  /// stretch them out: one spawn every 5 s has to feed every ball.
   void damage(SimulationBall ball, double amount) {
     if (mode != MatchMode.arsenal) return;
-    ball.life = math.max(0, ball.life - amount);
+    final crowd = _balls.length > 2 ? _balls.length / 2 : 1.0;
+    ball.life = math.max(0, ball.life - amount * crowd);
   }
 
   /// Cuts up to [count] of [ball]'s threads and frees their rim slots, the ones anchored nearest to

@@ -84,7 +84,10 @@ class PowerUpSystem {
     _aimAndFire();
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
-    if (number % PowerUpTuning.spawnIntervalSteps == 0) _spawn(number);
+    if (number >= PowerUpTuning.firstSpawnSteps &&
+        (number - PowerUpTuning.firstSpawnSteps) % PowerUpTuning.spawnIntervalSteps == 0) {
+      _spawn(number);
+    }
     _turnShields();
   }
 

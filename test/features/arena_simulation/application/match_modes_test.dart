@@ -279,4 +279,18 @@ void main() {
       expect(playOut(off).$2, isEmpty, reason: 'seed $seed');
     }
   });
+
+  test('crowded Arsenal matches hit harder: damage scales with the number of balls', () {
+    final four = [
+      ..._balls.take(2),
+      const CustomBall(id: 'c', name: 'C', primaryColor: Colors.green, glowColor: Colors.lime),
+      const CustomBall(id: 'd', name: 'D', primaryColor: Colors.orange, glowColor: Colors.amber),
+    ];
+    final two = MatchSimulationController(_balls.take(2).toList(), arenaRadius: _arenaRadius, seed: 3, mode: MatchMode.arsenal, lookAhead: false);
+    final crowd = MatchSimulationController(four, arenaRadius: _arenaRadius, seed: 3, mode: MatchMode.arsenal, lookAhead: false);
+    two.damage(two.state.balls[0], 10);
+    crowd.damage(crowd.state.balls[0], 10);
+    expect(PowerUpTuning.arenaLife - two.state.balls[0].life, 10);
+    expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 20);
+  });
 }

@@ -363,8 +363,10 @@ void main() {
     _run(c, 1);
     expect(c.powerUps!.blasts, 1);
     expect(c.powerUps!.bombs, isEmpty);
-    expect(a.life, _life - PowerUpTuning.arenaDamage[PowerUpKind.bomb]!);
-    expect(b.life, _life - PowerUpTuning.arenaDamage[PowerUpKind.bomb]!);
+    // 3 balls: crowded Arsenal damage is x1.5 (never below 0).
+    final blast = math.max(0.0, _life - PowerUpTuning.arenaDamage[PowerUpKind.bomb]! * 1.5);
+    expect(a.life, blast);
+    expect(b.life, blast);
     expect(other.life, _life);
   });
 

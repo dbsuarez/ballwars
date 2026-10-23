@@ -36,13 +36,17 @@ void _run(MatchSimulationController c, int steps) {
 }
 
 void main() {
-  test('a power-up spawns every 300 steps at a free spot inside the arena', () {
+  test('the first power-up spawns early, then one every 300 steps, at a free spot inside the arena', () {
     final c = _arsenal();
-    _run(c, PowerUpTuning.spawnIntervalSteps - 1);
+    _run(c, PowerUpTuning.firstSpawnSteps - 1);
     expect(c.powerUps!.field, isEmpty);
     _run(c, 1);
+    expect(c.powerUps!.field.length, 1);
+    _run(c, PowerUpTuning.spawnIntervalSteps - 1);
+    expect(c.powerUps!.field.length, 1);
+    _run(c, 1);
     final field = c.powerUps!.field;
-    expect(field.length, 1);
+    expect(field.length, 2);
     final r = _arenaRadius * PowerUpTuning.fieldRadiusRatio;
     expect(field.first.position.distance, lessThanOrEqualTo(_arenaRadius - r));
     for (final b in c.state.balls) {
@@ -52,10 +56,11 @@ void main() {
 
   test('at most 3 on the field; a 4th removes the oldest', () {
     final c = _arsenal();
-    _run(c, PowerUpTuning.spawnIntervalSteps * 4);
+    // Spawns at first, first + interval, ... : after the 4th, the oldest left is the 2nd.
+    _run(c, PowerUpTuning.firstSpawnSteps + PowerUpTuning.spawnIntervalSteps * 3);
     final field = c.powerUps!.field;
     expect(field.length, PowerUpTuning.maxOnField);
-    expect(field.first.spawnStep, PowerUpTuning.spawnIntervalSteps * 2);
+    expect(field.first.spawnStep, PowerUpTuning.firstSpawnSteps + PowerUpTuning.spawnIntervalSteps);
   });
 
   test('touching a power-up picks it up and replaces the held one', () {

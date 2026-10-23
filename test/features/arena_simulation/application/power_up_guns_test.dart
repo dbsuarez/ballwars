@@ -188,7 +188,8 @@ void main() {
     final bullet = d.powerUps!.projectiles.single;
     holder.isEliminated = true;
     _runUntilSpent(d, bullet);
-    expect(target.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!);
+    // 3 balls: crowded Arsenal damage is x1.5.
+    expect(target.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]! * 1.5);
     expect(bystander.life, PowerUpTuning.arenaLife);
   });
 

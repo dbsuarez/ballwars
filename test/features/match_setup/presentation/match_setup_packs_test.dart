@@ -132,4 +132,19 @@ void main() {
     expect(find.text('0/4'), findsOneWidget);
     expect(find.text('Clear'), findsNothing);
   });
+
+  testWidgets('ball size is passed to the match and remembered', (tester) async {
+    await pumpSetup(tester);
+    await tester.tap(find.text('Medium'));
+    await tester.pump();
+    expect(find.text('Large'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.ballSize, BallSize.large);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester);
+    expect(find.text('Large'), findsOneWidget);
+  });
 }

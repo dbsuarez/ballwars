@@ -104,6 +104,10 @@ class MatchSimulationController {
   /// the endgame is final. False skips that (used by the look-ahead itself).
   final bool lookAhead;
 
+  /// Ball size relative to [ballRadiusRatio] (BallSize.scale); part of the
+  /// match, like the seed.
+  final double ballScale;
+
   /// The step on which the match ends (null without a look-ahead, or if it
   /// hit its limit).
   int? get predictedFinishStep => _finishStep;
@@ -126,6 +130,7 @@ class MatchSimulationController {
     this.slowMotionLines = slowMotionLineThreshold,
     this.slowMotionBeforeWinSeconds,
     this.lookAhead = true,
+    this.ballScale = 1.0,
   }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (lookAhead && (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
       // Same seed and setup: the steps are identical (slow motion only
@@ -139,6 +144,7 @@ class MatchSimulationController {
         layoutRotation: layoutRotation,
         slowMotionLines: slowMotionLines,
         lookAhead: false,
+        ballScale: ballScale,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished && ahead._stepCount < _maxPredictedSteps) {
@@ -164,7 +170,7 @@ class MatchSimulationController {
     final sense = _rng.nextDouble() < 0.5 ? 1.0 : -1.0;
     final count = contestants.length;
 
-    final ballRadius = arenaRadius * ballRadiusRatio;
+    final ballRadius = arenaRadius * ballRadiusRatio * ballScale;
     // Line colors that are visible on the arena and distinct per contestant
     // (cosmetic only: ids and physics settings are untouched).
     final lineColors = MatchColors.resolve([

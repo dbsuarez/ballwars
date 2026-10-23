@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
+import '../../ball_packs/data/ball_pack_repository.dart';
+import '../../ball_packs/domain/ball_pack.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../data/custom_group_repository.dart';
 import '../domain/custom_group.dart';
@@ -24,7 +26,17 @@ class MyGroupsScreen extends StatefulWidget {
   final CustomGroupRepository? editRepository;
   final bool allGroups;
 
-  const MyGroupsScreen({super.key, required this.repository, this.editRepository, this.allGroups = false});
+  /// The built-in categories, for "Add to main category" (a default
+  /// repository when null).
+  final BallPackRepository? packRepository;
+
+  const MyGroupsScreen({
+    super.key,
+    required this.repository,
+    this.editRepository,
+    this.allGroups = false,
+    this.packRepository,
+  });
 
   @override
   State<MyGroupsScreen> createState() => _MyGroupsScreenState();
@@ -35,6 +47,14 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
 
   /// Groups from other players in this user's categories.
   List<CustomGroup> _saved = const [];
+
+  // Everyone's groups (admin): the built-in categories, and which category
+  // each group was added to (group id -> pack id).
+  List<BallPack> _packs = const [];
+  Map<String, String> _packLinks = const {};
+
+  /// Groups their makers submitted for the main categories.
+  Set<String> _submitted = const {};
   String? _error;
   bool _busy = false;
 
@@ -56,10 +76,36 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
       } catch (_) {
         saved = const []; // Not set up yet (migration 004).
       }
+      var packs = _packs;
+      var links = _packLinks;
+      var submitted = _submitted;
+      try {
+        submitted = await (widget.allGroups ? _edits : widget.repository).submittedGroupIds();
+      } catch (_) {
+        // Not set up yet (migration 008) or offline.
+      }
+      if (widget.allGroups) {
+        try {
+          packs = await (widget.packRepository ?? BallPackRepository()).load();
+          links = {for (final g in await _edits.packExtras()) g.id: g.packId!};
+        } catch (_) {
+          // Not set up yet (migration 008) or offline: no category links.
+        }
+      }
       if (mounted) {
         setState(() {
           _groups = groups;
           _saved = saved;
+          _packs = packs;
+          _packLinks = links;
+          _submitted = submitted;
+          // Admin: submitted groups first, so they're easy to review.
+          if (widget.allGroups) {
+            _groups = [
+              ...groups.where((g) => submitted.contains(g.id)),
+              ...groups.where((g) => !submitted.contains(g.id)),
+            ];
+          }
         });
       }
     } catch (e) {
@@ -143,6 +189,32 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
       await _reload();
     }
   }
+
+  Future<void> _addToPack(CustomGroup group) async {
+    final packId = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text('Add "${group.name}" to'),
+        children: [
+          for (final pack in _packs)
+            SimpleDialogOption(onPressed: () => Navigator.of(context).pop(pack.id), child: Text(pack.name)),
+        ],
+      ),
+    );
+    if (packId == null) return;
+    await _run(() => _edits.linkToPack(group.id, packId));
+  }
+
+  Future<void> _submit(CustomGroup group, bool submit) async {
+    await _run(() => widget.repository.setSubmitted(group.id, submit));
+    if (mounted && submit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${group.name}" was sent to the admin for the main categories.')),
+      );
+    }
+  }
+
+  String _packName(String packId) => _packs.where((p) => p.id == packId).firstOrNull?.name ?? packId;
 
   void _share(CustomGroup group) {
     Clipboard.setData(ClipboardData(text: ReplayLink.groupUri(group.id).toString()));
@@ -278,6 +350,10 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                   'share' => _share(group),
                   'rename' => _rename(group),
                   'remove' => _setSaved(group, false),
+                  'pack' => _addToPack(group),
+                  'submit' => _submit(group, true),
+                  'withdraw' => _submit(group, false),
+                  'unpack' => _run(() => _edits.linkToPack(group.id, null)),
                   _ => _deleteGroup(group),
                 },
                 itemBuilder: (_) => [
@@ -287,10 +363,37 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                     PopupMenuItem(value: 'delete', child: Text('Delete group')),
                   ] else
                     const PopupMenuItem(value: 'remove', child: Text('Remove from my categories')),
+                  if (!widget.allGroups && editable)
+                    _submitted.contains(group.id)
+                        ? const PopupMenuItem(value: 'withdraw', child: Text('Withdraw submission'))
+                        : const PopupMenuItem(value: 'submit', child: Text('Submit to main categories')),
+                  if (widget.allGroups && _packs.isNotEmpty)
+                    _packLinks.containsKey(group.id)
+                        ? PopupMenuItem(
+                            value: 'unpack',
+                            child: Text('Remove from ${_packName(_packLinks[group.id]!)}'),
+                          )
+                        : const PopupMenuItem(value: 'pack', child: Text('Add to main category…')),
                 ],
               ),
             ],
           ),
+          if (_submitted.contains(group.id) && !_packLinks.containsKey(group.id))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                widget.allGroups ? 'Submitted for the main categories' : 'Submitted: the admin may add it to a main category',
+                style: AppText.ui(13, FontWeight.w600, color: c.muted),
+              ),
+            ),
+          if (widget.allGroups && _packLinks.containsKey(group.id))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'In ${_packName(_packLinks[group.id]!)} for everyone',
+                style: AppText.ui(13, FontWeight.w600, color: c.text),
+              ),
+            ),
           if (inMyCategories != null)
             Row(
               children: [

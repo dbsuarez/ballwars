@@ -37,6 +37,9 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
           'speed': double.tryParse(replayQuery['speed'] ?? '1') ?? 1,
           'effects': replayQuery['fx'] != '0',
           'balls': replayQuery['balls']!,
+          // Only when not medium, so databases without the column (before
+          // migration 008) still take ordinary links.
+          if (replayQuery['size'] != null) 'size': replayQuery['size'],
         });
         return code;
       } on PostgrestException catch (e) {
@@ -48,12 +51,13 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
 
   @override
   Future<Map<String, String>?> resolve(String code) async {
-    final row = await _client.from('replays').select('seed, speed, effects, balls').eq('id', code).maybeSingle();
+    final row = await _client.from('replays').select().eq('id', code).maybeSingle();
     if (row == null) return null;
     return {
       'seed': '${row['seed']}',
       'speed': '${row['speed']}',
       if (row['effects'] == false) 'fx': '0',
+      if (row['size'] != null && row['size'] != 'm') 'size': row['size'] as String,
       'balls': row['balls'] as String,
     };
   }

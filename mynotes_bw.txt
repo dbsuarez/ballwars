@@ -1,3 +1,5 @@
 Match-up Settings
 *- a clear button for the currently selected balls, in-line in the far right
 *- The Ball A VS Ball B in the right side of a wide-screen device, can we put it in the "left side" when in mobile?
+*- In Everyone's Gropu, a way to add custom balls to the main categories so that when I saw a good group, I can add it to the main even if the user who made it did not share it..
+*- How about a way for the users to submit their own created group?

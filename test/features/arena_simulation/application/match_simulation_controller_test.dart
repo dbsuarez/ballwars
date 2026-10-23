@@ -371,6 +371,23 @@ void main() {
       }
     }
   });
+
+  test('ball size scales every ball and is deterministic', () {
+    final big = MatchSimulationController(_twoBalls(), arenaRadius: 300, seed: 9, ballScale: 1.25);
+    final normal = MatchSimulationController(_twoBalls(), arenaRadius: 300, seed: 9);
+    expect(big.state.balls.first.radius, closeTo(normal.state.balls.first.radius * 1.25, 1e-9));
+
+    String? winner(double scale) {
+      final c = MatchSimulationController(_twoBalls(), arenaRadius: 300, seed: 9, ballScale: scale);
+      for (var i = 0; i < 60 * 600 && c.state.status != MatchStatus.finished; i++) {
+        c.tick(1 / 60);
+      }
+      return '${c.state.winnerId}/${c.wallHits}';
+    }
+
+    expect(winner(0.6), winner(0.6));
+    expect(winner(1.25), winner(1.25));
+  });
 }
 
 List<CustomBall> _threeBalls() => const [

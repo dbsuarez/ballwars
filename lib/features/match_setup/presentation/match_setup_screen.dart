@@ -41,6 +41,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   final math.Random _random = math.Random();
   double _speedMultiplier = 1.0;
   bool _showEffects = true;
+  BallSize _ballSize = BallSize.medium;
   int _winsNeeded = 1;
   String? _category;
   List<BallPack> _packs = const [];
@@ -61,8 +62,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final effects = await EffectsPrefs.effectsOn();
     final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
     final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
+    final size = BallSize.byId(await DevicePrefs.read('size'));
     if (!mounted) return;
     setState(() {
+      if (size != null) _ballSize = size;
       _showEffects = effects;
       if (rounds != null && const [1, 2, 3].contains(rounds)) _winsNeeded = rounds;
       if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
@@ -77,7 +80,25 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   List<BallPack> get _categories =>
-      [..._groups, ..._packs]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      [..._groups, ..._packsWithExtras]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+  /// Groups the admin added to built-in categories (see [CustomGroup.packId]).
+  List<CustomGroup> _packExtras = const [];
+
+  /// The built-in packs with the admin's extra balls appended.
+  List<BallPack> get _packsWithExtras => [
+        for (final pack in _packs)
+          BallPack(
+            id: pack.id,
+            name: pack.name,
+            tag: pack.tag,
+            balls: [
+              ...pack.balls,
+              for (final g in _packExtras)
+                if (g.packId == pack.id) ...g.balls,
+            ],
+          ),
+      ];
 
   Future<void> _load() async {
     setState(() {
@@ -119,8 +140,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
     final mine = await orNone(repo.myGroups);
     final saved = await orNone(repo.savedGroups);
+    final extras = await orNone(repo.packExtras);
     if (!mounted) return;
     final mineIds = {for (final g in mine) g.id};
+    _packExtras = extras;
     setState(
       () => _groups = [
         for (final g in mine)
@@ -181,6 +204,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         speedMultiplier: _speedMultiplier,
         showEffects: _showEffects,
         winsNeeded: _winsNeeded,
+        ballSize: _ballSize,
       ),
     );
   }
@@ -446,6 +470,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Setting(
+                  label: 'SIZE',
+                  child: _Cycle<BallSize>(
+                    values: BallSize.values,
+                    value: _ballSize,
+                    label: (v) => v.label,
+                    onChanged: (v) {
+                      GameAudio.instance.click();
+                      setState(() => _ballSize = v);
+                      DevicePrefs.write('size', v.id);
+                    },
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -544,7 +584,12 @@ class _Cycle<T> extends StatelessWidget {
         alignment: Alignment.centerLeft,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      child: Text(label(value), style: AppText.ui(14, FontWeight.w700, color: c.text)),
+      // One line; long values ("First to 3") shrink a little in narrow tiles.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(label(value), maxLines: 1, style: AppText.ui(14, FontWeight.w700, color: c.text)),
+      ),
     );
   }
 }

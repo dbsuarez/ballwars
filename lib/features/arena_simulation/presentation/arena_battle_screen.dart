@@ -124,6 +124,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       arenaBackground: BallWarsColors.of(context).background,
       slowMotionLines: AppSettingsScope.of(context).slowMotionLines,
       slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
+      ballScale: widget.config.ballSize.scale,
     );
     _roundCounted = false;
     _state = _controller.state;
@@ -214,6 +215,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
       speedMultiplier: widget.config.speedMultiplier,
       showEffects: _showEffects,
       contestants: widget.config.contestants,
+      ballSize: widget.config.ballSize,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -385,6 +387,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen> with TickerProvid
                               showEffects: _showEffects,
                               slowMotionLines: AppSettingsScope.of(context).slowMotionLines,
                               slowMotionBeforeWinSeconds: AppSettingsScope.of(context).slowMotionBeforeWinSeconds,
+                              ballScale: widget.config.ballSize.scale,
                               headline: headline,
                               colors: c,
                               backend: _videoExport,

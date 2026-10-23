@@ -11,7 +11,18 @@ class CustomGroup {
   /// The user who made it (null where unknown, e.g. in tests).
   final String? ownerId;
 
-  const CustomGroup({required this.id, required this.name, required this.isPublic, required this.balls, this.ownerId});
+  /// The built-in category (pack id) the admin added this group's balls to,
+  /// if any; its balls also show up inside that category for everyone.
+  final String? packId;
+
+  const CustomGroup({
+    required this.id,
+    required this.name,
+    required this.isPublic,
+    required this.balls,
+    this.ownerId,
+    this.packId,
+  });
 
   static const String ballIdPrefix = 'group:';
 

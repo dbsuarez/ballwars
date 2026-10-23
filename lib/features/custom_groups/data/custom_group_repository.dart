@@ -32,6 +32,20 @@ abstract class CustomGroupRepository {
   /// This device's user id, once signed in (null before).
   String? get userId;
 
+  /// Groups the admin added to a built-in category ([CustomGroup.packId]);
+  /// their balls show up inside it for everyone.
+  Future<List<CustomGroup>> packExtras();
+
+  /// Admin: adds the group's balls to the built-in category [packId], or
+  /// takes them out again (null).
+  Future<void> linkToPack(String groupId, String? packId);
+
+  /// Ids of groups their makers submitted for the main categories.
+  Future<Set<String>> submittedGroupIds();
+
+  /// The owner submits their group for the main categories (or withdraws it).
+  Future<void> setSubmitted(String groupId, bool submitted);
+
   /// Admin: deletes uploaded images no ball uses any more (left behind when
   /// a delete's storage cleanup failed). Returns how many were removed.
   Future<int> cleanUpUnusedImages();
@@ -271,6 +285,44 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   }
 
   @override
+  Future<List<CustomGroup>> packExtras() async {
+    // pack_id comes with migration 008; until then this fails and callers
+    // carry on without extras. It's left out of the other queries for that
+    // reason.
+    final rows = await _offline('groups:packs', () async {
+      return _client
+          .from('ball_groups')
+          .select('$_groupColumns, pack_id')
+          .not('pack_id', 'is', null)
+          .order('name')
+          .order('position', referencedTable: 'group_balls')
+          .retry(enabled: false);
+    });
+    return [for (final row in rows) _group(row)];
+  }
+
+  @override
+  Future<void> linkToPack(String groupId, String? packId) async {
+    await _client.from('ball_groups').update({'pack_id': packId}).eq('id', groupId);
+  }
+
+  @override
+  Future<Set<String>> submittedGroupIds() async {
+    // submitted_at comes with migration 008 (see [packExtras]).
+    final rows = await _client.from('ball_groups').select('id').not('submitted_at', 'is', null).retry(enabled: false);
+    return {for (final row in rows) row['id'] as String};
+  }
+
+  @override
+  Future<void> setSubmitted(String groupId, bool submitted) async {
+    await _userId();
+    await _client
+        .from('ball_groups')
+        .update({'submitted_at': submitted ? DateTime.now().toUtc().toIso8601String() : null})
+        .eq('id', groupId);
+  }
+
+  @override
   Future<int> cleanUpUnusedImages() async {
     // Listed by the database (migration 007, admin only), deleted through the
     // Storage API: storage files can't be removed from SQL.
@@ -303,6 +355,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
         name: row['name'] as String,
         isPublic: row['is_public'] as bool? ?? true,
         ownerId: row['owner'] as String?,
+        packId: row['pack_id'] as String?,
         balls: [for (final b in (row['group_balls'] as List? ?? const [])) _ball(b as Map<String, dynamic>)],
       );
 

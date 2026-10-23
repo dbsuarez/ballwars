@@ -19,6 +19,7 @@ class ExportVideoDialog extends StatefulWidget {
   /// When slow motion starts (the admin's setting), so the video matches.
   final int slowMotionLines;
   final double? slowMotionBeforeWinSeconds;
+  final double ballScale;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -30,6 +31,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.showEffects = true,
     this.slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     this.slowMotionBeforeWinSeconds,
+    this.ballScale = 1.0,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -44,6 +46,7 @@ class ExportVideoDialog extends StatefulWidget {
     bool showEffects = true,
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
+    double ballScale = 1.0,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
     required VideoExportBackend backend,
@@ -59,6 +62,7 @@ class ExportVideoDialog extends StatefulWidget {
         showEffects: showEffects,
         slowMotionLines: slowMotionLines,
         slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
+        ballScale: ballScale,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -100,6 +104,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         showEffects: widget.showEffects,
         slowMotionLines: widget.slowMotionLines,
         slowMotionBeforeWinSeconds: widget.slowMotionBeforeWinSeconds,
+        ballScale: widget.ballScale,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {

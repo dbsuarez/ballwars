@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../match_setup/domain/match_config.dart';
 
 /// Where the web app is hosted (GitHub Pages). Links made outside a browser
 /// point here; links made in the browser use the page's own address.
@@ -25,11 +26,16 @@ class ReplayLink {
   final bool showEffects;
   final List<CustomBall> contestants;
 
+  /// Changes the match, so it travels in the link (`size=`, left out for
+  /// medium; older links are medium).
+  final BallSize ballSize;
+
   const ReplayLink({
     required this.seed,
     required this.speedMultiplier,
     required this.contestants,
     this.showEffects = true,
+    this.ballSize = BallSize.medium,
   });
 
   /// [presets] are balls every copy of the app has; they are linked by id.
@@ -42,7 +48,8 @@ class ReplayLink {
     });
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
-    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}&balls=${balls.join(',')}';
+    final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
+    final query = 'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size&balls=${balls.join(',')}';
     return Uri.parse('${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query');
   }
 
@@ -65,6 +72,8 @@ class ReplayLink {
     final tokens = (params['balls'] ?? '').split(',').where((t) => t.isNotEmpty).toList();
     if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) return null;
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
+    final ballSize = params['size'] == null ? BallSize.medium : BallSize.byId(params['size']);
+    if (ballSize == null) return null;
 
     final contestants = <CustomBall>[];
     for (var i = 0; i < tokens.length; i++) {
@@ -72,7 +81,13 @@ class ReplayLink {
       if (ball == null) return null;
       contestants.add(ball);
     }
-    return ReplayLink(seed: seed, speedMultiplier: speed, contestants: contestants, showEffects: params['fx'] != '0');
+    return ReplayLink(
+      seed: seed,
+      speedMultiplier: speed,
+      contestants: contestants,
+      showEffects: params['fx'] != '0',
+      ballSize: ballSize,
+    );
   }
 
   /// A short link `<app>?r=<code>` (see ShortLinkRepository).

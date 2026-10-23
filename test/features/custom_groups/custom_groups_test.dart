@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/ball_management/data/local_ball_repository.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
+import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
 import 'package:ballwars/features/custom_groups/data/custom_group_repository.dart';
 import 'package:ballwars/features/custom_groups/data/image_prep.dart';
 import 'package:ballwars/features/custom_groups/domain/custom_group.dart';
@@ -25,7 +26,28 @@ class _FakeGroups implements CustomGroupRepository {
   final List<CustomGroup> saved;
   final List<Map<String, Object?>> updates = [];
   final List<String> unsaved = [];
-  _FakeGroups(this.groups, {this.saved = const []});
+  final List<CustomGroup> extras;
+  final Map<String, String?> links = {};
+  final Map<String, bool> submissions = {};
+  _FakeGroups(this.groups, {this.saved = const [], this.extras = const []});
+
+  @override
+  Future<List<CustomGroup>> allGroups() async => groups;
+
+  @override
+  Future<List<CustomGroup>> packExtras() async => extras;
+
+  @override
+  Future<void> linkToPack(String groupId, String? packId) async => links[groupId] = packId;
+
+  @override
+  Future<Set<String>> submittedGroupIds() async => {
+        for (final e in submissions.entries)
+          if (e.value) e.key,
+      };
+
+  @override
+  Future<void> setSubmitted(String groupId, bool submitted) async => submissions[groupId] = submitted;
 
   @override
   Future<List<CustomGroup>> savedGroups() async => saved;
@@ -197,5 +219,69 @@ void main() {
     expect(repo.updates.single['color'], const Color(0xFF8E44AD)); // kept
     expect(repo.updates.single['png'], isNull); // picture unchanged
     expect(find.text('Edit ball'), findsNothing);
+  });
+
+  // A new repository per test: it caches its first load, and a load made
+  // under one test's fake clock never completes under the next one's.
+  BallPackRepository packs() => BallPackRepository(
+    baseUri: Uri.parse('http://localhost:1/packs/'),
+    fetch: (_) async => '{"version": 1, "groups": [{"id": "anime", "name": "Anime Pack", "style": "logo", "balls": ['
+        '{"id": "a1", "name": "Naruto", "image": "anime/a1.svg", "color": "#FF8800"},'
+        '{"id": "a2", "name": "Sasuke", "image": "anime/a2.svg", "color": "#222266"}]}]}',
+  );
+
+  testWidgets("groups the admin added to a main category show up inside it", (tester) async {
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: MatchSetupScreen(
+        packRepository: packs(),
+        customGroups: _FakeGroups(const [], extras: [
+          CustomGroup(id: 'g7', name: 'More anime', isPublic: true, packId: 'anime', balls: [_groupBall('x', 'Goku')]),
+        ]),
+        onStartBattle: (_) {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Naruto'), findsOneWidget);
+    expect(find.text('Goku'), findsOneWidget); // merged into "Anime Pack"
+  });
+
+  testWidgets("in Everyone's groups the admin adds a player's group to a main category", (tester) async {
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final repo = _FakeGroups([
+      CustomGroup(id: 'g1', name: 'Barkada', isPublic: true, ownerId: 'someone', balls: [_groupBall('c', 'Juan')]),
+    ]);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo, allGroups: true, packRepository: packs())));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Group options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add to main category…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Anime Pack'));
+    await tester.pumpAndSettle();
+    expect(repo.links, {'g1': 'anime'});
+  });
+
+  testWidgets('players submit their own group for the main categories', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final repo = _FakeGroups([
+      CustomGroup(id: 'g1', name: 'Barkada', isPublic: true, balls: [_groupBall('c', 'Juan')]),
+    ]);
+    await tester.pumpWidget(MaterialApp(home: MyGroupsScreen(repository: repo)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Group options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Submit to main categories'));
+    await tester.pumpAndSettle();
+    expect(repo.submissions, {'g1': true});
+    expect(find.textContaining('Submitted'), findsOneWidget);
   });
 }

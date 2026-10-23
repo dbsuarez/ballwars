@@ -5,6 +5,7 @@ import 'package:ballwars/features/arena_simulation/application/match_simulation_
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/data/local_ball_repository.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
+import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/replay_export/domain/replay_link.dart';
 
 const _presets = LocalBallRepository.presets;
@@ -146,5 +147,20 @@ void main() {
     test('oversized links are rejected before parsing', () {
       expect(parse('seed=1&balls=$two&pad=${'a' * 5000}'), isNull);
     });
+  });
+
+  test('ball size travels in the link; old links are medium; unknown sizes are rejected', () {
+    final link = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], ballSize: BallSize.large);
+    final uri = link.toUri(presetIds: {for (final b in _presets) b.id}, appUrl: 'https://dbsuarez.github.io/ballwars/');
+    expect(uri.queryParameters['size'], 'l');
+    expect(ReplayLink.fromUri(uri, presets: _presets)!.ballSize, BallSize.large);
+
+    final medium = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]])
+        .toUri(presetIds: {for (final b in _presets) b.id}, appUrl: 'https://dbsuarez.github.io/ballwars/');
+    expect(medium.queryParameters.containsKey('size'), isFalse);
+    expect(ReplayLink.fromUri(medium, presets: _presets)!.ballSize, BallSize.medium);
+
+    final bad = uri.replace(queryParameters: {...uri.queryParameters, 'size': 'huge'});
+    expect(ReplayLink.fromUri(bad, presets: _presets), isNull);
   });
 }

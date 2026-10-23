@@ -2,6 +2,24 @@ import '../../ball_management/domain/custom_ball.dart';
 
 enum WinCondition { domination, timeAttack }
 
+/// How big every ball in a match is, relative to today's (medium) size. All
+/// balls share it, so it's fair; bigger balls cut more and end matches
+/// sooner. It changes the match, so replay links carry it ([id]).
+enum BallSize {
+  smallest('xs', 'Smallest', 0.6),
+  small('s', 'Small', 0.8),
+  medium('m', 'Medium', 1.0),
+  large('l', 'Large', 1.25);
+
+  final String id;
+  final String label;
+  final double scale;
+
+  const BallSize(this.id, this.label, this.scale);
+
+  static BallSize? byId(String? id) => values.where((s) => s.id == id).firstOrNull;
+}
+
 class MatchConfig {
   final List<CustomBall> contestants;
   final double speedMultiplier;
@@ -14,11 +32,14 @@ class MatchConfig {
   final int winsNeeded;
   final WinCondition winCondition;
 
+  final BallSize ballSize;
+
   const MatchConfig({
     required this.contestants,
     this.speedMultiplier = 1.0,
     this.showEffects = true,
     this.winsNeeded = 1,
     this.winCondition = WinCondition.domination,
+    this.ballSize = BallSize.medium,
   });
 }

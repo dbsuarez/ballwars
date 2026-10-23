@@ -53,6 +53,7 @@ class ReplayVideoExporter {
     bool showEffects = true,
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
+    double ballScale = 1.0,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
@@ -65,6 +66,7 @@ class ReplayVideoExporter {
           arenaBackground: style.background,
           slowMotionLines: slowMotionLines,
           slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
+          ballScale: ballScale,
         );
     final frameDelta = speedMultiplier / fps;
 

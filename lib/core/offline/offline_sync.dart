@@ -6,7 +6,8 @@ import '../utils/ball_image_loader.dart';
 import 'offline_store.dart';
 
 /// Run at startup: downloads every ball image the Match Setup can show (all
-/// packs, the user's own groups and the ones they added) that isn't in
+/// packs and the admin's extra balls in them, the user's own groups and the
+/// ones they added) that isn't in
 /// [OfflineStore] yet. Afterwards the categories open instantly and the app
 /// works offline. Images are keyed by URL, and pack URLs carry a content hash,
 /// so only new or changed images download. Failures are skipped; they are
@@ -44,7 +45,7 @@ class OfflineSync {
     }
     final repo = groups;
     if (repo != null) {
-      for (final load in [repo.myGroups, repo.savedGroups]) {
+      for (final load in [repo.myGroups, repo.savedGroups, repo.packExtras]) {
         try {
           for (final group in await load()) {
             add(group.balls);

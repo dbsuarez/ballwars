@@ -351,6 +351,7 @@ class _HomeScreenState extends State<_HomeScreen> {
           config: MatchConfig(
             contestants: link.contestants,
             speedMultiplier: link.speedMultiplier,
+            ballSize: link.ballSize,
             showEffects: link.showEffects,
           ),
           seed: link.seed,

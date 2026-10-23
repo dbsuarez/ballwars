@@ -29,17 +29,39 @@ void main() {
     expect(find.text('out · 0 wins'), findsOneWidget);
   });
 
-  testWidgets('scoreboard shows life with hearts in Arsenal', (tester) async {
+  testWidgets('scoreboard shows circular life meters in Arsenal', (tester) async {
     final a = _ball('a', 0)..life = 88;
     final b = _ball('b', 0)
       ..life = 0
       ..isEliminated = true;
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: ScoreboardOverlay(balls: [a, b], mode: MatchMode.arsenal))));
-    expect(find.text('88 life'), findsOneWidget);
-    expect(find.text('out'), findsOneWidget);
-    expect(find.byType(HeartsRow), findsNWidgets(2));
-    // 88 life rounds to 9 hearts (nearest half heart: 9.0).
-    expect(tester.widget<HeartsRow>(find.byType(HeartsRow).first).hearts, 9.0);
+    expect(find.text('88'), findsOneWidget);
+    expect(find.text('0'), findsOneWidget);
+    expect(find.byType(CircularLifeMeter), findsNWidgets(2));
+    expect(find.byType(HeartsRow), findsNothing);
+    expect(
+      tester.widget<CircularLifeMeter>(find.byType(CircularLifeMeter).first).life,
+      88,
+    );
+  });
+
+  testWidgets('circular life remains visible on a narrow scoreboard', (tester) async {
+    tester.view.physicalSize = const Size(220, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final ball = _ball('a', 0)..life = 125;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScoreboardOverlay(balls: [ball], mode: MatchMode.arsenal),
+        ),
+      ),
+    );
+
+    expect(find.text('125'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('All-Out hearts show the share of starting threads left', (tester) async {

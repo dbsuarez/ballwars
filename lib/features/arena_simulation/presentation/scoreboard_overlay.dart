@@ -5,9 +5,8 @@ import '../domain/fan_line.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 
-/// One row per ball: name, lines held or life (and round wins in a series), and below it either a thin
-/// bar of its share of the rim (Threads) or 10 hearts in the ball's color (Arsenal: life; All-Out: the
-/// share of its starting threads left).
+/// One row per ball: name, current strength and round wins. Arsenal uses a
+/// compact circular life meter so the exact number stays readable on phones.
 class ScoreboardOverlay extends StatelessWidget {
   final List<SimulationBall> balls;
 
@@ -41,8 +40,7 @@ class ScoreboardOverlay extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Text(
@@ -52,13 +50,25 @@ class ScoreboardOverlay extends StatelessWidget {
                         style: AppText.ui(14, FontWeight.w700, color: ball.isEliminated ? c.muted : c.text),
                       ),
                     ),
-                    Text(_detail(ball), style: AppText.mono(12, color: c.muted)),
+                    if (mode == MatchMode.arsenal) ...[
+                      if (wins != null) ...[
+                        Text(_winsDetail(ball), style: AppText.mono(11, color: c.muted)),
+                        const SizedBox(width: 8),
+                      ],
+                      CircularLifeMeter(
+                        life: ball.isEliminated ? 0 : ball.life,
+                        color: ball.config.primaryColor,
+                        trackColor: c.border,
+                      ),
+                    ] else
+                      Text(_detail(ball), style: AppText.mono(12, color: c.muted)),
                   ],
                 ),
-                const SizedBox(height: 8),
-                if (mode != MatchMode.threads)
+                if (mode == MatchMode.allOut) ...[
+                  const SizedBox(height: 8),
                   HeartsRow(hearts: _hearts(ball), color: ball.config.primaryColor, empty: c.border)
-                else
+                ] else if (mode == MatchMode.threads) ...[
+                  const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
                     child: LinearProgressIndicator(
@@ -68,6 +78,7 @@ class ScoreboardOverlay extends StatelessWidget {
                       minHeight: 4,
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -85,6 +96,65 @@ class ScoreboardOverlay extends StatelessWidget {
     if (w == null) return lines;
     final n = w[ball.config.id] ?? 0;
     return '$lines · $n ${n == 1 ? 'win' : 'wins'}';
+  }
+
+  String _winsDetail(SimulationBall ball) {
+    final n = wins?[ball.config.id] ?? 0;
+    return '$n ${n == 1 ? 'win' : 'wins'}';
+  }
+}
+
+/// Exact Arsenal life inside a ball-like circular progress ring. Life above
+/// 100 stays full and turns gold, while the center still shows the true value.
+class CircularLifeMeter extends StatelessWidget {
+  final double life;
+  final Color color;
+  final Color trackColor;
+  final double size;
+
+  const CircularLifeMeter({
+    super.key,
+    required this.life,
+    required this.color,
+    required this.trackColor,
+    this.size = 42,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final value = (life / PowerUpTuning.arenaLife).clamp(0.0, 1.0);
+    final meterColor = life > PowerUpTuning.arenaLife
+        ? const Color(0xFFFFC83D)
+        : color;
+    final number = life.round();
+    return Semantics(
+      label: '$number life',
+      child: SizedBox.square(
+        dimension: size,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CircularProgressIndicator(
+              value: value,
+              strokeWidth: 5,
+              strokeCap: StrokeCap.round,
+              color: meterColor,
+              backgroundColor: trackColor,
+            ),
+            Center(
+              child: Text(
+                '$number',
+                maxLines: 1,
+                style: AppText.mono(
+                  number >= 100 ? 10 : 12,
+                  color: meterColor,
+                ).copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

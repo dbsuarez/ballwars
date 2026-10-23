@@ -157,17 +157,17 @@ class PowerUpTuning {
   static const double sweepReach = 1.8;
 
   /// Share of a hit's damage a shield absorbs.
-  static const double shieldBlock = 0.75;
+  static const double shieldBlock = 0.25;
 
   /// Arsenal mode: life lost per hit (shotgun per pellet, gatling per round).
   static const Map<PowerUpKind, double> arenaDamage = {
-    PowerUpKind.pistol: 50,
-    PowerUpKind.shotgun: 12,
+    PowerUpKind.pistol: 10,
+    PowerUpKind.shotgun: 10,
     PowerUpKind.gatling: 15,
-    PowerUpKind.knife: 70,
-    PowerUpKind.bomb: 80,
+    PowerUpKind.knife: 25,
+    PowerUpKind.bomb: 50,
   };
-  static const double arenaShieldBash = 30;
+  static const double arenaShieldBash = 5;
   static const double arenaAppleHeal = 25;
 
   /// Arsenal: an apple at full life still counts, up to this much life (the extra shows as gold hearts).

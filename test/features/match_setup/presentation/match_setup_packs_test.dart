@@ -214,7 +214,7 @@ void main() {
     // Switch every kind off: the last one can't be switched off.
     // Each one says what it does, with its damage.
     expect(find.text(powerUpDescription(PowerUpKind.pistol, arsenal: true)), findsOneWidget);
-    expect(find.textContaining('${PowerUpTuning.arenaDamage[PowerUpKind.pistol]!.round()} damage'), findsOneWidget);
+    expect(find.textContaining('one shot: ${PowerUpTuning.arenaDamage[PowerUpKind.pistol]!.round()} damage'), findsOneWidget);
     for (final kind in PowerUpKind.values) {
       final tile = find.widgetWithText(SwitchListTile, kind.label);
       await tester.scrollUntilVisible(tile, 80, scrollable: find.byType(Scrollable).last);

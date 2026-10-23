@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
+import 'power_up_painter.dart';
 
 /// The "Faces" ball look: a classic smiley in the ball's own color, with white eyes whose pupils follow
 /// the nearest opponent, and an expression that follows its health and hits. Cosmetic only.
@@ -19,7 +20,11 @@ FaceExpression expressionFor(SimulationBall ball, double healthRatio) {
 
 /// Where the pupils sit inside an eye of [eyeRadius]: 35% of it toward the nearest opponent still in
 /// the match, centered when there is none.
-Offset pupilOffset(SimulationBall ball, List<SimulationBall> balls, double eyeRadius) {
+Offset pupilOffset(
+  SimulationBall ball,
+  List<SimulationBall> balls,
+  double eyeRadius,
+) {
   SimulationBall? nearest;
   var best = double.infinity;
   for (final other in balls) {
@@ -39,8 +44,9 @@ Offset pupilOffset(SimulationBall ball, List<SimulationBall> balls, double eyeRa
 
 /// A ball's health for its face: life in Arsenal (no threads), otherwise the share of its starting
 /// threads left.
-double faceHealth(SimulationBall ball) =>
-    ball.startLines > 0 ? ball.lineCount / ball.startLines : ball.life / PowerUpTuning.arenaLife;
+double faceHealth(SimulationBall ball) => ball.startLines > 0
+    ? ball.lineCount / ball.startLines
+    : ball.life / PowerUpTuning.arenaLife;
 
 /// Draws [ball]'s smiley: the ball's color, two white eyes with black pupils (or squeezed shut on a
 /// fresh hit), brows only when worried or hurt, and a black mouth arc. By default it fills the ball (the
@@ -75,7 +81,10 @@ void paintSmiley(
     ..strokeCap = StrokeCap.round
     ..color = const Color(0xFF111114);
   final eyeR = r * 0.22;
-  final eyes = [c + Offset(-r * 0.34, -r * 0.18), c + Offset(r * 0.34, -r * 0.18)];
+  final eyes = [
+    c + Offset(-r * 0.34, -r * 0.18),
+    c + Offset(r * 0.34, -r * 0.18),
+  ];
 
   if (expression == FaceExpression.wince) {
     // > <
@@ -92,18 +101,31 @@ void paintSmiley(
     for (final eye in eyes) {
       canvas.drawCircle(eye, eyeR, Paint()..color = Colors.white);
       canvas.drawCircle(eye, eyeR, ink..strokeWidth = math.max(1.0, r * 0.05));
-      canvas.drawCircle(eye + look, eyeR * 0.5, Paint()..color = const Color(0xFF111114));
+      canvas.drawCircle(
+        eye + look,
+        eyeR * 0.5,
+        Paint()..color = const Color(0xFF111114),
+      );
     }
     ink.strokeWidth = math.max(1.2, r * 0.09);
   }
 
   // Brows: worried tilts up in the middle, hurt tilts down (angry frown).
-  if (expression == FaceExpression.worried || expression == FaceExpression.hurt) {
-    final inner = expression == FaceExpression.worried ? -eyeR * 1.7 : -eyeR * 1.1;
-    final outer = expression == FaceExpression.worried ? -eyeR * 1.2 : -eyeR * 1.7;
+  if (expression == FaceExpression.worried ||
+      expression == FaceExpression.hurt) {
+    final inner = expression == FaceExpression.worried
+        ? -eyeR * 1.7
+        : -eyeR * 1.1;
+    final outer = expression == FaceExpression.worried
+        ? -eyeR * 1.2
+        : -eyeR * 1.7;
     for (final (i, eye) in eyes.indexed) {
       final dir = i == 0 ? 1.0 : -1.0;
-      canvas.drawLine(eye + Offset(-dir * eyeR, outer), eye + Offset(dir * eyeR * 0.6, inner), ink);
+      canvas.drawLine(
+        eye + Offset(-dir * eyeR, outer),
+        eye + Offset(dir * eyeR * 0.6, inner),
+        ink,
+      );
     }
   }
 
@@ -111,15 +133,127 @@ void paintSmiley(
   final w = r * 0.42;
   switch (expression) {
     case FaceExpression.happy:
-      canvas.drawArc(Rect.fromCenter(center: mouth + Offset(0, -r * 0.12), width: w * 2, height: r * 0.5), 0.25,
-          math.pi - 0.5, false, ink);
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: mouth + Offset(0, -r * 0.12),
+          width: w * 2,
+          height: r * 0.5,
+        ),
+        0.25,
+        math.pi - 0.5,
+        false,
+        ink,
+      );
     case FaceExpression.worried:
-      canvas.drawLine(mouth + Offset(-w * 0.6, 0), mouth + Offset(w * 0.6, 0), ink);
+      canvas.drawLine(
+        mouth + Offset(-w * 0.6, 0),
+        mouth + Offset(w * 0.6, 0),
+        ink,
+      );
     case FaceExpression.hurt:
     case FaceExpression.wince:
-      canvas.drawArc(Rect.fromCenter(center: mouth + Offset(0, r * 0.12), width: w * 1.6, height: r * 0.4),
-          math.pi + 0.3, math.pi - 0.6, false, ink);
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: mouth + Offset(0, r * 0.12),
+          width: w * 1.6,
+          height: r * 0.4,
+        ),
+        math.pi + 0.3,
+        math.pi - 0.6,
+        false,
+        ink,
+      );
     case FaceExpression.shocked:
       canvas.drawCircle(mouth, r * 0.12, ink);
   }
+}
+
+/// Draws the Faces look's white cartoon gloves. A held item gets one gripping
+/// hand and a second hand on the lower free side; an unarmed smiley carries a
+/// relaxed hand on each side. Draw this after [PowerUpPainter.paintBallEffects]
+/// so the grip sits visibly over the weapon.
+void paintHands(Canvas canvas, SimulationBall ball) {
+  final r = ball.radius;
+  final held = ball.held;
+  if (held == null) {
+    _paintHandAt(
+      canvas,
+      ball.position + _unit(math.pi / 2 - 1.2) * (r * 0.98),
+      r,
+    );
+    _paintHandAt(
+      canvas,
+      ball.position + _unit(math.pi / 2 + 1.2) * (r * 0.98),
+      r,
+    );
+    return;
+  }
+
+  final angle = PowerUpPainter.heldAngle(ball);
+  final dir = _unit(angle);
+  final side = Offset(-dir.dy, dir.dx);
+  final weaponCenter = PowerUpPainter.heldCenter(ball);
+  final Offset grip;
+  if (held == PowerUpKind.shield) {
+    grip = ball.position + dir * (r * 0.95);
+  } else if (held.isBlade || held == PowerUpKind.hook) {
+    grip = weaponCenter - dir * (r * 0.65);
+  } else {
+    // The sprite flips vertically when it points left, so its local grip does
+    // the same.
+    final localY = dir.dx < 0 ? -0.3 : 0.3;
+    grip = weaponCenter - dir * (r * 0.45) + side * (r * localY);
+  }
+  _paintHandAt(canvas, grip, r, gripAngle: angle);
+
+  final freeA = angle - 2.3;
+  final freeB = angle + 2.3;
+  final freeAngle = math.sin(freeA) >= math.sin(freeB) ? freeA : freeB;
+  _paintHandAt(canvas, ball.position + _unit(freeAngle) * (r * 0.98), r);
+}
+
+Offset _unit(double angle) => Offset(math.cos(angle), math.sin(angle));
+
+void _paintHandAt(
+  Canvas canvas,
+  Offset center,
+  double ballRadius, {
+  double? gripAngle,
+}) {
+  final handRadius = ballRadius * 0.22;
+  final outline = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = math.max(1.0, ballRadius * 0.07)
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0xFF111114);
+  final fill = Paint()..color = const Color(0xFFF7F7F4);
+
+  // A short cuff makes the circle read as a glove rather than another ball.
+  if (gripAngle != null) {
+    final back = _unit(gripAngle + math.pi);
+    final side = Offset(-back.dy, back.dx);
+    final cuffCenter = center + back * (handRadius * 0.72);
+    final cuff = Path()
+      ..moveTo(
+        (cuffCenter + side * handRadius * 0.55).dx,
+        (cuffCenter + side * handRadius * 0.55).dy,
+      )
+      ..lineTo(
+        (cuffCenter + back * handRadius * 0.72 + side * handRadius * 0.46).dx,
+        (cuffCenter + back * handRadius * 0.72 + side * handRadius * 0.46).dy,
+      )
+      ..lineTo(
+        (cuffCenter + back * handRadius * 0.72 - side * handRadius * 0.46).dx,
+        (cuffCenter + back * handRadius * 0.72 - side * handRadius * 0.46).dy,
+      )
+      ..lineTo(
+        (cuffCenter - side * handRadius * 0.55).dx,
+        (cuffCenter - side * handRadius * 0.55).dy,
+      )
+      ..close();
+    canvas.drawPath(cuff, fill);
+    canvas.drawPath(cuff, outline);
+  }
+  canvas.drawCircle(center, handRadius, fill);
+  canvas.drawCircle(center, handRadius, outline);
 }

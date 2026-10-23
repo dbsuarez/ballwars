@@ -3,14 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_painter.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 
 void main() {
   test('paint runs without throwing for a live simulation state', () async {
     final controller = MatchSimulationController(
       const [
-        CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
-        CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
+        CustomBall(
+          id: 'a',
+          name: 'A',
+          primaryColor: Colors.red,
+          glowColor: Colors.pink,
+        ),
+        CustomBall(
+          id: 'b',
+          name: 'B',
+          primaryColor: Colors.blue,
+          glowColor: Colors.cyan,
+        ),
       ],
       arenaRadius: 260.0,
       seed: 1,
@@ -28,5 +40,42 @@ void main() {
     painter.paint(canvas, const Size(520, 520));
     final picture = recorder.endRecording();
     expect(picture, isNotNull);
+  });
+
+  test('Faces paint hands for unarmed and equipped balls', () {
+    final controller = MatchSimulationController(
+      const [
+        CustomBall(
+          id: 'a',
+          name: 'A',
+          primaryColor: Colors.red,
+          glowColor: Colors.pink,
+        ),
+        CustomBall(
+          id: 'b',
+          name: 'B',
+          primaryColor: Colors.blue,
+          glowColor: Colors.cyan,
+        ),
+      ],
+      arenaRadius: 260,
+      seed: 2,
+      mode: MatchMode.arsenal,
+    );
+    controller.state.balls.first
+      ..held = PowerUpKind.pistol
+      ..aimTarget = controller.state.balls.last;
+
+    final recorder = ui.PictureRecorder();
+    ArenaPainter(
+      state: controller.state,
+      arenaRadius: 260,
+      rimAngle: 0,
+      look: BallLook.faces,
+    ).paint(Canvas(recorder), const Size(520, 520));
+    final picture = recorder.endRecording();
+
+    expect(picture, isNotNull);
+    picture.dispose();
   });
 }

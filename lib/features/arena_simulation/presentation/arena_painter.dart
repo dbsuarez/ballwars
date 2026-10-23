@@ -161,7 +161,11 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintBeamAttack(Canvas canvas) {
-    if (state.beamPhase == 0 || state.beamFirer == null || state.beamTarget == null) return;
+    if (state.beamPhase == 0 ||
+        state.beamFirer == null ||
+        state.beamTarget == null) {
+      return;
+    }
 
     final firer = state.beamFirer!;
     final target = state.beamTarget!;
@@ -173,7 +177,10 @@ class ArenaPainter extends CustomPainter {
     );
 
     // Extend ray past target to arena rim
-    final endPt = Offset(math.cos(beamAngle) * arenaRadius, math.sin(beamAngle) * arenaRadius);
+    final endPt = Offset(
+      math.cos(beamAngle) * arenaRadius,
+      math.sin(beamAngle) * arenaRadius,
+    );
 
     Color beamColor;
     double alpha;
@@ -233,7 +240,11 @@ class ArenaPainter extends CustomPainter {
     }
   }
 
-  void _paintTargetCone(Canvas canvas, SimulationBall target, double beamAngle) {
+  void _paintTargetCone(
+    Canvas canvas,
+    SimulationBall target,
+    double beamAngle,
+  ) {
     // Small cone at target (opposite direction of beam)
     final coneAngle = beamAngle + math.pi;
     final halfWidth = 0.15; // Small fixed width
@@ -241,9 +252,17 @@ class ArenaPainter extends CustomPainter {
     final path = Path();
     path.moveTo(target.position.dx, target.position.dy);
     final rimAngle1 = coneAngle - halfWidth;
-    final rimPt1 = Offset(math.cos(rimAngle1) * arenaRadius, math.sin(rimAngle1) * arenaRadius);
+    final rimPt1 = Offset(
+      math.cos(rimAngle1) * arenaRadius,
+      math.sin(rimAngle1) * arenaRadius,
+    );
     path.lineTo(rimPt1.dx, rimPt1.dy);
-    path.arcTo(Rect.fromCircle(center: Offset.zero, radius: arenaRadius), rimAngle1, halfWidth * 2, false);
+    path.arcTo(
+      Rect.fromCircle(center: Offset.zero, radius: arenaRadius),
+      rimAngle1,
+      halfWidth * 2,
+      false,
+    );
     path.lineTo(target.position.dx, target.position.dy);
     path.close();
 
@@ -256,7 +275,8 @@ class ArenaPainter extends CustomPainter {
   void _paintParticles(Canvas canvas) {
     for (final particle in state.particles.particles) {
       if (particle is Particle) {
-        final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
+        final lifeRatio =
+            1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
         final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
         final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
         canvas.drawCircle(
@@ -267,7 +287,8 @@ class ArenaPainter extends CustomPainter {
       } else if (particle is RimArcParticle) {
         // Render thin white arc along rim
         final (startPt, endPt) = particle.getArcSegment();
-        final lifeRatio = 1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
+        final lifeRatio =
+            1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
         final paint = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0
@@ -283,7 +304,10 @@ class ArenaPainter extends CustomPainter {
     if (ball.isGhost) {
       canvas.saveLayer(
         // Room for the held weapon, drawn just past the edge.
-        Rect.fromCircle(center: ball.position, radius: ball.radius * 2 + _ballGlowPadding),
+        Rect.fromCircle(
+          center: ball.position,
+          radius: ball.radius * 2 + _ballGlowPadding,
+        ),
         Paint()..color = const Color(0x66000000),
       );
     }
@@ -292,7 +316,9 @@ class ArenaPainter extends CustomPainter {
     final distToCenter = ball.position.distance;
     final edgeDist = arenaRadius - distToCenter;
     final glowRadius = ball.radius + _ballGlowPadding;
-    final effectiveGlowRadius = edgeDist < glowRadius ? glowRadius * (edgeDist / glowRadius).clamp(0.0, 1.0) : glowRadius;
+    final effectiveGlowRadius = edgeDist < glowRadius
+        ? glowRadius * (edgeDist / glowRadius).clamp(0.0, 1.0)
+        : glowRadius;
 
     // Glow: a radial gradient fading out from the ball's edge (instead of an
     // outer blur).
@@ -306,7 +332,11 @@ class ArenaPainter extends CustomPainter {
         ..shader = ui.Gradient.radial(
           ball.position,
           glowOuter,
-          [glow.withValues(alpha: 0.45), glow.withValues(alpha: 0.45), glow.withValues(alpha: 0)],
+          [
+            glow.withValues(alpha: 0.45),
+            glow.withValues(alpha: 0.45),
+            glow.withValues(alpha: 0),
+          ],
           [0, edge, 1],
         ),
     );
@@ -314,9 +344,18 @@ class ArenaPainter extends CustomPainter {
     if (look == BallLook.faces) {
       paintSmiley(canvas, ball, faceHealth(ball), state.balls);
     } else {
-      BallFacePainter.paint(canvas, ball.position, ball.radius, ball.config, ball.cachedUiImage);
+      BallFacePainter.paint(
+        canvas,
+        ball.position,
+        ball.radius,
+        ball.config,
+        ball.cachedUiImage,
+      );
     }
     PowerUpPainter.paintBallEffects(canvas, ball);
+    if (look == BallLook.faces) {
+      paintHands(canvas, ball);
+    }
     if (ball.isGhost) canvas.restore();
   }
 
@@ -331,12 +370,19 @@ class ArenaPainter extends CustomPainter {
       final painter = _textCache[key] ??= TextPainter(
         text: TextSpan(
           text: text.text,
-          style: TextStyle(color: text.color.withValues(alpha: alpha), fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: text.color.withValues(alpha: alpha),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
       if (_textCache.length > 200) _textCache.remove(_textCache.keys.first);
-      painter.paint(canvas, text.position - Offset(painter.width / 2, painter.height / 2));
+      painter.paint(
+        canvas,
+        text.position - Offset(painter.width / 2, painter.height / 2),
+      );
     }
   }
 

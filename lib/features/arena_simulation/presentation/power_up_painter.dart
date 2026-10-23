@@ -38,7 +38,12 @@ class PowerUpPainter {
 
   /// Field power-ups, aim lines, bullets, mines, blasts and slashes. Call after the fan lines, before the
   /// balls. [showEffects] covers only the decorative blast flash; gameplay objects always draw.
-  static void paint(Canvas canvas, SimulationState state, double arenaRadius, {bool showEffects = true}) {
+  static void paint(
+    Canvas canvas,
+    SimulationState state,
+    double arenaRadius, {
+    bool showEffects = true,
+  }) {
     final p = state.powerUps;
     if (p == null) return;
     final r = p.fieldRadius;
@@ -50,7 +55,8 @@ class PowerUpPainter {
         canvas.drawCircle(
           e.position,
           e.radius,
-          Paint()..color = const Color(0xFFFFB347).withValues(alpha: 0.25 * fade),
+          Paint()
+            ..color = const Color(0xFFFFB347).withValues(alpha: 0.25 * fade),
         );
       }
       canvas.drawCircle(
@@ -65,18 +71,34 @@ class PowerUpPainter {
 
     for (final item in p.field) {
       // Subtle pulse: the token breathes about once a second.
-      final pulse = 0.5 + 0.5 * math.sin((state.step - item.spawnStep) * 2 * math.pi / 60);
-      _paintToken(canvas, item.kind, item.position, r * (0.96 + 0.08 * pulse), 0.5 + 0.5 * pulse);
+      final pulse =
+          0.5 +
+          0.5 * math.sin((state.step - item.spawnStep) * 2 * math.pi / 60);
+      _paintToken(
+        canvas,
+        item.kind,
+        item.position,
+        r * (0.96 + 0.08 * pulse),
+        0.5 + 0.5 * pulse,
+      );
     }
 
     for (final bomb in p.mines) {
       // Armed: ringed in its owner's color, with a red light blinking twice a second.
       final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
-      _paintToken(canvas, PowerUpKind.mine, bomb.position, r, 1, ring: bomb.owner.config.primaryColor);
+      _paintToken(
+        canvas,
+        PowerUpKind.mine,
+        bomb.position,
+        r,
+        1,
+        ring: bomb.owner.config.primaryColor,
+      );
       canvas.drawCircle(
         bomb.position + Offset(r * 0.62, -r * 0.62),
         math.max(2.5, r * 0.18),
-        Paint()..color = blink ? const Color(0xFFFF3B30) : const Color(0xFF5A1A16),
+        Paint()
+          ..color = blink ? const Color(0xFFFF3B30) : const Color(0xFF5A1A16),
       );
     }
 
@@ -88,7 +110,9 @@ class PowerUpPainter {
         target.position,
         Paint()
           ..strokeWidth = 1
-          ..color = colorOf(ball.held ?? PowerUpKind.pistol).withValues(alpha: 0.45),
+          ..color = colorOf(
+            ball.held ?? PowerUpKind.pistol,
+          ).withValues(alpha: 0.45),
       );
     }
 
@@ -109,7 +133,14 @@ class PowerUpPainter {
           if (sprite == null) {
             drawGlyph(canvas, PowerUpKind.hook, shot.position, r * 0.6);
           } else {
-            _drawSprite(canvas, sprite, shot.position, r * 0.8, angle, flip: shot.velocity.dx < 0);
+            _drawSprite(
+              canvas,
+              sprite,
+              shot.position,
+              r * 0.8,
+              angle,
+              flip: shot.velocity.dx < 0,
+            );
           }
           continue;
         }
@@ -117,9 +148,19 @@ class PowerUpPainter {
           // A grenade in flight: its icon, tumbling.
           final sprite = PowerUpSprites.of(PowerUpKind.grenade);
           if (sprite == null) {
-            canvas.drawCircle(shot.position, r * 0.4, Paint()..color = colorOf(PowerUpKind.grenade));
+            canvas.drawCircle(
+              shot.position,
+              r * 0.4,
+              Paint()..color = colorOf(PowerUpKind.grenade),
+            );
           } else {
-            _drawSprite(canvas, sprite, shot.position, r * 0.6, state.step * 0.3);
+            _drawSprite(
+              canvas,
+              sprite,
+              shot.position,
+              r * 0.6,
+              state.step * 0.3,
+            );
           }
           continue;
         }
@@ -233,13 +274,26 @@ class PowerUpPainter {
           const Color(0xFF7FDBFF),
           i / 2,
         )!.withValues(alpha: 0.95 - i * 0.28);
-      canvas.drawArc(Rect.fromCircle(center: back - dir * radius, radius: radius), angle - 0.75, 1.5, false, _iceArc);
+      canvas.drawArc(
+        Rect.fromCircle(center: back - dir * radius, radius: radius),
+        angle - 0.75,
+        1.5,
+        false,
+        _iceArc,
+      );
     }
-    canvas.drawCircle(shot.position, math.max(2.0, r * 0.22), Paint()..color = const Color(0xFFF4FDFF));
+    canvas.drawCircle(
+      shot.position,
+      math.max(2.0, r * 0.22),
+      Paint()..color = const Color(0xFFF4FDFF),
+    );
     final side = Offset(-dir.dy, dir.dx);
     final sparkles = Float32List(8);
     for (var i = 0; i < 4; i++) {
-      final o = shot.position - dir * (r * (0.9 + i * 0.5)) + side * (r * 0.5 * math.sin(travelled * 0.05 + i * 2.1));
+      final o =
+          shot.position -
+          dir * (r * (0.9 + i * 0.5)) +
+          side * (r * 0.5 * math.sin(travelled * 0.05 + i * 2.1));
       sparkles
         ..[i * 2] = o.dx
         ..[i * 2 + 1] = o.dy;
@@ -283,7 +337,14 @@ class PowerUpPainter {
 
   /// A power-up token drawn like a small ball: a white ball with a ring in the power-up's color ([ring]
   /// instead if given, e.g. an armed mine's owner) at [ringAlpha], a soft glow, and the icon inside.
-  static void _paintToken(Canvas canvas, PowerUpKind kind, Offset c, double r, double ringAlpha, {Color? ring}) {
+  static void _paintToken(
+    Canvas canvas,
+    PowerUpKind kind,
+    Offset c,
+    double r,
+    double ringAlpha, {
+    Color? ring,
+  }) {
     final color = ring ?? colorOf(kind);
     canvas.drawCircle(
       c,
@@ -292,7 +353,10 @@ class PowerUpPainter {
         ..shader = ui.Gradient.radial(
           c,
           r * 1.5,
-          [color.withValues(alpha: 0.35 * ringAlpha), color.withValues(alpha: 0)],
+          [
+            color.withValues(alpha: 0.35 * ringAlpha),
+            color.withValues(alpha: 0),
+          ],
           [0.6, 1],
         ),
     );
@@ -303,7 +367,11 @@ class PowerUpPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(1.5, r * 0.14)
-        ..color = Color.lerp(const Color(0xFFF4F4F2), color, 0.4 + 0.6 * ringAlpha)!,
+        ..color = Color.lerp(
+          const Color(0xFFF4F4F2),
+          color,
+          0.4 + 0.6 * ringAlpha,
+        )!,
     );
     final sprite = PowerUpSprites.of(kind);
     if (sprite == null) {
@@ -343,22 +411,57 @@ class PowerUpPainter {
 
   /// The direction, in radians, each weapon icon points in as drawn in its SVG (guns: the muzzle; knife:
   /// the tip). Weapons are turned from it to point where they are used.
-  static const Map<PowerUpKind, double> _iconAngle = {PowerUpKind.knife: -math.pi / 4, PowerUpKind.sword: -math.pi / 4};
+  static const Map<PowerUpKind, double> _iconAngle = {
+    PowerUpKind.knife: -math.pi / 4,
+    PowerUpKind.sword: -math.pi / 4,
+  };
+
+  /// The direction in which [ball]'s held item is drawn. Kept public so the
+  /// Faces look can put its gripping hand on the same item without duplicating
+  /// the aiming rules.
+  static double heldAngle(SimulationBall ball) {
+    if (ball.held == PowerUpKind.shield) return ball.shieldAngle;
+    final target = ball.aimTarget;
+    final Offset toward;
+    if ((ball.held?.isGun ?? false) && target != null) {
+      toward = target.position - ball.position;
+    } else if (ball.velocity != Offset.zero) {
+      toward = ball.velocity;
+    } else {
+      toward = const Offset(1, 0);
+    }
+    return math.atan2(toward.dy, toward.dx);
+  }
+
+  /// Center of the held item's sprite.
+  static Offset heldCenter(SimulationBall ball) {
+    final angle = heldAngle(ball);
+    final dir = Offset(math.cos(angle), math.sin(angle));
+    final distance = ball.held == PowerUpKind.shield
+        ? ball.radius
+        : ball.radius * 1.2;
+    return ball.position + dir * distance;
+  }
 
   /// Looks drawn over [ball]: a frozen ball gets an icy tint, and what it holds is drawn on it. A gun
   /// sits on its edge pointing at its target (or the way it moves), a knife points the way it moves, and
   /// a shield is held on the side it faces.
   static void paintBallEffects(Canvas canvas, SimulationBall ball) {
     if (ball.frozenLeft > 0) {
-      canvas.drawCircle(ball.position, ball.radius, Paint()..color = const Color(0xFF9FE3FF).withValues(alpha: 0.45));
+      canvas.drawCircle(
+        ball.position,
+        ball.radius,
+        Paint()..color = const Color(0xFF9FE3FF).withValues(alpha: 0.45),
+      );
     }
     final held = ball.held;
     if (held == null) return;
     final sprite = PowerUpSprites.of(held);
     if (held == PowerUpKind.shield) {
+      final angle = heldAngle(ball);
       canvas.drawArc(
         Rect.fromCircle(center: ball.position, radius: ball.radius + 4),
-        ball.shieldAngle - 0.9,
+        angle - 0.9,
         1.8,
         false,
         Paint()
@@ -368,39 +471,29 @@ class PowerUpPainter {
           ..color = colorOf(PowerUpKind.shield),
       );
       if (sprite != null) {
-        final dir = Offset(math.cos(ball.shieldAngle), math.sin(ball.shieldAngle));
         _drawSprite(
           canvas,
           sprite,
-          ball.position + dir * ball.radius,
+          heldCenter(ball),
           ball.radius * 0.7,
-          ball.shieldAngle + math.pi / 2,
+          angle + math.pi / 2,
         );
       }
       return;
     }
     if (sprite == null) {
-      final badge = ball.position + Offset(ball.radius * 0.72, -ball.radius * 0.72);
+      final badge = heldCenter(ball);
       final r = math.max(6.0, ball.radius * 0.36);
       canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
       drawGlyph(canvas, held, badge, r * 0.62);
       return;
     }
-    final target = ball.aimTarget;
-    final Offset toward;
-    if (held.isGun && target != null) {
-      toward = target.position - ball.position;
-    } else if (ball.velocity != Offset.zero) {
-      toward = ball.velocity;
-    } else {
-      toward = const Offset(1, 0);
-    }
-    final angle = math.atan2(toward.dy, toward.dx);
+    final angle = heldAngle(ball);
     final dir = Offset(math.cos(angle), math.sin(angle));
     _drawSprite(
       canvas,
       sprite,
-      ball.position + dir * (ball.radius * 1.2),
+      heldCenter(ball),
       ball.radius * 0.9,
       angle,
       iconAngle: _iconAngle[held] ?? 0,
@@ -438,7 +531,11 @@ class PowerUpPainter {
         canvas.drawLine(at(-0.95, 0.35), at(-0.6, 0.75), stroke);
       case PowerUpKind.gatling:
         for (final y in [-0.45, 0.0, 0.45]) {
-          canvas.drawLine(at(-0.8, y), at(0.9, y), stroke..strokeWidth = math.max(1.0, s * 0.2));
+          canvas.drawLine(
+            at(-0.8, y),
+            at(0.9, y),
+            stroke..strokeWidth = math.max(1.0, s * 0.2),
+          );
         }
       case PowerUpKind.knife:
         canvas.drawPath(
@@ -454,13 +551,27 @@ class PowerUpPainter {
           Path()
             ..moveTo(at(0, -0.95).dx, at(0, -0.95).dy)
             ..lineTo(at(0.8, -0.6).dx, at(0.8, -0.6).dy)
-            ..quadraticBezierTo(at(0.75, 0.55).dx, at(0.75, 0.55).dy, at(0, 0.95).dx, at(0, 0.95).dy)
-            ..quadraticBezierTo(at(-0.75, 0.55).dx, at(-0.75, 0.55).dy, at(-0.8, -0.6).dx, at(-0.8, -0.6).dy)
+            ..quadraticBezierTo(
+              at(0.75, 0.55).dx,
+              at(0.75, 0.55).dy,
+              at(0, 0.95).dx,
+              at(0, 0.95).dy,
+            )
+            ..quadraticBezierTo(
+              at(-0.75, 0.55).dx,
+              at(-0.75, 0.55).dy,
+              at(-0.8, -0.6).dx,
+              at(-0.8, -0.6).dy,
+            )
             ..close(),
           fill,
         );
       case PowerUpKind.apple:
-        canvas.drawCircle(at(0, 0.15), s * 0.75, Paint()..color = const Color(0xFFE53935));
+        canvas.drawCircle(
+          at(0, 0.15),
+          s * 0.75,
+          Paint()..color = const Color(0xFFE53935),
+        );
         canvas.drawLine(at(0, -0.55), at(0.35, -0.95), stroke);
       case PowerUpKind.speed:
         canvas.drawPath(
@@ -477,10 +588,18 @@ class PowerUpPainter {
       case PowerUpKind.freeze:
         for (var i = 0; i < 3; i++) {
           final a = i * math.pi / 3;
-          canvas.drawLine(at(math.cos(a), math.sin(a)), at(-math.cos(a), -math.sin(a)), stroke);
+          canvas.drawLine(
+            at(math.cos(a), math.sin(a)),
+            at(-math.cos(a), -math.sin(a)),
+            stroke,
+          );
         }
       case PowerUpKind.mine:
-        canvas.drawCircle(at(-0.1, 0.2), s * 0.7, Paint()..color = const Color(0xFF2B2B33));
+        canvas.drawCircle(
+          at(-0.1, 0.2),
+          s * 0.7,
+          Paint()..color = const Color(0xFF2B2B33),
+        );
         canvas.drawLine(
           at(0.35, -0.35),
           at(0.75, -0.85),
@@ -489,11 +608,20 @@ class PowerUpPainter {
             ..color = const Color(0xFFFFB347),
         );
       case PowerUpKind.magnet:
-        canvas.drawArc(Rect.fromCircle(center: at(0, 0.1), radius: s * 0.65), 0, math.pi, false, stroke);
+        canvas.drawArc(
+          Rect.fromCircle(center: at(0, 0.1), radius: s * 0.65),
+          0,
+          math.pi,
+          false,
+          stroke,
+        );
         canvas.drawLine(at(-0.65, 0.1), at(-0.65, -0.8), stroke);
         canvas.drawLine(at(0.65, 0.1), at(0.65, -0.8), stroke);
       case PowerUpKind.grenade:
-        canvas.drawOval(Rect.fromCenter(center: at(0, 0.2), width: s * 1.3, height: s * 1.5), fill);
+        canvas.drawOval(
+          Rect.fromCenter(center: at(0, 0.2), width: s * 1.3, height: s * 1.5),
+          fill,
+        );
         canvas.drawLine(at(-0.2, -0.6), at(0.5, -0.9), stroke);
       case PowerUpKind.hook:
         canvas.drawLine(at(-0.9, 0), at(0.6, 0), stroke);

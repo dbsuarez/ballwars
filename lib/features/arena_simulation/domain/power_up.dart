@@ -49,7 +49,8 @@ enum PowerUpKind {
   lightningStrikes('Lightning Strikes'),
   earthquake('Earthquake'),
   tornado('Tornado'),
-  energyWave('Energy Wave');
+  energyWave('Energy Wave'),
+  flamethrower('Flamethrower');
 
   const PowerUpKind(this.label);
 
@@ -74,7 +75,8 @@ enum PowerUpKind {
       this == boomerang ||
       this == fireWall ||
       this == waterGun ||
-      this == energyWave;
+      this == energyWave ||
+      this == flamethrower;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -85,12 +87,14 @@ enum PowerUpKind {
       this == gatling ||
       this == bow ||
       this == threadHarpoon ||
-      this == energyWave;
+      this == energyWave ||
+      this == flamethrower;
 
   /// Camera emphasis for a successful hit; subtle shots stay crisp while
   /// heavyweight attacks move the whole arena.
   double get impactWeight => switch (this) {
     rocketLauncher || omegaTendrils || energyWave => 1.0,
+    flamethrower => 0.72,
     grenade || mine || phaseMine || molotov || fireWall => 0.8,
     sword || orbitingFlail || spikeWall || threadHarpoon => 0.48,
     shotgun || bow || ricochetDisc || boomerang => 0.3,
@@ -120,7 +124,8 @@ enum PowerUpKind {
       this == boomerang ||
       this == fireWall ||
       this == waterGun ||
-      this == energyWave;
+      this == energyWave ||
+      this == flamethrower;
 
   /// Traps spawn close to the arena boundary and arm when collected.
   bool get isTrap =>
@@ -370,6 +375,29 @@ class EnergyWave {
   int age = 0;
 }
 
+class EnergyWaveAttack {
+  EnergyWaveAttack({required this.owner, required this.targets})
+    : savedOwnerVelocity = owner.velocity,
+      savedVelocities = {for (final target in targets) target: target.velocity};
+
+  static const int chargeSteps = 36;
+  static const int hitIntervalSteps = 14;
+
+  final SimulationBall owner;
+  final List<SimulationBall> targets;
+  final Offset savedOwnerVelocity;
+  final Map<SimulationBall, Offset> savedVelocities;
+  int age = 0;
+  int currentIndex = -1;
+}
+
+class FlameCone {
+  FlameCone({required this.owner, required this.angle});
+  final SimulationBall owner;
+  final double angle;
+  int age = 0;
+}
+
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or
 /// [stepsLeft] runs out), then takes the uppercut and is thrown off at [speed] in a random direction.
 class HookPull {
@@ -498,6 +526,8 @@ class PowerUpTuning {
   static const int fireWallSteps = 240;
   static const int damageOverTimeSteps = 120;
   static const int damageOverTimeTickSteps = 30;
+  static const int flamethrowerSteps = 90;
+  static const int flamethrowerTickSteps = 15;
 
   /// Bomb blast radius as a fraction of the arena radius.
   static const double blastRadiusRatio = 0.28;
@@ -545,6 +575,7 @@ class PowerUpTuning {
     PowerUpKind.earthquake: 5,
     PowerUpKind.tornado: 3,
     PowerUpKind.energyWave: 28,
+    PowerUpKind.flamethrower: 3,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -582,6 +613,7 @@ class PowerUpTuning {
     PowerUpKind.earthquake: 2,
     PowerUpKind.tornado: 1,
     PowerUpKind.energyWave: 12,
+    PowerUpKind.flamethrower: 1,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -643,6 +675,8 @@ String powerUpDescription(
       'Summons a pursuing wind vortex for 3 s. It pulls nearby opponents inward and deals ${dmg(kind)} over time.',
     PowerUpKind.energyWave =>
       '$aim unleashes a thick arena-scale beam for ${dmg(kind)} and heavy knockback.',
+    PowerUpKind.flamethrower =>
+      '$aim sprays a sustained fire cone for 1.5 s: ${dmg(kind)} per pulse plus burn damage over time.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '

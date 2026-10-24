@@ -435,6 +435,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             endlessBattle: link.endlessBattle,
             mayhem: link.mayhem,
             shrinkingArena: link.shrinkingArena,
+            minimumArenaScale: link.minimumArenaScale,
             showEffects: link.showEffects,
             look: look,
             wallSparkSize: wallSparkSize,

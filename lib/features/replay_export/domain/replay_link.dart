@@ -45,6 +45,7 @@ class ReplayLink {
   final bool endlessBattle;
   final bool mayhem;
   final bool shrinkingArena;
+  final double minimumArenaScale;
 
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
@@ -63,6 +64,7 @@ class ReplayLink {
     this.endlessBattle = false,
     this.mayhem = false,
     this.shrinkingArena = false,
+    this.minimumArenaScale = 0.60,
   });
 
   static const String _weaponsPrefix = 'w.';
@@ -122,8 +124,11 @@ class ReplayLink {
         : '';
     final mayhemToken = mode == MatchMode.arsenal && mayhem ? '&mayhem=1' : '';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
+    final minimumArena = shrinkingArena && minimumArenaScale != 0.60
+        ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
+        : '';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -202,6 +207,14 @@ class ReplayLink {
     }
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
+    final minimumArenaScale = double.tryParse(params['minarena'] ?? '0.60');
+    if (minimumArenaScale == null ||
+        !minimumArenaScale.isFinite ||
+        minimumArenaScale < 0.40 ||
+        minimumArenaScale > 0.90 ||
+        (!shrinkingArena && params.containsKey('minarena'))) {
+      return null;
+    }
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
@@ -233,6 +246,7 @@ class ReplayLink {
       endlessBattle: endlessBattle,
       mayhem: mayhem,
       shrinkingArena: shrinkingArena,
+      minimumArenaScale: minimumArenaScale,
     );
   }
 

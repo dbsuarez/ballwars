@@ -168,6 +168,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       endlessBattle: widget.config.endlessBattle,
       mayhem: widget.config.mayhem,
       shrinkingArena: widget.config.shrinkingArena,
+      minimumArenaScale: widget.config.minimumArenaScale,
       bloodColor: AppSettingsScope.of(context).bloodColor,
     );
     _roundCounted = replaySeed != null;
@@ -374,6 +375,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       endlessBattle: widget.config.endlessBattle,
       mayhem: widget.config.mayhem,
       shrinkingArena: widget.config.shrinkingArena,
+      minimumArenaScale: widget.config.minimumArenaScale,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -629,6 +631,38 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               : const SizedBox.shrink(),
                         ),
                       ),
+                      if (widget.config.shrinkingArena)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.68),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                child: Text(
+                                  'ARENA ${(_controller.arenaRadius / _controller.initialArenaRadius * 100).round()}%',
+                                  key: const ValueKey('arena-shrink-percent'),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.7,
+                                      ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -688,6 +722,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               powerUps: widget.config.powerUps,
                               tuning: widget.config.tuning,
                               shrinkingArena: widget.config.shrinkingArena,
+                              minimumArenaScale:
+                                  widget.config.minimumArenaScale,
                               headline: headline,
                               colors: c,
                               ballGlowEnabled: AppSettingsScope.of(

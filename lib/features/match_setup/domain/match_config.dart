@@ -103,6 +103,9 @@ class MatchConfig {
   /// Gradually contracts the playable boundary during the match.
   final bool shrinkingArena;
 
+  /// Smallest playable radius, as a fraction of the starting radius.
+  final double minimumArenaScale;
+
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
 
@@ -124,6 +127,7 @@ class MatchConfig {
     this.endlessBattle = false,
     this.mayhem = false,
     this.shrinkingArena = false,
+    this.minimumArenaScale = 0.60,
     this.tuning = PowerUpConfig.defaults,
     this.mode = MatchMode.threads,
   });

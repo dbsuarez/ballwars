@@ -17,6 +17,7 @@ class AppSettings {
   final Color bloodColor;
   final String arenaTitle;
   final String arenaSubtitle;
+  final double minimumArenaScale;
   final String watermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
@@ -44,6 +45,7 @@ class AppSettings {
     this.bloodColor = defaultBloodColor,
     this.arenaTitle = defaultArenaTitle,
     this.arenaSubtitle = defaultArenaSubtitle,
+    this.minimumArenaScale = defaultMinimumArenaScale,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
@@ -60,6 +62,7 @@ class AppSettings {
   static const Color defaultBloodColor = Color(0xFFD9152B);
   static const String defaultArenaTitle = 'dbsuarez';
   static const String defaultArenaSubtitle = 'bakbakan na';
+  static const double defaultMinimumArenaScale = 0.60;
   static const double defaultSlowMotionBeforeWinSeconds = 1.5;
   static const AppSettings defaults = AppSettings();
 
@@ -71,6 +74,7 @@ class AppSettings {
     Color? bloodColor,
     String? arenaTitle,
     String? arenaSubtitle,
+    double? minimumArenaScale,
     String? watermarkText,
     String? musicId,
     String? menuMusicId,
@@ -85,6 +89,7 @@ class AppSettings {
     bloodColor: bloodColor ?? this.bloodColor,
     arenaTitle: arenaTitle ?? this.arenaTitle,
     arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,
+    minimumArenaScale: minimumArenaScale ?? this.minimumArenaScale,
     watermarkText: watermarkText ?? this.watermarkText,
     musicId: musicId ?? this.musicId,
     menuMusicId: menuMusicId ?? this.menuMusicId,

@@ -675,6 +675,7 @@ void main() {
         arenaRadius: 300,
         seed: 9,
         shrinkingArena: true,
+        minimumArenaScale: 0.45,
         lookAhead: false,
         mode: MatchMode.arsenal,
         endlessBattle: true,
@@ -693,6 +694,10 @@ void main() {
           lessThanOrEqualTo(c.arenaRadius + 0.001),
         );
       }
+      for (var i = 0; i < MatchSimulationController.shrinkDurationSteps; i++) {
+        c.tick(1 / 60);
+      }
+      expect(c.arenaRadius, closeTo(135, 0.001));
     },
   );
 }

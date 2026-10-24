@@ -282,6 +282,47 @@ class PowerUpSprites {
     _animatedEffects[AnimatedEffect.campfire] = campfireFrames;
     campfireSheet.dispose();
 
+    // Dedicated boundary portal loop: the general effect sheet's portal is a
+    // burst, while this one remains open and visibly swirls at the arena rim.
+    final arenaPortalData = await rootBundle.load(
+      'assets/sprites/arena-portal.png',
+    );
+    final arenaPortalCodec = await ui.instantiateImageCodec(
+      arenaPortalData.buffer.asUint8List(),
+    );
+    final arenaPortalSheet = (await arenaPortalCodec.getNextFrame()).image;
+    arenaPortalCodec.dispose();
+    final arenaPortalCellWidth = arenaPortalSheet.width / 4.0;
+    final arenaPortalFrames = <ui.Image>[];
+    for (var frame = 0; frame < 4; frame++) {
+      final recorder = ui.PictureRecorder();
+      final source = Rect.fromLTWH(
+        frame * arenaPortalCellWidth,
+        0,
+        arenaPortalCellWidth,
+        arenaPortalSheet.height.toDouble(),
+      );
+      final fitted = applyBoxFit(
+        BoxFit.contain,
+        source.size,
+        const Size.square(92),
+      );
+      Canvas(recorder).drawImageRect(
+        arenaPortalSheet,
+        source,
+        Alignment.center.inscribe(
+          fitted.destination,
+          const Rect.fromLTWH(2, 2, 92, 92),
+        ),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      arenaPortalFrames.add(await picture.toImage(96, 96));
+      picture.dispose();
+    }
+    _animatedEffects[AnimatedEffect.portal] = arenaPortalFrames;
+    arenaPortalSheet.dispose();
+
     final maximumData = await rootBundle.load(
       'assets/sprites/maximum-power.png',
     );
@@ -513,6 +554,9 @@ class PowerUpSprites {
     ]);
     await loadExtraSheet('assets/sprites/energy-wave.png', [
       PowerUpKind.energyWave,
+    ]);
+    await loadExtraSheet('assets/sprites/flamethrower.png', [
+      PowerUpKind.flamethrower,
     ]);
   }
 

@@ -379,6 +379,51 @@ void main() {
     },
   );
 
+  test('a flamethrower sustains a damaging cone and leaves burn damage', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.flamethrower;
+
+    _run(c, PowerUpTuning.aimSteps + 2);
+
+    expect(c.powerUps!.flameCones, hasLength(1));
+    expect(a.held, PowerUpKind.flamethrower);
+    expect(b.life, lessThan(PowerUpTuning.arenaLife));
+    expect(b.burningLeft, greaterThan(0));
+    expect(_texts(c), contains('BURN IT DOWN!'));
+
+    _run(c, PowerUpTuning.flamethrowerSteps);
+    expect(c.powerUps!.flameCones, isEmpty);
+    expect(a.held, isNull);
+  });
+
+  test(
+    'Energy Wave pauses opponents, sweeps each once, then releases them',
+    () {
+      final c = _match();
+      final [a, b] = c.state.balls;
+      a.held = PowerUpKind.energyWave;
+      b.velocity = const Offset(0, 80);
+
+      _run(c, PowerUpTuning.aimSteps);
+      expect(c.powerUps!.energyWaveAttacks, hasLength(1));
+      expect(b.life, PowerUpTuning.arenaLife);
+
+      _run(c, EnergyWaveAttack.chargeSteps + 1);
+      expect(b.velocity, Offset.zero);
+      expect(
+        b.life,
+        PowerUpTuning.arenaLife -
+            PowerUpTuning.arenaDamage[PowerUpKind.energyWave]!,
+      );
+      expect(c.powerUps!.energyWaves, isNotEmpty);
+
+      _run(c, EnergyWaveAttack.hitIntervalSteps + 12);
+      expect(c.powerUps!.energyWaveAttacks, isEmpty);
+      expect(b.velocity.distance, lessThan(_arenaRadius * 0.5));
+    },
+  );
+
   test('a shield blocks a hook (and breaks); nothing is pulled', () {
     final c = _match();
     final [a, b] = c.state.balls;

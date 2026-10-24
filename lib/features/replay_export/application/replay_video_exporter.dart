@@ -70,6 +70,7 @@ class ReplayVideoExporter {
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     bool shrinkingArena = false,
+    double minimumArenaScale = 0.60,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
@@ -86,6 +87,7 @@ class ReplayVideoExporter {
       powerUpKinds: powerUps,
       tuning: tuning,
       shrinkingArena: shrinkingArena,
+      minimumArenaScale: minimumArenaScale,
       bloodColor: style.bloodColor,
     );
     final frameDelta = speedMultiplier / fps;

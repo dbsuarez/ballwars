@@ -69,12 +69,11 @@ class MatchSimulationController {
 
   final double initialArenaRadius;
   final bool shrinkingArena;
+  final double minimumArenaScale;
   final Color bloodColor;
 
   static const int shrinkGraceSteps = 10 * 60;
   static const int shrinkDurationSteps = 120 * 60;
-  static const double minimumArenaScale = 0.60;
-
   double get arenaRadius {
     if (!shrinkingArena || _stepCount <= shrinkGraceSteps) {
       return initialArenaRadius;
@@ -200,6 +199,7 @@ class MatchSimulationController {
     this.endlessBattle = false,
     this.mayhem = false,
     this.shrinkingArena = false,
+    this.minimumArenaScale = 0.60,
     this.bloodColor = const Color(0xFFD9152B),
   }) : initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
@@ -225,6 +225,7 @@ class MatchSimulationController {
         endlessBattle: endlessBattle,
         mayhem: mayhem,
         shrinkingArena: shrinkingArena,
+        minimumArenaScale: minimumArenaScale,
         bloodColor: bloodColor,
       );
       var lastCalmStep = 0;

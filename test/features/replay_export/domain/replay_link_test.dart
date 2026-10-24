@@ -520,9 +520,13 @@ void main() {
       speedMultiplier: 1,
       contestants: [_presets[0], _presets[1]],
       shrinkingArena: true,
+      minimumArenaScale: 0.45,
     );
     final uri = link.toUri(presetIds: {for (final b in _presets) b.id});
     expect(uri.queryParameters['shrink'], '1');
-    expect(ReplayLink.fromUri(uri, presets: _presets)!.shrinkingArena, isTrue);
+    expect(uri.queryParameters['minarena'], '0.45');
+    final decoded = ReplayLink.fromUri(uri, presets: _presets)!;
+    expect(decoded.shrinkingArena, isTrue);
+    expect(decoded.minimumArenaScale, 0.45);
   });
 }

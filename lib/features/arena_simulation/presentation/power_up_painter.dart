@@ -61,6 +61,7 @@ class PowerUpPainter {
     PowerUpKind.earthquake: Color(0xFFD88A39),
     PowerUpKind.tornado: Color(0xFFBCEEFF),
     PowerUpKind.energyWave: Color(0xFF31DFFF),
+    PowerUpKind.flamethrower: Color(0xFFFF6422),
   };
 
   /// The color a power-up is drawn in.
@@ -276,6 +277,46 @@ class PowerUpPainter {
         );
       }
     }
+    for (final attack in p.energyWaveAttacks) {
+      final charge = (attack.age / EnergyWaveAttack.chargeSteps).clamp(
+        0.0,
+        1.0,
+      );
+      final pulse = 0.86 + 0.14 * math.sin(state.step * 0.65).abs();
+      final orb = attack.owner.position;
+      canvas.drawCircle(
+        orb,
+        r * (0.55 + charge * 1.05) * pulse,
+        Paint()
+          ..shader = ui.Gradient.radial(orb, r * 1.7, [
+            Colors.white.withValues(alpha: 0.96),
+            const Color(0xFF2DE7FF).withValues(alpha: 0.88),
+            const Color(0x002468FF),
+          ]),
+      );
+      for (var ring = 0; ring < 3; ring++) {
+        canvas.drawCircle(
+          orb,
+          r * (1.3 + ring * 0.48 + charge * 0.35),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, r * 0.1)
+            ..color = const Color(
+              0xFF8EF5FF,
+            ).withValues(alpha: (0.7 - ring * 0.18) * pulse),
+        );
+      }
+      for (final target in attack.targets) {
+        canvas.drawCircle(
+          target.position,
+          target.radius * (1.18 + 0.06 * pulse),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, r * 0.1)
+            ..color = const Color(0xFF48DFFF).withValues(alpha: 0.62),
+        );
+      }
+    }
     for (final wave in p.energyWaves) {
       final fade = (1 - wave.age / 24).clamp(0.0, 1.0);
       final beamWidth = r * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());
@@ -315,6 +356,41 @@ class PowerUpPainter {
             ).withValues(alpha: fade * (0.8 - i * 0.2)),
         );
       }
+    }
+    for (final cone in p.flameCones) {
+      final direction = Offset.fromDirection(cone.angle);
+      final normal = Offset(-direction.dy, direction.dx);
+      for (var i = 0; i < 7; i++) {
+        final distance = r * (1.35 + i * 0.78);
+        final spread = i * r * 0.16;
+        final flutter = math.sin(state.step * 0.7 + i * 1.9) * spread;
+        final center =
+            cone.owner.position + direction * distance + normal * flutter;
+        final flame = PowerUpSprites.effectFrame(
+          AnimatedEffect.flame,
+          (state.step ~/ 3 + i) % 4,
+        );
+        if (flame != null) {
+          _drawEffect(
+            canvas,
+            flame,
+            center,
+            r * (0.58 + i * 0.13),
+            cone.angle,
+            opacity: 0.94 - i * 0.045,
+          );
+        }
+      }
+      canvas.drawArc(
+        Rect.fromCircle(
+          center: cone.owner.position,
+          radius: arenaRadius * 0.78,
+        ),
+        cone.angle - 0.48,
+        0.96,
+        true,
+        Paint()..color = const Color(0xFFFF5A1F).withValues(alpha: 0.08),
+      );
     }
 
     for (final e in p.explosions) {
@@ -403,24 +479,29 @@ class PowerUpPainter {
       final pulse =
           0.5 +
           0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
+      final anchor = portal.position.distance == 0
+          ? portal.position
+          : portal.position / portal.position.distance * arenaRadius;
       canvas.save();
-      canvas.translate(portal.position.dx, portal.position.dy);
+      canvas.translate(anchor.dx, anchor.dy);
       canvas.rotate(portalRotationFor(portal.position));
-      for (var i = 0; i < 3; i++) {
+      final sprite = PowerUpSprites.effectFrame(
+        AnimatedEffect.portal,
+        (state.step ~/ 4) % 4,
+      );
+      if (sprite != null) {
+        _drawEffect(canvas, sprite, Offset.zero, r * (1.42 + pulse * 0.08), 0);
+      } else {
         canvas.drawOval(
           Rect.fromCenter(
             center: Offset.zero,
-            width: r * (1.0 + i * 0.32 + pulse * 0.08),
-            height: r * (2.1 + i * 0.28 + pulse * 0.12),
+            width: r * (1.25 + pulse * 0.08),
+            height: r * (2.5 + pulse * 0.12),
           ),
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = math.max(1.5, r * 0.13)
-            ..color =
-                (i.isEven
-                        ? colorOf(PowerUpKind.portal)
-                        : const Color(0xFFFF58D6))
-                    .withValues(alpha: 0.9 - i * 0.22),
+            ..color = colorOf(PowerUpKind.portal),
         );
       }
       canvas.restore();

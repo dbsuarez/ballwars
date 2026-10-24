@@ -424,6 +424,15 @@ class FinisherProfile {
       style: FinisherStyle.projectile,
       symbol: 'K',
     ),
+    'Flamethrower': FinisherProfile(
+      move: 'Flamethrower',
+      yell: 'BURN IT DOWN!',
+      impactYell: 'SCORCHED!',
+      color: Color(0xFFFF5A20),
+      accent: Color(0xFFFFD23F),
+      style: FinisherStyle.barrage,
+      symbol: 'F',
+    ),
     'Collision': FinisherProfile(
       move: 'Collision',
       yell: 'FULL SPEED!',

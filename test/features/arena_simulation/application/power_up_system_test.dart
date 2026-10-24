@@ -305,7 +305,7 @@ void main() {
     final portal = c.powerUps!.portals.single;
     expect(
       portal.position.distance,
-      closeTo(_arenaRadius - c.powerUps!.fieldRadius * 1.6, 0.001),
+      closeTo(_arenaRadius - c.powerUps!.fieldRadius * 0.38, 0.001),
     );
   });
 

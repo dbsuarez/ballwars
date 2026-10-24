@@ -72,6 +72,8 @@ class PowerUpSystem {
   final List<EarthquakePulse> earthquakes = [];
   final List<Tornado> tornadoes = [];
   final List<EnergyWave> energyWaves = [];
+  final List<EnergyWaveAttack> energyWaveAttacks = [];
+  final List<FlameCone> flameCones = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
@@ -140,6 +142,10 @@ class PowerUpSystem {
       (tendril) =>
           identical(tendril.owner, ball) || identical(tendril.target, ball),
     );
+    energyWaveAttacks.removeWhere(
+      (attack) =>
+          identical(attack.owner, ball) || attack.targets.contains(ball),
+    );
   }
 
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
@@ -191,6 +197,8 @@ class PowerUpSystem {
       wave.age++;
     }
     energyWaves.removeWhere((wave) => wave.age >= 24);
+    _updateEnergyWaveAttacks();
+    _updateFlameCones();
     _countDown();
     _burn();
     _updateFireWallsAndDamageOverTime();
@@ -216,8 +224,12 @@ class PowerUpSystem {
     _turnShields();
   }
 
-  void _holdFiredWeapon(SimulationBall ball, PowerUpKind kind) {
-    (_firedWeaponHold[ball] ??= {})[kind] = firedWeaponHoldSteps;
+  void _holdFiredWeapon(
+    SimulationBall ball,
+    PowerUpKind kind, {
+    int steps = firedWeaponHoldSteps,
+  }) {
+    (_firedWeaponHold[ball] ??= {})[kind] = steps;
   }
 
   void _updateFiredWeaponHold() {
@@ -1021,7 +1033,8 @@ class PowerUpSystem {
       final distance =
           kind == PowerUpKind.spikeWall ||
               kind == PowerUpKind.stickyGoo ||
-              kind == PowerUpKind.poisonSwamp
+              kind == PowerUpKind.poisonSwamp ||
+              kind == PowerUpKind.portal
           ? match.arenaRadius - radius * 0.38
           : kind.isTrap
           ? match.arenaRadius - radius * 1.6
@@ -1283,6 +1296,9 @@ class PowerUpSystem {
             case PowerUpKind.energyWave:
               _fireEnergyWave(ball, target);
               _yell(ball, 'KA-ME-HA-ME-HAAA!');
+            case PowerUpKind.flamethrower:
+              _startFlamethrower(ball, target);
+              _yell(ball, 'BURN IT DOWN!');
             default:
               _fire(ball, target, kind, 0);
               _yell(ball, 'BANG!');
@@ -1470,28 +1486,140 @@ class PowerUpSystem {
   }
 
   void _fireEnergyWave(SimulationBall ball, SimulationBall target) {
-    final toward = target.position - ball.position;
-    final direction = toward.distance == 0
-        ? const Offset(1, 0)
-        : toward / toward.distance;
-    final start = ball.position + direction * ball.radius;
-    final end = start + direction * match.arenaRadius * 2.4;
-    energyWaves.add(EnergyWave(owner: ball, start: start, end: end));
-    weaponImpacts.add(WeaponImpact(position: start, strength: 1));
-    for (final other in match.state.balls) {
-      if (identical(other, ball) || !_alive(other) || other.isGhost) continue;
-      final distance = MathUtils.distancePointToSegmentSquared(
-        other.position,
-        start,
-        end,
-      );
-      if (distance > math.pow(other.radius + fieldRadius * 0.7, 2)) continue;
-      _hit(other, PowerUpKind.energyWave, at: other.position, from: ball);
-      other.velocity =
-          direction *
-          math.max(other.velocity.distance, match.arenaRadius * 1.4);
-    }
+    final targets =
+        match.state.balls
+            .where((other) => !identical(other, ball) && _alive(other))
+            .toList()
+          ..sort((a, b) {
+            final aa = math.atan2(
+              a.position.dy - ball.position.dy,
+              a.position.dx - ball.position.dx,
+            );
+            final ba = math.atan2(
+              b.position.dy - ball.position.dy,
+              b.position.dx - ball.position.dx,
+            );
+            return aa.compareTo(ba);
+          });
+    if (targets.isEmpty) return;
+    energyWaveAttacks.add(EnergyWaveAttack(owner: ball, targets: targets));
+    final total =
+        EnergyWaveAttack.chargeSteps +
+        targets.length * EnergyWaveAttack.hitIntervalSteps +
+        12;
+    _holdFiredWeapon(ball, PowerUpKind.energyWave, steps: total);
     shots++;
+  }
+
+  void _updateEnergyWaveAttacks() {
+    for (final attack in energyWaveAttacks.toList()) {
+      if (!_alive(attack.owner)) {
+        energyWaveAttacks.remove(attack);
+        continue;
+      }
+      attack.age++;
+      attack.owner.velocity = Offset.zero;
+      for (final target in attack.targets) {
+        if (_alive(target)) target.velocity = Offset.zero;
+      }
+      if (attack.age < EnergyWaveAttack.chargeSteps) continue;
+
+      final index =
+          (attack.age - EnergyWaveAttack.chargeSteps) ~/
+          EnergyWaveAttack.hitIntervalSteps;
+      if (index < attack.targets.length && index > attack.currentIndex) {
+        attack.currentIndex = index;
+        final target = attack.targets[index];
+        if (_alive(target)) {
+          final toward = target.position - attack.owner.position;
+          final direction = toward.distance == 0
+              ? const Offset(1, 0)
+              : toward / toward.distance;
+          final start = attack.owner.position + direction * attack.owner.radius;
+          final end = start + direction * match.arenaRadius * 2.4;
+          energyWaves.add(
+            EnergyWave(owner: attack.owner, start: start, end: end),
+          );
+          weaponImpacts.add(
+            WeaponImpact(position: target.position, strength: 1),
+          );
+          _hit(
+            target,
+            PowerUpKind.energyWave,
+            at: target.position,
+            from: attack.owner,
+            unavoidable: true,
+          );
+          _yell(target, 'BLASTED!');
+        }
+      }
+
+      final finishedAt =
+          EnergyWaveAttack.chargeSteps +
+          attack.targets.length * EnergyWaveAttack.hitIntervalSteps +
+          10;
+      if (attack.age < finishedAt) continue;
+      attack.owner.velocity = attack.savedOwnerVelocity;
+      for (final target in attack.targets) {
+        if (!_alive(target)) continue;
+        final away = target.position - attack.owner.position;
+        final saved = attack.savedVelocities[target] ?? Offset.zero;
+        target.velocity = away.distance == 0
+            ? saved
+            : away /
+                  away.distance *
+                  math.max(saved.distance, match.arenaRadius * 0.42);
+      }
+      energyWaveAttacks.remove(attack);
+    }
+  }
+
+  void _startFlamethrower(SimulationBall ball, SimulationBall target) {
+    final toward = target.position - ball.position;
+    flameCones.add(
+      FlameCone(owner: ball, angle: math.atan2(toward.dy, toward.dx)),
+    );
+    _holdFiredWeapon(
+      ball,
+      PowerUpKind.flamethrower,
+      steps: PowerUpTuning.flamethrowerSteps,
+    );
+    shots++;
+  }
+
+  void _updateFlameCones() {
+    for (final cone in flameCones.toList()) {
+      cone.age++;
+      if (cone.age >= PowerUpTuning.flamethrowerSteps || !_alive(cone.owner)) {
+        flameCones.remove(cone);
+        continue;
+      }
+      if (cone.age % PowerUpTuning.flamethrowerTickSteps != 1) continue;
+      for (final target in match.state.balls) {
+        if (identical(target, cone.owner) ||
+            !_alive(target) ||
+            target.isGhost) {
+          continue;
+        }
+        final offset = target.position - cone.owner.position;
+        if (offset.distance > match.arenaRadius * 0.78 + target.radius) {
+          continue;
+        }
+        final angle = math.atan2(offset.dy, offset.dx);
+        if (_wrap(angle - cone.angle).abs() > 0.48) continue;
+        _hit(
+          target,
+          PowerUpKind.flamethrower,
+          at: target.position,
+          from: cone.owner,
+        );
+        _applyDamageOverTime(
+          target,
+          PowerUpKind.flamethrower,
+          owner: cone.owner,
+        );
+      }
+    }
   }
 
   /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
@@ -1839,7 +1967,10 @@ class PowerUpSystem {
       const Color(0xFFFF4FD8),
       const Color(0xFF5BE7FF),
     ),
-    PowerUpKind.fireWall => (const Color(0xFFFF5A1F), const Color(0xFFFFD43B)),
+    PowerUpKind.fireWall || PowerUpKind.flamethrower => (
+      const Color(0xFFFF5A1F),
+      const Color(0xFFFFD43B),
+    ),
     PowerUpKind.poisonSwamp => (
       const Color(0xFF78A92B),
       const Color(0xFFCAFF54),

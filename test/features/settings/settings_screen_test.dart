@@ -163,7 +163,7 @@ void main() {
 
     expect(find.textContaining('down to 10 lines'), findsOneWidget);
     await tester.drag(
-      find.byType(Slider),
+      find.byKey(const ValueKey('slow-motion-slider')),
       const Offset(-2000, 0),
     ); // all the way left: off
     await tester.pumpAndSettle();
@@ -171,6 +171,38 @@ void main() {
     await tester.tap(find.text('Save slow motion'));
     await tester.pumpAndSettle();
     expect(repo.saved.single.slowMotionLines, 0);
+  });
+
+  testWidgets('the admin sets the minimum shrinking-arena size', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 6000);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final repo = _FakeRepo();
+    final settings = ValueNotifier(AppSettings.defaults);
+    await tester.pumpWidget(
+      AppSettingsScope(
+        settings: settings,
+        repository: repo,
+        adminAuth: _Admin(),
+        child: MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: const SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Minimum shrinking-arena size: 60%'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const ValueKey('minimum-arena-scale-slider')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save arena size'));
+    await tester.pumpAndSettle();
+    expect(repo.saved.single.minimumArenaScale, 0.40);
   });
 
   testWidgets('the admin can turn the arena ball glow off', (tester) async {

@@ -28,6 +28,7 @@ class ExportVideoDialog extends StatefulWidget {
   final Set<PowerUpKind>? powerUps;
   final PowerUpConfig tuning;
   final bool shrinkingArena;
+  final double minimumArenaScale;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -44,6 +45,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
     this.shrinkingArena = false,
+    this.minimumArenaScale = 0.60,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -63,6 +65,7 @@ class ExportVideoDialog extends StatefulWidget {
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     bool shrinkingArena = false,
+    double minimumArenaScale = 0.60,
     BallLook look = BallLook.pictures,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
@@ -88,6 +91,7 @@ class ExportVideoDialog extends StatefulWidget {
         powerUps: powerUps,
         tuning: tuning,
         shrinkingArena: shrinkingArena,
+        minimumArenaScale: minimumArenaScale,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -139,6 +143,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         powerUps: widget.powerUps,
         tuning: widget.tuning,
         shrinkingArena: widget.shrinkingArena,
+        minimumArenaScale: widget.minimumArenaScale,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {

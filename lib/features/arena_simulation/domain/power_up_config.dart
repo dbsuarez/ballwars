@@ -85,6 +85,7 @@ class PowerUpConfig {
     PowerUpKind.earthquake,
     PowerUpKind.tornado,
     PowerUpKind.energyWave,
+    PowerUpKind.flamethrower,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.
@@ -294,7 +295,8 @@ class PowerUpConfig {
       : kind == PowerUpKind.molotov ||
             kind == PowerUpKind.fireWall ||
             kind == PowerUpKind.poisonSwamp ||
-            kind == PowerUpKind.tornado
+            kind == PowerUpKind.tornado ||
+            kind == PowerUpKind.flamethrower
       ? ' (per burn tick)'
       : '';
 

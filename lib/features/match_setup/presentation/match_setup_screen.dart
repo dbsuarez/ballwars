@@ -341,6 +341,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             _mode == MatchMode.arsenal && (_endlessBattle || _mayhem),
         mayhem: _mode == MatchMode.arsenal && _mayhem,
         shrinkingArena: _shrinkingArena,
+        minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode == MatchMode.threads
             ? PowerUpConfig.defaults

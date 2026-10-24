@@ -14,6 +14,7 @@ void main() {
       PowerUpKind.ricochetDisc,
       PowerUpKind.threadHarpoon,
       PowerUpKind.energyWave,
+      PowerUpKind.flamethrower,
       PowerUpKind.prismLaser,
       PowerUpKind.swapCannon,
       PowerUpKind.bow,
@@ -102,6 +103,7 @@ void main() {
       PowerUpKind.bow,
       PowerUpKind.threadHarpoon,
       PowerUpKind.energyWave,
+      PowerUpKind.flamethrower,
     });
   });
 

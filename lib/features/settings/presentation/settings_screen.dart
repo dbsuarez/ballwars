@@ -34,6 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int? _slowMotionLines;
   bool? _slowBeforeWin;
   double? _slowSeconds;
+  double? _minimumArenaScale;
   bool _busy = false;
   String? _message;
 
@@ -358,6 +359,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       _Section(
+                        title: 'ARENA',
+                        child: Builder(
+                          builder: (context) {
+                            final scale =
+                                _minimumArenaScale ??
+                                settings.minimumArenaScale;
+                            final percent = (scale * 100).round();
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Minimum shrinking-arena size: $percent%',
+                                  key: const ValueKey(
+                                    'minimum-arena-scale-label',
+                                  ),
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w600,
+                                    color: c.text,
+                                  ),
+                                ),
+                                Slider(
+                                  key: const ValueKey(
+                                    'minimum-arena-scale-slider',
+                                  ),
+                                  value: scale,
+                                  min: 0.40,
+                                  max: 0.90,
+                                  divisions: 10,
+                                  label: '$percent%',
+                                  onChanged: _busy
+                                      ? null
+                                      : (value) => setState(
+                                          () => _minimumArenaScale = value,
+                                        ),
+                                ),
+                                Text(
+                                  'The arena starts at 100% and stops shrinking here. Default 60%.',
+                                  style: AppText.ui(
+                                    12,
+                                    FontWeight.w500,
+                                    color: c.muted,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed:
+                                      _busy ||
+                                          scale == settings.minimumArenaScale
+                                      ? null
+                                      : () => _save(
+                                          settings.copyWith(
+                                            minimumArenaScale: scale,
+                                          ),
+                                          done:
+                                              'Minimum arena size saved for everyone.',
+                                        ),
+                                  child: const Text('Save arena size'),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      _Section(
                         title: 'SLOW MOTION',
                         child: Builder(
                           builder: (context) {
@@ -410,6 +477,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 if (beforeWin)
                                   Slider(
+                                    key: const ValueKey('slow-motion-slider'),
                                     value: seconds,
                                     min: 0.5,
                                     max: 5,
@@ -422,6 +490,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   )
                                 else
                                   Slider(
+                                    key: const ValueKey('slow-motion-slider'),
                                     value: lines.toDouble(),
                                     min: 0,
                                     max: 60,

@@ -55,4 +55,36 @@ void main() {
   test('every weapon, power-up, and trap has a finisher profile', () {
     expect(FinisherProfile.coversEveryArenaItem, isTrue);
   });
+
+  testWidgets('grenade uses its own blast finisher instead of the hook move', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: HarpoonCinematic(
+          winner: const CustomBall(
+            id: 'a',
+            name: 'Ball A',
+            primaryColor: Colors.red,
+            glowColor: Colors.pink,
+          ),
+          loser: const CustomBall(
+            id: 'b',
+            name: 'Ball B',
+            primaryColor: Colors.blue,
+            glowColor: Colors.cyan,
+          ),
+          move: 'Grenade',
+          onFinished: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('FIRE IN THE HOLE!'), findsOneWidget);
+    expect(FinisherProfile.forMove('Grenade').style, FinisherStyle.blast);
+    await tester.pump(const Duration(milliseconds: 3300));
+    expect(find.text('KABOOM!'), findsOneWidget);
+    expect(find.text('UPPERCUT!'), findsNothing);
+  });
 }

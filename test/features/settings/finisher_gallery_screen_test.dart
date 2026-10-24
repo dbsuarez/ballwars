@@ -64,6 +64,12 @@ void main() {
 
     final playPistol = find.byKey(const ValueKey('play-finisher-Pistol'));
     expect(playPistol, findsOneWidget);
+    final playButton = tester.widget<IconButton>(playPistol);
+    expect(
+      playButton.style!.backgroundColor!.resolve({}),
+      FinisherProfile.forMove('Pistol').color,
+    );
+    expect(playButton.style!.foregroundColor!.resolve({}), Colors.black);
     await tester.ensureVisible(playPistol);
     await tester.tap(playPistol);
     await tester.pump();

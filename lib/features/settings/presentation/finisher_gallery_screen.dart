@@ -293,6 +293,11 @@ class _FinisherCard extends StatelessWidget {
               key: ValueKey('play-finisher-${profile.move}'),
               tooltip: 'Play ${profile.move} finisher',
               onPressed: onPlay,
+              style: IconButton.styleFrom(
+                backgroundColor: profile.color,
+                foregroundColor: Colors.black,
+                side: BorderSide(color: profile.accent, width: 2),
+              ),
               icon: const Icon(Icons.play_arrow_rounded),
             ),
           ],

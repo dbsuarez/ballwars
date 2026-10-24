@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../domain/power_up.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import 'finisher_profile.dart';
+import 'power_up_sprites.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
 class HarpoonCinematic extends StatefulWidget {
@@ -91,12 +93,21 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
               final centerY = bounds.maxHeight * 0.58;
               final winnerX = bounds.maxWidth * 0.18;
               final loserStartX = bounds.maxWidth * 0.78;
-              final hook = _range(t, 0.14, 0.25);
+              // Hook snaps out early so it can pull the opponent in. Other
+              // items stay visible in flight until their impact beat.
+              final hook = _range(
+                t,
+                0.14,
+                profile.style == FinisherStyle.hook ? 0.25 : 0.72,
+              );
               final pull = Curves.easeInCubic.transform(_range(t, 0.32, 0.62));
               final windUp = Curves.easeInOut.transform(_range(t, 0.62, 0.73));
               final uppercut = Curves.easeOutQuart.transform(
                 _range(t, 0.73, 0.9),
               );
+              final usesUppercut =
+                  profile.style == FinisherStyle.hook ||
+                  profile.style == FinisherStyle.melee;
               final closesDistance =
                   profile.style == FinisherStyle.hook ||
                   profile.style == FinisherStyle.melee;
@@ -105,10 +116,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                         (winnerX + diameter * 1.28 - loserStartX) * pull
                   : loserStartX;
               final loserY =
-                  centerY -
-                  uppercut *
-                      diameter *
-                      (profile.style == FinisherStyle.trap ? 0.65 : 1.4);
+                  centerY - (usesUppercut ? uppercut : 0) * diameter * 1.4;
               final winnerY = centerY + windUp * diameter * 0.12;
               final dash = profile.style == FinisherStyle.melee ? pull : 0.0;
               final winnerCenter = Offset(
@@ -282,7 +290,7 @@ class _FinisherPainter extends CustomPainter {
       loserCenter,
       loser.primaryColor,
       dizzy: true,
-      rotation: uppercutProgress * 0.55,
+      rotation: _usesUppercut ? uppercutProgress * 0.55 : 0,
     );
     _paintWinner(canvas);
   }
@@ -301,12 +309,7 @@ class _FinisherPainter extends CustomPainter {
           final shots = profile.style == FinisherStyle.barrage ? 7 : 1;
           for (var i = 0; i < shots; i++) {
             final spread = (i - (shots - 1) / 2) * radius * 0.13;
-            _paintSymbol(
-              canvas,
-              to + Offset(0, spread),
-              profile.symbol,
-              radius * 0.42,
-            );
+            _paintItem(canvas, to + Offset(0, spread), radius * 0.62);
           }
         }
       case FinisherStyle.melee:
@@ -322,9 +325,16 @@ class _FinisherPainter extends CustomPainter {
           );
         }
       case FinisherStyle.blast:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final arc = math.sin(hookProgress * math.pi) * radius * 1.15;
+          _paintItem(canvas, to - Offset(0, arc), radius * 0.9);
+        }
+        if (impactProgress > 0) {
+          _paintExplosion(canvas, loserCenter, impactProgress);
+        }
       case FinisherStyle.trap:
         if (hookProgress > 0.35) {
-          _paintSymbol(canvas, loserCenter, profile.symbol, radius * 0.75);
+          _paintItem(canvas, loserCenter, radius * 1.15);
         }
       case FinisherStyle.aura:
         final ring = Paint()
@@ -350,6 +360,45 @@ class _FinisherPainter extends CustomPainter {
           ring,
         );
     }
+  }
+
+  bool get _usesUppercut =>
+      profile.style == FinisherStyle.hook ||
+      profile.style == FinisherStyle.melee;
+
+  PowerUpKind? get _kind {
+    for (final kind in PowerUpKind.values) {
+      if (kind.label == profile.move) return kind;
+    }
+    return null;
+  }
+
+  void _paintItem(Canvas canvas, Offset center, double size) {
+    final kind = _kind;
+    if (kind == null) {
+      _paintSymbol(canvas, center, profile.symbol, size * 0.7);
+      return;
+    }
+    PowerUpSprites.paintIcon(
+      canvas,
+      kind,
+      Rect.fromCenter(center: center, width: size, height: size),
+    );
+  }
+
+  void _paintExplosion(Canvas canvas, Offset center, double progress) {
+    final burst = Curves.easeOut.transform(progress);
+    final fade = 1 - progress;
+    canvas.drawCircle(
+      center,
+      radius * (0.45 + burst * 1.8),
+      Paint()..color = profile.color.withValues(alpha: fade * 0.78),
+    );
+    canvas.drawCircle(
+      center,
+      radius * (0.18 + burst * 1.05),
+      Paint()..color = profile.accent.withValues(alpha: fade * 0.95),
+    );
   }
 
   void _paintSymbol(Canvas canvas, Offset center, String symbol, double size) {
@@ -390,7 +439,9 @@ class _FinisherPainter extends CustomPainter {
 
   void _paintWinner(Canvas canvas) {
     final glove = winnerCenter + Offset(radius * 0.88, radius * 0.18);
-    final raisedGlove = glove - Offset(0, uppercutProgress * radius * 1.22);
+    final raisedGlove =
+        glove -
+        Offset(0, (_usesUppercut ? uppercutProgress : 0) * radius * 1.22);
     _paintSmiley(canvas, winnerCenter, winner.primaryColor);
     final arm = Paint()
       ..color = const Color(0xFF111114)

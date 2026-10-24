@@ -1357,7 +1357,7 @@ class PowerUpSystem {
     match.state.particles.spawnBlood(
       origin: impact,
       direction: target.position - (from?.position ?? impact),
-      color: target.config.primaryColor,
+      color: const Color(0xFFD9152B),
       rng: rng,
     );
   }

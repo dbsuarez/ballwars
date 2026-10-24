@@ -557,6 +557,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                   child: HarpoonCinematic(
                     winner: _winnerBall!,
                     loser: _loserBall!,
+                    onHookFired: _audio.shotgun,
+                    onImpact: () {
+                      _audio.hit();
+                      _audio.collide();
+                    },
                     onFinished: () {
                       if (!mounted) return;
                       _audio.win();
@@ -605,6 +610,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       _copyReplayLink();
                     },
                     onReplay: _replay,
+                    onReplayFinisher:
+                        _controller.winningMove == PowerUpKind.hook.label &&
+                            _loserBall != null
+                        ? () {
+                            _audio.click();
+                            setState(() => _showHarpoonCinematic = true);
+                          }
+                        : null,
                     onPlayAgain: _playAgain,
                     round: widget.config.winsNeeded > 1 ? _round : null,
                     seriesOver: _seriesOver,

@@ -5,7 +5,12 @@ import 'package:ballwars/features/arena_simulation/presentation/winner_modal.dar
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 
 void main() {
-  const winner = CustomBall(id: 'a', name: 'Alpha', primaryColor: Colors.teal, glowColor: Colors.cyan);
+  const winner = CustomBall(
+    id: 'a',
+    name: 'Alpha',
+    primaryColor: Colors.teal,
+    glowColor: Colors.cyan,
+  );
 
   Future<void> pump(
     WidgetTester tester, {
@@ -38,18 +43,51 @@ void main() {
     expect(find.text('Winning move: Pistol'), findsOneWidget);
   });
 
-  testWidgets('asks whether to turn effects off; the answer and "don\'t ask again" are passed on', (tester) async {
-    (bool, bool)? answer;
-    await pump(tester, onSlowAnswer: (off, dontAsk) => answer = (off, dontAsk));
-    expect(find.text('Game running slow?'), findsOneWidget);
-
-    await tester.tap(find.text("Don't ask again"));
-    await tester.pump();
-    await tester.tap(find.text('Turn off'));
-    await tester.pump();
-    expect(answer, (true, true));
-    expect(find.text('Game running slow?'), findsNothing);
+  testWidgets('can replay a finishing move without replaying the match', (
+    tester,
+  ) async {
+    var replayed = false;
+    tester.view.physicalSize = const Size(1080, 2200);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Scaffold(
+          body: WinnerModal(
+            winner: winner,
+            winningMove: 'Hook',
+            onReplay: () {},
+            onReplayFinisher: () => replayed = true,
+            onPlayAgain: () {},
+            onExit: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byKey(const ValueKey('replay-finisher')));
+    expect(replayed, isTrue);
   });
+
+  testWidgets(
+    'asks whether to turn effects off; the answer and "don\'t ask again" are passed on',
+    (tester) async {
+      (bool, bool)? answer;
+      await pump(
+        tester,
+        onSlowAnswer: (off, dontAsk) => answer = (off, dontAsk),
+      );
+      expect(find.text('Game running slow?'), findsOneWidget);
+
+      await tester.tap(find.text("Don't ask again"));
+      await tester.pump();
+      await tester.tap(find.text('Turn off'));
+      await tester.pump();
+      expect(answer, (true, true));
+      expect(find.text('Game running slow?'), findsNothing);
+    },
+  );
 
   testWidgets('No keeps effects on', (tester) async {
     (bool, bool)? answer;
@@ -64,12 +102,15 @@ void main() {
     expect(find.text('Game running slow?'), findsNothing);
   });
 
-  testWidgets('the confetti falls for a while, fades and stops, so the card stops redrawing', (tester) async {
-    await pump(tester);
-    expect(find.byType(CustomPaint), findsWidgets);
-    expect(tester.hasRunningAnimations, isTrue);
-    await tester.pump(WinnerModal.confettiDuration);
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(tester.hasRunningAnimations, isFalse);
-  });
+  testWidgets(
+    'the confetti falls for a while, fades and stops, so the card stops redrawing',
+    (tester) async {
+      await pump(tester);
+      expect(find.byType(CustomPaint), findsWidgets);
+      expect(tester.hasRunningAnimations, isTrue);
+      await tester.pump(WinnerModal.confettiDuration);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.hasRunningAnimations, isFalse);
+    },
+  );
 }

@@ -19,6 +19,9 @@ class WinnerModal extends StatefulWidget {
   /// Replay: watch this exact match again.
   final VoidCallback onReplay;
 
+  /// Replays only the winning finishing move when one has a cinematic.
+  final VoidCallback? onReplayFinisher;
+
   /// Play again (or Start over in a series): a new simulation.
   final VoidCallback onPlayAgain;
   final VoidCallback onExit;
@@ -52,6 +55,7 @@ class WinnerModal extends StatefulWidget {
     this.winningMove,
     this.question,
     required this.onReplay,
+    this.onReplayFinisher,
     required this.onPlayAgain,
     required this.onExit,
     this.onSaveVideo,
@@ -334,6 +338,15 @@ class _WinnerModalState extends State<WinnerModal>
                           'Winning move: ${widget.winningMove}',
                           textAlign: TextAlign.center,
                           style: AppText.ui(14, FontWeight.w700, color: c.text),
+                        ),
+                      ],
+                      if (widget.onReplayFinisher != null) ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          key: const ValueKey('replay-finisher'),
+                          onPressed: widget.onReplayFinisher,
+                          icon: const Icon(Icons.replay_rounded),
+                          label: const Text('Replay finisher'),
                         ),
                       ],
                       if (score != null) ...[

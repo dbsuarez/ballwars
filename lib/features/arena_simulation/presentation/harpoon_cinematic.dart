@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import 'finisher_profile.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
 class HarpoonCinematic extends StatefulWidget {
@@ -11,6 +12,7 @@ class HarpoonCinematic extends StatefulWidget {
     super.key,
     required this.winner,
     required this.loser,
+    required this.move,
     required this.onFinished,
     this.onHookFired,
     this.onImpact,
@@ -18,6 +20,7 @@ class HarpoonCinematic extends StatefulWidget {
 
   final CustomBall winner;
   final CustomBall loser;
+  final String move;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -64,12 +67,17 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
   @override
   Widget build(BuildContext context) {
     final colors = BallWarsColors.of(context);
+    final profile = FinisherProfile.forMove(widget.move);
     return Semantics(
       label: 'Hook finishing move cinematic',
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            colors: [colors.surfaceHigh, const Color(0xFF190D13), Colors.black],
+            colors: [
+              Color.lerp(colors.surfaceHigh, profile.color, 0.18)!,
+              Color.lerp(const Color(0xFF190D13), profile.color, 0.1)!,
+              Colors.black,
+            ],
             stops: const [0, 0.62, 1],
           ),
         ),
@@ -89,12 +97,24 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
               final uppercut = Curves.easeOutQuart.transform(
                 _range(t, 0.73, 0.9),
               );
-              final loserX =
-                  loserStartX +
-                  (winnerX + diameter * 1.28 - loserStartX) * pull;
-              final loserY = centerY - uppercut * diameter * 1.65;
+              final closesDistance =
+                  profile.style == FinisherStyle.hook ||
+                  profile.style == FinisherStyle.melee;
+              final loserX = closesDistance
+                  ? loserStartX +
+                        (winnerX + diameter * 1.28 - loserStartX) * pull
+                  : loserStartX;
+              final loserY =
+                  centerY -
+                  uppercut *
+                      diameter *
+                      (profile.style == FinisherStyle.trap ? 0.65 : 1.4);
               final winnerY = centerY + windUp * diameter * 0.12;
-              final winnerCenter = Offset(winnerX, winnerY);
+              final dash = profile.style == FinisherStyle.melee ? pull : 0.0;
+              final winnerCenter = Offset(
+                winnerX + (loserStartX - winnerX - diameter * 1.3) * dash,
+                winnerY,
+              );
               final loserCenter = Offset(loserX, loserY);
               final impact = _range(t, 0.73, 0.82);
               final shake = impact < 1
@@ -118,6 +138,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                           pullProgress: pull,
                           uppercutProgress: uppercut,
                           impactProgress: impact,
+                          profile: profile,
                         ),
                       ),
                     ),
@@ -128,7 +149,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                         style: AppText.ui(
                           14,
                           FontWeight.w900,
-                          color: const Color(0xFFFF4B3E),
+                          color: profile.color,
                           letterSpacing: 4,
                         ),
                       ),
@@ -140,8 +161,9 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                       child: Center(
                         child: _YellBubble(
                           key: const ValueKey('harpoon-cinematic-yell'),
-                          text: t >= 0.7 ? 'UPPERCUT!' : 'COME OVER HERE!',
+                          text: t >= 0.7 ? profile.impactYell : profile.yell,
                           impact: t >= 0.7,
+                          color: profile.accent,
                         ),
                       ),
                     ),
@@ -187,10 +209,16 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
 }
 
 class _YellBubble extends StatelessWidget {
-  const _YellBubble({super.key, required this.text, required this.impact});
+  const _YellBubble({
+    super.key,
+    required this.text,
+    required this.impact,
+    required this.color,
+  });
 
   final String text;
   final bool impact;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Transform.rotate(
@@ -198,12 +226,10 @@ class _YellBubble extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
       decoration: BoxDecoration(
-        color: impact ? const Color(0xFFFFD43B) : Colors.white,
+        color: impact ? color : Colors.white,
         border: Border.all(color: Colors.black, width: 4),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: const [
-          BoxShadow(color: Color(0xFFFF4B3E), offset: Offset(6, 6)),
-        ],
+        boxShadow: [BoxShadow(color: color, offset: const Offset(6, 6))],
       ),
       child: Text(
         text,
@@ -230,6 +256,7 @@ class _FinisherPainter extends CustomPainter {
     required this.pullProgress,
     required this.uppercutProgress,
     required this.impactProgress,
+    required this.profile,
   });
 
   final CustomBall winner;
@@ -241,6 +268,7 @@ class _FinisherPainter extends CustomPainter {
   final double pullProgress;
   final double uppercutProgress;
   final double impactProgress;
+  final FinisherProfile profile;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -248,11 +276,7 @@ class _FinisherPainter extends CustomPainter {
     if (impactProgress > 0 && impactProgress < 1) {
       _paintImpact(canvas, loserCenter, impactProgress);
     }
-    final lineStart = winnerCenter + Offset(radius * 0.65, -radius * 0.05);
-    final lineEnd = Offset.lerp(lineStart, loserCenter, hookProgress)!;
-    if (hookProgress > 0 && uppercutProgress < 0.72) {
-      _paintChainAndHook(canvas, lineStart, lineEnd);
-    }
+    _paintMoveEffect(canvas);
     _paintSmiley(
       canvas,
       loserCenter,
@@ -261,6 +285,90 @@ class _FinisherPainter extends CustomPainter {
       rotation: uppercutProgress * 0.55,
     );
     _paintWinner(canvas);
+  }
+
+  void _paintMoveEffect(Canvas canvas) {
+    final from = winnerCenter + Offset(radius * 0.65, -radius * 0.05);
+    final to = Offset.lerp(from, loserCenter, hookProgress)!;
+    switch (profile.style) {
+      case FinisherStyle.hook:
+        if (hookProgress > 0 && uppercutProgress < 0.72) {
+          _paintChainAndHook(canvas, from, to);
+        }
+      case FinisherStyle.projectile:
+      case FinisherStyle.barrage:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final shots = profile.style == FinisherStyle.barrage ? 7 : 1;
+          for (var i = 0; i < shots; i++) {
+            final spread = (i - (shots - 1) / 2) * radius * 0.13;
+            _paintSymbol(
+              canvas,
+              to + Offset(0, spread),
+              profile.symbol,
+              radius * 0.42,
+            );
+          }
+        }
+      case FinisherStyle.melee:
+        if (uppercutProgress > 0) {
+          final slash = Paint()
+            ..color = profile.accent.withValues(alpha: 1 - impactProgress)
+            ..strokeWidth = 9
+            ..strokeCap = StrokeCap.round;
+          canvas.drawLine(
+            loserCenter + Offset(-radius * 0.8, radius * 0.8),
+            loserCenter + Offset(radius * 0.8, -radius * 0.8),
+            slash,
+          );
+        }
+      case FinisherStyle.blast:
+      case FinisherStyle.trap:
+        if (hookProgress > 0.35) {
+          _paintSymbol(canvas, loserCenter, profile.symbol, radius * 0.75);
+        }
+      case FinisherStyle.aura:
+        final ring = Paint()
+          ..color = profile.color.withValues(alpha: 0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 7;
+        canvas.drawCircle(
+          winnerCenter,
+          radius * (1.2 + hookProgress * 1.5),
+          ring,
+        );
+      case FinisherStyle.warp:
+        final ring = Paint()
+          ..color = profile.color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8;
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: loserCenter,
+            width: radius * (0.5 + hookProgress * 2),
+            height: radius * (1.5 + hookProgress),
+          ),
+          ring,
+        );
+    }
+  }
+
+  void _paintSymbol(Canvas canvas, Offset center, String symbol, double size) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: symbol,
+        style: TextStyle(
+          color: profile.accent,
+          fontSize: size,
+          fontWeight: FontWeight.w900,
+          shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      center - Offset(painter.width / 2, painter.height / 2),
+    );
   }
 
   void _paintSpeedLines(Canvas canvas) {
@@ -439,7 +547,7 @@ class _FinisherPainter extends CustomPainter {
   void _paintImpact(Canvas canvas, Offset center, double progress) {
     final alpha = (1 - progress).clamp(0.0, 1.0);
     final rays = Paint()
-      ..color = const Color(0xFFFFD43B).withValues(alpha: alpha)
+      ..color = profile.accent.withValues(alpha: alpha)
       ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;
     for (var i = 0; i < 16; i++) {
@@ -465,5 +573,6 @@ class _FinisherPainter extends CustomPainter {
       old.hookProgress != hookProgress ||
       old.pullProgress != pullProgress ||
       old.uppercutProgress != uppercutProgress ||
-      old.impactProgress != impactProgress;
+      old.impactProgress != impactProgress ||
+      old.profile != profile;
 }

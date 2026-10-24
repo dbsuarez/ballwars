@@ -6,7 +6,6 @@ import '../../settings/presentation/app_settings_scope.dart';
 import '../application/match_simulation_controller.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
-import '../domain/power_up.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'power_up_sprites.dart';
 import 'ball_face_expression.dart';
@@ -15,6 +14,7 @@ import 'scoreboard_overlay.dart';
 import 'widgets/match_status_header.dart';
 import 'winner_modal.dart';
 import 'harpoon_cinematic.dart';
+import 'finisher_profile.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_management/data/local_ball_repository.dart';
@@ -244,12 +244,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         // from: 0, so the dissolve plays again after a RETRY.
         _dissolveController.forward(from: 0).then((_) {
           if (!current()) return;
-          final harpoonFinish =
-              _controller.winningMove == PowerUpKind.hook.label;
-          if (!harpoonFinish) _audio.win();
+          final hasFinisher = _controller.winningMove != null;
+          if (!hasFinisher) _audio.win();
           setState(() {
             _dissolveComplete = true;
-            _showHarpoonCinematic = harpoonFinish;
+            _showHarpoonCinematic = hasFinisher;
             if (!_roundCounted && _winnerBall != null) {
               _roundCounted = true;
               _roundWins.update(
@@ -299,6 +298,50 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       p.blasts,
       p.pickups,
     );
+  }
+
+  void _playFinisherLaunch() {
+    final profile = FinisherProfile.forMove(
+      _controller.winningMove ?? 'Collision',
+    );
+    switch (profile.style) {
+      case FinisherStyle.projectile:
+        _audio.shot();
+      case FinisherStyle.barrage:
+        profile.move == 'Gatling' ? _audio.gatling() : _audio.shotgun();
+      case FinisherStyle.melee:
+        _audio.slash();
+      case FinisherStyle.blast:
+      case FinisherStyle.trap:
+        _audio.bomb();
+      case FinisherStyle.hook:
+        _audio.shotgun();
+      case FinisherStyle.aura:
+        _audio.shield();
+      case FinisherStyle.warp:
+        _audio.pickup();
+    }
+  }
+
+  void _playFinisherImpact() {
+    final profile = FinisherProfile.forMove(
+      _controller.winningMove ?? 'Collision',
+    );
+    switch (profile.style) {
+      case FinisherStyle.projectile:
+      case FinisherStyle.barrage:
+      case FinisherStyle.hook:
+        _audio.hit();
+      case FinisherStyle.melee:
+        _audio.collide();
+      case FinisherStyle.blast:
+      case FinisherStyle.trap:
+        _audio.bomb();
+      case FinisherStyle.aura:
+        _audio.shield();
+      case FinisherStyle.warp:
+        _audio.pickup();
+    }
   }
 
   /// Back from the background (phone unlocked): the next frame is not
@@ -557,11 +600,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                   child: HarpoonCinematic(
                     winner: _winnerBall!,
                     loser: _loserBall!,
-                    onHookFired: _audio.shotgun,
-                    onImpact: () {
-                      _audio.hit();
-                      _audio.collide();
-                    },
+                    move: _controller.winningMove ?? 'Collision',
+                    onHookFired: _playFinisherLaunch,
+                    onImpact: _playFinisherImpact,
                     onFinished: () {
                       if (!mounted) return;
                       _audio.win();
@@ -611,8 +652,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     },
                     onReplay: _replay,
                     onReplayFinisher:
-                        _controller.winningMove == PowerUpKind.hook.label &&
-                            _loserBall != null
+                        _controller.winningMove != null && _loserBall != null
                         ? () {
                             _audio.click();
                             setState(() => _showHarpoonCinematic = true);

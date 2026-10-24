@@ -1,5 +1,6 @@
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
+import 'package:ballwars/features/arena_simulation/presentation/finisher_profile.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,7 @@ void main() {
               primaryColor: Colors.blue,
               glowColor: Colors.cyan,
             ),
+            move: 'Hook',
             onFinished: () => finished = true,
             onHookFired: () => hookSounds++,
             onImpact: () => impacts++,
@@ -49,4 +51,8 @@ void main() {
       expect(finished, isTrue);
     },
   );
+
+  test('every weapon, power-up, and trap has a finisher profile', () {
+    expect(FinisherProfile.coversEveryArenaItem, isTrue);
+  });
 }

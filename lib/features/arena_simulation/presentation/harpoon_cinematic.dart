@@ -696,6 +696,48 @@ class _FinisherPainter extends CustomPainter {
         if (impactProgress > 0) {
           _paintExplosion(canvas, loserCenter, impactProgress);
         }
+      case PowerUpKind.omegaTendrils:
+        if (hookProgress > 0) {
+          for (var i = -2; i <= 2; i++) {
+            final bend = i * radius * 0.32;
+            final end = Offset.lerp(
+              from,
+              loserCenter + Offset(bend * 0.2, bend),
+              hookProgress,
+            )!;
+            final path = Path()
+              ..moveTo(from.dx, from.dy)
+              ..cubicTo(
+                from.dx + radius * 1.2,
+                from.dy + bend,
+                end.dx - radius,
+                end.dy - bend * 0.4,
+                end.dx,
+                end.dy,
+              );
+            canvas.drawPath(
+              path,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 7
+                ..strokeCap = StrokeCap.round
+                ..color = i.isEven ? profile.color : profile.accent,
+            );
+          }
+          final sprite = PowerUpSprites.omegaTendrilsAttack;
+          if (sprite != null) {
+            _paintRaster(
+              canvas,
+              sprite,
+              loserCenter,
+              radius * 1.9,
+              rotation: hookProgress * 0.35,
+            );
+          }
+        }
+        if (impactProgress > 0) {
+          _paintExplosion(canvas, loserCenter, impactProgress);
+        }
       default:
         return false;
     }

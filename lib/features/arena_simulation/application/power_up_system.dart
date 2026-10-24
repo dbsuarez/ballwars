@@ -70,6 +70,7 @@ class PowerUpSystem {
 
   /// Balls being reeled in by a hook.
   final List<HookPull> pulls = [];
+  final List<OmegaTendril> omegaTendrils = [];
 
   /// How many power-ups balls have picked up so far (the screen plays a sound when it goes up).
   int pickups = 0;
@@ -126,6 +127,10 @@ class PowerUpSystem {
     pulls.removeWhere(
       (pull) => identical(pull.owner, ball) || identical(pull.target, ball),
     );
+    omegaTendrils.removeWhere(
+      (tendril) =>
+          identical(tendril.owner, ball) || identical(tendril.target, ball),
+    );
   }
 
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
@@ -170,6 +175,7 @@ class PowerUpSystem {
   /// (a speed boost picked up in step N runs from step N + 1).
   void step() {
     _updateFiredWeaponHold();
+    _updateOmegaTendrils();
     _countDown();
     _burn();
     _updateStickyGoo();
@@ -266,7 +272,7 @@ class PowerUpSystem {
         _yell(ball, 'TIME OUT!');
       case PowerUpKind.vampire:
         ball.vampireLeft = PowerUpTuning.specialEffectSteps;
-        _yell(ball, 'I VANT YOUR POWER!');
+        _yell(ball, 'I WANT YOUR POWER!');
       case PowerUpKind.mirror:
         ball.mirrorCharges++;
         _yell(ball, 'RETURN TO SENDER!');
@@ -283,12 +289,67 @@ class PowerUpSystem {
       case PowerUpKind.goldenArmor:
         ball.goldenArmorHits = 2;
         _yell(ball, 'GOLDEN GUARD!');
+      case PowerUpKind.omegaTendrils:
+        _launchOmegaTendrils(ball);
+        _yell(ball, 'NO ONE ESCAPES!');
       default:
         ball.equipWeapon(p.kind, dualWield: match.dualWield);
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
         if (p.kind.isBlade && match.mode == MatchMode.allOut) {
           ball.sweepLeft = PowerUpTuning.sweepSteps;
         }
+    }
+  }
+
+  void _launchOmegaTendrils(SimulationBall owner) {
+    for (final target in match.state.balls) {
+      if (identical(target, owner) || !_alive(target)) continue;
+      omegaTendrils.add(
+        OmegaTendril(
+          owner: owner,
+          target: target,
+          savedVelocity: target.velocity,
+        ),
+      );
+    }
+  }
+
+  void _updateOmegaTendrils() {
+    for (final tendril in omegaTendrils.toList()) {
+      final target = tendril.target;
+      if (!_alive(tendril.owner) || !_alive(target)) {
+        omegaTendrils.remove(tendril);
+        continue;
+      }
+      target.velocity = Offset.zero;
+      tendril.stepsLeft--;
+      if (tendril.stepsLeft > 0) continue;
+
+      target.position += Offset(0, target.radius * 0.55);
+      target.velocity = Offset(
+        tendril.savedVelocity.dx * 0.25,
+        math.max(tendril.savedVelocity.distance, match.arenaRadius * 0.45),
+      );
+      final lost = match.damage(
+        target,
+        _t.arenaDamage(PowerUpKind.omegaTendrils),
+        attacker: tendril.owner,
+        move: PowerUpKind.omegaTendrils.label,
+      );
+      _showDamage(target, target.position, lost, 0);
+      target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
+      match.state.particles.spawnBlood(
+        origin: target.position,
+        direction: const Offset(0, 1),
+        color: match.bloodColor,
+        rng: rng,
+      );
+      explosions.add(
+        Explosion(position: target.position, radius: target.radius * 1.8),
+      );
+      blasts++;
+      _yell(target, 'SLAMMED!');
+      omegaTendrils.remove(tendril);
     }
   }
 

@@ -40,7 +40,8 @@ enum PowerUpKind {
   bow('Bow'),
   stickyGoo('Sticky Goo'),
   molotov('Molotov'),
-  rocketLauncher('Rocket Launcher');
+  rocketLauncher('Rocket Launcher'),
+  omegaTendrils('Omega Tendrils');
 
   const PowerUpKind(this.label);
 
@@ -400,6 +401,7 @@ class PowerUpTuning {
     PowerUpKind.bow: 4,
     PowerUpKind.molotov: 6,
     PowerUpKind.rocketLauncher: 45,
+    PowerUpKind.omegaTendrils: 12,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -428,6 +430,7 @@ class PowerUpTuning {
     PowerUpKind.bow: 1,
     PowerUpKind.molotov: 2,
     PowerUpKind.rocketLauncher: 16,
+    PowerUpKind.omegaTendrils: 3,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -473,6 +476,8 @@ String powerUpDescription(
       '$aim throws it where the target is. The area burns for 3 s, dealing ${dmg(kind)} every 0.5 s.',
     PowerUpKind.rocketLauncher =>
       '$aim fires one homing missile that pursues its target until it hits: ${dmg(kind)}.',
+    PowerUpKind.omegaTendrils =>
+      'Cheat power: unavoidable tendrils grab every opponent and slam them for ${dmg(kind)}.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '
@@ -527,6 +532,20 @@ String powerUpDescription(
     PowerUpKind.stickyGoo =>
       'Holds the first ball that touches it in place for 2 s.',
   };
+}
+
+class OmegaTendril {
+  OmegaTendril({
+    required this.owner,
+    required this.target,
+    required this.savedVelocity,
+    this.stepsLeft = 36,
+  });
+
+  final SimulationBall owner;
+  final SimulationBall target;
+  final Offset savedVelocity;
+  int stepsLeft;
 }
 
 /// Arsenal: how damage grows with more balls (matches [MatchSimulationController.damage]).

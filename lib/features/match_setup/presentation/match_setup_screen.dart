@@ -39,7 +39,7 @@ class MatchSetupScreen extends StatefulWidget {
 }
 
 class _MatchSetupScreenState extends State<MatchSetupScreen> {
-  static const int _maxBalls = 4;
+  int get _maxBalls => _mayhem ? 6 : 4;
   static const int _searchFrom = 20;
   static const List<double> _speeds = [0.5, 1, 2];
 
@@ -63,6 +63,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   Set<PowerUpKind>? _powerUps;
   bool _dualWield = false;
   bool _endlessBattle = false;
+  bool _mayhem = false;
   bool _shrinkingArena = false;
 
   /// Which kind of categories the dropdown lists; remembered per device.
@@ -95,6 +96,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final look = BallLook.byName(await DevicePrefs.read('look'));
     final dualWield = await DevicePrefs.read('dual-wield');
     final endlessBattle = await DevicePrefs.read('endless-battle');
+    final mayhem = await DevicePrefs.read('mayhem');
     final shrinkingArena = await DevicePrefs.read('shrinking-arena');
     final savedKinds = {
       for (final name in (await DevicePrefs.read('power-ups') ?? '').split(','))
@@ -114,6 +116,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       if (look != null) _look = look;
       _dualWield = dualWield == '1';
       _endlessBattle = endlessBattle == '1';
+      _mayhem = mayhem == '1' && _mode == MatchMode.arsenal;
       _shrinkingArena = shrinkingArena == '1';
       if (savedKinds.isNotEmpty &&
           savedKinds.length < PowerUpKind.values.length) {
@@ -305,16 +308,19 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   void _randomMatchup() {
     final pool = [..._categoryBalls]..shuffle(_random);
-    if (pool.length < 2) return;
+    final count = _mayhem ? 6 : 2;
+    if (pool.length < count) return;
     GameAudio.instance.click();
     setState(() {
       _selected
         ..clear()
-        ..addEntries(pool.take(2).map((b) => MapEntry(b.id, b)));
+        ..addEntries(pool.take(count).map((b) => MapEntry(b.id, b)));
     });
   }
 
-  bool get _canStart => _selected.length >= 2 && _selected.length <= _maxBalls;
+  bool get _canStart => _mayhem
+      ? _selected.length == 6
+      : _selected.length >= 2 && _selected.length <= _maxBalls;
 
   void _start() {
     if (!_canStart) return;
@@ -326,12 +332,14 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         showEffects: _showEffects,
         wallSparkSize: _wallSparkSize,
         winsNeeded: _winsNeeded,
-        ballSize: _ballSize,
-        mode: _mode,
+        ballSize: _mayhem ? BallSize.small : _ballSize,
+        mode: _mayhem ? MatchMode.arsenal : _mode,
         look: _look,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
         dualWield: _mode != MatchMode.threads && _dualWield,
-        endlessBattle: _mode == MatchMode.arsenal && _endlessBattle,
+        endlessBattle:
+            _mode == MatchMode.arsenal && (_endlessBattle || _mayhem),
+        mayhem: _mode == MatchMode.arsenal && _mayhem,
         shrinkingArena: _shrinkingArena,
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode == MatchMode.threads
@@ -604,7 +612,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             style: const ButtonStyle(visualDensity: VisualDensity.compact),
             onSelectionChanged: (v) {
               GameAudio.instance.click();
-              setState(() => _mode = v.first);
+              setState(() {
+                _mode = v.first;
+                if (_mode != MatchMode.arsenal) _mayhem = false;
+              });
               DevicePrefs.write('mode', v.first.id);
             },
           ),
@@ -633,6 +644,29 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               },
             ),
             if (_mode == MatchMode.arsenal)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Mayhem'),
+                subtitle: const Text(
+                  'Six balls, two minutes, respawns; most knockouts wins',
+                ),
+                value: _mayhem,
+                onChanged: (value) {
+                  GameAudio.instance.click();
+                  setState(() {
+                    _mayhem = value;
+                    if (!value && _selected.length > 4) {
+                      final keep = _selected.entries.take(4).toList();
+                      _selected
+                        ..clear()
+                        ..addEntries(keep);
+                    }
+                  });
+                  DevicePrefs.write('mayhem', value ? '1' : '0');
+                },
+              ),
+            if (_mode == MatchMode.arsenal && !_mayhem)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
@@ -675,7 +709,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 Expanded(
                   child: _selected.isEmpty
                       ? Text(
-                          'Pick 2 to 4 balls',
+                          _mayhem
+                              ? 'Pick exactly 6 balls'
+                              : 'Pick 2 to 4 balls',
                           style: AppText.ui(
                             13,
                             FontWeight.w500,

@@ -343,6 +343,15 @@ class FinisherProfile {
       style: FinisherStyle.blast,
       symbol: 'R',
     ),
+    'Omega Tendrils': FinisherProfile(
+      move: 'Omega Tendrils',
+      yell: 'NO ONE ESCAPES!',
+      impactYell: 'OMEGA SLAM!',
+      color: Color(0xFFE21D35),
+      accent: Color(0xFFFF6578),
+      style: FinisherStyle.hook,
+      symbol: 'O',
+    ),
     'Collision': FinisherProfile(
       move: 'Collision',
       yell: 'FULL SPEED!',

@@ -470,6 +470,50 @@ void main() {
     );
   });
 
+  test('Mayhem travels only as a six-ball Arsenal replay', () {
+    final six = List.generate(
+      ReplayLink.mayhemBalls,
+      (index) => CustomBall(
+        id: 'mayhem-$index',
+        name: 'Mayhem $index',
+        primaryColor: Color(0xFF100000 + index),
+        glowColor: Color(0xFF200000 + index),
+        baseSpeed: 300,
+        mass: 1,
+      ),
+    );
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: six,
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+      mayhem: true,
+    );
+    final ids = {for (final ball in six) ball.id};
+    final uri = link.toUri(presetIds: ids);
+    expect(uri.queryParameters['mayhem'], '1');
+    final restored = ReplayLink.fromUri(uri, presets: six)!;
+    expect(restored.mayhem, isTrue);
+    expect(restored.contestants, hasLength(ReplayLink.mayhemBalls));
+
+    final two = 'p.${_presets[0].id},p.${_presets[1].id}';
+    expect(
+      ReplayLink.fromUri(
+        Uri.parse('https://x/?seed=1&mayhem=1&balls=m.arsenal,$two'),
+        presets: _presets,
+      ),
+      isNull,
+    );
+    expect(
+      ReplayLink.fromUri(
+        Uri.parse('https://x/?seed=1&mayhem=1&balls=$two'),
+        presets: _presets,
+      ),
+      isNull,
+    );
+  });
+
   test('Shrinking arena travels in replay links', () {
     final link = ReplayLink(
       seed: 5,

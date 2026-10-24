@@ -166,6 +166,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       tuning: widget.config.tuning,
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
+      mayhem: widget.config.mayhem,
       shrinkingArena: widget.config.shrinkingArena,
       bloodColor: AppSettingsScope.of(context).bloodColor,
     );
@@ -371,6 +372,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       tuning: widget.config.tuning,
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
+      mayhem: widget.config.mayhem,
       shrinkingArena: widget.config.shrinkingArena,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;

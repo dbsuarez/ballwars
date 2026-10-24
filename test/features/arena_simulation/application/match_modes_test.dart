@@ -90,6 +90,35 @@ MatchSimulationController _arsenal({int count = 2, int seed = 1}) =>
     );
 
 void main() {
+  test('Mayhem ends after two minutes and chooses the knockout leader', () {
+    final contestants = List.generate(
+      6,
+      (index) => CustomBall(
+        id: 'mayhem-$index',
+        name: 'Ball $index',
+        primaryColor: Colors.primaries[index],
+        glowColor: Colors.primaries[index],
+      ),
+    );
+    final match = MatchSimulationController(
+      contestants,
+      arenaRadius: _arenaRadius,
+      seed: 7,
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+      mayhem: true,
+      lookAhead: false,
+    );
+    match.eliminations[contestants[3].id] = 4;
+    match.eliminations[contestants[1].id] = 2;
+
+    match.tick(MatchSimulationController.mayhemDurationSeconds);
+
+    expect(match.state.status, MatchStatus.finished);
+    expect(match.state.winnerId, contestants[3].id);
+    expect(match.winningMove, 'Knockout lead');
+  });
+
   test('Threads mode plays exactly as before', () {
     for (final (count, seed, winner, wallHits, ballHits, steps)
         in _threadsBaseline) {

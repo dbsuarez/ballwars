@@ -106,6 +106,25 @@ Projectile _bulletAt(
 );
 
 void main() {
+  test('Omega Tendrils unavoidably grabs every opponent and slams lightly', () {
+    final c = _match(count: 3);
+    final [owner, shieldedGhost, armored] = c.state.balls;
+    shieldedGhost
+      ..held = PowerUpKind.shield
+      ..ghostLeft = 120;
+    armored.goldenArmorHits = 1;
+
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    _run(c, 36);
+
+    expect(shieldedGhost.life, lessThan(_life));
+    expect(shieldedGhost.held, PowerUpKind.shield);
+    expect(armored.life, _life);
+    expect(armored.goldenArmorHits, 0);
+    expect(c.powerUps!.blasts, 2);
+  });
+
   test(
     'portal sends its entrant to a random arena side and leaves a warp flash',
     () {

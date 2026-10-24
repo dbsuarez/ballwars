@@ -161,6 +161,8 @@ class MatchSimulationController {
   final PowerUpConfig tuning;
   final bool dualWield;
   final bool endlessBattle;
+  final bool mayhem;
+  static const double mayhemDurationSeconds = 120;
 
   /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
   static const int hurtFlashSteps = 18;
@@ -196,6 +198,7 @@ class MatchSimulationController {
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
+    this.mayhem = false,
     this.shrinkingArena = false,
     this.bloodColor = const Color(0xFFD9152B),
   }) : initialArenaRadius = arenaRadius,
@@ -220,6 +223,7 @@ class MatchSimulationController {
         tuning: tuning,
         dualWield: dualWield,
         endlessBattle: endlessBattle,
+        mayhem: mayhem,
         shrinkingArena: shrinkingArena,
         bloodColor: bloodColor,
       );
@@ -405,7 +409,9 @@ class MatchSimulationController {
   }) {
     if (mode != MatchMode.arsenal) return 0;
     if (amount > 0 && _absorbWithGoldenArmor(ball)) return 0;
-    final crowd = _balls.length > 2
+    final crowd = mayhem
+        ? 0.85
+        : _balls.length > 2
         ? math.pow(_balls.length / 2, 2).toDouble()
         : 1.0;
     final before = ball.life;
@@ -508,6 +514,12 @@ class MatchSimulationController {
     }
 
     _elapsedSeconds += realDeltaSeconds;
+    if (mayhem && _elapsedSeconds >= mayhemDurationSeconds) {
+      _finishMayhem();
+      _particles.update(realDeltaSeconds);
+      _floatingTexts.update(realDeltaSeconds);
+      return;
+    }
     final timeScale = _status == MatchStatus.slowMotion
         ? slowMotionTimeScale
         : playbackSpeedUp;
@@ -527,6 +539,23 @@ class MatchSimulationController {
 
     _particles.update(realDeltaSeconds);
     _floatingTexts.update(realDeltaSeconds);
+  }
+
+  void _finishMayhem() {
+    if (_status == MatchStatus.finished || _balls.isEmpty) return;
+    final ranked = [..._balls]
+      ..sort((a, b) {
+        final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
+          eliminations[a.config.id] ?? 0,
+        );
+        if (knockouts != 0) return knockouts;
+        final life = b.life.compareTo(a.life);
+        if (life != 0) return life;
+        return _balls.indexOf(a).compareTo(_balls.indexOf(b));
+      });
+    _winnerId = ranked.first.config.id;
+    _winningMove = 'Knockout lead';
+    _status = MatchStatus.finished;
   }
 
   void _stepPhysics(double dt) {

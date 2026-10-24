@@ -57,11 +57,16 @@ class PowerUpSprites {
   static final Map<AnimatedEffect, List<ui.Image>> _animatedEffects = {};
   static ui.Image? _rocketLauncher;
   static ui.Image? _rocketMissile;
+  static ui.Image? _omegaTendrilsIcon;
+  static ui.Image? _omegaTendrilsAttack;
   static Future<void>? _loading;
 
   /// [kind]'s image (16 x 16 px), or null before [load] has finished.
-  static ui.Image? of(PowerUpKind kind) =>
-      kind == PowerUpKind.rocketLauncher ? _rocketLauncher : _images[kind];
+  static ui.Image? of(PowerUpKind kind) => switch (kind) {
+    PowerUpKind.rocketLauncher => _rocketLauncher,
+    PowerUpKind.omegaTendrils => _omegaTendrilsIcon,
+    _ => _images[kind],
+  };
   static ui.Image? effect(EffectSprite kind) => _effects[kind];
   static ui.Image? projectile(ProjectileSprite kind) => _projectiles[kind];
   static ui.Image? effectFrame(AnimatedEffect kind, int frame) {
@@ -70,6 +75,7 @@ class PowerUpSprites {
   }
 
   static ui.Image? get rocketMissile => _rocketMissile;
+  static ui.Image? get omegaTendrilsAttack => _omegaTendrilsAttack;
 
   /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
@@ -286,6 +292,32 @@ class PowerUpSprites {
       96,
     );
     rocketSheet.dispose();
+
+    final omegaData = await rootBundle.load(
+      'assets/sprites/omega-tendrils.png',
+    );
+    final omegaCodec = await ui.instantiateImageCodec(
+      omegaData.buffer.asUint8List(),
+    );
+    final omegaSheet = (await omegaCodec.getNextFrame()).image;
+    omegaCodec.dispose();
+    Future<ui.Image> omegaCell(int column, int size) async {
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImageRect(
+        omegaSheet,
+        Rect.fromLTWH(column * 256.0, 0, 256, 256),
+        Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(size, size);
+      picture.dispose();
+      return image;
+    }
+
+    _omegaTendrilsIcon = await omegaCell(0, 64);
+    _omegaTendrilsAttack = await omegaCell(1, 96);
+    omegaSheet.dispose();
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {

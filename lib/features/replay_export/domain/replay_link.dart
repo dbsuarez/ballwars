@@ -43,6 +43,7 @@ class ReplayLink {
   /// Whether this match allows two equipped weapons (`dw=1`).
   final bool dualWield;
   final bool endlessBattle;
+  final bool mayhem;
   final bool shrinkingArena;
 
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
@@ -60,6 +61,7 @@ class ReplayLink {
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
+    this.mayhem = false,
     this.shrinkingArena = false,
   });
 
@@ -118,9 +120,10 @@ class ReplayLink {
     final endless = mode == MatchMode.arsenal && endlessBattle
         ? '&endless=1'
         : '';
+    final mayhemToken = mode == MatchMode.arsenal && mayhem ? '&mayhem=1' : '';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$shrinking&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -173,7 +176,11 @@ class ReplayLink {
           if (mask & (1 << k.index) != 0) k,
       };
     }
-    if (seed == null || tokens.length < minBalls || tokens.length > maxBalls) {
+    final mayhem = params['mayhem'] == '1';
+    if (params.containsKey('mayhem') && params['mayhem'] != '1') return null;
+    if (seed == null ||
+        tokens.length < minBalls ||
+        tokens.length > (mayhem ? mayhemBalls : maxBalls)) {
       return null;
     }
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
@@ -187,6 +194,12 @@ class ReplayLink {
     final endlessBattle = params['endless'] == '1';
     if (params.containsKey('endless') && params['endless'] != '1') return null;
     if (mode != MatchMode.arsenal && endlessBattle) return null;
+    if (mayhem &&
+        (mode != MatchMode.arsenal ||
+            !endlessBattle ||
+            tokens.length != mayhemBalls)) {
+      return null;
+    }
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
     var tuning = PowerUpConfig.defaults;
@@ -218,6 +231,7 @@ class ReplayLink {
       tuning: tuning,
       dualWield: dualWield,
       endlessBattle: endlessBattle,
+      mayhem: mayhem,
       shrinkingArena: shrinkingArena,
     );
   }
@@ -304,6 +318,7 @@ class ReplayLink {
 
   static const int minBalls = 2;
   static const int maxBalls = 4;
+  static const int mayhemBalls = 6;
   static const double minSpeed = 0.25;
   static const double maxSpeed = 4;
 

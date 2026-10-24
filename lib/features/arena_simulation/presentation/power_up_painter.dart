@@ -52,6 +52,7 @@ class PowerUpPainter {
     PowerUpKind.stickyGoo: Color(0xFF65E34F),
     PowerUpKind.molotov: Color(0xFFFF6A2A),
     PowerUpKind.rocketLauncher: Color(0xFF98A84B),
+    PowerUpKind.omegaTendrils: Color(0xFFE21D35),
   };
 
   /// The color a power-up is drawn in.
@@ -68,6 +69,57 @@ class PowerUpPainter {
     final p = state.powerUps;
     if (p == null) return;
     final r = p.fieldRadius;
+
+    for (final tendril in p.omegaTendrils) {
+      final from = tendril.owner.position;
+      final to = tendril.target.position;
+      final delta = to - from;
+      final distance = math.max(1.0, delta.distance);
+      final normal = Offset(-delta.dy, delta.dx) / distance;
+      final progress = 1 - tendril.stepsLeft / 36.0;
+      final reach = Curves.easeOutCubic.transform(
+        (progress / 0.55).clamp(0.0, 1.0),
+      );
+      final end = Offset.lerp(from, to, reach)!;
+      final wave = math.sin(state.step * 0.55 + to.dx * 0.02);
+      final path = Path()
+        ..moveTo(from.dx, from.dy)
+        ..cubicTo(
+          from.dx + delta.dx * 0.3 + normal.dx * r * 0.8 * wave,
+          from.dy + delta.dy * 0.3 + normal.dy * r * 0.8 * wave,
+          from.dx + delta.dx * 0.7 - normal.dx * r * 0.65 * wave,
+          from.dy + delta.dy * 0.7 - normal.dy * r * 0.65 * wave,
+          end.dx,
+          end.dy,
+        );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(5, r * 0.42)
+          ..strokeCap = StrokeCap.round
+          ..color = const Color(0xFF5B0714),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, r * 0.18)
+          ..strokeCap = StrokeCap.round
+          ..color = const Color(0xFFFF304C),
+      );
+      final sprite = PowerUpSprites.omegaTendrilsAttack;
+      if (sprite != null) {
+        _drawEffect(
+          canvas,
+          sprite,
+          end,
+          r * (0.75 + 0.25 * math.sin(state.step * 0.4).abs()),
+          math.atan2(delta.dy, delta.dx),
+          opacity: reach,
+        );
+      }
+    }
 
     for (final fire in p.burningZones) {
       final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;

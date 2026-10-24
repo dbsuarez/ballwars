@@ -203,6 +203,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.saved.last.bloodColor, purple);
     expect(settings.value.bloodColor, purple);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Large line'),
+      'BALL WARS',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Small line'),
+      'fight now',
+    );
+    await tester.tap(find.text('Save arena text'));
+    await tester.pumpAndSettle();
+    expect(repo.saved.last.arenaTitle, 'BALL WARS');
+    expect(repo.saved.last.arenaSubtitle, 'fight now');
   });
 
   testWidgets('the admin can switch slow motion to before the win', (

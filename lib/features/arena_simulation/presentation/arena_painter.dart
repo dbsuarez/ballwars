@@ -20,6 +20,8 @@ class ArenaPainter extends CustomPainter {
   /// so the match plays out the same either way.
   final bool showEffects;
   final bool showBallGlow;
+  final String arenaTitle;
+  final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
 
   /// The theme's background (inside the arena) and text color (the rim).
@@ -36,6 +38,8 @@ class ArenaPainter extends CustomPainter {
     required this.rimAngle,
     this.showEffects = true,
     this.showBallGlow = true,
+    this.arenaTitle = 'dbsuarez',
+    this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
@@ -84,6 +88,37 @@ class ArenaPainter extends CustomPainter {
       ]);
     canvas.drawCircle(Offset.zero, arenaRadius, paint);
     _paintGrid(canvas);
+    _paintArenaText(canvas);
+  }
+
+  void _paintArenaText(Canvas canvas) {
+    void line(String text, double size, double y, FontWeight weight) {
+      if (text.trim().isEmpty) return;
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text.trim(),
+          style: TextStyle(
+            color: rimColor.withValues(alpha: 0.14),
+            fontSize: size,
+            fontWeight: weight,
+            letterSpacing: size * 0.06,
+          ),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: arenaRadius * 1.45);
+      painter.paint(canvas, Offset(-painter.width / 2, y - painter.height / 2));
+    }
+
+    line(arenaTitle, arenaRadius * 0.14, -arenaRadius * 0.08, FontWeight.w900);
+    line(
+      arenaSubtitle,
+      arenaRadius * 0.065,
+      arenaRadius * 0.08,
+      FontWeight.w600,
+    );
   }
 
   /// Squares across the arena floor, [gridCells] across the diameter.

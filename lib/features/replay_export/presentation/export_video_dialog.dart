@@ -68,6 +68,8 @@ class ExportVideoDialog extends StatefulWidget {
     BallWarsColors? colors,
     bool ballGlowEnabled = true,
     Color bloodColor = const Color(0xFFD9152B),
+    String arenaTitle = 'dbsuarez',
+    String arenaSubtitle = 'bakbakan na',
     required VideoExportBackend backend,
   }) {
     return showDialog<void>(
@@ -94,6 +96,8 @@ class ExportVideoDialog extends StatefulWidget {
           look: look,
           ballGlowEnabled: ballGlowEnabled,
           bloodColor: bloodColor,
+          arenaTitle: arenaTitle,
+          arenaSubtitle: arenaSubtitle,
         ),
         encoder: backend,
         saver: backend,

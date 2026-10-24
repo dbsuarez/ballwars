@@ -27,6 +27,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final TextEditingController _headline = TextEditingController();
   final TextEditingController _watermark = TextEditingController();
+  final TextEditingController _arenaTitle = TextEditingController();
+  final TextEditingController _arenaSubtitle = TextEditingController();
   bool? _isAdmin;
   // Slow-motion choices before they are saved.
   int? _slowMotionLines;
@@ -41,6 +43,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_isAdmin == null) {
       _headline.text = AppSettingsScope.of(context).headline;
       _watermark.text = AppSettingsScope.of(context).watermarkText;
+      _arenaTitle.text = AppSettingsScope.of(context).arenaTitle;
+      _arenaSubtitle.text = AppSettingsScope.of(context).arenaSubtitle;
       _checkAdmin();
     }
   }
@@ -49,6 +53,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _headline.dispose();
     _watermark.dispose();
+    _arenaTitle.dispose();
+    _arenaSubtitle.dispose();
     GameAudio.instance.stopPreview();
     super.dispose();
   }
@@ -614,6 +620,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           ),
                                   ),
                               ],
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              'Arena text',
+                              style: AppText.ui(
+                                14,
+                                FontWeight.w600,
+                                color: c.text,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _arenaTitle,
+                              maxLength: 30,
+                              decoration: const InputDecoration(
+                                labelText: 'Large line',
+                                hintText: AppSettings.defaultArenaTitle,
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            TextField(
+                              controller: _arenaSubtitle,
+                              maxLength: 50,
+                              decoration: const InputDecoration(
+                                labelText: 'Small line',
+                                hintText: AppSettings.defaultArenaSubtitle,
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                            OutlinedButton(
+                              onPressed:
+                                  _busy ||
+                                      _arenaTitle.text.trim().isEmpty ||
+                                      _arenaSubtitle.text.trim().isEmpty
+                                  ? null
+                                  : () => _save(
+                                      settings.copyWith(
+                                        arenaTitle: _arenaTitle.text.trim(),
+                                        arenaSubtitle: _arenaSubtitle.text
+                                            .trim(),
+                                      ),
+                                      done: 'Arena text saved.',
+                                    ),
+                              child: const Text('Save arena text'),
                             ),
                           ],
                         ),

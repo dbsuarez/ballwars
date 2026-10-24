@@ -47,6 +47,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasPowerUpsColumn = false;
   bool _hasBallGlowColumn = false;
   bool _hasBloodColorColumn = false;
+  bool _hasArenaTextColumns = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
     : _writer = writer ?? _client;
@@ -81,6 +82,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasPowerUpsColumn = row.containsKey('power_ups');
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
     _hasBloodColorColumn = row.containsKey('blood_color');
+    _hasArenaTextColumns = row.containsKey('arena_title');
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
@@ -90,6 +92,10 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         (row['blood_color'] as num?)?.toInt() ??
             AppSettings.defaultBloodColor.toARGB32(),
       ),
+      arenaTitle:
+          row['arena_title'] as String? ?? AppSettings.defaultArenaTitle,
+      arenaSubtitle:
+          row['arena_subtitle'] as String? ?? AppSettings.defaultArenaSubtitle,
       watermarkText:
           row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
@@ -124,6 +130,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasBallGlowColumn) 'ball_glow_enabled': settings.ballGlowEnabled,
           if (_hasBloodColorColumn)
             'blood_color': settings.bloodColor.toARGB32(),
+          if (_hasArenaTextColumns) 'arena_title': settings.arenaTitle.trim(),
+          if (_hasArenaTextColumns)
+            'arena_subtitle': settings.arenaSubtitle.trim(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)

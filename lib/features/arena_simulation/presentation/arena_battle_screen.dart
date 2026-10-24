@@ -572,6 +572,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         showBallGlow: AppSettingsScope.of(
                           context,
                         ).ballGlowEnabled,
+                        arenaTitle: AppSettingsScope.of(context).arenaTitle,
+                        arenaSubtitle: AppSettingsScope.of(
+                          context,
+                        ).arenaSubtitle,
                         wallSparkSize: widget.config.wallSparkSize,
                         repaint: _frame,
                         look: widget.config.look,
@@ -657,6 +661,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               bloodColor: AppSettingsScope.of(
                                 context,
                               ).bloodColor,
+                              arenaTitle: AppSettingsScope.of(
+                                context,
+                              ).arenaTitle,
+                              arenaSubtitle: AppSettingsScope.of(
+                                context,
+                              ).arenaSubtitle,
                               backend: _videoExport,
                             );
                           },

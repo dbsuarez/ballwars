@@ -15,6 +15,8 @@ class AppSettings {
   final bool watermarkEnabled;
   final bool ballGlowEnabled;
   final Color bloodColor;
+  final String arenaTitle;
+  final String arenaSubtitle;
   final String watermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
@@ -40,6 +42,8 @@ class AppSettings {
     this.watermarkEnabled = true,
     this.ballGlowEnabled = true,
     this.bloodColor = defaultBloodColor,
+    this.arenaTitle = defaultArenaTitle,
+    this.arenaSubtitle = defaultArenaSubtitle,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
@@ -54,6 +58,8 @@ class AppSettings {
   static const String defaultMenuMusic = 'drift';
   static const int defaultSlowMotionLines = 10;
   static const Color defaultBloodColor = Color(0xFFD9152B);
+  static const String defaultArenaTitle = 'dbsuarez';
+  static const String defaultArenaSubtitle = 'bakbakan na';
   static const double defaultSlowMotionBeforeWinSeconds = 1.5;
   static const AppSettings defaults = AppSettings();
 
@@ -63,6 +69,8 @@ class AppSettings {
     bool? watermarkEnabled,
     bool? ballGlowEnabled,
     Color? bloodColor,
+    String? arenaTitle,
+    String? arenaSubtitle,
     String? watermarkText,
     String? musicId,
     String? menuMusicId,
@@ -75,6 +83,8 @@ class AppSettings {
     watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
     ballGlowEnabled: ballGlowEnabled ?? this.ballGlowEnabled,
     bloodColor: bloodColor ?? this.bloodColor,
+    arenaTitle: arenaTitle ?? this.arenaTitle,
+    arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,
     watermarkText: watermarkText ?? this.watermarkText,
     musicId: musicId ?? this.musicId,
     menuMusicId: menuMusicId ?? this.menuMusicId,

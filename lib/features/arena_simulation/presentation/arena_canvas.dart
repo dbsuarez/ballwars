@@ -11,6 +11,8 @@ class ArenaCanvas extends StatelessWidget {
   final double rimAngle;
   final bool showEffects;
   final bool showBallGlow;
+  final String arenaTitle;
+  final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
 
   /// Repaints the arena when it notifies, without rebuilding any widgets.
@@ -26,6 +28,8 @@ class ArenaCanvas extends StatelessWidget {
     required this.rimAngle,
     this.showEffects = true,
     this.showBallGlow = true,
+    this.arenaTitle = 'dbsuarez',
+    this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
     this.repaint,
     this.look = BallLook.pictures,
@@ -44,6 +48,8 @@ class ArenaCanvas extends StatelessWidget {
           rimAngle: rimAngle,
           showEffects: showEffects,
           showBallGlow: showBallGlow,
+          arenaTitle: arenaTitle,
+          arenaSubtitle: arenaSubtitle,
           wallSparkSize: wallSparkSize,
           background: c.background,
           rimColor: c.text,

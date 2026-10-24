@@ -59,8 +59,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('WEAPONS'), findsOneWidget);
-    expect(FinisherProfile.coversEveryArenaItem, isTrue);
+    expect(FinisherProfile.coversEveryDamagingArenaItem, isTrue);
     expect(PowerUpKind.values, hasLength(32));
+    expect(find.text('POWER-UPS'), findsNothing);
+    expect(find.byTooltip('Play Apple finisher'), findsNothing);
+    expect(find.byTooltip('Play Magnet finisher'), findsNothing);
+    expect(find.byTooltip('Play Freeze finisher'), findsNothing);
+    expect(find.byTooltip('Play Portal finisher'), findsNothing);
 
     final playPistol = find.byKey(const ValueKey('play-finisher-Pistol'));
     expect(playPistol, findsOneWidget);
@@ -76,16 +81,24 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(HarpoonCinematic), findsOneWidget);
     expect(find.text('FINISHING MOVE'), findsOneWidget);
+    final close = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byTooltip('Close preview'),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(close.style!.foregroundColor!.resolve({}), Colors.black);
     await tester.pump(const Duration(milliseconds: 4400));
     await tester.pumpAndSettle();
     expect(find.text('Finisher Gallery'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('finisher-stickyGoo')),
+      find.byKey(const ValueKey('finisher-spikeWall')),
       500,
       scrollable: find.byType(Scrollable),
     );
     expect(find.text('TRAPS'), findsOneWidget);
-    expect(find.byTooltip('Play Sticky Goo finisher'), findsOneWidget);
+    expect(find.byTooltip('Play Spike Wall finisher'), findsOneWidget);
+    expect(find.byTooltip('Play Sticky Goo finisher'), findsNothing);
   });
 }

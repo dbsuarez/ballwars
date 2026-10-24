@@ -53,7 +53,7 @@ void main() {
   );
 
   test('every weapon, power-up, and trap has a finisher profile', () {
-    expect(FinisherProfile.coversEveryArenaItem, isTrue);
+    expect(FinisherProfile.coversEveryDamagingArenaItem, isTrue);
   });
 
   testWidgets('grenade uses its own blast finisher instead of the hook move', (

@@ -91,6 +91,15 @@ enum PowerUpKind {
 
   /// Power-ups apply immediately and never replace an equipped weapon.
   bool get isPowerUp => !isWeapon && !isTrap;
+
+  /// Whether this item can directly remove life or threads and therefore be
+  /// credited as a finishing move under [config]. Buffs that merely improve
+  /// another weapon keep that weapon's name as the winning move.
+  bool dealsDamage(PowerUpConfig config) =>
+      config.arenaDamage(this) > 0 ||
+      config.allOutThreads(this) > 0 ||
+      (this == shield &&
+          (config.arenaShieldBash > 0 || config.allOutShieldBash > 0));
 }
 
 /// A power-up lying in the arena, waiting to be picked up.

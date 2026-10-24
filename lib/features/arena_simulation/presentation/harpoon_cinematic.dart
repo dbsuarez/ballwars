@@ -105,9 +105,9 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
               final uppercut = Curves.easeOutQuart.transform(
                 _range(t, 0.73, 0.9),
               );
-              final usesUppercut = profile.style == FinisherStyle.hook;
+              final usesUppercut = profile.move == 'Hook';
               final closesDistance =
-                  profile.style == FinisherStyle.hook ||
+                  profile.move == 'Hook' ||
                   profile.style == FinisherStyle.melee;
               final loserX = closesDistance
                   ? loserStartX +
@@ -282,7 +282,6 @@ class _FinisherPainter extends CustomPainter {
     if (impactProgress > 0 && impactProgress < 1) {
       _paintImpact(canvas, loserCenter, impactProgress);
     }
-    _paintMoveEffect(canvas);
     _paintSmiley(
       canvas,
       loserCenter,
@@ -290,12 +289,17 @@ class _FinisherPainter extends CustomPainter {
       dizzy: true,
       rotation: _usesUppercut ? uppercutProgress * 0.55 : 0,
     );
+    // Weapons and hazards sit over the characters so large cutscene balls do
+    // not hide mines, spikes, blades, or projectiles.
+    _paintMoveEffect(canvas);
     _paintWinner(canvas);
   }
 
   void _paintMoveEffect(Canvas canvas) {
     final from = winnerCenter + Offset(radius * 0.65, -radius * 0.05);
     final to = Offset.lerp(from, loserCenter, hookProgress)!;
+    final kind = _kind;
+    if (kind != null && _paintSignatureMove(canvas, kind, from, to)) return;
     switch (profile.style) {
       case FinisherStyle.hook:
         if (hookProgress > 0 && uppercutProgress < 0.72) {
@@ -371,7 +375,286 @@ class _FinisherPainter extends CustomPainter {
     }
   }
 
-  bool get _usesUppercut => profile.style == FinisherStyle.hook;
+  bool _paintSignatureMove(
+    Canvas canvas,
+    PowerUpKind kind,
+    Offset from,
+    Offset to,
+  ) {
+    switch (kind) {
+      case PowerUpKind.pistol:
+        if (hookProgress > 0 && hookProgress < 1) {
+          _paintBullet(canvas, to, radius * 0.22);
+        }
+      case PowerUpKind.shotgun:
+        if (hookProgress > 0 && hookProgress < 1) {
+          for (var i = -3; i <= 3; i++) {
+            final target = loserCenter + Offset(0, i * radius * 0.34);
+            final pellet = Offset.lerp(from, target, hookProgress)!;
+            canvas.drawCircle(
+              pellet,
+              radius * 0.075,
+              Paint()..color = profile.accent,
+            );
+          }
+        }
+      case PowerUpKind.gatling:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final sequence = hookProgress * 7;
+          final shot = sequence.floor().clamp(0, 6);
+          final local = sequence - shot;
+          final target = loserCenter + Offset(0, (shot - 3) * radius * 0.13);
+          _paintBullet(
+            canvas,
+            Offset.lerp(from, target, local.clamp(0.0, 1.0))!,
+            radius * 0.16,
+          );
+        }
+      case PowerUpKind.knife:
+        if (uppercutProgress > 0) {
+          final thrust = Offset.lerp(
+            winnerCenter + Offset(radius * 0.9, 0),
+            loserCenter - Offset(radius * 0.65, 0),
+            uppercutProgress,
+          )!;
+          _paintItem(canvas, thrust, radius * 1.45);
+          canvas.drawLine(
+            thrust - Offset(radius * 0.9, 0),
+            thrust,
+            Paint()
+              ..color = Colors.white.withValues(alpha: 0.8)
+              ..strokeWidth = 7
+              ..strokeCap = StrokeCap.round,
+          );
+        }
+      case PowerUpKind.sword:
+        if (uppercutProgress > 0) {
+          final rect = Rect.fromCenter(
+            center: loserCenter,
+            width: radius * 2.5,
+            height: radius * 2.5,
+          );
+          canvas.drawArc(
+            rect,
+            math.pi * 0.75,
+            math.pi * 1.2 * uppercutProgress,
+            false,
+            Paint()
+              ..color = profile.accent
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 10
+              ..strokeCap = StrokeCap.round,
+          );
+          final blade =
+              loserCenter +
+              Offset.fromDirection(
+                math.pi * (0.75 + 1.2 * uppercutProgress),
+                radius * 1.25,
+              );
+          _paintItem(canvas, blade, radius * 1.65);
+        }
+      case PowerUpKind.shield:
+        if (uppercutProgress > 0) {
+          final bash = Offset.lerp(
+            winnerCenter + Offset(radius, 0),
+            loserCenter - Offset(radius * 0.65, 0),
+            uppercutProgress,
+          )!;
+          _paintItem(canvas, bash, radius * 2.0);
+        }
+      case PowerUpKind.mine:
+      case PowerUpKind.phaseMine:
+        if (hookProgress > 0.18) {
+          _paintItem(
+            canvas,
+            loserCenter + Offset(0, radius * 1.05),
+            radius * 2.1,
+          );
+        }
+        if (impactProgress > 0) {
+          _paintExplosion(canvas, loserCenter, impactProgress);
+        }
+      case PowerUpKind.grenade:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final arc = math.sin(hookProgress * math.pi) * radius * 1.4;
+          _paintItem(canvas, to - Offset(0, arc), radius * 1.65);
+        }
+        if (impactProgress > 0) {
+          _paintExplosion(canvas, loserCenter, impactProgress);
+        }
+      case PowerUpKind.hook:
+        if (hookProgress > 0 && uppercutProgress < 0.72) {
+          _paintChainAndHook(canvas, from, to);
+        }
+      case PowerUpKind.threadHarpoon:
+        if (hookProgress > 0) {
+          for (var i = -2; i <= 2; i++) {
+            final start = from + Offset(0, i * radius * 0.15);
+            final end = Offset.lerp(
+              start,
+              loserCenter + Offset(0, i * radius * 0.28),
+              hookProgress,
+            )!;
+            canvas.drawLine(
+              start,
+              end,
+              Paint()
+                ..color = i.isEven ? profile.color : profile.accent
+                ..strokeWidth = 4
+                ..strokeCap = StrokeCap.round,
+            );
+          }
+          if (hookProgress < 1) _paintItem(canvas, to, radius * 1.25);
+        }
+      case PowerUpKind.ricochetDisc:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final banner = Offset((from.dx + loserCenter.dx) / 2, radius * 0.35);
+          final disc = hookProgress < 0.5
+              ? Offset.lerp(from, banner, hookProgress * 2)!
+              : Offset.lerp(banner, loserCenter, (hookProgress - 0.5) * 2)!;
+          canvas.drawLine(
+            from,
+            banner,
+            Paint()
+              ..color = profile.color.withValues(alpha: 0.45)
+              ..strokeWidth = 3,
+          );
+          canvas.drawLine(
+            banner,
+            loserCenter,
+            Paint()
+              ..color = profile.color.withValues(alpha: 0.45)
+              ..strokeWidth = 3,
+          );
+          _paintItem(canvas, disc, radius * 1.25);
+        }
+      case PowerUpKind.orbitingFlail:
+        if (hookProgress > 0) {
+          final angle = hookProgress * math.pi * 4;
+          final orbit =
+              winnerCenter + Offset.fromDirection(angle, radius * 1.75);
+          final head = hookProgress < 0.72
+              ? orbit
+              : Offset.lerp(orbit, loserCenter, (hookProgress - 0.72) / 0.28)!;
+          canvas.drawLine(
+            winnerCenter,
+            head,
+            Paint()
+              ..color = const Color(0xFFDCE5EC)
+              ..strokeWidth = 6,
+          );
+          _paintItem(canvas, head, radius * 1.45);
+        }
+      case PowerUpKind.prismLaser:
+        if (hookProgress > 0) {
+          const colors = [
+            Colors.red,
+            Colors.orange,
+            Colors.yellow,
+            Colors.green,
+            Colors.cyan,
+            Colors.purple,
+          ];
+          for (var i = 0; i < colors.length; i++) {
+            canvas.drawLine(
+              from + Offset(0, (i - 2.5) * 3),
+              Offset.lerp(
+                from,
+                loserCenter + Offset(0, (i - 2.5) * radius * 0.2),
+                hookProgress,
+              )!,
+              Paint()
+                ..color = colors[i]
+                ..strokeWidth = 5,
+            );
+          }
+        }
+      case PowerUpKind.swapCannon:
+        final ring = Paint()
+          ..color = profile.color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8;
+        canvas.drawCircle(
+          winnerCenter,
+          radius * (1.15 + hookProgress * 0.25),
+          ring,
+        );
+        canvas.drawCircle(
+          loserCenter,
+          radius * (1.15 + hookProgress * 0.25),
+          ring..color = profile.accent,
+        );
+        if (hookProgress > 0.25) {
+          _paintArrow(canvas, winnerCenter, loserCenter, profile.accent);
+          _paintArrow(canvas, loserCenter, winnerCenter, profile.color);
+        }
+      case PowerUpKind.spikeWall:
+        if (hookProgress > 0.18) {
+          _paintItem(
+            canvas,
+            loserCenter + Offset(0, radius * 0.7),
+            radius * 2.7,
+          );
+        }
+      case PowerUpKind.bow:
+        if (hookProgress > 0) {
+          for (var i = -2; i <= 2; i++) {
+            final delay = i.abs() * 0.035;
+            final p = ((hookProgress - delay) / (1 - delay)).clamp(0.0, 1.0);
+            final start = from + Offset(0, i * radius * 0.08);
+            final end = loserCenter + Offset(i * radius * 0.27, 0);
+            final point =
+                Offset.lerp(start, end, p)! -
+                Offset(0, math.sin(p * math.pi) * radius * 2.2);
+            _paintArrowGlyph(canvas, point, profile.accent);
+          }
+        }
+      default:
+        return false;
+    }
+    return true;
+  }
+
+  void _paintBullet(Canvas canvas, Offset center, double size) {
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: center, width: size * 2.4, height: size),
+      Radius.circular(size / 2),
+    );
+    canvas.drawRRect(rect, Paint()..color = const Color(0xFFD9B45B));
+    canvas.drawLine(
+      center - Offset(size * 1.7, 0),
+      center - Offset(size * 0.8, 0),
+      Paint()
+        ..color = const Color(0xFFFFE89A).withValues(alpha: 0.65)
+        ..strokeWidth = size * 0.45,
+    );
+  }
+
+  void _paintArrow(Canvas canvas, Offset from, Offset to, Color color) {
+    final mid = Offset.lerp(from, to, 0.5)!;
+    canvas.drawLine(
+      from,
+      mid,
+      Paint()
+        ..color = color
+        ..strokeWidth = 5,
+    );
+    _paintArrowGlyph(canvas, mid, color);
+  }
+
+  void _paintArrowGlyph(Canvas canvas, Offset point, Color color) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    final length = radius * 0.72;
+    final tail = point - Offset(length, 0);
+    canvas.drawLine(tail, point, paint);
+    canvas.drawLine(point, point - Offset(radius * 0.2, radius * 0.14), paint);
+    canvas.drawLine(point, point - Offset(radius * 0.2, -radius * 0.14), paint);
+  }
+
+  bool get _usesUppercut => profile.move == 'Hook';
 
   PowerUpKind? get _kind {
     for (final kind in PowerUpKind.values) {

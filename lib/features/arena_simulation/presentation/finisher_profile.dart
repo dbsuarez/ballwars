@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../domain/power_up.dart';
+import '../domain/power_up_config.dart';
 
 enum FinisherStyle { projectile, barrage, melee, blast, hook, aura, trap, warp }
 
@@ -344,6 +345,7 @@ class FinisherProfile {
     ),
   };
 
-  static bool get coversEveryArenaItem =>
-      PowerUpKind.values.every((kind) => profiles.containsKey(kind.label));
+  static bool get coversEveryDamagingArenaItem => PowerUpKind.values
+      .where((kind) => kind.dealsDamage(PowerUpConfig.defaults))
+      .every((kind) => profiles.containsKey(kind.label));
 }

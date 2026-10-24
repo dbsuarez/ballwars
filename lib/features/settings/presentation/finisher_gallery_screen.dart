@@ -76,6 +76,11 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                   child: IconButton.filledTonal(
                     tooltip: 'Close preview',
                     onPressed: () => Navigator.of(previewContext).maybePop(),
+                    style: IconButton.styleFrom(
+                      backgroundColor: profile.color,
+                      foregroundColor: Colors.black,
+                      side: BorderSide(color: profile.accent, width: 2),
+                    ),
                     icon: const Icon(Icons.close_rounded),
                   ),
                 ),
@@ -130,6 +135,10 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
+    final tuning = AppSettingsScope.of(context).powerUps;
+    final damaging = PowerUpKind.values.where(
+      (item) => item.dealsDamage(tuning),
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Finisher Gallery')),
       body: _isAdmin == null
@@ -159,34 +168,33 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                 const SizedBox(height: 20),
                 _group(
                   'WEAPONS',
-                  PowerUpKind.values.where((item) => item.isWeapon).toList(),
+                  damaging.where((item) => item.isWeapon).toList(),
                 ),
                 _group(
                   'POWER-UPS',
-                  PowerUpKind.values.where((item) => item.isPowerUp).toList(),
+                  damaging.where((item) => item.isPowerUp).toList(),
                 ),
-                _group(
-                  'TRAPS',
-                  PowerUpKind.values.where((item) => item.isTrap).toList(),
-                ),
+                _group('TRAPS', damaging.where((item) => item.isTrap).toList()),
                 _coreGroup(),
               ],
             ),
     );
   }
 
-  Widget _group(String title, List<PowerUpKind> items) => _GalleryGroup(
-    title: title,
-    children: [
-      for (final item in items)
-        _FinisherCard(
-          key: ValueKey('finisher-${item.name}'),
-          profile: FinisherProfile.forMove(item.label),
-          icon: PowerUpIcon(item, size: 36),
-          onPlay: () => _play(item.label),
-        ),
-    ],
-  );
+  Widget _group(String title, List<PowerUpKind> items) => items.isEmpty
+      ? const SizedBox.shrink()
+      : _GalleryGroup(
+          title: title,
+          children: [
+            for (final item in items)
+              _FinisherCard(
+                key: ValueKey('finisher-${item.name}'),
+                profile: FinisherProfile.forMove(item.label),
+                icon: PowerUpIcon(item, size: 36),
+                onPlay: () => _play(item.label),
+              ),
+          ],
+        );
 
   Widget _coreGroup() => _GalleryGroup(
     title: 'CORE MOVES',

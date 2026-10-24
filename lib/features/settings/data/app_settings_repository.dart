@@ -45,7 +45,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasMenuMusicColumn = false;
   bool _hasPowerUpsColumn = false;
 
-  SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer}) : _writer = writer ?? _client;
+  SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
+    : _writer = writer ?? _client;
 
   @override
   Future<AppSettings> load() async {
@@ -61,7 +62,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           .maybeSingle()
           .retry(enabled: false)
           .timeout(const Duration(seconds: 8));
-      if (row != null) await OfflineStore.instance.write(key, utf8.encode(jsonEncode(row)));
+      if (row != null) {
+        await OfflineStore.instance.write(key, utf8.encode(jsonEncode(row)));
+      }
     } catch (_) {
       final saved = await OfflineStore.instance.read(key);
       if (saved == null) rethrow;
@@ -77,11 +80,15 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
-      watermarkText: row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
+      watermarkText:
+          row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
       menuMusicId: row['menu_music'] as String? ?? AppSettings.defaultMenuMusic,
-      slowMotionLines: (row['slow_motion_lines'] as num?)?.toInt() ?? AppSettings.defaultSlowMotionLines,
-      slowMotionBeforeWinSeconds: (row['slow_motion_before_win'] as num?)?.toDouble(),
+      slowMotionLines:
+          (row['slow_motion_lines'] as num?)?.toInt() ??
+          AppSettings.defaultSlowMotionLines,
+      slowMotionBeforeWinSeconds: (row['slow_motion_before_win'] as num?)
+          ?.toDouble(),
       powerUps: PowerUpConfig.fromJson(row['power_ups']),
     );
   }
@@ -93,19 +100,25 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         .update({
           'headline': settings.headline.trim(),
           'theme': settings.themeId,
-          if (_hasWatermarkColumns) 'watermark_enabled': settings.watermarkEnabled,
-          if (_hasWatermarkColumns) 'watermark_text': settings.watermarkText.trim(),
+          if (_hasWatermarkColumns)
+            'watermark_enabled': settings.watermarkEnabled,
+          if (_hasWatermarkColumns)
+            'watermark_text': settings.watermarkText.trim(),
           if (_hasMusicColumn) 'music': settings.musicId,
           if (_hasMenuMusicColumn) 'menu_music': settings.menuMusicId,
-          if (_hasSlowMotionColumn) 'slow_motion_lines': settings.slowMotionLines,
-          if (_hasSlowMotionColumn) 'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
+          if (_hasSlowMotionColumn)
+            'slow_motion_lines': settings.slowMotionLines,
+          if (_hasSlowMotionColumn)
+            'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
           if (_hasPowerUpsColumn) 'power_ups': settings.powerUps.toJson(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)
         .select('id');
     // RLS turns a non-admin update into "0 rows", not an error.
-    if (updated.isEmpty) throw StateError('Only the admin can change settings.');
+    if (updated.isEmpty) {
+      throw StateError('Only the admin can change settings.');
+    }
   }
 }
 
@@ -115,7 +128,10 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 /// The admin session is kept across restarts only with "Remember me".
 class SupabaseAdminAuth implements AdminAuth {
   /// Use for admin-only work (saving settings, editing anyone's groups).
-  final SupabaseClient client = SupabaseClient(SupabaseConfig.url, SupabaseConfig.publishableKey);
+  final SupabaseClient client = SupabaseClient(
+    SupabaseConfig.url,
+    SupabaseConfig.publishableKey,
+  );
 
   static const String _sessionKey = 'admin-session';
   static const String _rememberKey = 'admin-remember-me';
@@ -128,28 +144,31 @@ class SupabaseAdminAuth implements AdminAuth {
       if (state.event == AuthChangeEvent.signedOut) {
         DevicePrefs.write(_sessionKey, '');
       } else if (session != null) {
-        DevicePrefs.write(_sessionKey, _rememberSession ? jsonEncode(session.toJson()) : '');
+        DevicePrefs.write(
+          _sessionKey,
+          _rememberSession ? jsonEncode(session.toJson()) : '',
+        );
       }
     }, onError: (Object _) {});
   }
 
   /// Brings back the saved admin session (once).
   Future<void> _restore() => _restored ??= () async {
-        _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
-        if (!_rememberSession) {
-          await DevicePrefs.write(_sessionKey, '');
-          return;
-        }
-        final saved = await DevicePrefs.read(_sessionKey);
-        if (saved == null || saved.isEmpty) return;
-        try {
-          await client.auth.recoverSession(saved);
-        } on AuthException {
-          await DevicePrefs.write(_sessionKey, ''); // Expired or revoked.
-        } catch (_) {
-          // Offline: keep it for next time.
-        }
-      }();
+    _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
+    if (!_rememberSession) {
+      await DevicePrefs.write(_sessionKey, '');
+      return;
+    }
+    final saved = await DevicePrefs.read(_sessionKey);
+    if (saved == null || saved.isEmpty) return;
+    try {
+      await client.auth.recoverSession(saved);
+    } on AuthException {
+      await DevicePrefs.write(_sessionKey, ''); // Expired or revoked.
+    } catch (_) {
+      // Offline: keep it for next time.
+    }
+  }();
 
   @override
   String? get email => client.auth.currentUser?.email;
@@ -167,14 +186,33 @@ class SupabaseAdminAuth implements AdminAuth {
   }
 
   @override
-  Future<void> signIn(String email, String password, {bool rememberMe = false}) async {
+  Future<void> signIn(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     _rememberSession = rememberMe;
     await DevicePrefs.write(_rememberKey, rememberMe ? '1' : '');
     try {
-      await client.auth.signInWithPassword(email: email.trim(), password: password);
+      await client.auth.signInWithPassword(
+        email: email.trim(),
+        password: password,
+      );
       if (!await isAdmin()) {
         await client.auth.signOut();
         throw StateError('That account is not an admin.');
+      }
+      final session = client.auth.currentSession;
+      if (rememberMe && session != null) {
+        final encoded = jsonEncode(session.toJson());
+        await DevicePrefs.write(_sessionKey, encoded);
+        if (await DevicePrefs.read(_sessionKey) != encoded) {
+          throw StateError(
+            'Remember me could not save this session on the device.',
+          );
+        }
+      } else {
+        await DevicePrefs.write(_sessionKey, '');
       }
     } catch (_) {
       _rememberSession = false;

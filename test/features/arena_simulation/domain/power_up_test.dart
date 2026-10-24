@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 
 void main() {
   test('every kind has a label and the guns are flagged', () {
@@ -87,4 +88,25 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'only items that directly deal configured damage qualify for finishers',
+    () {
+      final damaging = PowerUpKind.values
+          .where((kind) => kind.dealsDamage(PowerUpConfig.defaults))
+          .toSet();
+      expect(damaging, containsAll(PowerUpConfig.damageKinds));
+      expect(damaging, contains(PowerUpKind.shield));
+      for (final utility in const [
+        PowerUpKind.apple,
+        PowerUpKind.speed,
+        PowerUpKind.freeze,
+        PowerUpKind.portal,
+        PowerUpKind.stickyGoo,
+        PowerUpKind.goldenArmor,
+      ]) {
+        expect(damaging, isNot(contains(utility)), reason: utility.name);
+      }
+    },
+  );
 }

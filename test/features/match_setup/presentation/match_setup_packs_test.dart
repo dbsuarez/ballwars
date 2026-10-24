@@ -272,6 +272,29 @@ void main() {
         findsNothing,
       );
       expect(find.byIcon(Icons.check_circle_rounded), findsWidgets);
+      final pistolDescription = powerUpDescription(
+        PowerUpKind.pistol,
+        arsenal: true,
+      );
+      final pistolCard = tester.widget<Card>(
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('selection-card-pistol')),
+              matching: find.byType(Card),
+            )
+            .first,
+      );
+      final description = tester.widget<Text>(find.text(pistolDescription));
+      final backgroundLuminance = pistolCard.color!.computeLuminance();
+      final textLuminance = description.style!.color!.computeLuminance();
+      final contrast =
+          (textLuminance > backgroundLuminance
+              ? textLuminance + 0.05
+              : backgroundLuminance + 0.05) /
+          (textLuminance > backgroundLuminance
+              ? backgroundLuminance + 0.05
+              : textLuminance + 0.05);
+      expect(contrast, greaterThanOrEqualTo(4.5));
       await tester.tap(find.widgetWithText(TextButton, 'Clear'));
       await tester.pump();
       expect(done().onPressed, isNull);

@@ -1181,11 +1181,17 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
   Widget _itemCard(PowerUpKind kind, {required bool selectable}) {
     final selected = selectable ? _on.contains(kind) : true;
     final colors = Theme.of(context).colorScheme;
+    final appColors = BallWarsColors.of(context);
     return Card(
       margin: EdgeInsets.zero,
-      color: selected
-          ? colors.secondaryContainer.withValues(alpha: 0.55)
-          : null,
+      color: selected ? appColors.surfaceHigh : appColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: selected ? appColors.text : appColors.border,
+          width: selected ? 1.5 : 1,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey('selection-card-${kind.name}'),
@@ -1207,7 +1213,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                       kind.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall?.copyWith(color: appColors.text),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -1218,7 +1226,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: appColors.muted),
                     ),
                   ],
                 ),

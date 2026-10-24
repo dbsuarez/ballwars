@@ -164,6 +164,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
       shrinkingArena: widget.config.shrinkingArena,
+      bloodColor: AppSettingsScope.of(context).bloodColor,
     );
     _roundCounted = replaySeed != null;
     _state = _controller.state;
@@ -653,6 +654,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               ballGlowEnabled: AppSettingsScope.of(
                                 context,
                               ).ballGlowEnabled,
+                              bloodColor: AppSettingsScope.of(
+                                context,
+                              ).bloodColor,
                               backend: _videoExport,
                             );
                           },

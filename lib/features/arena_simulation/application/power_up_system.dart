@@ -110,6 +110,7 @@ class PowerUpSystem {
       ..magneticFieldLeft = 0
       ..goldenArmorHits = 0
       ..stickyGooLeft = 0
+      ..burningLeft = 0
       ..sweepLeft = 0
       ..hurtFlashLeft = 0
       ..magnetPending = false
@@ -500,6 +501,7 @@ class PowerUpSystem {
         }
         if ((ball.position - fire.position).distance - ball.radius <=
             fire.radius) {
+          ball.burningLeft = math.max(ball.burningLeft, 45);
           _hit(ball, PowerUpKind.molotov, at: ball.position, from: fire.owner);
         }
       }
@@ -1357,7 +1359,7 @@ class PowerUpSystem {
     match.state.particles.spawnBlood(
       origin: impact,
       direction: target.position - (from?.position ?? impact),
-      color: const Color(0xFFD9152B),
+      color: match.bloodColor,
       rng: rng,
     );
   }
@@ -1420,6 +1422,7 @@ class PowerUpSystem {
       ball.position - Offset(0, ball.radius * 1.4),
       text,
       ball.config.primaryColor,
+      callout: true,
     );
   }
 

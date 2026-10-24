@@ -1,5 +1,6 @@
 import '../../arena_simulation/domain/power_up_config.dart';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/offline/device_prefs.dart';
@@ -45,6 +46,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasMenuMusicColumn = false;
   bool _hasPowerUpsColumn = false;
   bool _hasBallGlowColumn = false;
+  bool _hasBloodColorColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
     : _writer = writer ?? _client;
@@ -78,11 +80,16 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasMenuMusicColumn = row.containsKey('menu_music');
     _hasPowerUpsColumn = row.containsKey('power_ups');
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
+    _hasBloodColorColumn = row.containsKey('blood_color');
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
       ballGlowEnabled: row['ball_glow_enabled'] as bool? ?? true,
+      bloodColor: Color(
+        (row['blood_color'] as num?)?.toInt() ??
+            AppSettings.defaultBloodColor.toARGB32(),
+      ),
       watermarkText:
           row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
@@ -115,6 +122,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
             'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
           if (_hasPowerUpsColumn) 'power_ups': settings.powerUps.toJson(),
           if (_hasBallGlowColumn) 'ball_glow_enabled': settings.ballGlowEnabled,
+          if (_hasBloodColorColumn)
+            'blood_color': settings.bloodColor.toARGB32(),
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)

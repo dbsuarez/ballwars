@@ -391,6 +391,7 @@ class ReplayStyle {
   final Color text;
   final Color muted;
   final bool ballGlowEnabled;
+  final Color bloodColor;
 
   /// Ball look (pictures or faces), as in the app.
   final BallLook look;
@@ -401,6 +402,7 @@ class ReplayStyle {
     this.text = const Color(0xFFF2F2F0),
     this.muted = const Color(0xFF959596),
     this.ballGlowEnabled = true,
+    this.bloodColor = const Color(0xFFD9152B),
     this.look = BallLook.pictures,
   });
 }

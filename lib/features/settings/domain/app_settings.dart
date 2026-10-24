@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import '../../arena_simulation/domain/power_up_config.dart';
 
 /// App-wide settings, set by the admin and shown to everyone
@@ -12,6 +14,7 @@ class AppSettings {
   /// The tiled watermark behind the winner card.
   final bool watermarkEnabled;
   final bool ballGlowEnabled;
+  final Color bloodColor;
   final String watermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
@@ -36,6 +39,7 @@ class AppSettings {
     this.themeId = 'midnight',
     this.watermarkEnabled = true,
     this.ballGlowEnabled = true,
+    this.bloodColor = defaultBloodColor,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
@@ -49,6 +53,7 @@ class AppSettings {
   static const String defaultMusic = 'arena';
   static const String defaultMenuMusic = 'drift';
   static const int defaultSlowMotionLines = 10;
+  static const Color defaultBloodColor = Color(0xFFD9152B);
   static const double defaultSlowMotionBeforeWinSeconds = 1.5;
   static const AppSettings defaults = AppSettings();
 
@@ -57,6 +62,7 @@ class AppSettings {
     String? themeId,
     bool? watermarkEnabled,
     bool? ballGlowEnabled,
+    Color? bloodColor,
     String? watermarkText,
     String? musicId,
     String? menuMusicId,
@@ -68,6 +74,7 @@ class AppSettings {
     themeId: themeId ?? this.themeId,
     watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
     ballGlowEnabled: ballGlowEnabled ?? this.ballGlowEnabled,
+    bloodColor: bloodColor ?? this.bloodColor,
     watermarkText: watermarkText ?? this.watermarkText,
     musicId: musicId ?? this.musicId,
     menuMusicId: menuMusicId ?? this.menuMusicId,

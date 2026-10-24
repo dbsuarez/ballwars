@@ -779,6 +779,27 @@ class PowerUpPainter {
         _drawSprite(canvas, sprite, flail, ball.radius * 0.9, angle);
       }
     }
+    if (ball.burningLeft > 0) {
+      for (var i = 0; i < 5; i++) {
+        final angle = i * math.pi * 2 / 5 + step * 0.045;
+        final base =
+            ball.position +
+            Offset(math.cos(angle), math.sin(angle)) * ball.radius * 0.82;
+        final flicker = 0.22 + 0.08 * math.sin(step * 0.5 + i).abs();
+        final tip = base - Offset(0, ball.radius * flicker);
+        final side = ball.radius * 0.12;
+        canvas.drawPath(
+          Path()
+            ..moveTo(base.dx - side, base.dy)
+            ..quadraticBezierTo(tip.dx, tip.dy, base.dx + side, base.dy)
+            ..close(),
+          Paint()
+            ..color =
+                (i.isEven ? const Color(0xFFFF4B20) : const Color(0xFFFFD23F))
+                    .withValues(alpha: 0.9),
+        );
+      }
+    }
     if (ball.timeBubbleLeft > 0) {
       canvas.drawCircle(
         ball.position,

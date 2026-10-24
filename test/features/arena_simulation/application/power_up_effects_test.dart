@@ -217,7 +217,7 @@ void main() {
     expect(a.held, isNull);
     expect(c.powerUps!.slashes, 1);
     final blood = c.state.particles.particles.whereType<Particle>().where(
-      (p) => p.color == b.config.primaryColor,
+      (p) => p.color == c.bloodColor,
     );
     expect(blood, isNotEmpty);
   });

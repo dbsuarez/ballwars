@@ -193,7 +193,7 @@ void main() {
     expect(a.life, PowerUpTuning.arenaLife);
   });
 
-  test('a hit splashes particles in the hit ball\'s color', () {
+  test('a hit splashes particles in the configured blood color', () {
     final c = _match();
     final [a, b] = c.state.balls;
     a.held = PowerUpKind.pistol;
@@ -201,7 +201,7 @@ void main() {
     final bullet = c.powerUps!.projectiles.single;
     _runUntilSpent(c, bullet);
     final colored = c.state.particles.particles.whereType<Particle>().where(
-      (p) => p.color == b.config.primaryColor,
+      (p) => p.color == c.bloodColor,
     );
     expect(colored, isNotEmpty);
   });

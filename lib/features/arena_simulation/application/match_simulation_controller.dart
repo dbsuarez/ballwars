@@ -69,6 +69,7 @@ class MatchSimulationController {
 
   final double initialArenaRadius;
   final bool shrinkingArena;
+  final Color bloodColor;
 
   static const int shrinkGraceSteps = 10 * 60;
   static const int shrinkDurationSteps = 120 * 60;
@@ -196,6 +197,7 @@ class MatchSimulationController {
     this.dualWield = false,
     this.endlessBattle = false,
     this.shrinkingArena = false,
+    this.bloodColor = const Color(0xFFD9152B),
   }) : initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (!endlessBattle &&
@@ -219,6 +221,7 @@ class MatchSimulationController {
         dualWield: dualWield,
         endlessBattle: endlessBattle,
         shrinkingArena: shrinkingArena,
+        bloodColor: bloodColor,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished &&
@@ -533,6 +536,7 @@ class MatchSimulationController {
       if (ball.hurtFlashLeft > 0) {
         ball.hurtFlashLeft--; // Cosmetic ("Faces" wince), no effect on play.
       }
+      if (ball.burningLeft > 0) ball.burningLeft--;
     }
     final linesAtStart = {
       for (final ball in _balls) ball: ball.fanLines.length,

@@ -302,6 +302,7 @@ void main() {
       final before = b.life;
       _run(c, PowerUpTuning.molotovTickSteps);
       expect(b.life, before - PowerUpTuning.arenaDamage[PowerUpKind.molotov]!);
+      expect(b.burningLeft, greaterThan(0));
       _run(c, PowerUpTuning.molotovBurnSteps - PowerUpTuning.molotovTickSteps);
       expect(c.powerUps!.burningZones, isEmpty);
       expect(a.life, PowerUpTuning.arenaLife);

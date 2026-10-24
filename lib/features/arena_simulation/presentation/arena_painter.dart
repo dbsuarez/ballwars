@@ -362,23 +362,55 @@ class ArenaPainter extends CustomPainter {
   void _paintFloatingText(Canvas canvas) {
     for (final text in state.floatingTexts.items) {
       final alpha = (text.opacity.clamp(0.0, 1.0) * 16).round() / 16;
-      final key = '${text.text}|${text.color.toARGB32()}|$alpha';
+      final key =
+          '${text.text}|${text.color.toARGB32()}|$alpha|${text.callout}';
       final painter = _textCache[key] ??= TextPainter(
         text: TextSpan(
           text: text.text,
           style: TextStyle(
-            color: text.color.withValues(alpha: alpha),
+            color: (text.callout ? const Color(0xFF111111) : text.color)
+                .withValues(alpha: alpha),
             fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
       if (_textCache.length > 200) _textCache.remove(_textCache.keys.first);
-      painter.paint(
-        canvas,
-        text.position - Offset(painter.width / 2, painter.height / 2),
-      );
+      final origin =
+          text.position - Offset(painter.width / 2, painter.height / 2);
+      if (text.callout) {
+        final bubble = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            origin.dx - 8,
+            origin.dy - 5,
+            painter.width + 16,
+            painter.height + 10,
+          ),
+          const Radius.circular(8),
+        );
+        canvas.drawRRect(
+          bubble,
+          Paint()..color = Colors.white.withValues(alpha: 0.96 * alpha),
+        );
+        canvas.drawRRect(
+          bubble,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5
+            ..color = text.color.withValues(alpha: alpha),
+        );
+        final tail = Path()
+          ..moveTo(text.position.dx - 7, bubble.bottom - 1)
+          ..lineTo(text.position.dx + 5, bubble.bottom - 1)
+          ..lineTo(text.position.dx - 2, bubble.bottom + 9)
+          ..close();
+        canvas.drawPath(
+          tail,
+          Paint()..color = text.color.withValues(alpha: alpha),
+        );
+      }
+      painter.paint(canvas, origin);
     }
   }
 

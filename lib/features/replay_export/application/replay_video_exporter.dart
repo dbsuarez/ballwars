@@ -86,6 +86,7 @@ class ReplayVideoExporter {
       powerUpKinds: powerUps,
       tuning: tuning,
       shrinkingArena: shrinkingArena,
+      bloodColor: style.bloodColor,
     );
     final frameDelta = speedMultiplier / fps;
 

@@ -197,6 +197,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(repo.saved.single.ballGlowEnabled, isFalse);
     expect(settings.value.ballGlowEnabled, isFalse);
+
+    const purple = Color(0xFF8E44AD);
+    await tester.tap(find.byKey(ValueKey('blood-${purple.toARGB32()}')));
+    await tester.pumpAndSettle();
+    expect(repo.saved.last.bloodColor, purple);
+    expect(settings.value.bloodColor, purple);
   });
 
   testWidgets('the admin can switch slow motion to before the win', (

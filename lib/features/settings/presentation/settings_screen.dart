@@ -543,31 +543,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       _Section(
                         title: 'BALLS',
-                        child: SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            'Outer glow in the arena',
-                            style: AppText.ui(
-                              14,
-                              FontWeight.w600,
-                              color: c.text,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Shown around every ball during matches and replays.',
-                            style: AppText.ui(
-                              13,
-                              FontWeight.w500,
-                              color: c.muted,
-                            ),
-                          ),
-                          value: settings.ballGlowEnabled,
-                          onChanged: _busy
-                              ? null
-                              : (v) => _save(
-                                  settings.copyWith(ballGlowEnabled: v),
-                                  done: v ? 'Ball glow on.' : 'Ball glow off.',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                'Outer glow in the arena',
+                                style: AppText.ui(
+                                  14,
+                                  FontWeight.w600,
+                                  color: c.text,
                                 ),
+                              ),
+                              subtitle: Text(
+                                'Shown around every ball during matches and replays.',
+                                style: AppText.ui(
+                                  13,
+                                  FontWeight.w500,
+                                  color: c.muted,
+                                ),
+                              ),
+                              value: settings.ballGlowEnabled,
+                              onChanged: _busy
+                                  ? null
+                                  : (v) => _save(
+                                      settings.copyWith(ballGlowEnabled: v),
+                                      done: v
+                                          ? 'Ball glow on.'
+                                          : 'Ball glow off.',
+                                    ),
+                            ),
+                            Text(
+                              'Blood color',
+                              style: AppText.ui(
+                                14,
+                                FontWeight.w600,
+                                color: c.text,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                for (final color in const [
+                                  Color(0xFFD9152B),
+                                  Color(0xFFFF3B30),
+                                  Color(0xFF8B0000),
+                                  Color(0xFFFF6B35),
+                                  Color(0xFF8E44AD),
+                                  Color(0xFF111111),
+                                ])
+                                  ChoiceChip(
+                                    key: ValueKey('blood-${color.toARGB32()}'),
+                                    label: const SizedBox.square(dimension: 20),
+                                    avatar: CircleAvatar(
+                                      backgroundColor: color,
+                                    ),
+                                    selected:
+                                        settings.bloodColor.toARGB32() ==
+                                        color.toARGB32(),
+                                    onSelected: _busy
+                                        ? null
+                                        : (_) => _save(
+                                            settings.copyWith(
+                                              bloodColor: color,
+                                            ),
+                                            done: 'Blood color saved.',
+                                          ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                       _Section(

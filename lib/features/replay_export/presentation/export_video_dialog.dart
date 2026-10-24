@@ -67,6 +67,7 @@ class ExportVideoDialog extends StatefulWidget {
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
     bool ballGlowEnabled = true,
+    Color bloodColor = const Color(0xFFD9152B),
     required VideoExportBackend backend,
   }) {
     return showDialog<void>(
@@ -92,6 +93,7 @@ class ExportVideoDialog extends StatefulWidget {
           muted: colors?.muted ?? const ReplayStyle().muted,
           look: look,
           ballGlowEnabled: ballGlowEnabled,
+          bloodColor: bloodColor,
         ),
         encoder: backend,
         saver: backend,

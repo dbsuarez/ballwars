@@ -86,6 +86,38 @@ class PowerUpSystem {
   /// Gatling rounds fired so far, also counted in [shots] (the screen plays the gatling sound for them).
   int gatlingShots = 0;
 
+  /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
+  void resetForRespawn(SimulationBall ball) {
+    ball
+      ..held = null
+      ..heldSecondary = null
+      ..speedLeft = 0
+      ..frozenLeft = 0
+      ..ghostLeft = 0
+      ..flailLeft = 0
+      ..repulsorLeft = 0
+      ..timeBubbleLeft = 0
+      ..vampireLeft = 0
+      ..mirrorCharges = 0
+      ..overchargeLeft = 0
+      ..gremlinShots = 0
+      ..magneticFieldLeft = 0
+      ..goldenArmorHits = 0
+      ..sweepLeft = 0
+      ..hurtFlashLeft = 0
+      ..magnetPending = false
+      ..aimLeft = 0
+      ..aimTarget = null
+      ..burstLeft = 0;
+    _frozenVelocity.remove(ball);
+    _burstVolley.remove(ball);
+    _shieldedVolley.remove(ball);
+    _volleyLabel.remove(ball);
+    pulls.removeWhere(
+      (pull) => identical(pull.owner, ball) || identical(pull.target, ball),
+    );
+  }
+
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
   final Map<SimulationBall, Offset> _frozenVelocity = {};
 

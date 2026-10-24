@@ -95,23 +95,47 @@ class ScoreboardOverlay extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (_items(ball).isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Wrap(
-                    spacing: 5,
-                    runSpacing: 3,
+                const SizedBox(height: 5),
+                SizedBox(
+                  key: ValueKey('equipment-strip-${ball.config.id}'),
+                  height: 24,
+                  child: Row(
                     children: [
-                      for (final kind in _items(ball))
-                        Tooltip(
-                          message: kind.label,
-                          child: Semantics(
-                            label: kind.label,
-                            child: PowerUpIcon(kind, size: 20),
+                      for (final kind in _items(ball).take(4))
+                        Expanded(
+                          child: Tooltip(
+                            message: kind.label,
+                            child: Semantics(
+                              label: kind.label,
+                              child: ExcludeSemantics(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      PowerUpIcon(kind, size: 20),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        kind.label,
+                                        maxLines: 1,
+                                        style: AppText.ui(
+                                          11,
+                                          FontWeight.w600,
+                                          color: c.muted,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                     ],
                   ),
-                ],
+                ),
                 if (mode == MatchMode.allOut) ...[
                   const SizedBox(height: 8),
                   HeartsRow(

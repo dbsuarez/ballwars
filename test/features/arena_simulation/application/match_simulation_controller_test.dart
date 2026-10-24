@@ -68,13 +68,26 @@ void main() {
       lookAhead: false,
     );
     final a = _ball(controller, 'a');
-    final b = _ball(controller, 'b');
+    final b = _ball(controller, 'b')
+      ..held = PowerUpKind.pistol
+      ..heldSecondary = PowerUpKind.sword
+      ..speedLeft = 30
+      ..goldenArmorHits = 2
+      ..magnetPending = true;
 
+    controller.damage(b, 100, attacker: a);
+    controller.damage(b, 100, attacker: a);
     controller.damage(b, 100, attacker: a);
     controller.tick(1 / 60);
 
     expect(b.isEliminated, isFalse);
     expect(b.life, 100);
+    expect(b.equippedWeapons, isEmpty);
+    expect(b.speedLeft, 0);
+    expect(b.goldenArmorHits, 0);
+    expect(b.magnetPending, isFalse);
+    expect(b.ghostLeft, controller.tuning.ghostSteps ~/ 2);
+    expect(b.isGhost, isTrue);
     expect(controller.eliminations, {'a': 1});
     expect(controller.state.status, MatchStatus.running);
     expect(controller.state.winnerId, isNull);

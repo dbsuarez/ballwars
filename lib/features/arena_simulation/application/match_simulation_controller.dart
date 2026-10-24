@@ -814,12 +814,14 @@ class MatchSimulationController {
   }
 
   void _respawn(SimulationBall ball) {
+    _powerUps?.resetForRespawn(ball);
     final angle = _rng.nextDoubleRange(0, 2 * math.pi);
     final radial = Offset(math.cos(angle), math.sin(angle));
     final heading = angle + math.pi + _rng.nextDoubleRange(-0.4, 0.4);
     ball
       ..isEliminated = false
       ..life = PowerUpTuning.arenaLife
+      ..ghostLeft = tuning.ghostSteps ~/ 2
       ..position = radial * (arenaRadius * startRadiusMax)
       ..velocity =
           Offset(math.cos(heading), math.sin(heading)) *

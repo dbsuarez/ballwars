@@ -92,16 +92,18 @@ class PowerUpPainter {
           final angle =
               i * 2 * math.pi / 7 + state.step * (i.isEven ? 0.018 : -0.012);
           final distance = fire.radius * (0.18 + (i % 3) * 0.22);
+          final flicker = 0.5 + 0.5 * math.sin(state.step * 0.48 + i * 1.73);
           final base =
               fire.position +
-              Offset(math.cos(angle), math.sin(angle)) * distance;
+              Offset(math.cos(angle), math.sin(angle)) * distance -
+              Offset(0, r * 0.18 * flicker);
           if (flame != null) {
             _drawEffect(
               canvas,
               flame,
               base,
-              r * (0.5 + (i % 3) * 0.12) * pulse,
-              angle + math.pi / 2,
+              r * (0.42 + (i % 3) * 0.11 + flicker * 0.2) * pulse,
+              angle + math.pi / 2 + math.sin(state.step * 0.31 + i) * 0.14,
               opacity: life,
             );
           }
@@ -939,21 +941,23 @@ class PowerUpPainter {
           (step ~/ 5 + i) % 4,
         );
         final angle = i * math.pi * 2 / 5 + step * 0.045;
+        final flicker = 0.5 + 0.5 * math.sin(step * 0.52 + i * 1.61);
         final base =
             ball.position +
-            Offset(math.cos(angle), math.sin(angle)) * ball.radius * 0.82;
+            Offset(math.cos(angle), math.sin(angle)) * ball.radius * 0.82 -
+            Offset(0, ball.radius * 0.16 * flicker);
         if (flame != null) {
           _drawEffect(
             canvas,
             flame,
             base,
-            ball.radius * (0.34 + (i.isEven ? 0.07 : 0)),
-            angle + math.pi / 2,
+            ball.radius * (0.29 + flicker * 0.18),
+            angle + math.pi / 2 + math.sin(step * 0.36 + i) * 0.16,
           );
           continue;
         }
-        final flicker = 0.22 + 0.08 * math.sin(step * 0.5 + i).abs();
-        final tip = base - Offset(0, ball.radius * flicker);
+        final fallbackFlicker = 0.22 + 0.08 * math.sin(step * 0.5 + i).abs();
+        final tip = base - Offset(0, ball.radius * fallbackFlicker);
         final side = ball.radius * 0.12;
         canvas.drawPath(
           Path()

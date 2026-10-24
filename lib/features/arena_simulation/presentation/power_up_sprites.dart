@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -66,11 +67,15 @@ class PowerUpSprites {
     final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
     final sheet = (await codec.getNextFrame()).image;
     codec.dispose();
+    final pixels = await sheet.toByteData(format: ui.ImageByteFormat.rawRgba);
     for (final entry in _sheetRects.entries) {
+      final source = pixels == null
+          ? entry.value
+          : _opaqueBounds(pixels, sheet.width, entry.value);
       final recorder = ui.PictureRecorder();
       final fitted = applyBoxFit(
         BoxFit.contain,
-        entry.value.size,
+        source.size,
         const Size.square(64),
       );
       final destination = Alignment.center.inscribe(
@@ -79,7 +84,7 @@ class PowerUpSprites {
       );
       Canvas(recorder).drawImageRect(
         sheet,
-        entry.value,
+        source,
         destination,
         Paint()..filterQuality = FilterQuality.none,
       );
@@ -190,6 +195,35 @@ class PowerUpSprites {
       _animatedEffects[kind] = frames;
     }
     animatedSheet.dispose();
+  }
+
+  static Rect _opaqueBounds(ByteData pixels, int imageWidth, Rect cell) {
+    final left = cell.left.floor();
+    final top = cell.top.floor();
+    final right = cell.right.ceil();
+    final bottom = cell.bottom.ceil();
+    var minX = right;
+    var minY = bottom;
+    var maxX = left;
+    var maxY = top;
+    for (var y = top; y < bottom; y++) {
+      for (var x = left; x < right; x++) {
+        final alpha = pixels.getUint8((y * imageWidth + x) * 4 + 3);
+        if (alpha <= 12) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (minX > maxX || minY > maxY) return cell;
+    const padding = 2.0;
+    return Rect.fromLTRB(
+      math.max(cell.left, minX - padding),
+      math.max(cell.top, minY - padding),
+      math.min(cell.right, maxX + 1 + padding),
+      math.min(cell.bottom, maxY + 1 + padding),
+    );
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {
@@ -313,25 +347,28 @@ class PowerUpIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: PowerUpSprites.load(),
-    builder: (_, _) =>
-        CustomPaint(size: Size.square(size), painter: _IconPainter(kind)),
+    builder: (_, _) => CustomPaint(
+      size: Size.square(size),
+      painter: _IconPainter(kind, PowerUpSprites.of(kind)),
+    ),
   );
 }
 
 class _IconPainter extends CustomPainter {
   final PowerUpKind kind;
+  final ui.Image? image;
 
-  _IconPainter(this.kind);
+  _IconPainter(this.kind, this.image);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final image = PowerUpSprites.of(kind);
-    if (image == null) {
+    final sprite = image;
+    if (sprite == null) {
       PowerUpSprites.paintIcon(canvas, kind, Offset.zero & size);
     } else {
       canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        sprite,
+        Rect.fromLTWH(0, 0, sprite.width.toDouble(), sprite.height.toDouble()),
         Offset.zero & size,
         Paint()..filterQuality = FilterQuality.none,
       );
@@ -339,5 +376,6 @@ class _IconPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_IconPainter old) => old.kind != kind;
+  bool shouldRepaint(_IconPainter old) =>
+      old.kind != kind || old.image != image;
 }

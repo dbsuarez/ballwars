@@ -407,10 +407,13 @@ class MatchSimulationController {
     double amount, {
     SimulationBall? attacker,
     String? move,
+    bool scaleForCrowd = true,
   }) {
     if (mode != MatchMode.arsenal) return 0;
     if (amount > 0 && _absorbWithGoldenArmor(ball)) return 0;
-    final crowd = mayhem
+    final crowd = !scaleForCrowd
+        ? 1.0
+        : mayhem
         ? 0.85
         : _balls.length > 2
         ? math.pow(_balls.length / 2, 2).toDouble()

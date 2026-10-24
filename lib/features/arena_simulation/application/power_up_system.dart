@@ -1549,6 +1549,7 @@ class PowerUpSystem {
             at: target.position,
             from: attack.owner,
             unavoidable: true,
+            scaleForCrowd: false,
           );
           _yell(target, 'BLASTED!');
         }
@@ -1851,6 +1852,7 @@ class PowerUpSystem {
     SimulationBall? from,
     int volley = 0,
     bool unavoidable = false,
+    bool scaleForCrowd = true,
   }) {
     if (target.isGhost && !unavoidable) return;
     if (target.magneticFieldLeft > 0 && !unavoidable) {
@@ -1913,6 +1915,7 @@ class PowerUpSystem {
         (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,
         attacker: from,
         move: kind.label,
+        scaleForCrowd: scaleForCrowd,
       );
       if (from != null &&
           (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {

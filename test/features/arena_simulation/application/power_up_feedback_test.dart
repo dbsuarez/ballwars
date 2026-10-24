@@ -424,6 +424,57 @@ void main() {
     },
   );
 
+  test('Energy Wave does not erase a crowded Arsenal field', () {
+    final c = MatchSimulationController(
+      const [
+        ..._balls,
+        CustomBall(
+          id: 'c',
+          name: 'C',
+          primaryColor: Colors.green,
+          glowColor: Colors.lightGreen,
+        ),
+        CustomBall(
+          id: 'd',
+          name: 'D',
+          primaryColor: Colors.orange,
+          glowColor: Colors.amber,
+        ),
+      ],
+      arenaRadius: _arenaRadius,
+      seed: 4,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
+    final balls = c.state.balls;
+    final positions = const [
+      Offset(-110, 0),
+      Offset(110, 0),
+      Offset(0, -110),
+      Offset(0, 110),
+    ];
+    for (var i = 0; i < balls.length; i++) {
+      balls[i]
+        ..position = positions[i]
+        ..velocity = Offset.zero;
+    }
+    balls.first.held = PowerUpKind.energyWave;
+
+    _run(
+      c,
+      PowerUpTuning.aimSteps +
+          EnergyWaveAttack.chargeSteps +
+          EnergyWaveAttack.hitIntervalSteps * 3 +
+          1,
+    );
+
+    final expectedLife =
+        PowerUpTuning.arenaLife -
+        PowerUpTuning.arenaDamage[PowerUpKind.energyWave]!;
+    expect(balls.skip(1).map((ball) => ball.life), everyElement(expectedLife));
+    expect(balls.map((ball) => ball.isEliminated), everyElement(isFalse));
+  });
+
   test('a shield blocks a hook (and breaks); nothing is pulled', () {
     final c = _match();
     final [a, b] = c.state.balls;

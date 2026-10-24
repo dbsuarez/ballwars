@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/core/offline/offline_store.dart';
+import 'package:ballwars/core/offline/device_prefs.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
@@ -47,6 +48,16 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openSettings(WidgetTester tester) async {
+    await tester.tap(find.text('Edit match settings'));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> closeSettings(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Close match settings'));
     await tester.pumpAndSettle();
   }
 
@@ -127,10 +138,12 @@ void main() {
     tester,
   ) async {
     await pumpSetup(tester);
+    await openSettings(tester);
     await tester.tap(find.text('1 round'));
     await tester.tap(find.text('1×'));
     await tester.tap(find.text('On'));
     await tester.pump();
+    await closeSettings(tester);
     await tester.tap(find.byIcon(Icons.shuffle));
     await tester.pump();
     await tester.tap(find.text('Start'));
@@ -144,12 +157,14 @@ void main() {
     tester,
   ) async {
     await pumpSetup(tester);
+    await openSettings(tester);
     await tester.tap(find.text('1 round'));
     await tester.tap(find.text('1×'));
     await tester.pumpAndSettle();
 
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
+    await openSettings(tester);
     expect(find.text('First to 2'), findsOneWidget);
     expect(find.text('2×'), findsOneWidget);
   });
@@ -172,9 +187,11 @@ void main() {
     tester,
   ) async {
     await pumpSetup(tester);
+    await openSettings(tester);
     await tester.tap(find.text('Medium'));
     await tester.pump();
     expect(find.text('Large'), findsOneWidget);
+    await closeSettings(tester);
     await tester.tap(find.byIcon(Icons.shuffle));
     await tester.pump();
     await tester.tap(find.text('Start'));
@@ -182,6 +199,7 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
+    await openSettings(tester);
     expect(find.text('Large'), findsOneWidget);
   });
 
@@ -207,8 +225,11 @@ void main() {
     tester,
   ) async {
     await pumpSetup(tester);
+    await openSettings(tester);
+    await tester.ensureVisible(find.byTooltip('Ball look: pictures'));
     await tester.tap(find.byTooltip('Ball look: pictures'));
     await tester.pump();
+    await closeSettings(tester);
     await tester.tap(find.byIcon(Icons.shuffle));
     await tester.pump();
     await tester.tap(find.text('Start'));
@@ -216,6 +237,7 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
+    await openSettings(tester);
     expect(find.byTooltip('Ball look: faces'), findsOneWidget);
   });
 
@@ -242,6 +264,7 @@ void main() {
       expect(find.textContaining('Weapons'), findsNothing);
       await tester.tap(find.text('Arsenal'));
       await tester.pump();
+      await openSettings(tester);
       expect(find.text('Pickups: All'), findsOneWidget);
 
       await tester.tap(find.text('Pickups: All'));
@@ -314,6 +337,8 @@ void main() {
           .where((kind) => !kind.isTrap)
           .length;
       expect(find.text('Pickups: 1 of $selectableCount'), findsOneWidget);
+      expect(await DevicePrefs.read('power-ups-arsenal'), contains('pistol'));
+      expect(await DevicePrefs.read('power-ups-allout'), isNull);
 
       // All on again.
       await tester.tap(find.text('Pickups: 1 of $selectableCount'));
@@ -323,6 +348,7 @@ void main() {
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       expect(find.text('Pickups: All'), findsOneWidget);
+      await closeSettings(tester);
 
       await tester.tap(find.byIcon(Icons.shuffle));
       await tester.pump();
@@ -330,4 +356,45 @@ void main() {
       expect(started!.powerUps, isNull);
     },
   );
+  testWidgets('settings start collapsed and power-up lists are independent by mode', (tester) async {
+    await DevicePrefs.write('power-ups-arsenal', 'pistol');
+    await DevicePrefs.write('power-ups-allout', 'shotgun');
+    await pumpSetup(tester);
+    expect(find.text('Edit match settings'), findsOneWidget);
+    expect(find.text('Shrinking arena'), findsNothing);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.powerUps, contains(PowerUpKind.pistol));
+    expect(started!.powerUps, isNot(contains(PowerUpKind.shotgun)));
+    await tester.tap(find.text('All-Out'));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.powerUps, contains(PowerUpKind.shotgun));
+    expect(started!.powerUps, isNot(contains(PowerUpKind.pistol)));
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.powerUps, contains(PowerUpKind.pistol));
+  });
+
+  testWidgets('phone keeps ball picking visible until settings are opened', (tester) async {
+    await pumpSetup(tester);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpAndSettle();
+    expect(find.text('Edit match settings').hitTestable(), findsOneWidget);
+    expect(find.text('Start').hitTestable(), findsOneWidget);
+    expect(find.text('Shrinking arena'), findsNothing);
+    expect(tester.getSize(find.byType(GridView)).height, greaterThan(150));
+    await openSettings(tester);
+    expect(find.text('Shrinking arena'), findsOneWidget);
+    expect(find.byType(Card), findsWidgets);
+    await closeSettings(tester);
+    expect(find.text('Shrinking arena'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
 }

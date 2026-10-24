@@ -16,6 +16,7 @@ class ScoreboardOverlay extends StatelessWidget {
   final Map<String, int>? eliminations;
 
   final MatchMode mode;
+  final bool compact;
 
   const ScoreboardOverlay({
     super.key,
@@ -23,7 +24,55 @@ class ScoreboardOverlay extends StatelessWidget {
     this.wins,
     this.eliminations,
     this.mode = MatchMode.threads,
+    this.compact = false,
   });
+
+  Widget _compactCards(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    return LayoutBuilder(builder: (context, bounds) {
+      final columns = balls.length >= 5 && bounds.maxWidth >= 340 ? 3 : 2;
+      final width = (bounds.maxWidth - (columns - 1) * 6) / columns;
+      return Wrap(spacing: 6, runSpacing: 6, children: [
+        for (final ball in balls)
+          SizedBox(width: width, child: Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(width: 7, height: 7, decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: ball.config.primaryColor)),
+                  const SizedBox(width: 5),
+                  Expanded(child: Text(ball.config.name, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.ui(12, FontWeight.w700, color: c.text))),
+                ]),
+                const SizedBox(height: 4),
+                Text(ball.isEliminated ? 'OUT' : [
+                  mode == MatchMode.arsenal ? '${ball.life.round()} HP' : '${ball.lineCount} lines',
+                  if (eliminations != null) '${eliminations![ball.config.id] ?? 0} KOs',
+                  if (wins != null) _winsDetail(ball),
+                ].join(' / '), maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: AppText.mono(11, color: c.muted)),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(
+                  value: ball.isEliminated ? 0 : mode == MatchMode.arsenal
+                      ? (ball.life / PowerUpTuning.arenaLife).clamp(0.0, 1.0)
+                      : (ball.startLines == 0 ? 0.0 : ball.lineCount / ball.startLines).clamp(0.0, 1.0),
+                  color: ball.config.primaryColor, backgroundColor: c.border,
+                  minHeight: 3,
+                ),
+                SizedBox(height: 18, child: Row(children: [
+                  for (final item in _items(ball).take(3))
+                    Padding(padding: const EdgeInsets.only(right: 4),
+                        child: Tooltip(message: item.label, child: PowerUpIcon(item, size: 16))),
+                ])),
+              ]),
+            ),
+          )),
+      ]);
+    });
+  }
 
   /// Health as hearts out of 10, rounded to the nearest half heart. Arsenal life above full (from an
   /// apple) counts past 10.
@@ -44,6 +93,7 @@ class ScoreboardOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
+    if (compact) return _compactCards(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

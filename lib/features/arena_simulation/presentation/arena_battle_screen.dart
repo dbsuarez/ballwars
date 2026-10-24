@@ -1,3 +1,4 @@
+import '../../../core/widgets/screen_awake.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -570,6 +571,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       listenable: _frame,
       builder: (context, _) => ScoreboardOverlay(
         mode: widget.config.mode,
+        compact: MediaQuery.sizeOf(context).height >= MediaQuery.sizeOf(context).width,
         balls: _state.balls,
         wins: widget.config.winsNeeded > 1 ? _roundWins : null,
         eliminations: widget.config.endlessBattle
@@ -578,7 +580,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       ),
     );
 
-    return Scaffold(
+    return ScreenAwake(
+      enabled: !_isPaused && !finished,
+      child: Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -816,11 +820,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       ),
                       Expanded(child: arena),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
                         child: scoreboard,
                       ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 4, 24, 20),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                         child: Row(children: [timer, restart]),
                       ),
                     ],
@@ -894,6 +898,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             );
           },
         ),
+      ),
       ),
     );
   }

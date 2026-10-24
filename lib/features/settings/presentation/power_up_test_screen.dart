@@ -1,3 +1,4 @@
+import '../../../core/widgets/screen_awake.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -5,6 +6,7 @@ import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_canvas.dart';
+import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'app_settings_scope.dart';
@@ -42,6 +44,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   String _layout = 'Separated';
   final _pinned = [false, false];
   final _items = [PowerUpKind.pistol, PowerUpKind.shield];
+  final List<PowerUpKind?> _savedItems = [PowerUpKind.pistol, null];
 
   @override
   void initState() {
@@ -97,6 +100,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     for (var i = 0; i < balls.length; i++) {
       _match!.setTestBallPinned(balls[i], _pinned[i]);
     }
+    for (var i = 0; i < _savedItems.length; i++) {
+      final kind = _savedItems[i];
+      if (kind != null) _applyItem(i, kind);
+    }
     _paused = true;
     _previous = null;
   }
@@ -113,9 +120,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   void _give(int index) {
+    final kind = _items[index];
+    _savedItems[index] = kind;
+    _applyItem(index, kind);
+  }
+
+  void _applyItem(int index, PowerUpKind kind) {
     final match = _match!;
     final ball = match.state.balls[index];
-    final kind = _items[index];
     if (kind.isTrap) {
       match.powerUps!.spawnTestItem(kind);
     } else {
@@ -131,10 +143,232 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     super.dispose();
   }
 
+  void _togglePlayback() {
+    setState(() {
+      if (_match!.state.status == MatchStatus.finished) _reset();
+      _paused = !_paused;
+      _previous = null;
+      if (_paused) {
+        _ticker.stop();
+      } else {
+        _ticker.start();
+      }
+    });
+  }
+
+  void _freeze(int index, bool value) {
+    setState(() {
+      _pinned[index] = value;
+      _match!.setTestBallPinned(_match!.state.balls[index], value);
+    });
+  }
+
+  Future<void> _chooseItem(int index) async {
+    // Pause before opening controls so the user never misses the fight.
+    setState(() {
+      _paused = true;
+      _ticker.stop();
+      _previous = null;
+    });
+    final selected = await showModalBottomSheet<Object>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const _ItemPicker(),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      if (selected is PowerUpKind) {
+        _items[index] = selected;
+        _savedItems[index] = selected;
+      } else {
+        _savedItems[index] = null;
+      }
+      _reset();
+    });
+  }
+
+  Widget _arena() {
+    final match = _match!;
+    final state = match.state;
+    final finished = state.status == MatchStatus.finished;
+    return Column(children: [
+      Expanded(child: Center(child: AspectRatio(
+        aspectRatio: 1,
+        child: RepaintBoundary(child: ArenaCanvas(
+          state: state,
+          arenaRadius: match.arenaRadius,
+          rimAngle: 0,
+          look: BallLook.faces,
+        )),
+      ))),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(finished
+            ? 'Winner: ${state.balls.firstWhere((b) => b.config.id == state.winnerId).config.name}'
+            : '${_paused ? "Paused" : "Running"} - ${(state.step / 60).toStringAsFixed(1)} s'),
+      ),
+      Text(state.balls.map((ball) =>
+          '${ball.config.name}: ${_mode == MatchMode.arsenal ? "${ball.life.toStringAsFixed(0)} life" : "${ball.fanLines.length} threads"}'
+          '${ball.isEliminated ? " (out)" : ""}').join(' / ')),
+      Row(children: [
+        for (var i = 0; i < 2; i++)
+          Expanded(child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: () => _freeze(i, !_pinned[i]),
+              icon: Icon(_pinned[i] ? Icons.lock : Icons.directions_run,
+                  color: _balls[i].primaryColor),
+              label: Text('${i == 0 ? "A" : "B"}: ${_pinned[i] ? "Frozen" : "Moving"}'),
+            ),
+          )),
+      ]),
+    ]);
+  }
+
+  Widget _controls() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      for (var i = 0; i < 2; i++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            CircleAvatar(radius: 12, backgroundColor: _balls[i].primaryColor,
+                child: Text(i == 0 ? 'A' : 'B', style: const TextStyle(color: Colors.white, fontSize: 12))),
+            const SizedBox(width: 8),
+            Expanded(child: OutlinedButton(
+              key: ValueKey('choose-item-$i'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: () => _chooseItem(i),
+              child: Text(_savedItems[i]?.label ?? 'Choose item',
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            )),
+            IconButton(
+              tooltip: 'Give item again to Ball ${i == 0 ? "A" : "B"}',
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: _savedItems[i] == null ||
+                  _match!.state.status == MatchStatus.finished ||
+                  _match!.state.balls[i].isEliminated ? null : () => setState(() {
+                    _items[i] = _savedItems[i]!;
+                    _give(i);
+                  }),
+              icon: const Icon(Icons.refresh),
+            ),
+          ]),
+        ),
+    ]),
+  );
+
+  Future<void> _showSetup() async {
+    setState(() {
+      _paused = true;
+      _ticker.stop();
+      _previous = null;
+    });
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => StatefulBuilder(builder: (context, refresh) {
+        void change(VoidCallback update) {
+          setState(() { update(); _reset(); });
+          refresh(() {});
+        }
+        return SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.7,
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            ListTile(
+              title: const Text('Fight setup'),
+              trailing: IconButton(icon: const Icon(Icons.close),
+                  tooltip: 'Close setup', onPressed: () => Navigator.pop(sheetContext)),
+            ),
+            const Text('Changes reset and pause the fight. Selected items are restored.'),
+            DropdownButtonFormField<MatchMode>(
+              initialValue: _mode,
+              decoration: const InputDecoration(labelText: 'Fight mode'),
+              items: const [
+                DropdownMenuItem(value: MatchMode.arsenal, child: Text('Arsenal')),
+                DropdownMenuItem(value: MatchMode.allOut, child: Text('All-Out')),
+              ],
+              onChanged: (value) => change(() => _mode = value!),
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: _layout,
+              decoration: const InputDecoration(labelText: 'Starting positions'),
+              items: [for (final layout in ['Separated', 'Contact', 'Natural'])
+                DropdownMenuItem(value: layout, child: Text(layout))],
+              onChanged: (value) => change(() => _layout = value!),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Random item spawns'),
+              value: _randomSpawns,
+              onChanged: (value) => change(() => _randomSpawns = value),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Endless fight'),
+              value: _endless,
+              onChanged: (value) => change(() => _endless = value),
+            ),
+            const Text('Freeze holds a ball in place while attacks and timers continue. '
+                'Unlock to test hooks, portals or knockback. Traps appear near the rim. '
+                'The refresh button beside an item gives it again during a fight.'),
+          ]),
+        );
+      }),
+    );
+  }
+
+  Widget _playback() {
+    final match = _match!;
+    final finished = match.state.status == MatchStatus.finished;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            Expanded(child: FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
+              onPressed: _togglePlayback,
+              icon: Icon(finished || _paused ? Icons.play_arrow : Icons.pause),
+              label: Text(finished ? 'Replay fight' : _paused ? 'Play' : 'Pause'),
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
+              onPressed: () => setState(_reset),
+              icon: const Icon(Icons.restart_alt),
+              label: const Text('Reset fight'),
+            )),
+          ]),
+          Row(children: [
+            Expanded(child: OutlinedButton(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: !_paused || finished ? null : () => setState(() {
+                match.tick(MatchSimulationController.fixedTimestep / match.playbackSpeedUp);
+              }),
+              child: const Text('Step frame'),
+            )),
+            const SizedBox(width: 12),
+            const Text('Speed '),
+            DropdownButton<double>(
+              value: _speed,
+              items: [for (final speed in [0.25, 0.5, 1.0, 2.0])
+                DropdownMenuItem(value: speed, child: Text('${speed}x'))],
+              onChanged: (value) => setState(() => _speed = value!),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final match = _match;
-    if (_allowed != true || match == null) {
+    if (_allowed != true || _match == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Power-up Tests')),
         body: Center(child: _allowed == null
@@ -142,138 +376,97 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             : const Text('Admin access required.')),
       );
     }
-    final state = match.state;
-    final finished = state.status == MatchStatus.finished;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Power-up Tests')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('Live simulation using your saved power-up numbers. '
-                    'Give items, then press Play. Changes here affect only this test.'),
-                const SizedBox(height: 12),
-                Center(child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: RepaintBoundary(child: ArenaCanvas(
-                    state: state,
-                    arenaRadius: match.arenaRadius,
-                    rimAngle: 0,
-                    look: BallLook.faces,
-                  )),
-                )),
-                Text(finished
-                    ? 'Winner: ${state.balls.firstWhere((b) => b.config.id == state.winnerId).config.name}'
-                    : '${_paused ? "Paused" : "Running"} - ${(state.step / 60).toStringAsFixed(1)} s'),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  FilledButton.icon(
-                    onPressed: finished ? null : () => setState(() {
-                      _paused = !_paused;
-                      _previous = null;
-                      if (_paused) {
-                        _ticker.stop();
-                      } else {
-                        _ticker.start();
-                      }
-                    }),
-                    icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
-                    label: Text(_paused ? 'Play' : 'Pause'),
-                  ),
-                  OutlinedButton(
-                    onPressed: !_paused || finished ? null : () => setState(() {
-                      match.tick(MatchSimulationController.fixedTimestep /
-                          match.playbackSpeedUp);
-                    }),
-                    child: const Text('Step frame'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => setState(_reset),
-                    icon: const Icon(Icons.restart_alt),
-                    label: const Text('Reset fight'),
-                  ),
-                  DropdownButton<double>(
-                    value: _speed,
-                    items: [for (final speed in [0.25, 0.5, 1.0, 2.0])
-                      DropdownMenuItem(value: speed, child: Text('${speed}x'))],
-                    onChanged: (value) => setState(() => _speed = value!),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                const Text('Scenario changes reset and pause the fight.'),
-                Wrap(spacing: 20, children: [
-                  DropdownButton<MatchMode>(
-                    value: _mode,
-                    items: const [
-                      DropdownMenuItem(value: MatchMode.arsenal, child: Text('Arsenal')),
-                      DropdownMenuItem(value: MatchMode.allOut, child: Text('All-Out')),
-                    ],
-                    onChanged: (value) => setState(() { _mode = value!; _reset(); }),
-                  ),
-                  DropdownButton<String>(
-                    value: _layout,
-                    items: [for (final layout in ['Separated', 'Contact', 'Natural'])
-                      DropdownMenuItem(value: layout, child: Text(layout))],
-                    onChanged: (value) => setState(() { _layout = value!; _reset(); }),
-                  ),
-                ]),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Random item spawns'),
-                  value: _randomSpawns,
-                  onChanged: (value) => setState(() {
-                    _randomSpawns = value;
-                    match.powerUps!.automaticSpawning = value;
-                  }),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Endless fight'),
-                  subtitle: const Text('Respawn eliminated balls to keep testing.'),
-                  value: _endless,
-                  onChanged: (value) => setState(() { _endless = value; _reset(); }),
-                ),
-                const Text('Freeze locks position while attacks, damage and timers continue. '
-                    'It also prevents movement from hooks, portals and knockback. '
-                    'Traps are placed near the rim using normal spawn rules.'),
-                for (var i = 0; i < state.balls.length; i++)
-                  Card(child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Text('${state.balls[i].config.name} - '
-                          '${_mode == MatchMode.arsenal ? "${state.balls[i].life.toStringAsFixed(0)} life" : "${state.balls[i].fanLines.length} threads"}'
-                          '${state.balls[i].isEliminated ? " - eliminated" : ""}'),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('Freeze Ball ${i == 0 ? "A" : "B"} in place'),
-                        value: _pinned[i],
-                        onChanged: (value) => setState(() {
-                          _pinned[i] = value;
-                          match.setTestBallPinned(state.balls[i], value);
-                        }),
-                      ),
-                      DropdownButton<PowerUpKind>(
-                        isExpanded: true,
-                        value: _items[i],
-                        items: [for (final kind in PowerUpKind.values)
-                          DropdownMenuItem(value: kind, child: Text(kind.label))],
-                        onChanged: (value) => setState(() => _items[i] = value!),
-                      ),
-                      FilledButton.tonal(
-                        onPressed: finished || state.balls[i].isEliminated
-                            ? null : () => setState(() => _give(i)),
-                        child: Text(_items[i].isTrap ? 'Place ${_items[i].label} trap'
-                            : 'Give ${_items[i].label} to ${state.balls[i].config.name}'),
-                      ),
-                    ]),
-                  )),
-              ],
+    return ScreenAwake(
+      enabled: !_paused && _match!.state.status != MatchStatus.finished,
+      child: Scaffold(
+      appBar: AppBar(
+        title: const Text('Power-up Tests'),
+        actions: [IconButton(tooltip: 'Fight setup',
+            onPressed: _showSetup, icon: const Icon(Icons.tune))],
+      ),
+      bottomNavigationBar: _playback(),
+      body: SafeArea(
+        bottom: false,
+        child: LayoutBuilder(builder: (context, bounds) {
+          if (bounds.maxWidth >= 600 && bounds.maxWidth > bounds.maxHeight) {
+            return Row(children: [
+              Expanded(child: Padding(padding: const EdgeInsets.all(8), child: _arena())),
+              Expanded(child: Center(child: _controls())),
+            ]);
+          }
+          return Column(children: [
+            Expanded(child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8), child: _arena())),
+            _controls(),
+          ]);
+        }),
+      ),
+      ),
+    );
+  }
+}
+
+class _ItemPicker extends StatefulWidget {
+  const _ItemPicker();
+
+  @override
+  State<_ItemPicker> createState() => _ItemPickerState();
+}
+
+class _ItemPickerState extends State<_ItemPicker> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final items = PowerUpKind.values.where(
+      (kind) => kind.label.toLowerCase().contains(_query.toLowerCase()),
+    ).toList();
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.75,
+        child: Column(children: [
+          ListTile(
+            title: const Text('Choose an item'),
+            trailing: IconButton(
+              tooltip: 'Close item picker',
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close),
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              decoration: const InputDecoration(
+                labelText: 'Search weapons, power-ups and traps',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) => setState(() => _query = value),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.block),
+            title: const Text('No item'),
+            onTap: () => Navigator.pop(context, 'none'),
+          ),
+          Expanded(child: items.isEmpty
+              ? const Center(child: Text('No matching items'))
+              : ListView.builder(
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return ListTile(
+                      minVerticalPadding: 12,
+                      leading: PowerUpIcon(item, size: 32),
+                      title: Text(item.label),
+                      subtitle: Text(item.isTrap ? 'Trap' : item.isWeapon ? 'Weapon' : 'Power-up'),
+                      trailing: const Icon(Icons.add_circle_outline),
+                      onTap: () => Navigator.pop(context, item),
+                    );
+                  },
+                )),
+        ]),
       ),
     );
   }

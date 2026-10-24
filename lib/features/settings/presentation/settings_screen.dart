@@ -946,8 +946,10 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -958,6 +960,7 @@ class _Section extends StatelessWidget {
           const SizedBox(height: 12),
           child,
         ],
+      ),
       ),
     );
   }

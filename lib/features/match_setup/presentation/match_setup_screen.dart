@@ -61,6 +61,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   /// Power-up modes: the chosen power-ups, null for all.
   Set<PowerUpKind>? _powerUps;
+  final Map<MatchMode, Set<PowerUpKind>?> _modePowerUps = {};
+  VoidCallback? _refreshDrawer;
+
+  void _update(VoidCallback update) {
+    setState(update);
+    _refreshDrawer?.call();
+  }
   bool _dualWield = false;
   bool _endlessBattle = false;
   bool _mayhem = false;
@@ -98,15 +105,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final endlessBattle = await DevicePrefs.read('endless-battle');
     final mayhem = await DevicePrefs.read('mayhem');
     final shrinkingArena = await DevicePrefs.read('shrinking-arena');
-    final savedKinds = {
-      for (final name in (await DevicePrefs.read('power-ups') ?? '').split(','))
-        ...PowerUpKind.values.where((k) => k.name == name),
-    };
+    final legacy = await DevicePrefs.read('power-ups');
+    for (final gameMode in MatchMode.values) {
+      final saved = await DevicePrefs.read('power-ups-${gameMode.id}') ?? legacy;
+      final kinds = {
+        for (final name in (saved ?? '').split(','))
+          ...PowerUpKind.values.where((kind) => kind.name == name),
+      };
+      _modePowerUps[gameMode] = kinds.isEmpty || kinds.length == PowerUpKind.values.length
+          ? null : {...kinds.where((kind) => !kind.isTrap),
+              ...PowerUpKind.values.where((kind) => kind.isTrap)};
+    }
     final filter = _CategoryFilter.byName(
       await DevicePrefs.read('category-filter'),
     );
     if (!mounted) return;
-    setState(() {
+    _update(() {
       if (filter != null && filter != _filter) {
         _filter = filter;
         _category = _shown.firstOrNull?.id;
@@ -118,13 +132,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _endlessBattle = endlessBattle == '1';
       _mayhem = mayhem == '1' && _mode == MatchMode.arsenal;
       _shrinkingArena = shrinkingArena == '1';
-      if (savedKinds.isNotEmpty &&
-          savedKinds.length < PowerUpKind.values.length) {
-        _powerUps = {
-          ...savedKinds.where((kind) => !kind.isTrap),
-          ...PowerUpKind.values.where((kind) => kind.isTrap),
-        };
-      }
+      _powerUps = _modePowerUps[_mode];
       _showEffects = effects;
       if (wallSparkSize != null) _wallSparkSize = wallSparkSize;
       if (rounds != null && const [1, 2, 3].contains(rounds)) {
@@ -170,13 +178,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   ];
 
   Future<void> _load() async {
-    setState(() {
+    _update(() {
       _loading = true;
       _packsFailed = false;
     });
     await Future.wait([_loadGroups(), _loadPacks()]);
     if (!mounted) return;
-    setState(() {
+    _update(() {
       _loading = false;
       _category ??= _shown.firstOrNull?.id;
     });
@@ -187,9 +195,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     if (repo == null) return;
     try {
       final packs = await repo.load();
-      if (mounted) setState(() => _packs = packs);
+      if (mounted) _update(() => _packs = packs);
     } catch (_) {
-      if (mounted) setState(() => _packsFailed = true);
+      if (mounted) _update(() => _packsFailed = true);
     }
   }
 
@@ -215,7 +223,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     if (!mounted) return;
     final mineIds = {for (final g in mine) g.id};
     _packExtras = extras;
-    setState(
+    _update(
       () => _groups = [
         for (final g in mine)
           if (g.balls.isNotEmpty)
@@ -246,7 +254,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   void _setFilter(_CategoryFilter filter) {
     GameAudio.instance.click();
     DevicePrefs.write('category-filter', filter.name);
-    setState(() {
+    _update(() {
       _filter = filter;
       _selected.clear();
       _category = _shown.firstOrNull?.id;
@@ -272,7 +280,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   void _toggle(CustomBall ball) {
     GameAudio.instance.click();
-    setState(() {
+    _update(() {
       if (_selected.remove(ball.id) == null && _selected.length < _maxBalls) {
         _selected[ball.id] = ball;
       }
@@ -297,13 +305,14 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     );
     if (chosen == null || !mounted) return;
     final all = chosen.length == PowerUpKind.values.length;
-    setState(() => _powerUps = all ? null : chosen);
-    DevicePrefs.write('power-ups', [for (final k in chosen) k.name].join(','));
+    _update(() => _powerUps = all ? null : chosen);
+    _modePowerUps[_mode] = _powerUps;
+    DevicePrefs.write('power-ups-${_mode.id}', [for (final k in chosen) k.name].join(','));
   }
 
   void _clearPicks() {
     GameAudio.instance.click();
-    setState(_selected.clear);
+    _update(_selected.clear);
   }
 
   void _randomMatchup() {
@@ -311,7 +320,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final count = _mayhem ? 6 : 2;
     if (pool.length < count) return;
     GameAudio.instance.click();
-    setState(() {
+    _update(() {
       _selected
         ..clear()
         ..addEntries(pool.take(count).map((b) => MapEntry(b.id, b)));
@@ -378,7 +387,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                     child: TextField(
                       controller: _search,
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (_) => _update(() {}),
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.search),
                         hintText: 'Search',
@@ -492,7 +501,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             // Enter on typed text that matches nothing reports null: keep the
             // current category rather than showing an empty one.
             if (id == null) return;
-            setState(() {
+            _update(() {
               // A match never mixes categories: a new category starts with no picks.
               if (id != _category) _selected.clear();
               _category = id;
@@ -592,16 +601,45 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     );
   }
 
+  Future<void> _openSettings() async {
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (sheetContext) => StatefulBuilder(builder: (context, refresh) {
+          _refreshDrawer = () => refresh(() {});
+          return SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.8,
+            child: Column(children: [
+              ListTile(
+                title: const Text('Match settings'),
+                trailing: IconButton(tooltip: 'Close match settings',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(sheetContext)),
+              ),
+              Expanded(child: SingleChildScrollView(
+                child: Card(margin: const EdgeInsets.all(8),
+                    child: _settingsPanel(BallWarsColors.of(context))),
+              )),
+            ]),
+          );
+        }),
+      );
+    } finally {
+      _refreshDrawer = null;
+    }
+  }
+
   Widget _footer(BallWarsColors c) {
+    final pickups = _powerUps == null ? 'all pickups' :
+        '${_powerUps!.where((kind) => !kind.isTrap).length} pickups';
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(color: c.surface,
+          border: Border(top: BorderSide(color: c.border))),
+      child: Column(mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           // The kind of match: the thread game, weapons only, or both.
           SegmentedButton<MatchMode>(
             segments: [
@@ -613,91 +651,38 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             style: const ButtonStyle(visualDensity: VisualDensity.compact),
             onSelectionChanged: (v) {
               GameAudio.instance.click();
-              setState(() {
+              _update(() {
+                _modePowerUps[_mode] = _powerUps;
                 _mode = v.first;
+                _powerUps = _modePowerUps[_mode];
                 if (_mode != MatchMode.arsenal) _mayhem = false;
+                if (_selected.length > _maxBalls) {
+                  final keep = _selected.entries.take(_maxBalls).toList();
+                  _selected..clear()..addEntries(keep);
+                }
               });
               DevicePrefs.write('mode', v.first.id);
             },
           ),
-          if (_mode != MatchMode.threads) ...[
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _chooseWeapons,
-              icon: const Icon(Icons.tune_rounded, size: 18),
-              label: Text(
-                _powerUps == null
-                    ? 'Pickups: All'
-                    : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of '
-                          '${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
-              ),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            child: ListTile(
               dense: true,
-              title: const Text('Dual wield'),
-              subtitle: const Text('Equip up to two weapons'),
-              value: _dualWield,
-              onChanged: (value) {
-                GameAudio.instance.click();
-                setState(() => _dualWield = value);
-                DevicePrefs.write('dual-wield', value ? '1' : '0');
-              },
+              title: const Text('Edit match settings'),
+              subtitle: Text([
+                _winsNeeded == 1 ? '1 round' : 'First to $_winsNeeded',
+                '${_speedMultiplier}x', _ballSize.label,
+                'Effects ${_showEffects ? "on" : "off"}',
+                if (_mode != MatchMode.threads) pickups,
+                if (_dualWield && _mode != MatchMode.threads) 'Dual wield',
+                if (_mayhem) 'Mayhem',
+                if (_endlessBattle && !_mayhem && _mode == MatchMode.arsenal) 'Endless',
+                if (_shrinkingArena) 'Shrinking arena',
+              ].join(' / '), maxLines: 2, overflow: TextOverflow.ellipsis),
+              trailing: const Icon(Icons.tune),
+              onTap: _openSettings,
             ),
-            if (_mode == MatchMode.arsenal)
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Mayhem'),
-                subtitle: const Text(
-                  'Six balls, two minutes, respawns; most knockouts wins',
-                ),
-                value: _mayhem,
-                onChanged: (value) {
-                  GameAudio.instance.click();
-                  setState(() {
-                    _mayhem = value;
-                    if (!value && _selected.length > 4) {
-                      final keep = _selected.entries.take(4).toList();
-                      _selected
-                        ..clear()
-                        ..addEntries(keep);
-                    }
-                  });
-                  DevicePrefs.write('mayhem', value ? '1' : '0');
-                },
-              ),
-            if (_mode == MatchMode.arsenal && !_mayhem)
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Endless Battle'),
-                subtitle: const Text(
-                  'Respawn at full health and count knockouts',
-                ),
-                value: _endlessBattle,
-                onChanged: (value) {
-                  GameAudio.instance.click();
-                  setState(() => _endlessBattle = value);
-                  DevicePrefs.write('endless-battle', value ? '1' : '0');
-                },
-              ),
-          ],
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text('Shrinking arena'),
-            subtitle: const Text(
-              'After 10 seconds, the boundary contracts to 60% over 2 minutes',
-            ),
-            value: _shrinkingArena,
-            onChanged: (value) {
-              GameAudio.instance.click();
-              setState(() => _shrinkingArena = value);
-              DevicePrefs.write('shrinking-arena', value ? '1' : '0');
-            },
           ),
-          const SizedBox(height: 8),
           SizedBox(
             height: 36,
             child: Row(
@@ -760,6 +745,109 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 6),
+          Row(children: [
+            OutlinedButton.icon(
+              onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
+              icon: const Icon(Icons.shuffle), label: const Text('Random'),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: FilledButton(
+              onPressed: _canStart ? _start : null, child: const Text('Start'),
+            )),
+          ]),
+        ]),
+    );
+  }
+
+  Widget _settingsPanel(BallWarsColors c) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_mode != MatchMode.threads) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _chooseWeapons,
+              icon: const Icon(Icons.tune_rounded, size: 18),
+              label: Text(
+                _powerUps == null
+                    ? 'Pickups: All'
+                    : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of '
+                          '${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
+              ),
+            ),
+            Card(margin: const EdgeInsets.symmetric(vertical: 4), child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Dual wield'),
+              subtitle: const Text('Equip up to two weapons'),
+              value: _dualWield,
+              onChanged: (value) {
+                GameAudio.instance.click();
+                _update(() => _dualWield = value);
+                DevicePrefs.write('dual-wield', value ? '1' : '0');
+              },
+            )),
+            if (_mode == MatchMode.arsenal)
+              Card(margin: const EdgeInsets.symmetric(vertical: 4), child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Mayhem'),
+                subtitle: const Text(
+                  'Six balls, two minutes, respawns; most knockouts wins',
+                ),
+                value: _mayhem,
+                onChanged: (value) {
+                  GameAudio.instance.click();
+                  _update(() {
+                    _mayhem = value;
+                    if (!value && _selected.length > 4) {
+                      final keep = _selected.entries.take(4).toList();
+                      _selected
+                        ..clear()
+                        ..addEntries(keep);
+                    }
+                  });
+                  DevicePrefs.write('mayhem', value ? '1' : '0');
+                },
+              )),
+            if (_mode == MatchMode.arsenal && !_mayhem)
+              Card(margin: const EdgeInsets.symmetric(vertical: 4), child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Endless Battle'),
+                subtitle: const Text(
+                  'Respawn at full health and count knockouts',
+                ),
+                value: _endlessBattle,
+                onChanged: (value) {
+                  GameAudio.instance.click();
+                  _update(() => _endlessBattle = value);
+                  DevicePrefs.write('endless-battle', value ? '1' : '0');
+                },
+              )),
+          ],
+          Card(margin: const EdgeInsets.symmetric(vertical: 4), child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Shrinking arena'),
+            subtitle: const Text(
+              'After 10 seconds, the boundary contracts to 60% over 2 minutes',
+            ),
+            value: _shrinkingArena,
+            onChanged: (value) {
+              GameAudio.instance.click();
+              _update(() => _shrinkingArena = value);
+              DevicePrefs.write('shrinking-arena', value ? '1' : '0');
+            },
+          )),
+          const SizedBox(height: 8),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -772,7 +860,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     label: (v) => v == 1 ? '1 round' : 'First to $v',
                     onChanged: (v) {
                       GameAudio.instance.click();
-                      setState(() => _winsNeeded = v);
+                      _update(() => _winsNeeded = v);
                       DevicePrefs.write('rounds', v);
                     },
                   ),
@@ -788,7 +876,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     label: (v) => '${v == v.roundToDouble() ? v.toInt() : v}×',
                     onChanged: (v) {
                       GameAudio.instance.click();
-                      setState(() => _speedMultiplier = v);
+                      _update(() => _speedMultiplier = v);
                       DevicePrefs.write('speed', v);
                     },
                   ),
@@ -804,7 +892,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     label: (v) => v ? 'On' : 'Off',
                     onChanged: (v) {
                       GameAudio.instance.click();
-                      setState(() => _showEffects = v);
+                      _update(() => _showEffects = v);
                       EffectsPrefs.setEffectsOn(v);
                     },
                   ),
@@ -820,7 +908,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     label: (v) => v.label,
                     onChanged: (v) {
                       GameAudio.instance.click();
-                      setState(() => _ballSize = v);
+                      _update(() => _ballSize = v);
                       DevicePrefs.write('size', v.id);
                     },
                   ),
@@ -837,7 +925,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               label: (value) => value.label,
               onChanged: (value) {
                 GameAudio.instance.click();
-                setState(() => _wallSparkSize = value);
+                _update(() => _wallSparkSize = value);
                 DevicePrefs.write('wall-spark-size', value.id);
               },
             ),
@@ -853,7 +941,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 onChanged: (on) async {
                   await GameAudio.instance.setMusicOn(on);
                   GameAudio.instance.click();
-                  setState(() {});
+                  _update(() {});
                 },
               ),
               const SizedBox(width: 8),
@@ -865,7 +953,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 onChanged: (on) async {
                   await GameAudio.instance.setEffectsOn(on);
                   GameAudio.instance.click();
-                  setState(() {});
+                  _update(() {});
                 },
               ),
               const SizedBox(width: 8),
@@ -881,7 +969,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                       final next = _look == BallLook.pictures
                           ? BallLook.faces
                           : BallLook.pictures;
-                      setState(() => _look = next);
+                      _update(() => _look = next);
                       DevicePrefs.write('look', next.name);
                     },
                     style: OutlinedButton.styleFrom(
@@ -897,29 +985,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 56,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(56, 52),
-                  ),
-                  child: const Icon(
-                    Icons.shuffle,
-                    semanticLabel: 'Random matchup',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _canStart ? _start : null,
-                  child: const Text('Start'),
-                ),
-              ),
+
             ],
           ),
         ],
@@ -938,12 +1004,10 @@ class _Setting extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
-    return Container(
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 4, 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -958,6 +1022,7 @@ class _Setting extends StatelessWidget {
           ),
           child,
         ],
+      ),
       ),
     );
   }
@@ -1151,11 +1216,11 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => setState(() => _on.addAll(selectable)),
+                    onPressed: () => _update(() => _on.addAll(selectable)),
                     child: const Text('Select all'),
                   ),
                   TextButton(
-                    onPressed: () => setState(() => _on.removeAll(selectable)),
+                    onPressed: () => _update(() => _on.removeAll(selectable)),
                     child: const Text('Clear'),
                   ),
                 ],
@@ -1251,7 +1316,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
       child: InkWell(
         key: ValueKey('selection-card-${kind.name}'),
         onTap: selectable
-            ? () => setState(() => selected ? _on.remove(kind) : _on.add(kind))
+            ? () => _update(() => selected ? _on.remove(kind) : _on.add(kind))
             : null,
         child: Padding(
           padding: const EdgeInsets.all(12),

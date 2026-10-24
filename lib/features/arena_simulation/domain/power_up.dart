@@ -181,10 +181,11 @@ class Projectile {
 
 /// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
 class Explosion {
-  Explosion({required this.position, required this.radius});
+  Explosion({required this.position, required this.radius, this.kind});
 
   final Offset position;
   final double radius;
+  final PowerUpKind? kind;
 
   /// Steps since it went off.
   int age = 0;

@@ -675,7 +675,7 @@ class PowerUpSystem {
     final radius = match.arenaRadius * _t.blastRadiusRatio;
     final balls = match.state.balls;
     blasts++;
-    explosions.add(Explosion(position: at, radius: radius));
+    explosions.add(Explosion(position: at, radius: radius, kind: kind));
     match.state.floatingTexts.spawn(at, 'KABOOM!', _blastColor);
     if (match.mode == MatchMode.allOut) {
       for (final ball in balls) {
@@ -1389,6 +1389,7 @@ class PowerUpSystem {
               Explosion(
                 position: end,
                 radius: match.arenaRadius * PowerUpTuning.blastRadiusRatio,
+                kind: PowerUpKind.rocketLauncher,
               ),
             );
           }

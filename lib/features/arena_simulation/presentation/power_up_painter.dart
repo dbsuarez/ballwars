@@ -169,6 +169,10 @@ class PowerUpPainter {
     for (final e in p.explosions) {
       final t = e.age / PowerUpTuning.explosionShowSteps;
       final fade = (1 - t).clamp(0.0, 1.0);
+      if (e.kind == PowerUpKind.rocketLauncher) {
+        _paintRocketExplosion(canvas, e.position, e.radius, t, fade);
+        continue;
+      }
       if (showEffects) {
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.explosion,
@@ -554,6 +558,57 @@ class PowerUpPainter {
         canvas.drawLine(o - along, o + along, paint);
       }
     }
+  }
+
+  static void _paintRocketExplosion(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double progress,
+    double fade,
+  ) {
+    final eased = Curves.easeOutCubic.transform(progress.clamp(0.0, 1.0));
+    final blastRadius = radius * (0.18 + eased * 0.82);
+    final rayPaint = Paint()
+      ..color = const Color(0xFFFFB000).withValues(alpha: fade * 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(2, radius * 0.055 * fade);
+    for (var i = 0; i < 12; i++) {
+      final angle = i * math.pi / 6 + progress * 0.28;
+      final inner = center + Offset.fromDirection(angle, blastRadius * 0.38);
+      final outer =
+          center +
+          Offset.fromDirection(
+            angle,
+            blastRadius * (0.78 + (i.isEven ? 0.18 : 0)),
+          );
+      canvas.drawLine(inner, outer, rayPaint);
+    }
+    canvas.drawCircle(
+      center,
+      blastRadius * 0.72,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          center,
+          blastRadius * 0.72,
+          [
+            Colors.white.withValues(alpha: fade),
+            const Color(0xFFFFD43B).withValues(alpha: fade * 0.95),
+            const Color(0xFFFF4B22).withValues(alpha: fade * 0.72),
+            const Color(0x00251512),
+          ],
+          const [0, 0.22, 0.62, 1],
+        ),
+    );
+    canvas.drawCircle(
+      center,
+      blastRadius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(2, radius * 0.035)
+        ..color = Colors.white.withValues(alpha: fade * 0.8),
+    );
   }
 
   static void _paintBoundarySpike(

@@ -40,6 +40,7 @@ enum AnimatedEffect {
   slash,
   blood,
   maximumPower,
+  campfire,
 }
 
 /// The power-up icons ([pixelIcons], 16 x 16 pixel art) turned into small images once, so painting a frame
@@ -61,6 +62,7 @@ class PowerUpSprites {
   static ui.Image? _omegaTendrilsAttack;
   static ui.Image? _boomerangIcon;
   static ui.Image? _boomerangProjectile;
+  static ui.Image? _stickyGooRim;
   static Future<void>? _loading;
 
   /// [kind]'s image (16 x 16 px), or null before [load] has finished.
@@ -80,6 +82,7 @@ class PowerUpSprites {
   static ui.Image? get rocketMissile => _rocketMissile;
   static ui.Image? get omegaTendrilsAttack => _omegaTendrilsAttack;
   static ui.Image? get boomerangProjectile => _boomerangProjectile;
+  static ui.Image? get stickyGooRim => _stickyGooRim;
 
   /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
@@ -197,7 +200,9 @@ class PowerUpSprites {
     const animatedHeight = 181.0;
     const animatedInset = 10.0;
     for (final kind in AnimatedEffect.values.where(
-      (kind) => kind != AnimatedEffect.maximumPower,
+      (kind) =>
+          kind != AnimatedEffect.maximumPower &&
+          kind != AnimatedEffect.campfire,
     )) {
       final frames = <ui.Image>[];
       for (var frame = 0; frame < 4; frame++) {
@@ -274,7 +279,7 @@ class PowerUpSprites {
       campfireFrames.add(await picture.toImage(96, 96));
       picture.dispose();
     }
-    _animatedEffects[AnimatedEffect.flame] = campfireFrames;
+    _animatedEffects[AnimatedEffect.campfire] = campfireFrames;
     campfireSheet.dispose();
 
     final maximumData = await rootBundle.load(
@@ -397,6 +402,118 @@ class PowerUpSprites {
     _boomerangIcon = await boomerangCell(0, 64);
     _boomerangProjectile = await boomerangCell(1, 96);
     boomerangSheet.dispose();
+
+    final gooData = await rootBundle.load('assets/sprites/sticky-goo-rim.png');
+    final gooCodec = await ui.instantiateImageCodec(
+      gooData.buffer.asUint8List(),
+    );
+    final gooSheet = (await gooCodec.getNextFrame()).image;
+    gooCodec.dispose();
+    final gooRecorder = ui.PictureRecorder();
+    Canvas(gooRecorder).drawImageRect(
+      gooSheet,
+      Rect.fromLTWH(
+        0,
+        gooSheet.height * 0.13,
+        gooSheet.width.toDouble(),
+        gooSheet.height * 0.56,
+      ),
+      const Rect.fromLTWH(0, 0, 768, 160),
+      Paint()..filterQuality = FilterQuality.none,
+    );
+    final gooPicture = gooRecorder.endRecording();
+    _stickyGooRim = await gooPicture.toImage(768, 160);
+    gooPicture.dispose();
+    gooSheet.dispose();
+
+    final elementalData = await rootBundle.load(
+      'assets/sprites/elemental-powers.png',
+    );
+    final elementalCodec = await ui.instantiateImageCodec(
+      elementalData.buffer.asUint8List(),
+    );
+    final elementalSheet = (await elementalCodec.getNextFrame()).image;
+    elementalCodec.dispose();
+    final elementalKinds = [
+      PowerUpKind.fireWall,
+      PowerUpKind.poisonSwamp,
+      PowerUpKind.waterGun,
+      PowerUpKind.lightningStrikes,
+    ];
+    final elementalCell = elementalSheet.width / elementalKinds.length;
+    for (var i = 0; i < elementalKinds.length; i++) {
+      final recorder = ui.PictureRecorder();
+      final source = Rect.fromLTWH(
+        i * elementalCell,
+        0,
+        elementalCell,
+        elementalSheet.height.toDouble(),
+      );
+      final fitted = applyBoxFit(
+        BoxFit.contain,
+        source.size,
+        const Size.square(64),
+      );
+      Canvas(recorder).drawImageRect(
+        elementalSheet,
+        source,
+        Alignment.center.inscribe(
+          fitted.destination,
+          const Rect.fromLTWH(0, 0, 64, 64),
+        ),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      _images[elementalKinds[i]] = await picture.toImage(64, 64);
+      picture.dispose();
+    }
+    elementalSheet.dispose();
+
+    Future<void> loadExtraSheet(
+      String asset,
+      List<PowerUpKind> extraKinds,
+    ) async {
+      final data = await rootBundle.load(asset);
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final image = (await codec.getNextFrame()).image;
+      codec.dispose();
+      final cell = image.width / extraKinds.length;
+      for (var i = 0; i < extraKinds.length; i++) {
+        final source = Rect.fromLTWH(
+          i * cell,
+          0,
+          cell,
+          image.height.toDouble(),
+        );
+        final fitted = applyBoxFit(
+          BoxFit.contain,
+          source.size,
+          const Size.square(64),
+        );
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder).drawImageRect(
+          image,
+          source,
+          Alignment.center.inscribe(
+            fitted.destination,
+            const Rect.fromLTWH(0, 0, 64, 64),
+          ),
+          Paint()..filterQuality = FilterQuality.none,
+        );
+        final picture = recorder.endRecording();
+        _images[extraKinds[i]] = await picture.toImage(64, 64);
+        picture.dispose();
+      }
+      image.dispose();
+    }
+
+    await loadExtraSheet('assets/sprites/earth-wind.png', [
+      PowerUpKind.earthquake,
+      PowerUpKind.tornado,
+    ]);
+    await loadExtraSheet('assets/sprites/energy-wave.png', [
+      PowerUpKind.energyWave,
+    ]);
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {

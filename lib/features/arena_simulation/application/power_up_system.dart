@@ -65,6 +65,13 @@ class PowerUpSystem {
 
   /// Green boundary patches that hold the first ball touching them.
   final List<StickyGoo> stickyGoo = [];
+  final List<PoisonSwamp> poisonSwamps = [];
+  final List<FireWall> fireWalls = [];
+  final List<DamageOverTime> damageOverTime = [];
+  final List<LightningStrike> lightningStrikes = [];
+  final List<EarthquakePulse> earthquakes = [];
+  final List<Tornado> tornadoes = [];
+  final List<EnergyWave> energyWaves = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
@@ -113,6 +120,7 @@ class PowerUpSystem {
       ..goldenArmorHits = 0
       ..stickyGooLeft = 0
       ..burningLeft = 0
+      ..poisonLeft = 0
       ..sweepLeft = 0
       ..hurtFlashLeft = 0
       ..magnetPending = false
@@ -177,13 +185,21 @@ class PowerUpSystem {
   void step() {
     _updateFiredWeaponHold();
     _updateOmegaTendrils();
+    _updateLightningStrikes();
+    _updateEarthquakesAndTornadoes();
+    for (final wave in energyWaves) {
+      wave.age++;
+    }
+    energyWaves.removeWhere((wave) => wave.age >= 24);
     _countDown();
     _burn();
+    _updateFireWallsAndDamageOverTime();
     _updateStickyGoo();
     _triggerMines();
     _triggerPortals();
     _triggerSpikeWalls();
     _triggerStickyGoo();
+    _triggerPoisonSwamps();
     _pickUpTouched();
     _strikeWithOrbitingFlails();
     _sweep();
@@ -293,6 +309,23 @@ class PowerUpSystem {
       case PowerUpKind.omegaTendrils:
         _launchOmegaTendrils(ball);
         _yell(ball, 'NO ONE ESCAPES!');
+      case PowerUpKind.lightningStrikes:
+        final target = _nearestTarget(ball);
+        if (target != null) {
+          lightningStrikes.add(LightningStrike(owner: ball, target: target));
+          _yell(ball, 'THUNDER, STRIKE!');
+        }
+      case PowerUpKind.earthquake:
+        earthquakes.add(EarthquakePulse(owner: ball));
+        _yell(ball, 'SHAKE THE EARTH!');
+      case PowerUpKind.tornado:
+        final target = _nearestTarget(ball);
+        if (target != null) {
+          tornadoes.add(
+            Tornado(owner: ball, target: target, position: target.position),
+          );
+          _yell(ball, 'TWIST AND SHOUT!');
+        }
       default:
         ball.equipWeapon(p.kind, dualWield: match.dualWield);
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
@@ -312,6 +345,85 @@ class PowerUpSystem {
           savedVelocity: target.velocity,
         ),
       );
+    }
+  }
+
+  void _updateLightningStrikes() {
+    for (final strike in lightningStrikes.toList()) {
+      if (!_alive(strike.owner) || !_alive(strike.target)) {
+        lightningStrikes.remove(strike);
+        continue;
+      }
+      if (strike.flashLeft > 0) strike.flashLeft--;
+      if (strike.strikesLeft <= 0) {
+        if (strike.flashLeft <= 0) lightningStrikes.remove(strike);
+        continue;
+      }
+      strike.delay--;
+      if (strike.delay > 0) continue;
+      _hit(
+        strike.target,
+        PowerUpKind.lightningStrikes,
+        at: strike.target.position,
+        from: strike.owner,
+        unavoidable: true,
+      );
+      strike.strikesLeft -= 1;
+      strike.flashLeft = 8;
+      strike.delay = 12;
+      _yell(strike.target, 'ZAP!');
+    }
+  }
+
+  void _updateEarthquakesAndTornadoes() {
+    for (final quake in earthquakes.toList()) {
+      if (!_alive(quake.owner)) {
+        earthquakes.remove(quake);
+        continue;
+      }
+      if (quake.flashLeft > 0) quake.flashLeft--;
+      if (quake.pulsesLeft <= 0) {
+        if (quake.flashLeft <= 0) earthquakes.remove(quake);
+        continue;
+      }
+      quake.delay--;
+      if (quake.delay > 0) continue;
+      for (final target in match.state.balls) {
+        if (identical(target, quake.owner) || !_alive(target)) continue;
+        _hit(
+          target,
+          PowerUpKind.earthquake,
+          at: target.position + Offset(0, target.radius),
+          from: quake.owner,
+          unavoidable: true,
+        );
+      }
+      quake.pulsesLeft -= 1;
+      quake.flashLeft = 10;
+      quake.delay = 15;
+      blasts++;
+    }
+    for (final tornado in tornadoes.toList()) {
+      tornado.age++;
+      if (tornado.age >= PowerUpTuning.molotovBurnSteps ||
+          !_alive(tornado.owner)) {
+        tornadoes.remove(tornado);
+        continue;
+      }
+      final toward = tornado.target.position - tornado.position;
+      if (toward.distance > 0) {
+        tornado.position +=
+            toward / toward.distance * match.arenaRadius * 0.012;
+      }
+      for (final ball in match.state.balls) {
+        if (identical(ball, tornado.owner) || !_alive(ball) || ball.isGhost) {
+          continue;
+        }
+        final pull = tornado.position - ball.position;
+        if (pull.distance > fieldRadius * 3.2 || pull.distance == 0) continue;
+        ball.velocity += pull / pull.distance * match.arenaRadius * 0.018;
+        _applyDamageOverTime(ball, PowerUpKind.tornado, owner: tornado.owner);
+      }
     }
   }
 
@@ -399,7 +511,7 @@ class PowerUpSystem {
   void _triggerStickyGoo() {
     if (stickyGoo.isEmpty) return;
     for (final goo in List<StickyGoo>.of(stickyGoo)) {
-      final blobs = goo.blobPositions(fieldRadius * 0.72);
+      final blobs = goo.blobPositions(fieldRadius * 0.36);
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         final touches = blobs.any(
@@ -418,6 +530,100 @@ class PowerUpSystem {
         _yell(ball, 'STUCK!');
         break;
       }
+    }
+  }
+
+  void _triggerPoisonSwamps() {
+    for (final swamp in List<PoisonSwamp>.of(poisonSwamps)) {
+      final samples = swamp.samplePositions(fieldRadius * 0.36);
+      for (final ball in match.state.balls) {
+        if (!_alive(ball) || ball.isGhost) continue;
+        if (!samples.any(
+          (spot) =>
+              (ball.position - spot).distance < ball.radius + fieldRadius * 0.5,
+        )) {
+          continue;
+        }
+        poisonSwamps.remove(swamp);
+        _applyDamageOverTime(ball, PowerUpKind.poisonSwamp);
+        _yell(ball, 'POISONED!');
+        break;
+      }
+    }
+  }
+
+  void _applyDamageOverTime(
+    SimulationBall target,
+    PowerUpKind kind, {
+    SimulationBall? owner,
+  }) {
+    for (final effect in damageOverTime) {
+      if (identical(effect.target, target) && effect.kind == kind) {
+        effect.stepsLeft = math.max(
+          effect.stepsLeft,
+          PowerUpTuning.damageOverTimeSteps,
+        );
+        return;
+      }
+    }
+    damageOverTime.add(
+      DamageOverTime(
+        target: target,
+        kind: kind,
+        owner: owner,
+        stepsLeft: PowerUpTuning.damageOverTimeSteps,
+      ),
+    );
+    if (kind == PowerUpKind.poisonSwamp) {
+      target.poisonLeft = PowerUpTuning.damageOverTimeSteps;
+    } else {
+      target.burningLeft = PowerUpTuning.damageOverTimeSteps;
+    }
+  }
+
+  void _updateFireWallsAndDamageOverTime() {
+    for (final wall in fireWalls.toList()) {
+      wall.age++;
+      if (wall.age >= PowerUpTuning.fireWallSteps || !_alive(wall.owner)) {
+        fireWalls.remove(wall);
+        continue;
+      }
+      final tangent = Offset.fromDirection(wall.angle);
+      for (final ball in match.state.balls) {
+        if (identical(ball, wall.owner) || !_alive(ball) || ball.isGhost) {
+          continue;
+        }
+        final near = MathUtils.distancePointToSegmentSquared(
+          ball.position,
+          wall.center - tangent * fieldRadius * 2.4,
+          wall.center + tangent * fieldRadius * 2.4,
+        );
+        if (near <= math.pow(ball.radius + fieldRadius * 0.38, 2)) {
+          _applyDamageOverTime(ball, PowerUpKind.fireWall, owner: wall.owner);
+        }
+      }
+    }
+    for (final effect in damageOverTime.toList()) {
+      if (!_alive(effect.target)) {
+        damageOverTime.remove(effect);
+        continue;
+      }
+      effect.age += 1;
+      effect.stepsLeft -= 1;
+      if (effect.kind == PowerUpKind.poisonSwamp) {
+        effect.target.poisonLeft = effect.stepsLeft;
+      } else {
+        effect.target.burningLeft = effect.stepsLeft;
+      }
+      if (effect.age % PowerUpTuning.damageOverTimeTickSteps == 1) {
+        _hit(
+          effect.target,
+          effect.kind,
+          at: effect.target.position,
+          from: effect.owner,
+        );
+      }
+      if (effect.stepsLeft <= 0) damageOverTime.remove(effect);
     }
   }
 
@@ -799,6 +1005,9 @@ class PowerUpSystem {
     for (final goo in stickyGoo) {
       taken[quadrantOf(goo.position)]++;
     }
+    for (final swamp in poisonSwamps) {
+      taken[quadrantOf(swamp.position)]++;
+    }
     final fewest = taken.reduce(math.min);
     final open = [
       for (var q = 0; q < 4; q++)
@@ -810,7 +1019,9 @@ class PowerUpSystem {
     for (var attempt = 0; attempt < 10; attempt++) {
       final angle = (quadrant + rng.nextDoubleRange(0.1, 0.9)) * math.pi / 2;
       final distance =
-          kind == PowerUpKind.spikeWall || kind == PowerUpKind.stickyGoo
+          kind == PowerUpKind.spikeWall ||
+              kind == PowerUpKind.stickyGoo ||
+              kind == PowerUpKind.poisonSwamp
           ? match.arenaRadius - radius * 0.38
           : kind.isTrap
           ? match.arenaRadius - radius * 1.6
@@ -835,6 +1046,9 @@ class PowerUpSystem {
           ) &&
           stickyGoo.every(
             (goo) => (goo.position - spot).distance >= 2 * radius,
+          ) &&
+          poisonSwamps.every(
+            (swamp) => (swamp.position - spot).distance >= 2 * radius,
           );
       if (!clear) continue;
       if (kind == PowerUpKind.portal) {
@@ -857,6 +1071,13 @@ class PowerUpSystem {
         stickyGoo.add(StickyGoo(position: spot, spawnStep: number));
         if (stickyGoo.length > PowerUpTuning.maxOnField(_ballCount)) {
           stickyGoo.removeAt(0);
+        }
+        return;
+      }
+      if (kind == PowerUpKind.poisonSwamp) {
+        poisonSwamps.add(PoisonSwamp(position: spot, spawnStep: number));
+        if (poisonSwamps.length > PowerUpTuning.maxOnField(_ballCount)) {
+          poisonSwamps.removeAt(0);
         }
         return;
       }
@@ -1053,6 +1274,15 @@ class PowerUpSystem {
             case PowerUpKind.boomerang:
               _fire(ball, target, kind, 0, speedRatio: 0.72);
               _yell(ball, 'COMING BACK!');
+            case PowerUpKind.fireWall:
+              _raiseFireWall(ball, target);
+              _yell(ball, 'BURNING BARRIER!');
+            case PowerUpKind.waterGun:
+              _fire(ball, target, kind, 0, speedRatio: 1.55);
+              _yell(ball, 'SPLASH!');
+            case PowerUpKind.energyWave:
+              _fireEnergyWave(ball, target);
+              _yell(ball, 'KA-ME-HA-ME-HAAA!');
             default:
               _fire(ball, target, kind, 0);
               _yell(ball, 'BANG!');
@@ -1223,6 +1453,44 @@ class PowerUpSystem {
         target: target,
       ),
     );
+    shots++;
+  }
+
+  void _raiseFireWall(SimulationBall ball, SimulationBall target) {
+    final toward = target.position - ball.position;
+    final shotAngle = math.atan2(toward.dy, toward.dx);
+    fireWalls.add(
+      FireWall(
+        owner: ball,
+        center: target.position,
+        angle: shotAngle + math.pi / 2,
+      ),
+    );
+    shots++;
+  }
+
+  void _fireEnergyWave(SimulationBall ball, SimulationBall target) {
+    final toward = target.position - ball.position;
+    final direction = toward.distance == 0
+        ? const Offset(1, 0)
+        : toward / toward.distance;
+    final start = ball.position + direction * ball.radius;
+    final end = start + direction * match.arenaRadius * 2.4;
+    energyWaves.add(EnergyWave(owner: ball, start: start, end: end));
+    weaponImpacts.add(WeaponImpact(position: start, strength: 1));
+    for (final other in match.state.balls) {
+      if (identical(other, ball) || !_alive(other) || other.isGhost) continue;
+      final distance = MathUtils.distancePointToSegmentSquared(
+        other.position,
+        start,
+        end,
+      );
+      if (distance > math.pow(other.radius + fieldRadius * 0.7, 2)) continue;
+      _hit(other, PowerUpKind.energyWave, at: other.position, from: ball);
+      other.velocity =
+          direction *
+          math.max(other.velocity.distance, match.arenaRadius * 1.4);
+    }
     shots++;
   }
 
@@ -1454,9 +1722,10 @@ class PowerUpSystem {
     Offset? at,
     SimulationBall? from,
     int volley = 0,
+    bool unavoidable = false,
   }) {
-    if (target.isGhost) return;
-    if (target.magneticFieldLeft > 0) {
+    if (target.isGhost && !unavoidable) return;
+    if (target.magneticFieldLeft > 0 && !unavoidable) {
       _yell(target, 'REPELLED!');
       return;
     }
@@ -1569,6 +1838,16 @@ class PowerUpSystem {
     PowerUpKind.prismLaser => (
       const Color(0xFFFF4FD8),
       const Color(0xFF5BE7FF),
+    ),
+    PowerUpKind.fireWall => (const Color(0xFFFF5A1F), const Color(0xFFFFD43B)),
+    PowerUpKind.poisonSwamp => (
+      const Color(0xFF78A92B),
+      const Color(0xFFCAFF54),
+    ),
+    PowerUpKind.waterGun => (const Color(0xFF39BFFF), const Color(0xFFD7FAFF)),
+    PowerUpKind.lightningStrikes => (
+      const Color(0xFF70D7FF),
+      const Color(0xFFFFFF66),
     ),
     PowerUpKind.knife ||
     PowerUpKind.sword => (const Color(0xFFDCE5EC), const Color(0xFFFFD43B)),

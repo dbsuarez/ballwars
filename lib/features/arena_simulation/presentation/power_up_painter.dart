@@ -54,6 +54,13 @@ class PowerUpPainter {
     PowerUpKind.rocketLauncher: Color(0xFF98A84B),
     PowerUpKind.omegaTendrils: Color(0xFFE21D35),
     PowerUpKind.boomerang: Color(0xFF20DDF2),
+    PowerUpKind.fireWall: Color(0xFFFF6A22),
+    PowerUpKind.poisonSwamp: Color(0xFF8EEA31),
+    PowerUpKind.waterGun: Color(0xFF39BFFF),
+    PowerUpKind.lightningStrikes: Color(0xFFFFFF66),
+    PowerUpKind.earthquake: Color(0xFFD88A39),
+    PowerUpKind.tornado: Color(0xFFBCEEFF),
+    PowerUpKind.energyWave: Color(0xFF31DFFF),
   };
 
   /// The color a power-up is drawn in.
@@ -139,25 +146,174 @@ class PowerUpPainter {
           ..color = const Color(0xFFFFA126).withValues(alpha: 0.9 * life),
       );
       if (showEffects) {
-        for (var i = 0; i < 5; i++) {
+        const fireSpots = [
+          Offset(-0.46, -0.12),
+          Offset(0.38, -0.22),
+          Offset(-0.12, 0.3),
+          Offset(0.5, 0.2),
+          Offset(0.06, -0.42),
+          Offset(-0.5, 0.34),
+          Offset(0.22, 0.48),
+        ];
+        for (var i = 0; i < fireSpots.length; i++) {
           final flame = PowerUpSprites.effectFrame(
-            AnimatedEffect.flame,
+            AnimatedEffect.campfire,
             (state.step ~/ 4 + i) % 4,
           );
           final flicker = 0.5 + 0.5 * math.sin(state.step * 0.48 + i * 1.73);
-          final x = (i - 2) * fire.radius * 0.3;
-          final base = fire.position + Offset(x, fire.radius * 0.08);
+          final base = fire.position + fireSpots[i] * fire.radius;
           if (flame != null) {
             _drawEffect(
               canvas,
               flame,
               base,
-              fire.radius * (0.58 + flicker * 0.12) * pulse,
+              fire.radius * (0.42 + (i % 3) * 0.08 + flicker * 0.1) * pulse,
               0,
               opacity: life,
             );
           }
         }
+      }
+    }
+
+    for (final wall in p.fireWalls) {
+      final tangent = Offset.fromDirection(wall.angle);
+      for (var i = 0; i < 4; i++) {
+        final flame = PowerUpSprites.effectFrame(
+          AnimatedEffect.campfire,
+          (state.step ~/ 4 + i) % 4,
+        );
+        final spot = wall.center + tangent * r * (i - 1.5) * 1.35;
+        if (flame != null) {
+          _drawEffect(
+            canvas,
+            flame,
+            spot,
+            r * (1.05 + 0.1 * math.sin(state.step * 0.4 + i).abs()),
+            0,
+          );
+        } else {
+          canvas.drawCircle(
+            spot,
+            r * 0.45,
+            Paint()..color = const Color(0xFFFF6A22),
+          );
+        }
+      }
+    }
+
+    for (final strike in p.lightningStrikes) {
+      if (strike.flashLeft <= 0) continue;
+      final target = strike.target.position;
+      final top = Offset(target.dx, -arenaRadius - r * 1.5);
+      final path = Path()..moveTo(top.dx, top.dy);
+      const bends = 7;
+      for (var i = 1; i <= bends; i++) {
+        final t = i / bends;
+        final jitter = i == bends
+            ? 0.0
+            : math.sin(i * 12.7 + state.step * 1.9) * r * 0.7;
+        path.lineTo(
+          top.dx + (target.dx - top.dx) * t + jitter,
+          top.dy + (target.dy - top.dy) * t,
+        );
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = math.max(7, r * 0.5)
+          ..color = const Color(0xFF4BAEFF).withValues(alpha: 0.45),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = math.max(2, r * 0.16)
+          ..color = const Color(0xFFFFFFB0),
+      );
+      canvas.drawCircle(
+        target,
+        r * (1.2 + strike.flashLeft * 0.05),
+        Paint()..color = const Color(0xFFFFFF8A).withValues(alpha: 0.3),
+      );
+    }
+
+    for (final quake in p.earthquakes) {
+      if (quake.flashLeft <= 0) continue;
+      final progress = 1 - quake.flashLeft / 10.0;
+      for (var i = 0; i < 3; i++) {
+        canvas.drawCircle(
+          Offset.zero,
+          arenaRadius * (0.3 + progress * 0.65 - i * 0.08),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(3, r * 0.16)
+            ..color = const Color(
+              0xFFFFB23F,
+            ).withValues(alpha: 0.65 - i * 0.16),
+        );
+      }
+    }
+    for (final tornado in p.tornadoes) {
+      final icon = PowerUpSprites.of(PowerUpKind.tornado);
+      if (icon != null) {
+        _drawSprite(canvas, icon, tornado.position, r * 2.2, state.step * 0.08);
+      }
+      for (var i = 0; i < 3; i++) {
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: tornado.position + Offset(0, (i - 1) * r * 0.45),
+            width: r * (3.2 - i * 0.55),
+            height: r * 0.55,
+          ),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, r * 0.12)
+            ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.75),
+        );
+      }
+    }
+    for (final wave in p.energyWaves) {
+      final fade = (1 - wave.age / 24).clamp(0.0, 1.0);
+      final beamWidth = r * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());
+      canvas.drawLine(
+        wave.start,
+        wave.end,
+        Paint()
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = beamWidth * 1.7
+          ..color = const Color(0xFF167DFF).withValues(alpha: fade * 0.35),
+      );
+      canvas.drawLine(
+        wave.start,
+        wave.end,
+        Paint()
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = beamWidth
+          ..color = const Color(0xFF32E4FF).withValues(alpha: fade * 0.9),
+      );
+      canvas.drawLine(
+        wave.start,
+        wave.end,
+        Paint()
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = beamWidth * 0.38
+          ..color = Colors.white.withValues(alpha: fade),
+      );
+      for (var i = 0; i < 3; i++) {
+        canvas.drawCircle(
+          wave.start,
+          beamWidth * (0.7 + i * 0.3 + wave.age * 0.025),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, r * 0.1)
+            ..color = const Color(
+              0xFFA7F7FF,
+            ).withValues(alpha: fade * (0.8 - i * 0.2)),
+        );
       }
     }
 
@@ -287,33 +443,29 @@ class PowerUpPainter {
 
     for (final goo in p.stickyGoo) {
       final pulse = 0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
-      final blobs = goo.blobPositions(r * 0.72);
-      for (var i = 0; i < blobs.length; i++) {
-        final blob = blobs[i];
-        final angle = math.atan2(blob.dy, blob.dx);
-        canvas.save();
-        canvas.translate(blob.dx, blob.dy);
-        canvas.rotate(angle);
-        final wobble = 0.92 + 0.08 * math.sin(state.step * 0.16 + i * 1.7);
-        final rect = Rect.fromCenter(
-          center: Offset.zero,
-          width: r * 0.94 * pulse,
-          height: r * 0.62 * wobble,
-        );
-        canvas.drawOval(rect, Paint()..color = const Color(0xFF65E34F));
-        canvas.drawOval(
-          rect,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(1.5, r * 0.1)
-            ..color = const Color(0xFF287A2C),
-        );
+      _paintCurvedGooStrip(canvas, goo, arenaRadius, r, pulse);
+    }
+    for (final swamp in p.poisonSwamps) {
+      final pulse =
+          0.92 + 0.06 * math.sin((state.step - swamp.spawnStep) * 0.1);
+      _paintCurvedGooStrip(
+        canvas,
+        StickyGoo(position: swamp.position, spawnStep: swamp.spawnStep),
+        arenaRadius,
+        r,
+        pulse,
+        tint: const Color(0xFF669B22),
+      );
+      for (var i = 0; i < 5; i++) {
+        final angle =
+            math.atan2(swamp.position.dy, swamp.position.dx) +
+            (i - 2) * r * 0.82 / arenaRadius;
+        final spot = Offset.fromDirection(angle, arenaRadius - r * 0.7);
         canvas.drawCircle(
-          Offset(-r * 0.08, -r * 0.12),
-          r * 0.1,
-          Paint()..color = const Color(0xFFB5FF73),
+          spot + Offset(0, math.sin(state.step * 0.12 + i) * r * 0.12),
+          r * (0.08 + (i % 2) * 0.04),
+          Paint()..color = const Color(0xFFCAFF54).withValues(alpha: 0.8),
         );
-        canvas.restore();
       }
     }
 
@@ -352,6 +504,24 @@ class PowerUpPainter {
             ball.held ?? PowerUpKind.pistol,
           ).withValues(alpha: 0.45),
       );
+      if (ball.equippedWeapons.contains(PowerUpKind.energyWave)) {
+        final toTarget = target.position - ball.position;
+        if (toTarget.distance > 0) {
+          final charge = 1 - ball.aimLeft / math.max(1, PowerUpTuning.aimSteps);
+          final orb =
+              ball.position + toTarget / toTarget.distance * ball.radius * 1.3;
+          canvas.drawCircle(
+            orb,
+            r * (0.35 + charge * 0.75),
+            Paint()
+              ..shader = ui.Gradient.radial(orb, r * 1.2, [
+                Colors.white,
+                const Color(0xFF27E5FF),
+                const Color(0x00216CFF),
+              ]),
+          );
+        }
+      }
     }
 
     if (p.projectiles.isNotEmpty) {
@@ -438,6 +608,33 @@ class PowerUpPainter {
           } else {
             drawGlyph(canvas, shot.kind, shot.position, r * 0.65);
           }
+          continue;
+        }
+        if (shot.kind == PowerUpKind.waterGun) {
+          final wave = math.sin(state.step * 0.8) * r * 0.14;
+          final normal = Offset(-dir.dy, dir.dx);
+          final tail = shot.position - dir * r * 2.2;
+          final path = Path()
+            ..moveTo(tail.dx, tail.dy)
+            ..quadraticBezierTo(
+              (tail.dx + shot.position.dx) / 2 + normal.dx * wave,
+              (tail.dy + shot.position.dy) / 2 + normal.dy * wave,
+              shot.position.dx,
+              shot.position.dy,
+            );
+          canvas.drawPath(
+            path,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeCap = StrokeCap.round
+              ..strokeWidth = math.max(3, r * 0.34)
+              ..color = const Color(0xFF48CFFF),
+          );
+          canvas.drawCircle(
+            shot.position,
+            r * 0.26,
+            Paint()..color = const Color(0xFFC9F7FF),
+          );
           continue;
         }
         final projectileKind = _projectileSpriteFor(shot.kind);
@@ -576,6 +773,55 @@ class PowerUpPainter {
         ..strokeWidth = math.max(2, radius * 0.035)
         ..color = Colors.white.withValues(alpha: fade * 0.8),
     );
+  }
+
+  static void _paintCurvedGooStrip(
+    Canvas canvas,
+    StickyGoo goo,
+    double arenaRadius,
+    double r,
+    double pulse, {
+    Color? tint,
+  }) {
+    final sprite = PowerUpSprites.stickyGooRim;
+    if (sprite == null || goo.position.distance == 0) return;
+    const slices = 56;
+    final centerAngle = math.atan2(goo.position.dy, goo.position.dx);
+    final arcWidth = r * 5.15 * pulse;
+    final sweep = arcWidth / arenaRadius;
+    final sourceWidth = sprite.width / slices;
+    final destinationWidth = arcWidth / slices + 1.4;
+    final destinationHeight = r * 1.55;
+    for (var i = 0; i < slices; i++) {
+      final u = (i + 0.5) / slices;
+      final angle = centerAngle - sweep / 2 + sweep * u;
+      final anchor = Offset.fromDirection(angle, arenaRadius);
+      canvas.save();
+      canvas.translate(anchor.dx, anchor.dy);
+      // Local x follows the tangent; local y points inward into the arena.
+      canvas.rotate(angle + math.pi / 2);
+      canvas.drawImageRect(
+        sprite,
+        Rect.fromLTWH(
+          i * sourceWidth,
+          0,
+          sourceWidth,
+          sprite.height.toDouble(),
+        ),
+        Rect.fromLTWH(
+          -destinationWidth * 0.55,
+          0,
+          destinationWidth * 1.1,
+          destinationHeight,
+        ),
+        Paint()
+          ..filterQuality = FilterQuality.none
+          ..colorFilter = tint == null
+              ? null
+              : ColorFilter.mode(tint, BlendMode.modulate),
+      );
+      canvas.restore();
+    }
   }
 
   static void _paintBoundarySpike(
@@ -1106,6 +1352,22 @@ class PowerUpPainter {
             ..color =
                 (i.isEven ? const Color(0xFFFF4B20) : const Color(0xFFFFD23F))
                     .withValues(alpha: 0.9),
+        );
+      }
+    }
+    if (ball.poisonLeft > 0) {
+      final pulse = 0.45 + 0.18 * math.sin(step * 0.32);
+      canvas.drawCircle(
+        ball.position,
+        ball.radius * 1.08,
+        Paint()..color = const Color(0xFF79B928).withValues(alpha: pulse),
+      );
+      for (var i = 0; i < 4; i++) {
+        final angle = step * 0.035 + i * math.pi / 2;
+        canvas.drawCircle(
+          ball.position + Offset.fromDirection(angle, ball.radius * 1.12),
+          ball.radius * 0.1,
+          Paint()..color = const Color(0xFFCAFF54),
         );
       }
     }

@@ -13,12 +13,15 @@ void main() {
       PowerUpKind.hook,
       PowerUpKind.ricochetDisc,
       PowerUpKind.threadHarpoon,
+      PowerUpKind.energyWave,
       PowerUpKind.prismLaser,
       PowerUpKind.swapCannon,
       PowerUpKind.bow,
       PowerUpKind.molotov,
       PowerUpKind.rocketLauncher,
       PowerUpKind.boomerang,
+      PowerUpKind.fireWall,
+      PowerUpKind.waterGun,
     };
     for (final kind in PowerUpKind.values) {
       expect(kind.label, isNotEmpty);
@@ -98,6 +101,7 @@ void main() {
       PowerUpKind.gatling,
       PowerUpKind.bow,
       PowerUpKind.threadHarpoon,
+      PowerUpKind.energyWave,
     });
   });
 

@@ -78,6 +78,13 @@ class PowerUpConfig {
     PowerUpKind.rocketLauncher,
     PowerUpKind.omegaTendrils,
     PowerUpKind.boomerang,
+    PowerUpKind.fireWall,
+    PowerUpKind.poisonSwamp,
+    PowerUpKind.waterGun,
+    PowerUpKind.lightningStrikes,
+    PowerUpKind.earthquake,
+    PowerUpKind.tornado,
+    PowerUpKind.energyWave,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.
@@ -284,7 +291,10 @@ class PowerUpConfig {
       ? ' (per pellet)'
       : kind == PowerUpKind.gatling
       ? ' (per round)'
-      : kind == PowerUpKind.molotov
+      : kind == PowerUpKind.molotov ||
+            kind == PowerUpKind.fireWall ||
+            kind == PowerUpKind.poisonSwamp ||
+            kind == PowerUpKind.tornado
       ? ' (per burn tick)'
       : '';
 

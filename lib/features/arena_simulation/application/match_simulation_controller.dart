@@ -567,6 +567,7 @@ class MatchSimulationController {
         ball.hurtFlashLeft--; // Cosmetic ("Faces" wince), no effect on play.
       }
       if (ball.burningLeft > 0) ball.burningLeft--;
+      if (ball.poisonLeft > 0) ball.poisonLeft--;
     }
     final linesAtStart = {
       for (final ball in _balls) ball: ball.fanLines.length,

@@ -42,7 +42,14 @@ enum PowerUpKind {
   molotov('Molotov'),
   rocketLauncher('Rocket Launcher'),
   omegaTendrils('Omega Tendrils'),
-  boomerang('Boomerang');
+  boomerang('Boomerang'),
+  fireWall('Fire Wall Magic'),
+  poisonSwamp('Poison Swamp'),
+  waterGun('Water Gun'),
+  lightningStrikes('Lightning Strikes'),
+  earthquake('Earthquake'),
+  tornado('Tornado'),
+  energyWave('Energy Wave');
 
   const PowerUpKind(this.label);
 
@@ -64,7 +71,10 @@ enum PowerUpKind {
       this == swapCannon ||
       this == bow ||
       this == rocketLauncher ||
-      this == boomerang;
+      this == boomerang ||
+      this == fireWall ||
+      this == waterGun ||
+      this == energyWave;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -74,13 +84,14 @@ enum PowerUpKind {
       this == rocketLauncher ||
       this == gatling ||
       this == bow ||
-      this == threadHarpoon;
+      this == threadHarpoon ||
+      this == energyWave;
 
   /// Camera emphasis for a successful hit; subtle shots stay crisp while
   /// heavyweight attacks move the whole arena.
   double get impactWeight => switch (this) {
-    rocketLauncher || omegaTendrils => 1.0,
-    grenade || mine || phaseMine || molotov => 0.8,
+    rocketLauncher || omegaTendrils || energyWave => 1.0,
+    grenade || mine || phaseMine || molotov || fireWall => 0.8,
     sword || orbitingFlail || spikeWall || threadHarpoon => 0.48,
     shotgun || bow || ricochetDisc || boomerang => 0.3,
     _ => 0.16,
@@ -106,7 +117,10 @@ enum PowerUpKind {
       this == swapCannon ||
       this == bow ||
       this == rocketLauncher ||
-      this == boomerang;
+      this == boomerang ||
+      this == fireWall ||
+      this == waterGun ||
+      this == energyWave;
 
   /// Traps spawn close to the arena boundary and arm when collected.
   bool get isTrap =>
@@ -114,7 +128,8 @@ enum PowerUpKind {
       this == phaseMine ||
       this == portal ||
       this == spikeWall ||
-      this == stickyGoo;
+      this == stickyGoo ||
+      this == poisonSwamp;
 
   /// Power-ups apply immediately and never replace an equipped weapon.
   bool get isPowerUp => !isWeapon && !isTrap;
@@ -272,7 +287,7 @@ class StickyGoo {
   final int spawnStep;
 
   /// Separate goo clumps distributed along the same curved rim as spike walls.
-  List<Offset> blobPositions(double spacing, {int count = 7}) {
+  List<Offset> blobPositions(double spacing, {int count = 15}) {
     final radius = position.distance;
     if (radius == 0) return List<Offset>.filled(count, Offset.zero);
     final centerAngle = math.atan2(position.dy, position.dx);
@@ -283,6 +298,76 @@ class StickyGoo {
         Offset.fromDirection(centerAngle + (start + i) * angleStep, radius),
     ];
   }
+}
+
+class PoisonSwamp {
+  const PoisonSwamp({required this.position, required this.spawnStep});
+
+  final Offset position;
+  final int spawnStep;
+
+  List<Offset> samplePositions(double spacing, {int count = 15}) => StickyGoo(
+    position: position,
+    spawnStep: spawnStep,
+  ).blobPositions(spacing, count: count);
+}
+
+class FireWall {
+  FireWall({required this.owner, required this.center, required this.angle});
+
+  final SimulationBall owner;
+  final Offset center;
+  final double angle;
+  int age = 0;
+}
+
+class DamageOverTime {
+  DamageOverTime({
+    required this.target,
+    required this.kind,
+    this.owner,
+    required this.stepsLeft,
+  });
+
+  final SimulationBall target;
+  final SimulationBall? owner;
+  final PowerUpKind kind;
+  int stepsLeft;
+  int age = 0;
+}
+
+class LightningStrike {
+  LightningStrike({required this.owner, required this.target});
+
+  final SimulationBall owner;
+  final SimulationBall target;
+  int strikesLeft = 3;
+  int delay = 1;
+  int flashLeft = 0;
+}
+
+class EarthquakePulse {
+  EarthquakePulse({required this.owner});
+  final SimulationBall owner;
+  int pulsesLeft = 3;
+  int delay = 1;
+  int flashLeft = 0;
+}
+
+class Tornado {
+  Tornado({required this.owner, required this.target, required this.position});
+  final SimulationBall owner;
+  final SimulationBall target;
+  Offset position;
+  int age = 0;
+}
+
+class EnergyWave {
+  EnergyWave({required this.owner, required this.start, required this.end});
+  final SimulationBall owner;
+  final Offset start;
+  final Offset end;
+  int age = 0;
 }
 
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or
@@ -410,6 +495,9 @@ class PowerUpTuning {
   static const int stickyGooSteps = 120;
   static const int molotovBurnSteps = 180;
   static const int molotovTickSteps = 30;
+  static const int fireWallSteps = 240;
+  static const int damageOverTimeSteps = 120;
+  static const int damageOverTimeTickSteps = 30;
 
   /// Bomb blast radius as a fraction of the arena radius.
   static const double blastRadiusRatio = 0.28;
@@ -450,6 +538,13 @@ class PowerUpTuning {
     PowerUpKind.rocketLauncher: 45,
     PowerUpKind.omegaTendrils: 12,
     PowerUpKind.boomerang: 18,
+    PowerUpKind.fireWall: 5,
+    PowerUpKind.poisonSwamp: 4,
+    PowerUpKind.waterGun: 8,
+    PowerUpKind.lightningStrikes: 6,
+    PowerUpKind.earthquake: 5,
+    PowerUpKind.tornado: 3,
+    PowerUpKind.energyWave: 28,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -480,6 +575,13 @@ class PowerUpTuning {
     PowerUpKind.rocketLauncher: 16,
     PowerUpKind.omegaTendrils: 3,
     PowerUpKind.boomerang: 7,
+    PowerUpKind.fireWall: 2,
+    PowerUpKind.poisonSwamp: 1,
+    PowerUpKind.waterGun: 3,
+    PowerUpKind.lightningStrikes: 2,
+    PowerUpKind.earthquake: 2,
+    PowerUpKind.tornado: 1,
+    PowerUpKind.energyWave: 12,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -529,6 +631,18 @@ String powerUpDescription(
       'Cheat power: unavoidable tendrils grab every opponent and slam them for ${dmg(kind)}.',
     PowerUpKind.boomerang =>
       '$aim throws once for ${dmg(kind)}, returns to its owner, then drops.',
+    PowerUpKind.fireWall =>
+      '$aim raises four flames. Crossing deals ${dmg(kind)} and burns for 2 s.',
+    PowerUpKind.waterGun =>
+      '$aim squirts a fast water jet that splashes for ${dmg(kind)}.',
+    PowerUpKind.lightningStrikes =>
+      'Calls three unavoidable lightning strikes on the nearest opponent: ${dmg(kind)} each.',
+    PowerUpKind.earthquake =>
+      'Shakes the arena with three unavoidable pulses: ${dmg(kind)} each to every opponent.',
+    PowerUpKind.tornado =>
+      'Summons a pursuing wind vortex for 3 s. It pulls nearby opponents inward and deals ${dmg(kind)} over time.',
+    PowerUpKind.energyWave =>
+      '$aim unleashes a thick arena-scale beam for ${dmg(kind)} and heavy knockback.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '
@@ -582,6 +696,8 @@ String powerUpDescription(
       '$aim fires a ${PowerUpTuning.bowArrows}-arrow volley spanning twice a grenade blast: ${dmg(kind)} each.',
     PowerUpKind.stickyGoo =>
       'Holds the first ball that touches it in place for 2 s.',
+    PowerUpKind.poisonSwamp =>
+      'A toxic boundary swamp. Contact poisons a ball for 2 s: ${dmg(kind)} per tick.',
   };
 }
 

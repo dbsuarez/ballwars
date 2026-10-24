@@ -6,6 +6,7 @@ enum ArenaEffectPlayback { once, loop }
 
 enum ArenaEffectKind {
   flame,
+  campfire,
   explosion,
   smoke,
   lightning,
@@ -48,6 +49,11 @@ class ArenaEffectLibrary {
   static const definitions = <ArenaEffectKind, ArenaEffectDefinition>{
     ArenaEffectKind.flame: ArenaEffectDefinition(
       animation: AnimatedEffect.flame,
+      frames: 4,
+      playback: ArenaEffectPlayback.loop,
+    ),
+    ArenaEffectKind.campfire: ArenaEffectDefinition(
+      animation: AnimatedEffect.campfire,
       frames: 4,
       playback: ArenaEffectPlayback.loop,
     ),

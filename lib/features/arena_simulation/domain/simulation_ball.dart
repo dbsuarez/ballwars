@@ -30,6 +30,13 @@ class SimulationBall {
 
   void equipWeapon(PowerUpKind weapon, {required bool dualWield}) {
     assert(weapon.isWeapon);
+    // A launcher is too bulky to occupy both hands. Picking up another one
+    // discards the held launcher, while leaving a different second weapon
+    // available when dual wielding is enabled.
+    if (weapon == PowerUpKind.rocketLauncher &&
+        equippedWeapons.contains(PowerUpKind.rocketLauncher)) {
+      removeWeapon(PowerUpKind.rocketLauncher);
+    }
     if (!dualWield || held == null) {
       held = weapon;
       if (!dualWield) heldSecondary = null;

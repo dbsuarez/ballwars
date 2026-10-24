@@ -122,6 +122,8 @@ class PowerUpSprites {
     effectCodec.dispose();
     const cellWidth = 362.0;
     const cellHeight = 362.0;
+    const effectInset = 12.0;
+    const effectDestination = Rect.fromLTWH(6, 6, 84, 84);
     for (final kind in EffectSprite.values) {
       final column = kind.index % 4;
       final row = kind.index ~/ 4;
@@ -129,12 +131,12 @@ class PowerUpSprites {
       Canvas(recorder).drawImageRect(
         effectSheet,
         Rect.fromLTWH(
-          column * cellWidth,
-          row * cellHeight,
-          cellWidth,
-          cellHeight,
+          column * cellWidth + effectInset,
+          row * cellHeight + effectInset,
+          cellWidth - effectInset * 2,
+          cellHeight - effectInset * 2,
         ),
-        const Rect.fromLTWH(0, 0, 96, 96),
+        effectDestination,
         Paint()..filterQuality = FilterQuality.none,
       );
       final picture = recorder.endRecording();
@@ -183,6 +185,7 @@ class PowerUpSprites {
     animatedCodec.dispose();
     const animatedWidth = 362.0;
     const animatedHeight = 181.0;
+    const animatedInset = 10.0;
     for (final kind in AnimatedEffect.values.where(
       (kind) => kind != AnimatedEffect.maximumPower,
     )) {
@@ -191,20 +194,23 @@ class PowerUpSprites {
         final recorder = ui.PictureRecorder();
         final fitted = applyBoxFit(
           BoxFit.contain,
-          const Size(animatedWidth, animatedHeight),
-          const Size.square(96),
+          const Size(
+            animatedWidth - animatedInset * 2,
+            animatedHeight - animatedInset * 2,
+          ),
+          const Size.square(86),
         );
         Canvas(recorder).drawImageRect(
           animatedSheet,
           Rect.fromLTWH(
-            frame * animatedWidth,
-            kind.index * animatedHeight,
-            animatedWidth,
-            animatedHeight,
+            frame * animatedWidth + animatedInset,
+            kind.index * animatedHeight + animatedInset,
+            animatedWidth - animatedInset * 2,
+            animatedHeight - animatedInset * 2,
           ),
           Alignment.center.inscribe(
             fitted.destination,
-            const Rect.fromLTWH(0, 0, 96, 96),
+            const Rect.fromLTWH(5, 5, 86, 86),
           ),
           Paint()..filterQuality = FilterQuality.none,
         );

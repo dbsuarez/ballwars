@@ -218,7 +218,12 @@ class PowerUpPainter {
 
     for (final wall in p.spikeWalls) {
       final spacing = r * 0.96;
-      for (final base in wall.spikePositions(spacing)) {
+      for (final rawBase in wall.spikePositions(spacing)) {
+        // Old/replayed walls may have been spawned slightly farther inward.
+        // Project every visual base to the rim so the wooden rail touches it.
+        final base = rawBase.distance == 0
+            ? rawBase
+            : rawBase / rawBase.distance * spikeBaseRadius(arenaRadius, r);
         final angle = math.atan2(base.dy, base.dx);
         final radial = Offset(math.cos(angle), math.sin(angle));
         final tangent = Offset(-radial.dy, radial.dx);
@@ -512,6 +517,11 @@ class PowerUpPainter {
         ..color = const Color(0xFF6D3F2D),
     );
   }
+
+  /// The triangle base is drawn another 0.4 spike radii outward, placing its
+  /// rail exactly on the arena circumference.
+  static double spikeBaseRadius(double arenaRadius, double spikeRadius) =>
+      arenaRadius - spikeRadius * 0.4;
 
   /// Rotation for a vertically-authored portal oval so its long axis follows
   /// the tangent of the circular arena edge at [position].

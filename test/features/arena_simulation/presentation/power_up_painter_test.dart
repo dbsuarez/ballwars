@@ -113,6 +113,13 @@ void main() {
     );
   });
 
+  test('spike rail is anchored exactly to the arena edge', () {
+    const arenaRadius = 260.0;
+    const spikeRadius = 18.0;
+    final base = PowerUpPainter.spikeBaseRadius(arenaRadius, spikeRadius);
+    expect(base + spikeRadius * 0.4, arenaRadius);
+  });
+
   test('every selection icon paints visible pixels', () async {
     for (final kind in PowerUpKind.values) {
       final recorder = ui.PictureRecorder();

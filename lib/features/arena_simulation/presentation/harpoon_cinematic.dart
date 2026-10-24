@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -327,6 +328,19 @@ class _FinisherPainter extends CustomPainter {
             uppercutProgress,
           )!;
           _paintItem(canvas, strike, radius * 1.35);
+          final slashSprite = PowerUpSprites.effectFrame(
+            AnimatedEffect.slash,
+            (uppercutProgress * 4).floor().clamp(0, 3),
+          );
+          if (slashSprite != null) {
+            _paintRaster(
+              canvas,
+              slashSprite,
+              loserCenter,
+              radius * 1.8,
+              rotation: -math.pi / 4,
+            );
+          }
           final slash = Paint()
             ..color = profile.accent.withValues(alpha: 1 - impactProgress)
             ..strokeWidth = 9
@@ -388,14 +402,21 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.shotgun:
         if (hookProgress > 0 && hookProgress < 1) {
+          final pelletSprite = PowerUpSprites.projectile(
+            ProjectileSprite.shotgun,
+          );
           for (var i = -3; i <= 3; i++) {
             final target = loserCenter + Offset(0, i * radius * 0.34);
             final pellet = Offset.lerp(from, target, hookProgress)!;
-            canvas.drawCircle(
-              pellet,
-              radius * 0.075,
-              Paint()..color = profile.accent,
-            );
+            if (pelletSprite == null) {
+              canvas.drawCircle(
+                pellet,
+                radius * 0.075,
+                Paint()..color = profile.accent,
+              );
+            } else {
+              _paintRaster(canvas, pelletSprite, pellet, radius * 0.3);
+            }
           }
         }
       case PowerUpKind.gatling:
@@ -492,14 +513,29 @@ class _FinisherPainter extends CustomPainter {
           _paintExplosion(canvas, loserCenter, impactProgress);
           if (kind == PowerUpKind.molotov) {
             for (var i = 0; i < 9; i++) {
+              final fireSprite = PowerUpSprites.effectFrame(
+                AnimatedEffect.flame,
+                ((impactProgress * 12).floor() + i) % 4,
+              );
               final angle = i * math.pi * 2 / 9;
               final flame =
                   loserCenter + Offset.fromDirection(angle, radius * 1.4);
-              canvas.drawCircle(
-                flame - Offset(0, radius * 0.35 * impactProgress),
-                radius * 0.18,
-                Paint()..color = i.isEven ? profile.color : profile.accent,
-              );
+              final at = flame - Offset(0, radius * 0.35 * impactProgress);
+              if (fireSprite == null) {
+                canvas.drawCircle(
+                  at,
+                  radius * 0.18,
+                  Paint()..color = i.isEven ? profile.color : profile.accent,
+                );
+              } else {
+                _paintRaster(
+                  canvas,
+                  fireSprite,
+                  at,
+                  radius * 0.62,
+                  rotation: angle + math.pi / 2,
+                );
+              }
             }
           }
         }
@@ -643,6 +679,15 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintBullet(Canvas canvas, Offset center, double size) {
+    final projectile = PowerUpSprites.projectile(
+      _kind == PowerUpKind.gatling
+          ? ProjectileSprite.gatling
+          : ProjectileSprite.pistol,
+    );
+    if (projectile != null) {
+      _paintRaster(canvas, projectile, center, size * 3.2);
+      return;
+    }
     final rect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: center, width: size * 2.4, height: size),
       Radius.circular(size / 2),
@@ -675,6 +720,11 @@ class _FinisherPainter extends CustomPainter {
     Color color, {
     double angle = 0,
   }) {
+    final sprite = PowerUpSprites.projectile(ProjectileSprite.bow);
+    if (sprite != null) {
+      _paintRaster(canvas, sprite, point, radius * 0.95, rotation: angle);
+      return;
+    }
     canvas.save();
     canvas.translate(point.dx, point.dy);
     canvas.rotate(angle);
@@ -705,16 +755,35 @@ class _FinisherPainter extends CustomPainter {
       _paintSymbol(canvas, center, profile.symbol, size * 0.7);
       return;
     }
-    PowerUpSprites.paintIcon(
-      canvas,
-      kind,
-      Rect.fromCenter(center: center, width: size, height: size),
-    );
+    final sprite = PowerUpSprites.of(kind);
+    if (sprite == null) {
+      PowerUpSprites.paintIcon(
+        canvas,
+        kind,
+        Rect.fromCenter(center: center, width: size, height: size),
+      );
+    } else {
+      _paintRaster(canvas, sprite, center, size / 2);
+    }
   }
 
   void _paintExplosion(Canvas canvas, Offset center, double progress) {
     final burst = Curves.easeOut.transform(progress);
     final fade = 1 - progress;
+    final sprite = PowerUpSprites.effectFrame(
+      AnimatedEffect.explosion,
+      (progress * 4).floor().clamp(0, 3),
+    );
+    if (sprite != null) {
+      _paintRaster(
+        canvas,
+        sprite,
+        center,
+        radius * (0.8 + burst * 2.5),
+        opacity: fade,
+      );
+      return;
+    }
     canvas.drawCircle(
       center,
       radius * (0.7 + burst * 2.5),
@@ -725,6 +794,31 @@ class _FinisherPainter extends CustomPainter {
       radius * (0.3 + burst * 1.55),
       Paint()..color = profile.accent.withValues(alpha: fade * 0.95),
     );
+  }
+
+  void _paintRaster(
+    Canvas canvas,
+    ui.Image image,
+    Offset center,
+    double half, {
+    double rotation = 0,
+    double opacity = 1,
+  }) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromCenter(center: Offset.zero, width: half * 2, height: half * 2),
+      Paint()
+        ..filterQuality = FilterQuality.none
+        ..colorFilter = ColorFilter.mode(
+          Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
+          BlendMode.modulate,
+        ),
+    );
+    canvas.restore();
   }
 
   void _paintSymbol(Canvas canvas, Offset center, String symbol, double size) {

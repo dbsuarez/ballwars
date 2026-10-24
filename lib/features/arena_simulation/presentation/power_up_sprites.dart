@@ -6,6 +6,34 @@ import 'package:flutter/services.dart';
 import '../domain/power_up.dart';
 import 'power_up_pixel_art.dart';
 
+enum EffectSprite {
+  flame,
+  explosion,
+  iceWave,
+  slash,
+  portalBurst,
+  shieldImpact,
+  speedStreak,
+  blood,
+  magneticField,
+  timeBubble,
+  goldenArmorHit,
+  stickyGoo,
+}
+
+enum ProjectileSprite {
+  pistol,
+  shotgun,
+  gatling,
+  bow,
+  prismLaser,
+  swapCannon,
+  harpoon,
+  ricochetDisc,
+}
+
+enum AnimatedEffect { flame, explosion, portal, iceImpact, slash, blood }
+
 /// The power-up icons ([pixelIcons], 16 x 16 pixel art) turned into small images once, so painting a frame
 /// only blits them ([Canvas.drawImageRect] with nearest-neighbor scaling keeps the pixels crisp).
 ///
@@ -16,10 +44,19 @@ class PowerUpSprites {
   PowerUpSprites._();
 
   static final Map<PowerUpKind, ui.Image> _images = {};
+  static final Map<EffectSprite, ui.Image> _effects = {};
+  static final Map<ProjectileSprite, ui.Image> _projectiles = {};
+  static final Map<AnimatedEffect, List<ui.Image>> _animatedEffects = {};
   static Future<void>? _loading;
 
   /// [kind]'s image (16 x 16 px), or null before [load] has finished.
   static ui.Image? of(PowerUpKind kind) => _images[kind];
+  static ui.Image? effect(EffectSprite kind) => _effects[kind];
+  static ui.Image? projectile(ProjectileSprite kind) => _projectiles[kind];
+  static ui.Image? effectFrame(AnimatedEffect kind, int frame) {
+    final frames = _animatedEffects[kind];
+    return frames == null ? null : frames[frame % frames.length];
+  }
 
   /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
@@ -51,42 +88,146 @@ class PowerUpSprites {
       picture.dispose();
     }
     sheet.dispose();
+
+    final effectData = await rootBundle.load(
+      'assets/sprites/effects-master.png',
+    );
+    final effectCodec = await ui.instantiateImageCodec(
+      effectData.buffer.asUint8List(),
+    );
+    final effectSheet = (await effectCodec.getNextFrame()).image;
+    effectCodec.dispose();
+    const cellWidth = 362.0;
+    const cellHeight = 362.0;
+    for (final kind in EffectSprite.values) {
+      final column = kind.index % 4;
+      final row = kind.index ~/ 4;
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImageRect(
+        effectSheet,
+        Rect.fromLTWH(
+          column * cellWidth,
+          row * cellHeight,
+          cellWidth,
+          cellHeight,
+        ),
+        const Rect.fromLTWH(0, 0, 96, 96),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      _effects[kind] = await picture.toImage(96, 96);
+      picture.dispose();
+    }
+    effectSheet.dispose();
+
+    final projectileData = await rootBundle.load(
+      'assets/sprites/projectiles-master.png',
+    );
+    final projectileCodec = await ui.instantiateImageCodec(
+      projectileData.buffer.asUint8List(),
+    );
+    final projectileSheet = (await projectileCodec.getNextFrame()).image;
+    projectileCodec.dispose();
+    const projectileCell = 443.5;
+    for (final kind in ProjectileSprite.values) {
+      final column = kind.index % 4;
+      final row = kind.index ~/ 4;
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImageRect(
+        projectileSheet,
+        Rect.fromLTWH(
+          column * projectileCell,
+          row * projectileCell,
+          projectileCell,
+          projectileCell,
+        ),
+        const Rect.fromLTWH(0, 0, 96, 96),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      _projectiles[kind] = await picture.toImage(96, 96);
+      picture.dispose();
+    }
+    projectileSheet.dispose();
+
+    final animatedData = await rootBundle.load(
+      'assets/sprites/effects-animated.png',
+    );
+    final animatedCodec = await ui.instantiateImageCodec(
+      animatedData.buffer.asUint8List(),
+    );
+    final animatedSheet = (await animatedCodec.getNextFrame()).image;
+    animatedCodec.dispose();
+    const animatedWidth = 362.0;
+    const animatedHeight = 181.0;
+    for (final kind in AnimatedEffect.values) {
+      final frames = <ui.Image>[];
+      for (var frame = 0; frame < 4; frame++) {
+        final recorder = ui.PictureRecorder();
+        final fitted = applyBoxFit(
+          BoxFit.contain,
+          const Size(animatedWidth, animatedHeight),
+          const Size.square(96),
+        );
+        Canvas(recorder).drawImageRect(
+          animatedSheet,
+          Rect.fromLTWH(
+            frame * animatedWidth,
+            kind.index * animatedHeight,
+            animatedWidth,
+            animatedHeight,
+          ),
+          Alignment.center.inscribe(
+            fitted.destination,
+            const Rect.fromLTWH(0, 0, 96, 96),
+          ),
+          Paint()..filterQuality = FilterQuality.none,
+        );
+        final picture = recorder.endRecording();
+        frames.add(await picture.toImage(96, 96));
+        picture.dispose();
+      }
+      _animatedEffects[kind] = frames;
+    }
+    animatedSheet.dispose();
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {
-    PowerUpKind.pistol: Rect.fromLTWH(25, 70, 185, 210),
-    PowerUpKind.shotgun: Rect.fromLTWH(190, 65, 300, 215),
-    PowerUpKind.gatling: Rect.fromLTWH(485, 55, 330, 230),
-    PowerUpKind.knife: Rect.fromLTWH(775, 55, 190, 230),
-    PowerUpKind.sword: Rect.fromLTWH(940, 55, 200, 230),
-    PowerUpKind.shield: Rect.fromLTWH(1115, 45, 230, 245),
-    PowerUpKind.freeze: Rect.fromLTWH(1310, 60, 305, 225),
-    PowerUpKind.grenade: Rect.fromLTWH(1600, 55, 170, 230),
-    PowerUpKind.molotov: Rect.fromLTWH(15, 280, 200, 205),
-    PowerUpKind.hook: Rect.fromLTWH(215, 275, 210, 215),
-    PowerUpKind.ricochetDisc: Rect.fromLTWH(420, 275, 270, 215),
-    PowerUpKind.orbitingFlail: Rect.fromLTWH(675, 275, 210, 220),
-    PowerUpKind.threadHarpoon: Rect.fromLTWH(865, 270, 235, 225),
-    PowerUpKind.prismLaser: Rect.fromLTWH(1035, 280, 285, 210),
-    PowerUpKind.swapCannon: Rect.fromLTWH(1290, 270, 320, 225),
-    PowerUpKind.bow: Rect.fromLTWH(1590, 275, 180, 215),
-    PowerUpKind.apple: Rect.fromLTWH(15, 485, 155, 195),
-    PowerUpKind.speed: Rect.fromLTWH(145, 485, 155, 195),
-    PowerUpKind.magnet: Rect.fromLTWH(265, 480, 185, 205),
-    PowerUpKind.ghost: Rect.fromLTWH(405, 475, 190, 210),
-    PowerUpKind.repulsor: Rect.fromLTWH(545, 470, 220, 215),
-    PowerUpKind.timeBubble: Rect.fromLTWH(690, 460, 225, 230),
-    PowerUpKind.vampire: Rect.fromLTWH(865, 480, 200, 205),
-    PowerUpKind.mirror: Rect.fromLTWH(1015, 475, 180, 215),
-    PowerUpKind.overcharge: Rect.fromLTWH(1160, 470, 210, 220),
-    PowerUpKind.gremlin: Rect.fromLTWH(1305, 480, 180, 210),
-    PowerUpKind.magneticField: Rect.fromLTWH(1440, 460, 220, 235),
-    PowerUpKind.goldenArmor: Rect.fromLTWH(1600, 475, 170, 220),
-    PowerUpKind.mine: Rect.fromLTWH(425, 685, 200, 200),
-    PowerUpKind.phaseMine: Rect.fromLTWH(595, 675, 230, 212),
-    PowerUpKind.portal: Rect.fromLTWH(775, 670, 230, 217),
-    PowerUpKind.spikeWall: Rect.fromLTWH(975, 675, 230, 212),
-    PowerUpKind.stickyGoo: Rect.fromLTWH(1165, 675, 240, 212),
+    // These are deliberately non-overlapping cells. Some sprites have wide
+    // glows, so content-sized rectangles can accidentally include a neighbor.
+    PowerUpKind.pistol: Rect.fromLTRB(0, 0, 214, 286),
+    PowerUpKind.shotgun: Rect.fromLTRB(214, 0, 484, 286),
+    PowerUpKind.gatling: Rect.fromLTRB(484, 0, 755, 286),
+    PowerUpKind.knife: Rect.fromLTRB(755, 0, 908, 286),
+    PowerUpKind.sword: Rect.fromLTRB(908, 0, 1098, 286),
+    PowerUpKind.shield: Rect.fromLTRB(1098, 0, 1289, 286),
+    PowerUpKind.freeze: Rect.fromLTRB(1289, 0, 1593, 286),
+    PowerUpKind.grenade: Rect.fromLTRB(1593, 0, 1774, 286),
+    PowerUpKind.molotov: Rect.fromLTRB(0, 286, 229, 480),
+    PowerUpKind.hook: Rect.fromLTRB(229, 286, 440, 480),
+    PowerUpKind.ricochetDisc: Rect.fromLTRB(440, 286, 643, 480),
+    PowerUpKind.orbitingFlail: Rect.fromLTRB(643, 286, 845, 480),
+    PowerUpKind.threadHarpoon: Rect.fromLTRB(845, 286, 1030, 480),
+    PowerUpKind.prismLaser: Rect.fromLTRB(1030, 286, 1278, 480),
+    PowerUpKind.swapCannon: Rect.fromLTRB(1278, 286, 1554, 480),
+    PowerUpKind.bow: Rect.fromLTRB(1554, 286, 1774, 480),
+    PowerUpKind.apple: Rect.fromLTRB(0, 480, 145, 695),
+    PowerUpKind.speed: Rect.fromLTRB(145, 480, 278, 695),
+    PowerUpKind.magnet: Rect.fromLTRB(278, 480, 413, 695),
+    PowerUpKind.ghost: Rect.fromLTRB(413, 480, 548, 695),
+    PowerUpKind.repulsor: Rect.fromLTRB(548, 480, 690, 695),
+    PowerUpKind.timeBubble: Rect.fromLTRB(690, 480, 850, 695),
+    PowerUpKind.vampire: Rect.fromLTRB(850, 480, 1015, 695),
+    PowerUpKind.mirror: Rect.fromLTRB(1015, 480, 1165, 695),
+    PowerUpKind.overcharge: Rect.fromLTRB(1165, 480, 1315, 695),
+    PowerUpKind.gremlin: Rect.fromLTRB(1315, 480, 1460, 695),
+    PowerUpKind.magneticField: Rect.fromLTRB(1460, 480, 1605, 695),
+    PowerUpKind.goldenArmor: Rect.fromLTRB(1605, 480, 1774, 695),
+    PowerUpKind.mine: Rect.fromLTRB(400, 695, 600, 887),
+    PowerUpKind.phaseMine: Rect.fromLTRB(600, 695, 786, 887),
+    PowerUpKind.portal: Rect.fromLTRB(786, 695, 974, 887),
+    PowerUpKind.spikeWall: Rect.fromLTRB(974, 695, 1165, 887),
+    PowerUpKind.stickyGoo: Rect.fromLTRB(1165, 695, 1360, 887),
   };
 
   /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).

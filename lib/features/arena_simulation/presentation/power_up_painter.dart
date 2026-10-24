@@ -84,36 +84,27 @@ class PowerUpPainter {
           ..color = const Color(0xFFFFA126).withValues(alpha: 0.9 * life),
       );
       if (showEffects) {
-        for (var i = 0; i < 11; i++) {
+        for (var i = 0; i < 7; i++) {
+          final flame = PowerUpSprites.effectFrame(
+            AnimatedEffect.flame,
+            (state.step ~/ 5 + i) % 4,
+          );
           final angle =
-              i * 2 * math.pi / 11 + state.step * (i.isEven ? 0.018 : -0.012);
-          final distance = fire.radius * (0.2 + (i % 4) * 0.18);
+              i * 2 * math.pi / 7 + state.step * (i.isEven ? 0.018 : -0.012);
+          final distance = fire.radius * (0.18 + (i % 3) * 0.22);
           final base =
               fire.position +
               Offset(math.cos(angle), math.sin(angle)) * distance;
-          final height = r * (0.45 + (i % 3) * 0.18) * pulse;
-          final flame = Path()
-            ..moveTo(base.dx - r * 0.13, base.dy)
-            ..quadraticBezierTo(
-              base.dx,
-              base.dy - height,
-              base.dx + r * 0.13,
-              base.dy,
-            )
-            ..quadraticBezierTo(
-              base.dx,
-              base.dy - height * 0.35,
-              base.dx - r * 0.13,
-              base.dy,
-            )
-            ..close();
-          canvas.drawPath(
-            flame,
-            Paint()
-              ..color =
-                  (i.isEven ? const Color(0xFFFF4B20) : const Color(0xFFFFD23F))
-                      .withValues(alpha: 0.9 * life),
-          );
+          if (flame != null) {
+            _drawEffect(
+              canvas,
+              flame,
+              base,
+              r * (0.5 + (i % 3) * 0.12) * pulse,
+              angle + math.pi / 2,
+              opacity: life,
+            );
+          }
         }
       }
     }
@@ -122,12 +113,20 @@ class PowerUpPainter {
       final t = e.age / PowerUpTuning.explosionShowSteps;
       final fade = (1 - t).clamp(0.0, 1.0);
       if (showEffects) {
-        canvas.drawCircle(
-          e.position,
-          e.radius,
-          Paint()
-            ..color = const Color(0xFFFFB347).withValues(alpha: 0.25 * fade),
+        final sprite = PowerUpSprites.effectFrame(
+          AnimatedEffect.explosion,
+          (t * 4).floor().clamp(0, 3),
         );
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            e.position,
+            e.radius,
+            t * 0.2,
+            opacity: fade,
+          );
+        }
       }
       canvas.drawCircle(
         e.position,
@@ -147,6 +146,13 @@ class PowerUpPainter {
         ..strokeWidth = math.max(2, r * 0.18)
         ..color = colorOf(PowerUpKind.portal).withValues(alpha: fade);
       for (final spot in [flash.from, flash.to]) {
+        final sprite = PowerUpSprites.effectFrame(
+          AnimatedEffect.portal,
+          (state.step ~/ 4) % 4,
+        );
+        if (sprite != null) {
+          _drawEffect(canvas, sprite, spot, r * (1.1 + t), t, opacity: fade);
+        }
         canvas.drawOval(
           Rect.fromCenter(
             center: spot,
@@ -327,7 +333,7 @@ class PowerUpPainter {
         if (shot.kind == PowerUpKind.hook) {
           // The hook flying out on its chain.
           _paintChain(canvas, shot.owner.position, shot.position);
-          final sprite = PowerUpSprites.of(PowerUpKind.hook);
+          final sprite = PowerUpSprites.projectile(ProjectileSprite.harpoon);
           final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
           if (sprite == null) {
             drawGlyph(canvas, PowerUpKind.hook, shot.position, r * 0.6);
@@ -370,6 +376,20 @@ class PowerUpPainter {
         final speed = shot.velocity.distance;
         if (speed == 0) continue;
         final dir = shot.velocity / speed;
+        final projectileKind = _projectileSpriteFor(shot.kind);
+        final projectile = projectileKind == null
+            ? null
+            : PowerUpSprites.projectile(projectileKind);
+        if (projectile != null) {
+          _drawSprite(
+            canvas,
+            projectile,
+            shot.position,
+            r * (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62),
+            math.atan2(dir.dy, dir.dx),
+          );
+          continue;
+        }
         final front = shot.position;
         final mid = front - dir * (len * 0.45);
         final back = front - dir * len;
@@ -414,6 +434,21 @@ class PowerUpPainter {
     for (final m in p.slashMarks) {
       // Two quick strokes across the cut, fading out.
       final fade = (1 - m.age / PowerUpTuning.slashShowSteps).clamp(0.0, 1.0);
+      final sprite = PowerUpSprites.effectFrame(
+        AnimatedEffect.slash,
+        ((m.age / PowerUpTuning.slashShowSteps) * 4).floor().clamp(0, 3),
+      );
+      if (sprite != null) {
+        _drawEffect(
+          canvas,
+          sprite,
+          m.position,
+          r * 1.8,
+          m.angle,
+          opacity: fade,
+        );
+        continue;
+      }
       final along = Offset(math.cos(m.angle), math.sin(m.angle)) * (r * 1.6);
       final across = Offset(-along.dy, along.dx) * 0.18;
       final paint = Paint()
@@ -499,6 +534,17 @@ class PowerUpPainter {
     final speed = shot.velocity.distance;
     if (speed == 0) return;
     final direction = shot.velocity / speed;
+    final sprite = PowerUpSprites.projectile(ProjectileSprite.bow);
+    if (sprite != null) {
+      _drawSprite(
+        canvas,
+        sprite,
+        shot.position - direction * r * 0.45,
+        r * 0.85,
+        math.atan2(direction.dy, direction.dx),
+      );
+      return;
+    }
     final side = Offset(-direction.dy, direction.dx);
     final tip = shot.position;
     final tail = tip - direction * (r * 1.8);
@@ -524,6 +570,18 @@ class PowerUpPainter {
     );
   }
 
+  static ProjectileSprite? _projectileSpriteFor(PowerUpKind kind) =>
+      switch (kind) {
+        PowerUpKind.pistol => ProjectileSprite.pistol,
+        PowerUpKind.shotgun => ProjectileSprite.shotgun,
+        PowerUpKind.gatling => ProjectileSprite.gatling,
+        PowerUpKind.prismLaser => ProjectileSprite.prismLaser,
+        PowerUpKind.swapCannon => ProjectileSprite.swapCannon,
+        PowerUpKind.threadHarpoon => ProjectileSprite.harpoon,
+        PowerUpKind.ricochetDisc => ProjectileSprite.ricochetDisc,
+        _ => null,
+      };
+
   /// A freeze shot as an icy blast: pale arcs facing forward, widening the farther the shot has flown,
   /// a white core and a few frost sparkles behind it.
   static void _paintIceWave(Canvas canvas, Projectile shot, double r) {
@@ -534,6 +592,20 @@ class PowerUpPainter {
     // Grows from a ball's edge outward as it travels.
     final travelled = (shot.position - shot.owner.position).distance;
     final grow = (travelled / (r * 8)).clamp(0.0, 1.0);
+    final sprite = PowerUpSprites.effectFrame(
+      AnimatedEffect.iceImpact,
+      (grow * 4).floor().clamp(0, 3),
+    );
+    if (sprite != null) {
+      _drawEffect(
+        canvas,
+        sprite,
+        shot.position - dir * r * 0.55,
+        r * (1.15 + grow * 0.7),
+        angle,
+      );
+      return;
+    }
     // A soft frosty glow around the blast (a gradient, no blur).
     final glowR = r * (1.2 + 1.2 * grow);
     canvas.drawCircle(
@@ -706,6 +778,31 @@ class PowerUpPainter {
     canvas.restore();
   }
 
+  static void _drawEffect(
+    Canvas canvas,
+    ui.Image image,
+    Offset center,
+    double half,
+    double rotation, {
+    double opacity = 1,
+  }) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromCenter(center: Offset.zero, width: half * 2, height: half * 2),
+      Paint()
+        ..filterQuality = FilterQuality.none
+        ..colorFilter = ColorFilter.mode(
+          Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
+          BlendMode.modulate,
+        ),
+    );
+    canvas.restore();
+  }
+
   /// The direction, in radians, each weapon icon points in as drawn in its SVG (guns: the muzzle; knife:
   /// the tip). Weapons are turned from it to point where they are used.
   static const Map<PowerUpKind, double> _iconAngle = {
@@ -763,6 +860,17 @@ class PowerUpPainter {
     final dir = ball.velocity / speed;
     final side = Offset(-dir.dy, dir.dx);
     final r = ball.radius;
+    final sprite = PowerUpSprites.effect(EffectSprite.speedStreak);
+    if (sprite != null) {
+      _drawEffect(
+        canvas,
+        sprite,
+        ball.position - dir * r * 1.25,
+        r * 1.65,
+        math.atan2(dir.dy, dir.dx),
+        opacity: 0.9,
+      );
+    }
     final pulse = 0.85 + 0.15 * math.sin(ball.speedLeft * 0.45);
     final colors = [
       const Color(0xFFFFF176),
@@ -820,15 +928,30 @@ class PowerUpPainter {
       if (sprite == null) {
         drawGlyph(canvas, PowerUpKind.orbitingFlail, flail, ball.radius * 0.42);
       } else {
-        _drawSprite(canvas, sprite, flail, ball.radius * 0.9, angle);
+        // Spin the head independently while its center orbits the ball.
+        _drawSprite(canvas, sprite, flail, ball.radius * 0.9, -step * 0.34);
       }
     }
     if (ball.burningLeft > 0) {
       for (var i = 0; i < 5; i++) {
+        final flame = PowerUpSprites.effectFrame(
+          AnimatedEffect.flame,
+          (step ~/ 5 + i) % 4,
+        );
         final angle = i * math.pi * 2 / 5 + step * 0.045;
         final base =
             ball.position +
             Offset(math.cos(angle), math.sin(angle)) * ball.radius * 0.82;
+        if (flame != null) {
+          _drawEffect(
+            canvas,
+            flame,
+            base,
+            ball.radius * (0.34 + (i.isEven ? 0.07 : 0)),
+            angle + math.pi / 2,
+          );
+          continue;
+        }
         final flicker = 0.22 + 0.08 * math.sin(step * 0.5 + i).abs();
         final tip = base - Offset(0, ball.radius * flicker);
         final side = ball.radius * 0.12;
@@ -845,6 +968,17 @@ class PowerUpPainter {
       }
     }
     if (ball.timeBubbleLeft > 0) {
+      final sprite = PowerUpSprites.effect(EffectSprite.timeBubble);
+      if (sprite != null) {
+        _drawEffect(
+          canvas,
+          sprite,
+          ball.position,
+          ball.radius * 3,
+          step * 0.012,
+          opacity: 0.72,
+        );
+      }
       canvas.drawCircle(
         ball.position,
         ball.radius * 3,
@@ -911,6 +1045,17 @@ class PowerUpPainter {
     if (ball.magneticFieldLeft > 0) {
       final pulse = 0.72 + 0.18 * math.sin(ball.magneticFieldLeft * 0.35);
       final radius = ball.radius * 2;
+      final sprite = PowerUpSprites.effect(EffectSprite.magneticField);
+      if (sprite != null) {
+        _drawEffect(
+          canvas,
+          sprite,
+          ball.position,
+          radius,
+          -step * 0.025,
+          opacity: pulse,
+        );
+      }
       canvas.drawCircle(
         ball.position,
         radius,
@@ -937,6 +1082,17 @@ class PowerUpPainter {
       }
     }
     if (ball.goldenArmorHits > 0) {
+      final sprite = PowerUpSprites.effect(EffectSprite.goldenArmorHit);
+      if (sprite != null) {
+        _drawEffect(
+          canvas,
+          sprite,
+          ball.position,
+          ball.radius * 1.45,
+          step * 0.018,
+          opacity: 0.68,
+        );
+      }
       final armor = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = math.max(3, ball.radius * 0.16)
@@ -965,6 +1121,17 @@ class PowerUpPainter {
       );
     }
     if (ball.stickyGooLeft > 0) {
+      final sprite = PowerUpSprites.effect(EffectSprite.stickyGoo);
+      if (sprite != null) {
+        _drawEffect(
+          canvas,
+          sprite,
+          ball.position + Offset(0, ball.radius * 0.65),
+          ball.radius * 1.1,
+          0,
+          opacity: 0.9,
+        );
+      }
       canvas.drawArc(
         Rect.fromCircle(center: ball.position, radius: ball.radius * 1.05),
         0,

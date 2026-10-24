@@ -27,6 +27,8 @@ const _balls = [
 ];
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     'paints field power-ups, projectiles, mines, blasts and ball effects without throwing',
     () {
@@ -129,6 +131,36 @@ void main() {
         reason: '${kind.label} painted a transparent icon',
       );
       image.dispose();
+    }
+  });
+
+  test('the master sheet supplies one isolated image for every item', () async {
+    await PowerUpSprites.load();
+    for (final kind in PowerUpKind.values) {
+      final image = PowerUpSprites.of(kind);
+      expect(image, isNotNull, reason: '${kind.label} has no sheet crop');
+      expect(image!.width, 64, reason: kind.label);
+      expect(image.height, 64, reason: kind.label);
+    }
+    for (final kind in EffectSprite.values) {
+      final image = PowerUpSprites.effect(kind);
+      expect(image, isNotNull, reason: '$kind has no effect crop');
+      expect(image!.width, 96, reason: '$kind');
+      expect(image.height, 96, reason: '$kind');
+    }
+    for (final kind in ProjectileSprite.values) {
+      final image = PowerUpSprites.projectile(kind);
+      expect(image, isNotNull, reason: '$kind has no projectile crop');
+      expect(image!.width, 96, reason: '$kind');
+      expect(image.height, 96, reason: '$kind');
+    }
+    for (final kind in AnimatedEffect.values) {
+      for (var frame = 0; frame < 4; frame++) {
+        final image = PowerUpSprites.effectFrame(kind, frame);
+        expect(image, isNotNull, reason: '$kind frame $frame is missing');
+        expect(image!.width, 96, reason: '$kind frame $frame');
+        expect(image.height, 96, reason: '$kind frame $frame');
+      }
     }
   });
 

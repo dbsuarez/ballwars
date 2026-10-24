@@ -120,6 +120,7 @@ class PowerUpSystem {
     _frozenVelocity.remove(ball);
     _gooVelocity.remove(ball);
     _burstVolley.remove(ball);
+    _firedWeaponHold.remove(ball);
     _shieldedVolley.remove(ball);
     _volleyLabel.remove(ball);
     pulls.removeWhere(
@@ -135,6 +136,7 @@ class PowerUpSystem {
   // rest of that volley too (see [_hit]).
   int _lastVolley = 0;
   final Map<SimulationBall, int> _burstVolley = {};
+  final Map<SimulationBall, Map<PowerUpKind, int>> _firedWeaponHold = {};
   final Map<SimulationBall, int> _shieldedVolley = {};
 
   // The damage label of the last volley that hit each ball, so a volley's hits add up in one label.
@@ -149,6 +151,12 @@ class PowerUpSystem {
   /// Largest seeded turn of an inner shotgun pellet off its place in the fan, in radians.
   static const double _pelletJitter = 0.03;
 
+  /// Fired weapons stay visible for half a second so recoil reads clearly.
+  static const int firedWeaponHoldSteps = 30;
+
+  int firedWeaponHoldLeft(SimulationBall ball, PowerUpKind kind) =>
+      _firedWeaponHold[ball]?[kind] ?? 0;
+
   /// Pick-up radius of a field power-up: a little smaller than the balls, so it follows the ball size.
   late final double fieldRadius =
       match.state.balls.first.radius * _t.fieldRadiusRatio;
@@ -161,6 +169,7 @@ class PowerUpSystem {
   /// Timers count down first, so an effect picked up in step N lasts its full count from step N + 1 on
   /// (a speed boost picked up in step N runs from step N + 1).
   void step() {
+    _updateFiredWeaponHold();
     _countDown();
     _burn();
     _updateStickyGoo();
@@ -182,6 +191,29 @@ class PowerUpSystem {
       _spawn(number);
     }
     _turnShields();
+  }
+
+  void _holdFiredWeapon(SimulationBall ball, PowerUpKind kind) {
+    (_firedWeaponHold[ball] ??= {})[kind] = firedWeaponHoldSteps;
+  }
+
+  void _updateFiredWeaponHold() {
+    for (final ballEntry in _firedWeaponHold.entries.toList()) {
+      final ball = ballEntry.key;
+      final held = ballEntry.value;
+      for (final kind in held.keys.toList()) {
+        final left = held[kind]! - 1;
+        if (left > 0) {
+          held[kind] = left;
+          continue;
+        }
+        while (ball.equippedWeapons.contains(kind)) {
+          ball.removeWeapon(kind);
+        }
+        held.remove(kind);
+      }
+      if (held.isEmpty) _firedWeaponHold.remove(ball);
+    }
   }
 
   /// Gives [ball] the pickup [p] and takes [p] off the field. Power-ups apply
@@ -869,7 +901,11 @@ class PowerUpSystem {
       }
       final bursting = ball.burstLeft > 0;
       final guns = ball.equippedWeapons
-          .where((weapon) => weapon.isGun)
+          .where(
+            (weapon) =>
+                weapon.isGun &&
+                !(_firedWeaponHold[ball]?.containsKey(weapon) ?? false),
+          )
           .toList();
       if (!bursting && guns.isEmpty) continue;
       final target = _nearestTarget(ball);
@@ -884,6 +920,7 @@ class PowerUpSystem {
       if (ball.aimLeft > 0) continue;
 
       if (bursting) {
+        _holdFiredWeapon(ball, PowerUpKind.gatling);
         _fire(
           ball,
           target,
@@ -895,7 +932,7 @@ class PowerUpSystem {
         ball.burstLeft--;
       } else {
         for (final kind in guns) {
-          ball.removeWeapon(kind);
+          _holdFiredWeapon(ball, kind);
           switch (kind) {
             case PowerUpKind.shotgun:
               _fireShotgun(ball, target);
@@ -939,6 +976,9 @@ class PowerUpSystem {
             case PowerUpKind.bow:
               _fireBow(ball, target);
               _yell(ball, 'ARROWS, FLY!');
+            case PowerUpKind.rocketLauncher:
+              _fireRocket(ball, target);
+              _yell(ball, 'TARGET LOCKED!');
             default:
               _fire(ball, target, kind, 0);
               _yell(ball, 'BANG!');
@@ -1096,6 +1136,22 @@ class PowerUpSystem {
     shots++;
   }
 
+  void _fireRocket(SimulationBall ball, SimulationBall target) {
+    final toTarget = target.position - ball.position;
+    final distance = toTarget.distance;
+    final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    projectiles.add(
+      Projectile(
+        owner: ball,
+        kind: PowerUpKind.rocketLauncher,
+        position: ball.position + direction * ball.radius,
+        velocity: direction * (match.arenaRadius * _t.bulletSpeedRatio * 0.72),
+        target: target,
+      ),
+    );
+    shots++;
+  }
+
   /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
   void _fire(
     SimulationBall ball,
@@ -1136,6 +1192,22 @@ class PowerUpSystem {
     for (final p in projectiles) {
       if (p.spent) continue;
       final from = p.position;
+      if (p.kind == PowerUpKind.rocketLauncher) {
+        var target = p.target;
+        if (target == null || !_alive(target)) {
+          target = _nearestTarget(p.owner);
+          p.target = target;
+        }
+        if (target != null) {
+          final toward = target.position - from;
+          if (toward.distance > 0) {
+            p.velocity =
+                toward /
+                toward.distance *
+                (match.arenaRadius * _t.bulletSpeedRatio * 0.72);
+          }
+        }
+      }
       var projectileScale = 1.0;
       for (final ball in balls) {
         if (ball.timeBubbleLeft > 0 &&
@@ -1225,8 +1297,17 @@ class PowerUpSystem {
           _catch(p.owner, struck);
         } else {
           _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+          if (p.kind == PowerUpKind.rocketLauncher) {
+            explosions.add(
+              Explosion(
+                position: end,
+                radius: match.arenaRadius * PowerUpTuning.blastRadiusRatio,
+              ),
+            );
+          }
         }
-      } else if (end.distance >= match.arenaRadius) {
+      } else if (end.distance >= match.arenaRadius &&
+          p.kind != PowerUpKind.rocketLauncher) {
         if ((p.kind == PowerUpKind.ricochetDisc ||
                 p.kind == PowerUpKind.prismLaser) &&
             p.wallBounces == 0) {

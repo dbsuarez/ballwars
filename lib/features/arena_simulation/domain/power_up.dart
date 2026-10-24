@@ -39,7 +39,8 @@ enum PowerUpKind {
   goldenArmor('Golden Armor'),
   bow('Bow'),
   stickyGoo('Sticky Goo'),
-  molotov('Molotov');
+  molotov('Molotov'),
+  rocketLauncher('Rocket Launcher');
 
   const PowerUpKind(this.label);
 
@@ -59,7 +60,8 @@ enum PowerUpKind {
       this == threadHarpoon ||
       this == prismLaser ||
       this == swapCannon ||
-      this == bow;
+      this == bow ||
+      this == rocketLauncher;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -82,7 +84,8 @@ enum PowerUpKind {
       this == threadHarpoon ||
       this == prismLaser ||
       this == swapCannon ||
-      this == bow;
+      this == bow ||
+      this == rocketLauncher;
 
   /// Traps spawn close to the arena boundary and arm when collected.
   bool get isTrap =>
@@ -129,10 +132,12 @@ class Projectile {
     required this.velocity,
     this.volley = 0,
     this.landAt,
+    this.target,
   });
 
   /// A grenade's landing point (where its target was when thrown); null for bullets.
   final Offset? landAt;
+  SimulationBall? target;
 
   final SimulationBall owner;
   final PowerUpKind kind;
@@ -394,6 +399,7 @@ class PowerUpTuning {
     PowerUpKind.spikeWall: 25,
     PowerUpKind.bow: 4,
     PowerUpKind.molotov: 6,
+    PowerUpKind.rocketLauncher: 45,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -421,6 +427,7 @@ class PowerUpTuning {
     PowerUpKind.spikeWall: 10,
     PowerUpKind.bow: 1,
     PowerUpKind.molotov: 2,
+    PowerUpKind.rocketLauncher: 16,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -464,6 +471,8 @@ String powerUpDescription(
           'blows up but the thrower.',
     PowerUpKind.molotov =>
       '$aim throws it where the target is. The area burns for 3 s, dealing ${dmg(kind)} every 0.5 s.',
+    PowerUpKind.rocketLauncher =>
+      '$aim fires one homing missile that pursues its target until it hits: ${dmg(kind)}.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '

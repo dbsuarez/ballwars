@@ -334,6 +334,15 @@ class FinisherProfile {
       style: FinisherStyle.trap,
       symbol: '●',
     ),
+    'Rocket Launcher': FinisherProfile(
+      move: 'Rocket Launcher',
+      yell: 'TARGET LOCKED!',
+      impactYell: 'DIRECT HIT!',
+      color: Color(0xFF7F913C),
+      accent: Color(0xFFFF9D2E),
+      style: FinisherStyle.blast,
+      symbol: 'R',
+    ),
     'Collision': FinisherProfile(
       move: 'Collision',
       yell: 'FULL SPEED!',

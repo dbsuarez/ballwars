@@ -120,6 +120,16 @@ void main() {
     expect(base + spikeRadius * 0.4, arenaRadius);
   });
 
+  test('orbiting flail moves around the ball as simulation steps advance', () {
+    const center = Offset(12, -8);
+    const radius = 20.0;
+    final start = PowerUpPainter.orbitingFlailCenter(center, radius, 0);
+    final later = PowerUpPainter.orbitingFlailCenter(center, radius, 15);
+    expect(start, isNot(later));
+    expect((start - center).distance, closeTo(radius * 2.25, 1e-9));
+    expect((later - center).distance, closeTo(radius * 2.25, 1e-9));
+  });
+
   test('every selection icon paints visible pixels', () async {
     for (final kind in PowerUpKind.values) {
       final recorder = ui.PictureRecorder();

@@ -6,6 +6,7 @@ import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import 'power_up_sprites.dart';
+import 'arena_effect_library.dart';
 
 /// Draws the power-up layer of an Arsenal / All-Out match in the arena's coordinates (center at 0, 0):
 /// pulsing field power-ups, armed mines, aim lines, bullets, blasts and knife slashes ([paint]), plus the
@@ -50,6 +51,7 @@ class PowerUpPainter {
     PowerUpKind.bow: Color(0xFFC98A43),
     PowerUpKind.stickyGoo: Color(0xFF65E34F),
     PowerUpKind.molotov: Color(0xFFFF6A2A),
+    PowerUpKind.rocketLauncher: Color(0xFF98A84B),
   };
 
   /// The color a power-up is drawn in.
@@ -183,8 +185,8 @@ class PowerUpPainter {
           canvas,
           item.kind,
           item.position,
-          r * (0.96 + 0.08 * pulse),
-          0.5 + 0.5 * pulse,
+          r * (0.90 + 0.20 * pulse),
+          0.35 + 0.65 * pulse,
         );
       }
     }
@@ -383,6 +385,22 @@ class PowerUpPainter {
         final speed = shot.velocity.distance;
         if (speed == 0) continue;
         final dir = shot.velocity / speed;
+        if (shot.kind == PowerUpKind.rocketLauncher) {
+          final missile = PowerUpSprites.rocketMissile;
+          if (missile != null) {
+            final thrust = 0.88 + 0.12 * math.sin(state.step * 0.7).abs();
+            _drawSprite(
+              canvas,
+              missile,
+              shot.position - dir * r * 0.45,
+              r * 1.05 * thrust,
+              math.atan2(dir.dy, dir.dx),
+            );
+          } else {
+            drawGlyph(canvas, shot.kind, shot.position, r * 0.6);
+          }
+          continue;
+        }
         final projectileKind = _projectileSpriteFor(shot.kind);
         final projectile = projectileKind == null
             ? null
@@ -775,6 +793,7 @@ class PowerUpPainter {
     double rotation, {
     double iconAngle = 0,
     bool flip = false,
+    double opacity = 1,
   }) {
     canvas.save();
     canvas.translate(c.dx, c.dy);
@@ -785,7 +804,14 @@ class PowerUpPainter {
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       Rect.fromCenter(center: Offset.zero, width: 2 * half, height: 2 * half),
-      _spritePaint,
+      opacity >= 1
+          ? _spritePaint
+          : (Paint()
+              ..filterQuality = FilterQuality.none
+              ..colorFilter = ColorFilter.mode(
+                Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
+                BlendMode.modulate,
+              )),
     );
     canvas.restore();
   }
@@ -924,11 +950,27 @@ class PowerUpPainter {
     Canvas canvas,
     SimulationBall ball, {
     int step = 0,
+    double? incomingAttackAngle,
+    int Function(PowerUpKind kind)? firedWeaponHoldLeft,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
-      final angle = step * 0.14;
+      final angle = flailOrbitAngle(step);
       final direction = Offset(math.cos(angle), math.sin(angle));
-      final flail = ball.position + direction * ball.radius * 2.25;
+      final flail = orbitingFlailCenter(ball.position, ball.radius, step);
+      for (var trail = 3; trail >= 1; trail--) {
+        final oldAngle = flailOrbitAngle(step - trail * 2);
+        final oldCenter =
+            ball.position +
+            Offset(math.cos(oldAngle), math.sin(oldAngle)) * ball.radius * 2.25;
+        canvas.drawCircle(
+          oldCenter,
+          ball.radius * (0.18 + trail * 0.035),
+          Paint()
+            ..color = const Color(
+              0xFFB8C2CC,
+            ).withValues(alpha: 0.22 - trail * 0.045),
+        );
+      }
       canvas.drawLine(
         ball.position + direction * ball.radius * 0.72,
         flail,
@@ -1025,9 +1067,22 @@ class PowerUpPainter {
       );
     }
     if (ball.mirrorCharges > 0) {
+      final angle = incomingAttackAngle ?? 0;
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      final sprite = PowerUpSprites.of(PowerUpKind.mirror);
+      if (sprite != null) {
+        _drawSprite(
+          canvas,
+          sprite,
+          ball.position + direction * ball.radius * 1.16,
+          ball.radius * 0.72,
+          angle + math.pi / 2,
+          iconAngle: -math.pi / 4,
+        );
+      }
       canvas.drawArc(
         Rect.fromCircle(center: ball.position, radius: ball.radius * 1.35),
-        -1.1,
+        angle - 1.1,
         2.2,
         false,
         Paint()
@@ -1037,6 +1092,20 @@ class PowerUpPainter {
       );
     }
     if (ball.overchargeLeft > 0) {
+      final maximumPower = ArenaEffectLibrary.frame(
+        ArenaEffectKind.maximumPower,
+        step,
+      );
+      if (maximumPower != null) {
+        _drawEffect(
+          canvas,
+          maximumPower,
+          ball.position,
+          ball.radius * 1.7,
+          0,
+          opacity: 0.92,
+        );
+      }
       for (var i = 0; i < 4; i++) {
         final a = i * math.pi / 2 + ball.overchargeLeft * 0.1;
         canvas.drawCircle(
@@ -1157,17 +1226,64 @@ class PowerUpPainter {
     for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
       final weapon = ball.equippedWeapons[slot];
       if (weapon != PowerUpKind.orbitingFlail) {
-        _paintHeldWeapon(canvas, ball, weapon, slot);
+        _paintHeldWeapon(
+          canvas,
+          ball,
+          weapon,
+          slot,
+          firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
+        );
       }
     }
+  }
+
+  static double? incomingAttackAngle(
+    SimulationState state,
+    SimulationBall target,
+  ) {
+    if (target.mirrorCharges <= 0) return null;
+    Projectile? nearest;
+    var nearestDistance = double.infinity;
+    for (final projectile
+        in state.powerUps?.projectiles ?? const <Projectile>[]) {
+      if (projectile.spent || identical(projectile.owner, target)) continue;
+      final towardTarget = target.position - projectile.position;
+      if (projectile.velocity.dx * towardTarget.dx +
+              projectile.velocity.dy * towardTarget.dy <=
+          0) {
+        continue;
+      }
+      final distance = towardTarget.distanceSquared;
+      if (distance < nearestDistance) {
+        nearest = projectile;
+        nearestDistance = distance;
+      }
+    }
+    final projectile = nearest;
+    if (projectile == null) return null;
+    final incomingSide = projectile.position - target.position;
+    return math.atan2(incomingSide.dy, incomingSide.dx);
+  }
+
+  static double flailOrbitAngle(int step) => step * 0.075;
+
+  static Offset orbitingFlailCenter(
+    Offset ballCenter,
+    double ballRadius,
+    int step,
+  ) {
+    final angle = flailOrbitAngle(step);
+    return ballCenter +
+        Offset(math.cos(angle), math.sin(angle)) * ballRadius * 2.25;
   }
 
   static void _paintHeldWeapon(
     Canvas canvas,
     SimulationBall ball,
     PowerUpKind held,
-    int slot,
-  ) {
+    int slot, {
+    int firedHoldLeft = 0,
+  }) {
     final sprite = PowerUpSprites.of(held);
     if (held == PowerUpKind.shield) {
       final angle = heldAngle(ball, weapon: held, slot: slot);
@@ -1200,16 +1316,26 @@ class PowerUpPainter {
       drawGlyph(canvas, held, badge, r * 0.62);
       return;
     }
-    final angle = heldAngle(ball, weapon: held, slot: slot);
+    final baseAngle = heldAngle(ball, weapon: held, slot: slot);
+    final firedProgress = firedHoldLeft <= 0 ? 0.0 : 1 - firedHoldLeft / 30.0;
+    final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
+    final angle = baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
     final dir = Offset(math.cos(angle), math.sin(angle));
+    final center =
+        heldCenter(ball, weapon: held, slot: slot) +
+        Offset(
+          math.sin(drop * math.pi) * ball.radius * 0.25,
+          drop * drop * ball.radius * 2.2,
+        );
     _drawSprite(
       canvas,
       sprite,
-      heldCenter(ball, weapon: held, slot: slot),
+      center,
       ball.radius * 0.9,
       angle,
       iconAngle: _iconAngle[held] ?? 0,
       flip: dir.dx < 0,
+      opacity: 1 - drop * drop,
     );
   }
 

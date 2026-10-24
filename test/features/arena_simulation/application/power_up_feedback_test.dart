@@ -248,7 +248,7 @@ void main() {
       final [a, b] = c.state.balls;
       a.held = PowerUpKind.grenade;
       _run(c, PowerUpTuning.aimSteps);
-      expect(a.held, isNull);
+      expect(a.held, PowerUpKind.grenade);
       final grenade = c.powerUps!.projectiles.single;
       expect(grenade.kind, PowerUpKind.grenade);
       expect(grenade.landAt, b.position);
@@ -258,6 +258,7 @@ void main() {
       }
       expect(c.powerUps!.blasts, 1);
       expect(c.powerUps!.projectiles, isEmpty);
+      expect(a.held, isNull);
       expect(
         b.life,
         PowerUpTuning.arenaLife -

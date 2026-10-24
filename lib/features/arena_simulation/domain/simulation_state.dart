@@ -25,6 +25,9 @@ class SimulationState {
   /// Simulation steps taken so far (drives the power-ups' pulse and the mines' blink).
   final int step;
 
+  /// Live collision boundary. This changes while shrinking-arena mode runs.
+  final double arenaRadius;
+
   const SimulationState({
     required this.balls,
     required this.particles,
@@ -37,6 +40,7 @@ class SimulationState {
     this.beamTimer = 0.0,
     this.powerUps,
     this.step = 0,
+    required this.arenaRadius,
   });
 
   // All active fan lines across all balls (for rendering)

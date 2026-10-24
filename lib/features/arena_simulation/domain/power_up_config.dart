@@ -75,6 +75,7 @@ class PowerUpConfig {
     PowerUpKind.spikeWall,
     PowerUpKind.bow,
     PowerUpKind.molotov,
+    PowerUpKind.rocketLauncher,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.

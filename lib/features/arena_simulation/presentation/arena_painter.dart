@@ -80,13 +80,14 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintBackground(Canvas canvas) {
+    final visibleRadius = state.arenaRadius;
     // A barely-there lift toward the center, in the theme's colors.
     final paint = Paint()
-      ..shader = ui.Gradient.radial(Offset.zero, arenaRadius, [
+      ..shader = ui.Gradient.radial(Offset.zero, visibleRadius, [
         Color.lerp(background, rimColor, 0.05)!,
         background,
       ]);
-    canvas.drawCircle(Offset.zero, arenaRadius, paint);
+    canvas.drawCircle(Offset.zero, visibleRadius, paint);
     _paintGrid(canvas);
     _paintArenaText(canvas);
   }
@@ -156,15 +157,16 @@ class ArenaPainter extends CustomPainter {
   // with wider translucent strokes or radial gradients, sparks are plain dots.
 
   void _paintRim(Canvas canvas) {
+    final visibleRadius = state.arenaRadius;
     // A soft halo (two wide translucent strokes) under the crisp rim.
     final halo = Paint()
       ..style = PaintingStyle.stroke
       ..color = rimColor.withValues(alpha: 0.12);
-    canvas.drawCircle(Offset.zero, arenaRadius, halo..strokeWidth = 6.5);
-    canvas.drawCircle(Offset.zero, arenaRadius, halo..strokeWidth = 4.5);
+    canvas.drawCircle(Offset.zero, visibleRadius, halo..strokeWidth = 6.5);
+    canvas.drawCircle(Offset.zero, visibleRadius, halo..strokeWidth = 4.5);
     canvas.drawCircle(
       Offset.zero,
-      arenaRadius,
+      visibleRadius,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
@@ -383,7 +385,14 @@ class ArenaPainter extends CustomPainter {
         ball.cachedUiImage,
       );
     }
-    PowerUpPainter.paintBallEffects(canvas, ball, step: state.step);
+    PowerUpPainter.paintBallEffects(
+      canvas,
+      ball,
+      step: state.step,
+      incomingAttackAngle: PowerUpPainter.incomingAttackAngle(state, ball),
+      firedWeaponHoldLeft: (kind) =>
+          state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
+    );
     if (look == BallLook.faces) {
       paintHands(canvas, ball);
     }

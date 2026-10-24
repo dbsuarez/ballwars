@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
+import 'package:ballwars/features/arena_simulation/application/power_up_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/particle_system.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
@@ -104,6 +105,8 @@ void main() {
         _heading(shots.single),
         closeTo(math.atan2(toTarget.dy, toTarget.dx), 0.05),
       );
+      expect(a.held, PowerUpKind.pistol);
+      _run(c, PowerUpSystem.firedWeaponHoldSteps);
       expect(a.held, isNull);
     },
   );
@@ -128,6 +131,8 @@ void main() {
         lessThanOrEqualTo(PowerUpTuning.shotgunSpread / 2 + 1e-9),
       );
     }
+    expect(a.held, PowerUpKind.shotgun);
+    _run(c, PowerUpSystem.firedWeaponHoldSteps);
     expect(a.held, isNull);
   });
 
@@ -151,6 +156,8 @@ void main() {
       closeTo(PowerUpTuning.bowSpread(distance, _arenaRadius), 0.01),
     );
     expect(PowerUpTuning.arenaDamage[PowerUpKind.bow], 4);
+    expect(a.held, PowerUpKind.bow);
+    _run(c, PowerUpSystem.firedWeaponHoldSteps);
     expect(a.held, isNull);
   });
 

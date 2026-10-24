@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,7 @@ import '../../settings/presentation/app_settings_scope.dart';
 import '../application/match_simulation_controller.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
+import '../domain/power_up.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'power_up_sprites.dart';
 import 'ball_face_expression.dart';
@@ -430,6 +433,22 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     });
   }
 
+  Offset _screenShakeOffset() {
+    if (!_showEffects || _state.powerUps == null) return Offset.zero;
+    var strength = 0.0;
+    for (final explosion in _state.powerUps!.explosions) {
+      final life =
+          1 - explosion.age / PowerUpTuning.explosionShowSteps.toDouble();
+      if (life > strength) strength = life;
+    }
+    if (strength <= 0) return Offset.zero;
+    final magnitude = 7.0 * strength * strength;
+    return Offset(
+      math.sin(_state.step * 2.31) * magnitude,
+      math.cos(_state.step * 2.87) * magnitude * 0.72,
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -557,46 +576,55 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             final isPortrait = constraints.maxHeight >= constraints.maxWidth;
             // Side margins keep the arena off the screen edges on phones;
             // the slow-motion badge sits at the top of the arena.
-            final arena = Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: RepaintBoundary(
-                      child: ArenaCanvas(
-                        state: _state,
-                        arenaRadius: _controller.arenaRadius,
-                        worldRadius: _arenaRadius,
-                        rimAngle: _rimAngle,
-                        showEffects: _showEffects,
-                        showBallGlow: AppSettingsScope.of(
-                          context,
-                        ).ballGlowEnabled,
-                        arenaTitle: AppSettingsScope.of(context).arenaTitle,
-                        arenaSubtitle: AppSettingsScope.of(
-                          context,
-                        ).arenaSubtitle,
-                        wallSparkSize: widget.config.wallSparkSize,
-                        repaint: _frame,
-                        look: widget.config.look,
+            final arena = ListenableBuilder(
+              listenable: _frame,
+              builder: (context, _) => Transform.translate(
+                offset: _screenShakeOffset(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: ArenaCanvas(
+                            state: _state,
+                            arenaRadius: _controller.arenaRadius,
+                            worldRadius: _arenaRadius,
+                            rimAngle: _rimAngle,
+                            showEffects: _showEffects,
+                            showBallGlow: AppSettingsScope.of(
+                              context,
+                            ).ballGlowEnabled,
+                            arenaTitle: AppSettingsScope.of(context).arenaTitle,
+                            arenaSubtitle: AppSettingsScope.of(
+                              context,
+                            ).arenaSubtitle,
+                            wallSparkSize: widget.config.wallSparkSize,
+                            repaint: _frame,
+                            look: widget.config.look,
+                          ),
+                        ),
                       ),
-                    ),
+                      // Positioned like the arena: a non-positioned child would
+                      // size the Stack (to nothing, while there's no badge).
+                      Positioned.fill(
+                        child: ListenableBuilder(
+                          listenable: _frame,
+                          builder: (context, _) =>
+                              _state.status == MatchStatus.slowMotion
+                              ? const Align(
+                                  alignment: Alignment.topCenter,
+                                  child: SlowMotionBadge(),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
                   ),
-                  // Positioned like the arena: a non-positioned child would
-                  // size the Stack (to nothing, while there's no badge).
-                  Positioned.fill(
-                    child: ListenableBuilder(
-                      listenable: _frame,
-                      builder: (context, _) =>
-                          _state.status == MatchStatus.slowMotion
-                          ? const Align(
-                              alignment: Alignment.topCenter,
-                              child: SlowMotionBadge(),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ),
-                ],
+                ),
               ),
             );
 

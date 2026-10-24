@@ -496,6 +496,7 @@ class MatchSimulationController {
     winnerId: _winnerId,
     powerUps: _powerUps,
     step: _stepCount,
+    arenaRadius: arenaRadius,
   );
 
   void tick(double realDeltaSeconds) {

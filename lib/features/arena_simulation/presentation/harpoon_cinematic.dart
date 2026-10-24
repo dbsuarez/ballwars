@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/power_up.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import 'finisher_profile.dart';
+import 'arena_effect_library.dart';
 import 'power_up_sprites.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
@@ -513,9 +514,9 @@ class _FinisherPainter extends CustomPainter {
           _paintExplosion(canvas, loserCenter, impactProgress);
           if (kind == PowerUpKind.molotov) {
             for (var i = 0; i < 9; i++) {
-              final fireSprite = PowerUpSprites.effectFrame(
-                AnimatedEffect.flame,
-                ((impactProgress * 12).floor() + i) % 4,
+              final fireSprite = ArenaEffectLibrary.frame(
+                ArenaEffectKind.flame,
+                (impactProgress * 12).floor() + i,
               );
               final angle = i * math.pi * 2 / 9;
               final flame =
@@ -672,6 +673,29 @@ class _FinisherPainter extends CustomPainter {
             _paintArrowGlyph(canvas, point, profile.accent, angle: angle);
           }
         }
+      case PowerUpKind.rocketLauncher:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final missile = PowerUpSprites.rocketMissile;
+          final arc = math.sin(hookProgress * math.pi) * radius * 0.45;
+          final point = to - Offset(0, arc);
+          final direction = loserCenter - point;
+          final angle = math.atan2(direction.dy, direction.dx);
+          if (missile != null) {
+            final pulse = 1 + math.sin(hookProgress * math.pi * 28) * 0.05;
+            _paintRaster(
+              canvas,
+              missile,
+              point,
+              radius * 1.3 * pulse,
+              rotation: angle,
+            );
+          } else {
+            _paintItem(canvas, point, radius * 1.3);
+          }
+        }
+        if (impactProgress > 0) {
+          _paintExplosion(canvas, loserCenter, impactProgress);
+        }
       default:
         return false;
     }
@@ -770,9 +794,9 @@ class _FinisherPainter extends CustomPainter {
   void _paintExplosion(Canvas canvas, Offset center, double progress) {
     final burst = Curves.easeOut.transform(progress);
     final fade = 1 - progress;
-    final sprite = PowerUpSprites.effectFrame(
-      AnimatedEffect.explosion,
-      (progress * 4).floor().clamp(0, 3),
+    final sprite = ArenaEffectLibrary.frame(
+      ArenaEffectKind.explosion,
+      (progress * 8).floor(),
     );
     if (sprite != null) {
       _paintRaster(

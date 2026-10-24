@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -33,7 +32,15 @@ enum ProjectileSprite {
   ricochetDisc,
 }
 
-enum AnimatedEffect { flame, explosion, portal, iceImpact, slash, blood }
+enum AnimatedEffect {
+  flame,
+  explosion,
+  portal,
+  iceImpact,
+  slash,
+  blood,
+  maximumPower,
+}
 
 /// The power-up icons ([pixelIcons], 16 x 16 pixel art) turned into small images once, so painting a frame
 /// only blits them ([Canvas.drawImageRect] with nearest-neighbor scaling keeps the pixels crisp).
@@ -48,10 +55,13 @@ class PowerUpSprites {
   static final Map<EffectSprite, ui.Image> _effects = {};
   static final Map<ProjectileSprite, ui.Image> _projectiles = {};
   static final Map<AnimatedEffect, List<ui.Image>> _animatedEffects = {};
+  static ui.Image? _rocketLauncher;
+  static ui.Image? _rocketMissile;
   static Future<void>? _loading;
 
   /// [kind]'s image (16 x 16 px), or null before [load] has finished.
-  static ui.Image? of(PowerUpKind kind) => _images[kind];
+  static ui.Image? of(PowerUpKind kind) =>
+      kind == PowerUpKind.rocketLauncher ? _rocketLauncher : _images[kind];
   static ui.Image? effect(EffectSprite kind) => _effects[kind];
   static ui.Image? projectile(ProjectileSprite kind) => _projectiles[kind];
   static ui.Image? effectFrame(AnimatedEffect kind, int frame) {
@@ -59,19 +69,27 @@ class PowerUpSprites {
     return frames == null ? null : frames[frame % frames.length];
   }
 
+  static ui.Image? get rocketMissile => _rocketMissile;
+
   /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
 
   static Future<void> _loadAll() async {
-    final data = await rootBundle.load('assets/sprites/powerups-master.png');
+    final data = await rootBundle.load('assets/sprites/powerups-fixed.png');
     final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
     final sheet = (await codec.getNextFrame()).image;
     codec.dispose();
-    final pixels = await sheet.toByteData(format: ui.ImageByteFormat.rawRgba);
-    for (final entry in _sheetRects.entries) {
-      final source = pixels == null
-          ? entry.value
-          : _opaqueBounds(pixels, sheet.width, entry.value);
+    const fixedCell = 128.0;
+    const fixedColumns = 8;
+    final kinds = _sheetRects.keys.toList(growable: false);
+    for (var index = 0; index < kinds.length; index++) {
+      final kind = kinds[index];
+      final source = Rect.fromLTWH(
+        (index % fixedColumns) * fixedCell,
+        (index ~/ fixedColumns) * fixedCell,
+        fixedCell,
+        fixedCell,
+      );
       final recorder = ui.PictureRecorder();
       final fitted = applyBoxFit(
         BoxFit.contain,
@@ -89,7 +107,7 @@ class PowerUpSprites {
         Paint()..filterQuality = FilterQuality.none,
       );
       final picture = recorder.endRecording();
-      _images[entry.key] = await picture.toImage(64, 64);
+      _images[kind] = await picture.toImage(64, 64);
       picture.dispose();
     }
     sheet.dispose();
@@ -165,7 +183,9 @@ class PowerUpSprites {
     animatedCodec.dispose();
     const animatedWidth = 362.0;
     const animatedHeight = 181.0;
-    for (final kind in AnimatedEffect.values) {
+    for (final kind in AnimatedEffect.values.where(
+      (kind) => kind != AnimatedEffect.maximumPower,
+    )) {
       final frames = <ui.Image>[];
       for (var frame = 0; frame < 4; frame++) {
         final recorder = ui.PictureRecorder();
@@ -195,35 +215,71 @@ class PowerUpSprites {
       _animatedEffects[kind] = frames;
     }
     animatedSheet.dispose();
-  }
 
-  static Rect _opaqueBounds(ByteData pixels, int imageWidth, Rect cell) {
-    final left = cell.left.floor();
-    final top = cell.top.floor();
-    final right = cell.right.ceil();
-    final bottom = cell.bottom.ceil();
-    var minX = right;
-    var minY = bottom;
-    var maxX = left;
-    var maxY = top;
-    for (var y = top; y < bottom; y++) {
-      for (var x = left; x < right; x++) {
-        final alpha = pixels.getUint8((y * imageWidth + x) * 4 + 3);
-        if (alpha <= 12) continue;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-    if (minX > maxX || minY > maxY) return cell;
-    const padding = 2.0;
-    return Rect.fromLTRB(
-      math.max(cell.left, minX - padding),
-      math.max(cell.top, minY - padding),
-      math.min(cell.right, maxX + 1 + padding),
-      math.min(cell.bottom, maxY + 1 + padding),
+    final maximumData = await rootBundle.load(
+      'assets/sprites/maximum-power.png',
     );
+    final maximumCodec = await ui.instantiateImageCodec(
+      maximumData.buffer.asUint8List(),
+    );
+    final maximumSheet = (await maximumCodec.getNextFrame()).image;
+    maximumCodec.dispose();
+    final maximumFrames = <ui.Image>[];
+    for (var frame = 0; frame < 4; frame++) {
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImageRect(
+        maximumSheet,
+        Rect.fromLTWH(frame * 256.0, 0, 256, 256),
+        const Rect.fromLTWH(0, 0, 96, 96),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      maximumFrames.add(await picture.toImage(96, 96));
+      picture.dispose();
+    }
+    _animatedEffects[AnimatedEffect.maximumPower] = maximumFrames;
+    maximumSheet.dispose();
+
+    final rocketData = await rootBundle.load(
+      'assets/sprites/rocket-launcher.png',
+    );
+    final rocketCodec = await ui.instantiateImageCodec(
+      rocketData.buffer.asUint8List(),
+    );
+    final rocketSheet = (await rocketCodec.getNextFrame()).image;
+    rocketCodec.dispose();
+    final half = rocketSheet.width / 2.0;
+    Future<ui.Image> crop(Rect source, int size) async {
+      final recorder = ui.PictureRecorder();
+      final fitted = applyBoxFit(
+        BoxFit.contain,
+        source.size,
+        Size.square(size.toDouble()),
+      );
+      Canvas(recorder).drawImageRect(
+        rocketSheet,
+        source,
+        Alignment.center.inscribe(
+          fitted.destination,
+          Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
+        ),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(size, size);
+      picture.dispose();
+      return image;
+    }
+
+    _rocketLauncher = await crop(
+      Rect.fromLTWH(0, 0, half, rocketSheet.height.toDouble()),
+      64,
+    );
+    _rocketMissile = await crop(
+      Rect.fromLTWH(half, 0, half, rocketSheet.height.toDouble()),
+      96,
+    );
+    rocketSheet.dispose();
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {
@@ -246,11 +302,11 @@ class PowerUpSprites {
     PowerUpKind.swapCannon: Rect.fromLTRB(1278, 286, 1554, 480),
     PowerUpKind.bow: Rect.fromLTRB(1554, 286, 1774, 480),
     PowerUpKind.apple: Rect.fromLTRB(0, 480, 145, 695),
-    PowerUpKind.speed: Rect.fromLTRB(145, 480, 270, 695),
+    PowerUpKind.speed: Rect.fromLTRB(153, 480, 269, 695),
     PowerUpKind.magnet: Rect.fromLTRB(270, 480, 420, 695),
     PowerUpKind.ghost: Rect.fromLTRB(420, 480, 555, 695),
     PowerUpKind.repulsor: Rect.fromLTRB(555, 480, 706, 695),
-    PowerUpKind.timeBubble: Rect.fromLTRB(706, 480, 877, 695),
+    PowerUpKind.timeBubble: Rect.fromLTRB(714, 485, 873, 685),
     PowerUpKind.vampire: Rect.fromLTRB(877, 480, 1036, 695),
     PowerUpKind.mirror: Rect.fromLTRB(1036, 480, 1157, 695),
     PowerUpKind.overcharge: Rect.fromLTRB(1157, 480, 1316, 695),

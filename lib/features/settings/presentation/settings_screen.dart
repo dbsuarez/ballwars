@@ -8,6 +8,7 @@ import '../domain/app_settings.dart';
 import 'power_up_tuning_screen.dart';
 import 'app_settings_scope.dart';
 import 'finisher_gallery_screen.dart';
+import 'power_up_test_screen.dart';
 
 /// Settings. Players see only the admin sign-in; once the admin signs in
 /// (email + password, listed in the `admins` table) they can change the
@@ -586,6 +587,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: const Text('Edit power-up numbers'),
                             ),
                           ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'POWER-UP TESTS',
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('open-power-up-tests'),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PowerUpTestScreen(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.science_outlined),
+                          label: const Text('Open power-up tests'),
                         ),
                       ),
                       _Section(

@@ -562,7 +562,31 @@ class MatchSimulationController {
     _status = MatchStatus.finished;
   }
 
+  // Used only by the admin test arena. Empty during ordinary matches.
+  final Map<SimulationBall, Offset> _testPositions = {};
+  final Map<SimulationBall, Offset> _testVelocities = {};
+
+  void setTestBallPinned(SimulationBall ball, bool pinned) {
+    if (pinned) {
+      _testPositions.putIfAbsent(ball, () => ball.position);
+      _testVelocities.putIfAbsent(ball, () => ball.velocity);
+      ball.velocity = Offset.zero;
+    } else {
+      _testPositions.remove(ball);
+      final velocity = _testVelocities.remove(ball);
+      if (velocity != null) ball.velocity = velocity;
+    }
+  }
+
+  void _restoreTestPositions() {
+    for (final entry in _testPositions.entries) {
+      entry.key.position = entry.value;
+      entry.key.velocity = Offset.zero;
+    }
+  }
+
   void _stepPhysics(double dt) {
+    _restoreTestPositions();
     _physics.arenaRadius = arenaRadius;
     // Lines deactivated from outside the step (e.g. tests) free their slots.
     _pruneInactiveLines();
@@ -722,8 +746,11 @@ class MatchSimulationController {
       }
     }
 
+    _restoreTestPositions();
+
     // Power-ups (Arsenal and All-Out): spawn, pick up, aim, fire, hit.
     _powerUps?.step();
+    _restoreTestPositions();
 
     // 3. Lines follow their owner
     for (final ball in _balls) {

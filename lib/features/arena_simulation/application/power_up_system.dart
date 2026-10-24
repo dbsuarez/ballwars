@@ -189,6 +189,12 @@ class PowerUpSystem {
   ///
   /// Timers count down first, so an effect picked up in step N lasts its full count from step N + 1 on
   /// (a speed boost picked up in step N runs from step N + 1).
+  bool automaticSpawning = true;
+
+  /// Place a selected item using the real spawn rules in the admin test arena.
+  void spawnTestItem(PowerUpKind kind) =>
+      _spawn(match.stepCount + 1, forcedKind: kind);
+
   void step() {
     _updateFiredWeaponHold();
     _updateOmegaTendrils();
@@ -218,7 +224,8 @@ class PowerUpSystem {
     _aimAndFire();
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
-    if (number >= _t.firstSpawnSteps &&
+    if (automaticSpawning &&
+        number >= _t.firstSpawnSteps &&
         (number - _t.firstSpawnSteps) % _t.spawnInterval(_ballCount) == 0) {
       _spawn(number);
     }
@@ -986,7 +993,7 @@ class PowerUpSystem {
   /// Spawns one of the chosen kinds at a random spot in the emptiest quadrant of the arena (the one with
   /// the fewest power-ups and armed mines, a seeded pick among ties), away from the rim and the center
   /// and clear of balls and other power-ups. Skipped when 10 tries find no clear spot.
-  void _spawn(int number) {
+  void _spawn(int number, {PowerUpKind? forcedKind}) {
     // Uniform over the chosen kinds; with all of them chosen this draws exactly as with none chosen.
     final chosen = match.powerUpKinds;
     final kinds = chosen == null || chosen.length == PowerUpKind.values.length
@@ -998,8 +1005,8 @@ class PowerUpSystem {
     final eligibleKinds = number < _t.trapStartSteps
         ? kinds.where((kind) => !kind.isTrap).toList()
         : kinds;
-    if (eligibleKinds.isEmpty) return;
-    final kind = eligibleKinds[rng.nextInt(eligibleKinds.length)];
+    if (eligibleKinds.isEmpty && forcedKind == null) return;
+    final kind = forcedKind ?? eligibleKinds[rng.nextInt(eligibleKinds.length)];
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);

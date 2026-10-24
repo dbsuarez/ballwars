@@ -15,7 +15,10 @@ Future<void> main() async {
   GameAudio.instance.enabled = true;
   await GameAudio.instance.init();
   // Local setup only (no network); sign-in happens when a group is first used.
-  await Supabase.initialize(url: SupabaseConfig.url, publishableKey: SupabaseConfig.publishableKey);
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    publishableKey: SupabaseConfig.publishableKey,
+  );
   final client = Supabase.instance.client;
   // Older versions signed the admin in on this client, replacing the device's
   // anonymous account. The admin now has a session of their own (see
@@ -27,11 +30,22 @@ Future<void> main() async {
     } catch (_) {}
   }
   final admin = SupabaseAdminAuth();
+  final deviceGroups = SupabaseCustomGroupRepository(client);
+  final adminGroups = SupabaseCustomGroupRepository(admin.client);
+  final groups = AccountAwareCustomGroupRepository(
+    device: deviceGroups,
+    account: adminGroups,
+    isAccountActive: admin.isAdmin,
+    adoptGroupsFrom: adminGroups.adoptGroupsFrom,
+  );
   runApp(
     BallWarsApp(
-      customGroups: SupabaseCustomGroupRepository(client),
-      adminGroups: SupabaseCustomGroupRepository(admin.client),
-      settingsRepository: SupabaseAppSettingsRepository(client, writer: admin.client),
+      customGroups: groups,
+      adminGroups: adminGroups,
+      settingsRepository: SupabaseAppSettingsRepository(
+        client,
+        writer: admin.client,
+      ),
       adminAuth: admin,
       shortLinks: SupabaseShortLinkRepository(client),
       syncOffline: true,

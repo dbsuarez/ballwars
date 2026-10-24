@@ -10,7 +10,7 @@ import '../domain/custom_group.dart';
 
 /// User-made ball groups.
 abstract class CustomGroupRepository {
-  /// Groups created on this device (its anonymous account), balls included.
+  /// Groups owned by the active account, balls included.
   Future<List<CustomGroup>> myGroups();
 
   /// Every user's groups (admin only; others get just the public ones).
@@ -29,7 +29,7 @@ abstract class CustomGroupRepository {
   /// Takes it out again (the group itself stays).
   Future<void> unsaveGroup(String groupId);
 
-  /// This device's user id, once signed in (null before).
+  /// The active account's user id, once signed in (null before).
   String? get userId;
 
   /// Groups the admin added to a built-in category ([CustomGroup.packId]);
@@ -88,14 +88,19 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   SupabaseCustomGroupRepository(this._client);
 
-  static const String _ballColumns = 'id, name, image_path, image_style, color, position';
-  static const String _groupColumns = 'id, name, is_public, owner, group_balls($_ballColumns)';
+  static const String _ballColumns =
+      'id, name, image_path, image_style, color, position';
+  static const String _groupColumns =
+      'id, name, is_public, owner, group_balls($_ballColumns)';
 
-  StorageFileApi get _images => _client.storage.from(SupabaseConfig.imageBucket);
+  StorageFileApi get _images =>
+      _client.storage.from(SupabaseConfig.imageBucket);
 
   /// Every device gets an anonymous account the first time it needs one.
   Future<String> _userId() async {
-    final user = _client.auth.currentUser ?? (await _client.auth.signInAnonymously()).user;
+    final user =
+        _client.auth.currentUser ??
+        (await _client.auth.signInAnonymously()).user;
     if (user == null) throw StateError('Could not sign in');
     return user.id;
   }
@@ -161,7 +166,9 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   @override
   Future<void> saveGroup(String groupId) async {
     await _userId();
-    await _client.from('saved_groups').upsert({'group_id': groupId}, ignoreDuplicates: true);
+    await _client.from('saved_groups').upsert({
+      'group_id': groupId,
+    }, ignoreDuplicates: true);
   }
 
   @override
@@ -172,6 +179,20 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   String? get userId => _client.auth.currentUser?.id;
+
+  /// Admin-only: moves groups made by this device's anonymous account to the
+  /// signed-in account. Ball rows and image paths deliberately stay where
+  /// they are; admin storage access keeps those existing images editable.
+  Future<int> adoptGroupsFrom(String sourceOwner) async {
+    final targetOwner = await _userId();
+    if (sourceOwner == targetOwner) return 0;
+    final rows = await _client
+        .from('ball_groups')
+        .update({'owner': targetOwner})
+        .eq('owner', sourceOwner)
+        .select('id');
+    return rows.length;
+  }
 
   /// Runs [query] (without retries) and keeps its rows in [OfflineStore]
   /// under [key]; offline, the rows from the last successful run are
@@ -187,20 +208,28 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     } catch (_) {
       final saved = await OfflineStore.instance.read(key);
       if (saved == null) rethrow;
-      return (jsonDecode(utf8.decode(saved)) as List).cast<Map<String, dynamic>>();
+      return (jsonDecode(utf8.decode(saved)) as List)
+          .cast<Map<String, dynamic>>();
     }
   }
 
   @override
   Future<CustomGroup> createGroup(String name) async {
     await _userId();
-    final row = await _client.from('ball_groups').insert({'name': name.trim()}).select('id, name, is_public').single();
+    final row = await _client
+        .from('ball_groups')
+        .insert({'name': name.trim()})
+        .select('id, name, is_public')
+        .single();
     return _group({...row, 'group_balls': const []});
   }
 
   @override
   Future<void> renameGroup(String groupId, String name) async {
-    await _client.from('ball_groups').update({'name': name.trim()}).eq('id', groupId);
+    await _client
+        .from('ball_groups')
+        .update({'name': name.trim()})
+        .eq('id', groupId);
   }
 
   @override
@@ -250,7 +279,11 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     // someone else's ball).
     String? newPath;
     if (png != null) {
-      final row = await _client.from('group_balls').select('owner').eq('id', CustomGroup.uuidOf(ball)).single();
+      final row = await _client
+          .from('group_balls')
+          .select('owner')
+          .eq('id', CustomGroup.uuidOf(ball))
+          .single();
       newPath = await _upload(png, folder: row['owner'] as String);
     }
     try {
@@ -268,19 +301,29 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     }
   }
 
-  Map<String, Object> _fields(String name, BallImageStyle style, Color color) => {
-        'name': name.trim(),
-        'image_style': style == BallImageStyle.logo ? 'logo' : 'cover',
-        'color': '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
-      };
+  Map<String, Object> _fields(
+    String name,
+    BallImageStyle style,
+    Color color,
+  ) => {
+    'name': name.trim(),
+    'image_style': style == BallImageStyle.logo ? 'logo' : 'cover',
+    'color':
+        '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
+  };
 
   /// Uploads a prepared PNG into [folder] (default: this user's) and
   /// returns its path.
   Future<String> _upload(Uint8List png, {String? folder}) async {
     final uid = folder ?? await _userId();
     // 0x7FFFFFFF, not 1 << 32: on web 1 << 32 is 0 and nextInt(0) throws.
-    final path = '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
-    await _images.uploadBinary(path, png, fileOptions: const FileOptions(contentType: 'image/png'));
+    final path =
+        '$uid/${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(0x7FFFFFFF).toRadixString(16)}.png';
+    await _images.uploadBinary(
+      path,
+      png,
+      fileOptions: const FileOptions(contentType: 'image/png'),
+    );
     return path;
   }
 
@@ -303,13 +346,20 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   Future<void> linkToPack(String groupId, String? packId) async {
-    await _client.from('ball_groups').update({'pack_id': packId}).eq('id', groupId);
+    await _client
+        .from('ball_groups')
+        .update({'pack_id': packId})
+        .eq('id', groupId);
   }
 
   @override
   Future<Set<String>> submittedGroupIds() async {
     // submitted_at comes with migration 008 (see [packExtras]).
-    final rows = await _client.from('ball_groups').select('id').not('submitted_at', 'is', null).retry(enabled: false);
+    final rows = await _client
+        .from('ball_groups')
+        .select('id')
+        .not('submitted_at', 'is', null)
+        .retry(enabled: false);
     return {for (final row in rows) row['id'] as String};
   }
 
@@ -318,7 +368,11 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     await _userId();
     await _client
         .from('ball_groups')
-        .update({'submitted_at': submitted ? DateTime.now().toUtc().toIso8601String() : null})
+        .update({
+          'submitted_at': submitted
+              ? DateTime.now().toUtc().toIso8601String()
+              : null,
+        })
         .eq('id', groupId);
   }
 
@@ -326,7 +380,10 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   Future<int> cleanUpUnusedImages() async {
     // Listed by the database (migration 007, admin only), deleted through the
     // Storage API: storage files can't be removed from SQL.
-    final names = [for (final name in await _client.rpc('orphan_ball_images') as List) name as String];
+    final names = [
+      for (final name in await _client.rpc('orphan_ball_images') as List)
+        name as String,
+    ];
     for (var i = 0; i < names.length; i += 100) {
       await _images.remove(names.sublist(i, math.min(i + 100, names.length)));
     }
@@ -335,7 +392,10 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   Future<void> deleteBall(CustomBall ball) async {
-    await _client.from('group_balls').delete().eq('id', CustomGroup.uuidOf(ball));
+    await _client
+        .from('group_balls')
+        .delete()
+        .eq('id', CustomGroup.uuidOf(ball));
     final path = _pathOf(ball);
     if (path != null) await _images.remove([path]);
   }
@@ -346,27 +406,37 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     final rows = await _client
         .from('group_balls')
         .select(_ballColumns)
-        .inFilter('id', [for (final id in ballIds) id.replaceFirst(CustomGroup.ballIdPrefix, '')]);
+        .inFilter('id', [
+          for (final id in ballIds)
+            id.replaceFirst(CustomGroup.ballIdPrefix, ''),
+        ]);
     return [for (final row in rows) _ball(row)];
   }
 
   CustomGroup _group(Map<String, dynamic> row) => CustomGroup(
-        id: row['id'] as String,
-        name: row['name'] as String,
-        isPublic: row['is_public'] as bool? ?? true,
-        ownerId: row['owner'] as String?,
-        packId: row['pack_id'] as String?,
-        balls: [for (final b in (row['group_balls'] as List? ?? const [])) _ball(b as Map<String, dynamic>)],
-      );
+    id: row['id'] as String,
+    name: row['name'] as String,
+    isPublic: row['is_public'] as bool? ?? true,
+    ownerId: row['owner'] as String?,
+    packId: row['pack_id'] as String?,
+    balls: [
+      for (final b in (row['group_balls'] as List? ?? const []))
+        _ball(b as Map<String, dynamic>),
+    ],
+  );
 
   CustomBall _ball(Map<String, dynamic> row) {
-    final color = Color(0xFF000000 | int.parse((row['color'] as String).substring(1), radix: 16));
+    final color = Color(
+      0xFF000000 | int.parse((row['color'] as String).substring(1), radix: 16),
+    );
     final path = row['image_path'] as String?;
     return CustomBall(
       id: CustomGroup.ballId(row['id'] as String),
       name: row['name'] as String,
       imageUrl: path == null ? null : _images.getPublicUrl(path),
-      imageStyle: row['image_style'] == 'cover' ? BallImageStyle.cover : BallImageStyle.logo,
+      imageStyle: row['image_style'] == 'cover'
+          ? BallImageStyle.cover
+          : BallImageStyle.logo,
       primaryColor: color,
       glowColor: Color.lerp(color, const Color(0xFFFFFFFF), 0.35)!,
     );
@@ -380,4 +450,112 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     final i = url.indexOf(marker);
     return i < 0 ? null : Uri.decodeComponent(url.substring(i + marker.length));
   }
+}
+
+/// Uses the signed-in account for groups on every device, while retaining the
+/// anonymous repository for players who have not signed in as an admin.
+/// Existing groups from the current device are adopted once per session.
+class AccountAwareCustomGroupRepository implements CustomGroupRepository {
+  final CustomGroupRepository device;
+  final CustomGroupRepository account;
+  final Future<bool> Function() isAccountActive;
+  final Future<int> Function(String sourceOwner) adoptGroupsFrom;
+  Future<void>? _adoption;
+
+  AccountAwareCustomGroupRepository({
+    required this.device,
+    required this.account,
+    required this.isAccountActive,
+    required this.adoptGroupsFrom,
+  });
+
+  Future<CustomGroupRepository> _active() async {
+    if (!await isAccountActive()) return device;
+    _adoption ??= _adoptDeviceGroups();
+    await _adoption;
+    return account;
+  }
+
+  Future<void> _adoptDeviceGroups() async {
+    final sourceOwner = device.userId;
+    if (sourceOwner != null) await adoptGroupsFrom(sourceOwner);
+  }
+
+  @override
+  String? get userId => account.userId ?? device.userId;
+
+  @override
+  Future<List<CustomGroup>> myGroups() async => (await _active()).myGroups();
+  @override
+  Future<List<CustomGroup>> allGroups() async => (await _active()).allGroups();
+  @override
+  Future<List<CustomGroup>> savedGroups() async =>
+      (await _active()).savedGroups();
+  @override
+  Future<CustomGroup?> group(String groupId) async =>
+      (await _active()).group(groupId);
+  @override
+  Future<void> saveGroup(String groupId) async =>
+      (await _active()).saveGroup(groupId);
+  @override
+  Future<void> unsaveGroup(String groupId) async =>
+      (await _active()).unsaveGroup(groupId);
+  @override
+  Future<List<CustomGroup>> packExtras() async =>
+      (await _active()).packExtras();
+  @override
+  Future<void> linkToPack(String groupId, String? packId) async =>
+      (await _active()).linkToPack(groupId, packId);
+  @override
+  Future<Set<String>> submittedGroupIds() async =>
+      (await _active()).submittedGroupIds();
+  @override
+  Future<void> setSubmitted(String groupId, bool submitted) async =>
+      (await _active()).setSubmitted(groupId, submitted);
+  @override
+  Future<int> cleanUpUnusedImages() async =>
+      (await _active()).cleanUpUnusedImages();
+  @override
+  Future<CustomGroup> createGroup(String name) async =>
+      (await _active()).createGroup(name);
+  @override
+  Future<void> renameGroup(String groupId, String name) async =>
+      (await _active()).renameGroup(groupId, name);
+  @override
+  Future<void> deleteGroup(CustomGroup group) async =>
+      (await _active()).deleteGroup(group);
+  @override
+  Future<CustomBall> addBall({
+    required String groupId,
+    required String name,
+    required Uint8List png,
+    required BallImageStyle style,
+    required Color color,
+  }) async => (await _active()).addBall(
+    groupId: groupId,
+    name: name,
+    png: png,
+    style: style,
+    color: color,
+  );
+  @override
+  Future<CustomBall> updateBall(
+    CustomBall ball, {
+    required String name,
+    required BallImageStyle style,
+    required Color color,
+    Uint8List? png,
+  }) async => (await _active()).updateBall(
+    ball,
+    name: name,
+    style: style,
+    color: color,
+    png: png,
+  );
+  @override
+  Future<void> deleteBall(CustomBall ball) async =>
+      (await _active()).deleteBall(ball);
+  @override
+  Future<List<CustomBall>> ballsById(List<String> ballIds) async =>
+      (await _active()).ballsById(ballIds);
 }

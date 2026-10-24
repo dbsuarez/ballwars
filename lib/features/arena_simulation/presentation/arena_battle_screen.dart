@@ -6,6 +6,7 @@ import '../../settings/presentation/app_settings_scope.dart';
 import '../application/match_simulation_controller.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
+import '../domain/power_up.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'power_up_sprites.dart';
 import 'ball_face_expression.dart';
@@ -13,6 +14,7 @@ import 'arena_canvas.dart';
 import 'scoreboard_overlay.dart';
 import 'widgets/match_status_header.dart';
 import 'winner_modal.dart';
+import 'harpoon_cinematic.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_management/data/local_ball_repository.dart';
@@ -83,6 +85,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   CustomBall? _loserBall;
   CustomBall? _winnerBall;
   bool _dissolveComplete = false;
+  bool _showHarpoonCinematic = false;
 
   // A beat after the last line is cut before the loser dissolves and the
   // winner banner shows. [_matchGeneration] cancels it if RETRY is pressed.
@@ -170,6 +173,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _loserBall = null;
     _winnerBall = null;
     _dissolveComplete = false;
+    _showHarpoonCinematic = false;
     _endPending = false;
     _heardWallHits = 0;
     _heardBallHits = 0;
@@ -240,9 +244,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         // from: 0, so the dissolve plays again after a RETRY.
         _dissolveController.forward(from: 0).then((_) {
           if (!current()) return;
-          _audio.win();
+          final harpoonFinish =
+              _controller.winningMove == PowerUpKind.hook.label;
+          if (!harpoonFinish) _audio.win();
           setState(() {
             _dissolveComplete = true;
+            _showHarpoonCinematic = harpoonFinish;
             if (!_roundCounted && _winnerBall != null) {
               _roundCounted = true;
               _roundWins.update(
@@ -543,7 +550,23 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
               // The runner-up shown big, then the winner card.
               if (_showDissolve && !_dissolveComplete && _loserBall != null)
                 _buildDissolveAnimation(),
-              if (_dissolveComplete && _winnerBall != null)
+              if (_showHarpoonCinematic &&
+                  _winnerBall != null &&
+                  _loserBall != null)
+                Positioned.fill(
+                  child: HarpoonCinematic(
+                    winner: _winnerBall!,
+                    loser: _loserBall!,
+                    onFinished: () {
+                      if (!mounted) return;
+                      _audio.win();
+                      setState(() => _showHarpoonCinematic = false);
+                    },
+                  ),
+                ),
+              if (_dissolveComplete &&
+                  !_showHarpoonCinematic &&
+                  _winnerBall != null)
                 Positioned.fill(
                   child: WinnerModal(
                     winner: _winnerBall!,

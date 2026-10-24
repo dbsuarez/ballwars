@@ -47,6 +47,8 @@ class PowerUpPainter {
     PowerUpKind.portal: Color(0xFF36E1FF),
     PowerUpKind.spikeWall: Color(0xFFFF5353),
     PowerUpKind.goldenArmor: Color(0xFFFFD54F),
+    PowerUpKind.bow: Color(0xFFC98A43),
+    PowerUpKind.stickyGoo: Color(0xFF65E34F),
   };
 
   /// The color a power-up is drawn in.
@@ -181,6 +183,53 @@ class PowerUpPainter {
       }
     }
 
+    for (final goo in p.stickyGoo) {
+      final pulse = 0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
+      final angle = math.atan2(goo.position.dy, goo.position.dx);
+      final halfAngle = r * 1.2 * pulse / arenaRadius;
+      final innerRadius = arenaRadius - r * 1.15;
+      final start = angle - halfAngle;
+      final sweep = halfAngle * 2;
+      final outerStart = Offset(math.cos(start), math.sin(start)) * arenaRadius;
+      final innerEnd =
+          Offset(math.cos(angle + halfAngle), math.sin(angle + halfAngle)) *
+          innerRadius;
+      final path = Path()
+        ..moveTo(outerStart.dx, outerStart.dy)
+        ..arcTo(
+          Rect.fromCircle(center: Offset.zero, radius: arenaRadius),
+          start,
+          sweep,
+          false,
+        )
+        ..lineTo(innerEnd.dx, innerEnd.dy)
+        ..arcTo(
+          Rect.fromCircle(center: Offset.zero, radius: innerRadius),
+          angle + halfAngle,
+          -sweep,
+          false,
+        )
+        ..close();
+      canvas.drawPath(path, Paint()..color = const Color(0xFF65E34F));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1.5, r * 0.12)
+          ..color = const Color(0xFF287A2C),
+      );
+      for (final offset in const [-0.55, 0.0, 0.58]) {
+        final bubbleAngle = angle + halfAngle * offset;
+        final bubbleRadius =
+            arenaRadius - r * (0.35 + 0.4 * (1 - offset.abs()));
+        canvas.drawCircle(
+          Offset(math.cos(bubbleAngle), math.sin(bubbleAngle)) * bubbleRadius,
+          r * 0.13,
+          Paint()..color = const Color(0xFFB5FF73),
+        );
+      }
+    }
+
     for (final bomb in p.mines) {
       // Armed traps sit directly on the arena instead of looking like pickup
       // balls. The short owner-colored footing preserves ownership feedback.
@@ -270,6 +319,10 @@ class PowerUpPainter {
           _paintIceWave(canvas, shot, r);
           continue;
         }
+        if (shot.kind == PowerUpKind.bow) {
+          _paintArrow(canvas, shot, r);
+          continue;
+        }
         final speed = shot.velocity.distance;
         if (speed == 0) continue;
         final dir = shot.velocity / speed;
@@ -349,6 +402,35 @@ class PowerUpPainter {
   static final Paint _iceArc = Paint()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
+
+  static void _paintArrow(Canvas canvas, Projectile shot, double r) {
+    final speed = shot.velocity.distance;
+    if (speed == 0) return;
+    final direction = shot.velocity / speed;
+    final side = Offset(-direction.dy, direction.dx);
+    final tip = shot.position;
+    final tail = tip - direction * (r * 1.8);
+    final paint = Paint()
+      ..strokeWidth = math.max(1.5, r * 0.12)
+      ..strokeCap = StrokeCap.round
+      ..color = colorOf(PowerUpKind.bow);
+    canvas.drawLine(tail, tip, paint);
+    canvas.drawLine(tip, tip - direction * r * 0.48 + side * r * 0.3, paint);
+    canvas.drawLine(tip, tip - direction * r * 0.48 - side * r * 0.3, paint);
+    final feather = Paint()
+      ..strokeWidth = math.max(1.2, r * 0.1)
+      ..color = const Color(0xFFF2C94C);
+    canvas.drawLine(
+      tail,
+      tail + direction * r * 0.42 + side * r * 0.28,
+      feather,
+    );
+    canvas.drawLine(
+      tail,
+      tail + direction * r * 0.42 - side * r * 0.28,
+      feather,
+    );
+  }
 
   /// A freeze shot as an icy blast: pale arcs facing forward, widening the farther the shot has flown,
   /// a white core and a few frost sparkles behind it.
@@ -747,6 +829,15 @@ class PowerUpPainter {
         Paint()..color = const Color(0xFF9FE3FF).withValues(alpha: 0.45),
       );
     }
+    if (ball.stickyGooLeft > 0) {
+      canvas.drawArc(
+        Rect.fromCircle(center: ball.position, radius: ball.radius * 1.05),
+        0,
+        math.pi,
+        true,
+        Paint()..color = const Color(0xFF65E34F).withValues(alpha: 0.8),
+      );
+    }
     for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
       _paintHeldWeapon(canvas, ball, ball.equippedWeapons[slot], slot);
     }
@@ -981,6 +1072,33 @@ class PowerUpPainter {
             ..lineTo(at(0.85, 0.55).dx, at(0.85, 0.55).dy)
             ..close(),
           fill,
+        );
+      case PowerUpKind.bow:
+        canvas.drawArc(
+          Rect.fromCenter(center: c, width: s * 1.2, height: s * 2),
+          -math.pi / 2,
+          math.pi,
+          false,
+          stroke,
+        );
+        canvas.drawLine(at(0, -1), at(0, 1), stroke);
+        canvas.drawLine(at(-0.7, 0), at(0.85, 0), stroke);
+        canvas.drawLine(at(0.85, 0), at(0.45, -0.28), stroke);
+        canvas.drawLine(at(0.85, 0), at(0.45, 0.28), stroke);
+      case PowerUpKind.stickyGoo:
+        canvas.drawOval(
+          Rect.fromCenter(center: c, width: s * 2, height: s * 1.1),
+          Paint()..color = const Color(0xFF65E34F),
+        );
+        canvas.drawCircle(
+          at(-0.35, -0.1),
+          s * 0.18,
+          Paint()..color = const Color(0xFFB5FF73),
+        );
+        canvas.drawCircle(
+          at(0.35, 0.15),
+          s * 0.13,
+          Paint()..color = const Color(0xFF287A2C),
         );
       default:
         canvas.drawCircle(c, s * 0.82, stroke);

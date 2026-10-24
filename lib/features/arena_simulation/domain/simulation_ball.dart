@@ -59,6 +59,7 @@ class SimulationBall {
   int gremlinShots = 0;
   int magneticFieldLeft = 0;
   int goldenArmorHits = 0;
+  int stickyGooLeft = 0;
 
   /// All-Out sword sweep: steps left of the wider cutting reach after picking up a knife.
   int sweepLeft = 0;

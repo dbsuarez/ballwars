@@ -73,6 +73,7 @@ class PowerUpConfig {
     PowerUpKind.swapCannon,
     PowerUpKind.phaseMine,
     PowerUpKind.spikeWall,
+    PowerUpKind.bow,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.

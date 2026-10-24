@@ -64,6 +64,7 @@ void main() {
       p.spikeWalls.add(
         SpikeWall(position: const Offset(0, 180), angle: 1, spawnStep: 0),
       );
+      p.stickyGoo.add(const StickyGoo(position: Offset(-180, 0), spawnStep: 0));
       p.slashMarks.add(SlashMark(position: const Offset(20, 20), angle: 1));
       p.explosions.add(Explosion(position: const Offset(30, 30), radius: 70));
       a

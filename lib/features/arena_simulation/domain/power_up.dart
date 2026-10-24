@@ -36,7 +36,9 @@ enum PowerUpKind {
   magneticField('Magnetic Force Field'),
   portal('Portal'),
   spikeWall('Spike Wall'),
-  goldenArmor('Golden Armor');
+  goldenArmor('Golden Armor'),
+  bow('Bow'),
+  stickyGoo('Sticky Goo');
 
   const PowerUpKind(this.label);
 
@@ -54,7 +56,8 @@ enum PowerUpKind {
       this == ricochetDisc ||
       this == threadHarpoon ||
       this == prismLaser ||
-      this == swapCannon;
+      this == swapCannon ||
+      this == bow;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -75,11 +78,16 @@ enum PowerUpKind {
       this == orbitingFlail ||
       this == threadHarpoon ||
       this == prismLaser ||
-      this == swapCannon;
+      this == swapCannon ||
+      this == bow;
 
   /// Traps spawn close to the arena boundary and arm when collected.
   bool get isTrap =>
-      this == mine || this == phaseMine || this == portal || this == spikeWall;
+      this == mine ||
+      this == phaseMine ||
+      this == portal ||
+      this == spikeWall ||
+      this == stickyGoo;
 
   /// Power-ups apply immediately and never replace an equipped weapon.
   bool get isPowerUp => !isWeapon && !isTrap;
@@ -191,6 +199,13 @@ class SpikeWall {
   }
 }
 
+class StickyGoo {
+  const StickyGoo({required this.position, required this.spawnStep});
+
+  final Offset position;
+  final int spawnStep;
+}
+
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or
 /// [stepsLeft] runs out), then takes the uppercut and is thrown off at [speed] in a random direction.
 class HookPull {
@@ -295,6 +310,17 @@ class PowerUpTuning {
 
   /// Total spread of the shotgun fan, in radians.
   static const double shotgunSpread = 0.7;
+  static const int bowArrows = 7;
+
+  /// A bow volley spans twice the grenade blast's diameter at its target.
+  static double bowSpread(double targetDistance, double arenaRadius) {
+    final halfWidth = arenaRadius * blastRadiusRatio * 2;
+    return (2 * math.atan2(halfWidth, math.max(1, targetDistance))).clamp(
+      0.3,
+      1.8,
+    );
+  }
+
   static const int gatlingRounds = 10;
   static const int gatlingIntervalSteps = 6;
   static const int speedSteps = 180;
@@ -302,6 +328,7 @@ class PowerUpTuning {
   static const int freezeSteps = 120;
   static const int ghostSteps = 180;
   static const int specialEffectSteps = 180;
+  static const int stickyGooSteps = 120;
 
   /// Bomb blast radius as a fraction of the arena radius.
   static const double blastRadiusRatio = 0.28;
@@ -337,6 +364,7 @@ class PowerUpTuning {
     PowerUpKind.swapCannon: 10,
     PowerUpKind.phaseMine: 40,
     PowerUpKind.spikeWall: 25,
+    PowerUpKind.bow: 4,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -362,6 +390,7 @@ class PowerUpTuning {
     PowerUpKind.swapCannon: 4,
     PowerUpKind.phaseMine: 18,
     PowerUpKind.spikeWall: 10,
+    PowerUpKind.bow: 1,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -451,8 +480,11 @@ String powerUpDescription(
       'An edge portal that teleports the ball entering it to a random side of the arena.',
     PowerUpKind.spikeWall =>
       'A row of 6 boundary spikes that deals ${dmg(kind)} and knocks the ball inward.',
-    PowerUpKind.goldenArmor =>
-      'Completely blocks the next two damaging hits without replacing weapons.',
+    PowerUpKind.goldenArmor => 'Completely blocks the next two damaging hits.',
+    PowerUpKind.bow =>
+      '$aim fires a ${PowerUpTuning.bowArrows}-arrow volley spanning twice a grenade blast: ${dmg(kind)} each.',
+    PowerUpKind.stickyGoo =>
+      'Holds the first ball that touches it in place for 2 s.',
   };
 }
 

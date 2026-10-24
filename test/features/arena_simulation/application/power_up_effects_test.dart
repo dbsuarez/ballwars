@@ -159,6 +159,27 @@ void main() {
     );
   });
 
+  test('green sticky goo holds a ball in place for two seconds', () {
+    final c = _match();
+    final a = c.state.balls[0]..velocity = const Offset(90, 0);
+    c.powerUps!.stickyGoo.add(StickyGoo(position: a.position, spawnStep: 0));
+
+    _run(c, 1);
+    expect(c.powerUps!.stickyGoo, isEmpty);
+    expect(a.stickyGooLeft, PowerUpTuning.stickyGooSteps);
+    expect(a.velocity, Offset.zero);
+    expect(
+      c.state.floatingTexts.items.map((text) => text.text),
+      contains('STUCK!'),
+    );
+
+    _run(c, PowerUpTuning.stickyGooSteps - 1);
+    expect(a.velocity, Offset.zero);
+    _run(c, 1);
+    expect(a.stickyGooLeft, 0);
+    expect(a.velocity.distance, greaterThan(0));
+  });
+
   test('golden armor blocks two hits completely, then shatters', () {
     final c = _match();
     final a = c.state.balls[0];

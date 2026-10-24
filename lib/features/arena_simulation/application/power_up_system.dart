@@ -59,6 +59,9 @@ class PowerUpSystem {
   /// Physical spike rows in the arena. They are hazards, never pickups.
   final List<SpikeWall> spikeWalls = [];
 
+  /// Green boundary patches that hold the first ball touching them.
+  final List<StickyGoo> stickyGoo = [];
+
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
 
@@ -103,6 +106,7 @@ class PowerUpSystem {
       ..gremlinShots = 0
       ..magneticFieldLeft = 0
       ..goldenArmorHits = 0
+      ..stickyGooLeft = 0
       ..sweepLeft = 0
       ..hurtFlashLeft = 0
       ..magnetPending = false
@@ -110,6 +114,7 @@ class PowerUpSystem {
       ..aimTarget = null
       ..burstLeft = 0;
     _frozenVelocity.remove(ball);
+    _gooVelocity.remove(ball);
     _burstVolley.remove(ball);
     _shieldedVolley.remove(ball);
     _volleyLabel.remove(ball);
@@ -120,6 +125,7 @@ class PowerUpSystem {
 
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
   final Map<SimulationBall, Offset> _frozenVelocity = {};
+  final Map<SimulationBall, Offset> _gooVelocity = {};
 
   // Volleys: shots fired as one attack share an id; a shield that breaks on one of them softens the
   // rest of that volley too (see [_hit]).
@@ -152,9 +158,11 @@ class PowerUpSystem {
   /// (a speed boost picked up in step N runs from step N + 1).
   void step() {
     _countDown();
+    _updateStickyGoo();
     _triggerMines();
     _triggerPortals();
     _triggerSpikeWalls();
+    _triggerStickyGoo();
     _pickUpTouched();
     _sweep();
     _updateFrozen();
@@ -283,6 +291,26 @@ class PowerUpSystem {
         }
         portals.remove(portal);
         _teleport(ball, portal.position);
+        break;
+      }
+    }
+  }
+
+  void _triggerStickyGoo() {
+    if (stickyGoo.isEmpty) return;
+    for (final goo in List<StickyGoo>.of(stickyGoo)) {
+      for (final ball in match.state.balls) {
+        if (!_alive(ball) || ball.isGhost) continue;
+        if ((ball.position - goo.position).distance >=
+            ball.radius + fieldRadius) {
+          continue;
+        }
+        stickyGoo.remove(goo);
+        _gooVelocity[ball] = ball.velocity;
+        ball
+          ..stickyGooLeft = PowerUpTuning.stickyGooSteps
+          ..velocity = Offset.zero;
+        _yell(ball, 'STUCK!');
         break;
       }
     }
@@ -630,6 +658,9 @@ class PowerUpSystem {
     for (final portal in portals) {
       taken[quadrantOf(portal.position)]++;
     }
+    for (final goo in stickyGoo) {
+      taken[quadrantOf(goo.position)]++;
+    }
     final fewest = taken.reduce(math.min);
     final open = [
       for (var q = 0; q < 4; q++)
@@ -640,7 +671,8 @@ class PowerUpSystem {
     final outer = match.arenaRadius * PowerUpTuning.spawnMaxDistance;
     for (var attempt = 0; attempt < 10; attempt++) {
       final angle = (quadrant + rng.nextDoubleRange(0.1, 0.9)) * math.pi / 2;
-      final distance = kind == PowerUpKind.spikeWall
+      final distance =
+          kind == PowerUpKind.spikeWall || kind == PowerUpKind.stickyGoo
           ? match.arenaRadius - radius * 0.38
           : kind.isTrap
           ? match.arenaRadius - radius * 1.6
@@ -662,6 +694,9 @@ class PowerUpSystem {
           ) &&
           portals.every(
             (portal) => (portal.position - spot).distance >= 2 * radius,
+          ) &&
+          stickyGoo.every(
+            (goo) => (goo.position - spot).distance >= 2 * radius,
           );
       if (!clear) continue;
       if (kind == PowerUpKind.portal) {
@@ -677,6 +712,13 @@ class PowerUpSystem {
         );
         if (spikeWalls.length > PowerUpTuning.maxOnField(_ballCount)) {
           spikeWalls.removeAt(0);
+        }
+        return;
+      }
+      if (kind == PowerUpKind.stickyGoo) {
+        stickyGoo.add(StickyGoo(position: spot, spawnStep: number));
+        if (stickyGoo.length > PowerUpTuning.maxOnField(_ballCount)) {
+          stickyGoo.removeAt(0);
         }
         return;
       }
@@ -725,6 +767,18 @@ class PowerUpSystem {
     }
   }
 
+  void _updateStickyGoo() {
+    for (final ball in match.state.balls) {
+      if (ball.stickyGooLeft <= 0) continue;
+      ball.stickyGooLeft--;
+      if (ball.stickyGooLeft == 0) {
+        ball.velocity = _gooVelocity.remove(ball) ?? ball.velocity;
+      } else {
+        ball.velocity = Offset.zero;
+      }
+    }
+  }
+
   /// The nearest opponent of [ball] a gun can aim at (still in the match, not a ghost), or null.
   SimulationBall? _nearestTarget(SimulationBall ball) {
     SimulationBall? best;
@@ -754,7 +808,9 @@ class PowerUpSystem {
         continue;
       }
       // A frozen ball can't shoot; a ghost is purely defensive, so it holds its aim until it's solid.
-      if (ball.frozenLeft > 0 || ball.isGhost) continue;
+      if (ball.frozenLeft > 0 || ball.stickyGooLeft > 0 || ball.isGhost) {
+        continue;
+      }
       final bursting = ball.burstLeft > 0;
       final guns = ball.equippedWeapons
           .where((weapon) => weapon.isGun)
@@ -821,6 +877,9 @@ class PowerUpSystem {
             case PowerUpKind.swapCannon:
               _fire(ball, target, kind, 0);
               _yell(ball, 'SWAP INCOMING!');
+            case PowerUpKind.bow:
+              _fireBow(ball, target);
+              _yell(ball, 'ARROWS, FLY!');
             default:
               _fire(ball, target, kind, 0);
               _yell(ball, 'BANG!');
@@ -921,6 +980,24 @@ class PowerUpSystem {
         target,
         PowerUpKind.shotgun,
         -spread / 2 + spread * i / (count - 1) + jitter,
+        volley: volley,
+      );
+    }
+  }
+
+  void _fireBow(SimulationBall ball, SimulationBall target) {
+    const count = PowerUpTuning.bowArrows;
+    final spread = PowerUpTuning.bowSpread(
+      (target.position - ball.position).distance,
+      match.arenaRadius,
+    );
+    final volley = ++_lastVolley;
+    for (var i = 0; i < count; i++) {
+      _fire(
+        ball,
+        target,
+        PowerUpKind.bow,
+        -spread / 2 + spread * i / (count - 1),
         volley: volley,
       );
     }

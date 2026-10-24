@@ -11,13 +11,31 @@ import 'package:ballwars/features/match_setup/domain/match_config.dart';
 const _arenaRadius = 260.0;
 
 const _balls = [
-  CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
-  CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
-  CustomBall(id: 'c', name: 'C', primaryColor: Colors.green, glowColor: Colors.lime),
+  CustomBall(
+    id: 'a',
+    name: 'A',
+    primaryColor: Colors.red,
+    glowColor: Colors.pink,
+  ),
+  CustomBall(
+    id: 'b',
+    name: 'B',
+    primaryColor: Colors.blue,
+    glowColor: Colors.cyan,
+  ),
+  CustomBall(
+    id: 'c',
+    name: 'C',
+    primaryColor: Colors.green,
+    glowColor: Colors.lime,
+  ),
 ];
 
 /// A match with [count] balls held still, the first two at (-100, 0) and (100, 0).
-MatchSimulationController _match({MatchMode mode = MatchMode.arsenal, int count = 2}) {
+MatchSimulationController _match({
+  MatchMode mode = MatchMode.arsenal,
+  int count = 2,
+}) {
   final c = MatchSimulationController(
     _balls.take(count).toList(),
     arenaRadius: _arenaRadius,
@@ -47,14 +65,19 @@ double _heading(Projectile p) => math.atan2(p.velocity.dy, p.velocity.dx);
 double _bulletSpeed() => _arenaRadius * PowerUpTuning.bulletSpeedRatio;
 
 /// Runs until [p] is spent (at most [limit] steps).
-void _runUntilSpent(MatchSimulationController c, Projectile p, {int limit = 200}) {
+void _runUntilSpent(
+  MatchSimulationController c,
+  Projectile p, {
+  int limit = 200,
+}) {
   for (var i = 0; i < limit && !p.spent; i++) {
     c.tick(1 / 60);
   }
 }
 
 bool _segmentsCross(Offset p1, Offset p2, Offset q1, Offset q2) {
-  double cross(Offset o, Offset a, Offset b) => (a.dx - o.dx) * (b.dy - o.dy) - (a.dy - o.dy) * (b.dx - o.dx);
+  double cross(Offset o, Offset a, Offset b) =>
+      (a.dx - o.dx) * (b.dy - o.dy) - (a.dy - o.dy) * (b.dx - o.dx);
   final d1 = cross(q1, q2, p1);
   final d2 = cross(q1, q2, p2);
   final d3 = cross(p1, p2, q1);
@@ -63,21 +86,27 @@ bool _segmentsCross(Offset p1, Offset p2, Offset q1, Offset q2) {
 }
 
 void main() {
-  test('a pistol aims for aimSteps steps then fires one bullet at the nearest opponent', () {
-    final c = _match(count: 3);
-    final [a, b, _] = c.state.balls;
-    a.held = PowerUpKind.pistol;
-    _run(c, PowerUpTuning.aimSteps - 1);
-    expect(c.powerUps!.projectiles, isEmpty);
-    expect(a.aimTarget, same(b));
-    _run(c, 1);
-    final shots = c.powerUps!.projectiles;
-    expect(shots.length, 1);
-    expect(c.powerUps!.shots, 1);
-    final toTarget = b.position - a.position;
-    expect(_heading(shots.single), closeTo(math.atan2(toTarget.dy, toTarget.dx), 0.05));
-    expect(a.held, isNull);
-  });
+  test(
+    'a pistol aims for aimSteps steps then fires one bullet at the nearest opponent',
+    () {
+      final c = _match(count: 3);
+      final [a, b, _] = c.state.balls;
+      a.held = PowerUpKind.pistol;
+      _run(c, PowerUpTuning.aimSteps - 1);
+      expect(c.powerUps!.projectiles, isEmpty);
+      expect(a.aimTarget, same(b));
+      _run(c, 1);
+      final shots = c.powerUps!.projectiles;
+      expect(shots.length, 1);
+      expect(c.powerUps!.shots, 1);
+      final toTarget = b.position - a.position;
+      expect(
+        _heading(shots.single),
+        closeTo(math.atan2(toTarget.dy, toTarget.dx), 0.05),
+      );
+      expect(a.held, isNull);
+    },
+  );
 
   test('a shotgun fires 10 pellets fanned over the spread', () {
     final c = _match();
@@ -89,10 +118,39 @@ void main() {
     final toTarget = b.position - a.position;
     final aim = math.atan2(toTarget.dy, toTarget.dx);
     final headings = [for (final p in pellets) _heading(p) - aim];
-    expect(headings.reduce(math.max) - headings.reduce(math.min), closeTo(PowerUpTuning.shotgunSpread, 0.01));
+    expect(
+      headings.reduce(math.max) - headings.reduce(math.min),
+      closeTo(PowerUpTuning.shotgunSpread, 0.01),
+    );
     for (final h in headings) {
-      expect(h.abs(), lessThanOrEqualTo(PowerUpTuning.shotgunSpread / 2 + 1e-9));
+      expect(
+        h.abs(),
+        lessThanOrEqualTo(PowerUpTuning.shotgunSpread / 2 + 1e-9),
+      );
     }
+    expect(a.held, isNull);
+  });
+
+  test('a bow fires a low-damage volley twice a grenade blast wide', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.bow;
+    final distance = (b.position - a.position).distance;
+    _run(c, PowerUpTuning.aimSteps);
+
+    final arrows = c.powerUps!.projectiles;
+    expect(arrows, hasLength(PowerUpTuning.bowArrows));
+    expect(arrows.every((arrow) => arrow.kind == PowerUpKind.bow), isTrue);
+    final aim = math.atan2(
+      b.position.dy - a.position.dy,
+      b.position.dx - a.position.dx,
+    );
+    final headings = [for (final arrow in arrows) _heading(arrow) - aim];
+    expect(
+      headings.reduce(math.max) - headings.reduce(math.min),
+      closeTo(PowerUpTuning.bowSpread(distance, _arenaRadius), 0.01),
+    );
+    expect(PowerUpTuning.arenaDamage[PowerUpKind.bow], 4);
     expect(a.held, isNull);
   });
 
@@ -121,11 +179,17 @@ void main() {
     final bullet = c.powerUps!.projectiles.single;
     _runUntilSpent(c, bullet);
     expect(bullet.spent, isTrue);
-    expect(b.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!);
+    expect(
+      b.life,
+      PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!,
+    );
     expect(c.powerUps!.hits, 1);
     expect(c.powerUps!.projectiles, isEmpty);
     _run(c, 60);
-    expect(b.life, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!);
+    expect(
+      b.life,
+      PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!,
+    );
     expect(a.life, PowerUpTuning.arenaLife);
   });
 
@@ -136,38 +200,54 @@ void main() {
     _run(c, PowerUpTuning.aimSteps);
     final bullet = c.powerUps!.projectiles.single;
     _runUntilSpent(c, bullet);
-    final colored = c.state.particles.particles.whereType<Particle>().where((p) => p.color == b.config.primaryColor);
+    final colored = c.state.particles.particles.whereType<Particle>().where(
+      (p) => p.color == b.config.primaryColor,
+    );
     expect(colored, isNotEmpty);
   });
 
-  test('in All-Out a bullet cuts the opponent threads it flies through and a hit snaps threads near the impact', () {
-    final c = _match(mode: MatchMode.allOut);
-    final [a, b] = c.state.balls;
-    a.position = const Offset(150, 100);
-    b.position = Offset.zero;
-    // b owns the left half of the rim. A bullet from the left, passing b's center at 0.8 r, flies through
-    // b's threads anchored up-left before it strikes b off-center.
-    final offset = b.radius * 0.8;
-    final start = Offset(-200, offset);
-    final impactX = -math.sqrt(b.radius * b.radius - offset * offset);
-    final beforeImpact = Offset(impactX - 10, offset);
-    final crossed = {
-      for (final line in b.fanLines)
-        if (_segmentsCross(start, beforeImpact, line.startPoint, b.position)) line.slotIndex,
-    };
-    expect(crossed, isNotEmpty);
-    final linesBefore = b.fanLines.length;
-    final freeBefore = c.freeSlotCount;
-    final bullet = Projectile(owner: a, kind: PowerUpKind.pistol, position: start, velocity: Offset(_bulletSpeed(), 0));
-    c.powerUps!.projectiles.add(bullet);
-    _runUntilSpent(c, bullet);
-    expect(bullet.spent, isTrue);
-    final left = {for (final line in b.fanLines) line.slotIndex};
-    expect(left.intersection(crossed), isEmpty);
-    final drop = linesBefore - b.fanLines.length;
-    expect(drop, greaterThanOrEqualTo(crossed.length + PowerUpTuning.allOutThreads[PowerUpKind.pistol]!));
-    expect(c.freeSlotCount - freeBefore, drop);
-  });
+  test(
+    'in All-Out a bullet cuts the opponent threads it flies through and a hit snaps threads near the impact',
+    () {
+      final c = _match(mode: MatchMode.allOut);
+      final [a, b] = c.state.balls;
+      a.position = const Offset(150, 100);
+      b.position = Offset.zero;
+      // b owns the left half of the rim. A bullet from the left, passing b's center at 0.8 r, flies through
+      // b's threads anchored up-left before it strikes b off-center.
+      final offset = b.radius * 0.8;
+      final start = Offset(-200, offset);
+      final impactX = -math.sqrt(b.radius * b.radius - offset * offset);
+      final beforeImpact = Offset(impactX - 10, offset);
+      final crossed = {
+        for (final line in b.fanLines)
+          if (_segmentsCross(start, beforeImpact, line.startPoint, b.position))
+            line.slotIndex,
+      };
+      expect(crossed, isNotEmpty);
+      final linesBefore = b.fanLines.length;
+      final freeBefore = c.freeSlotCount;
+      final bullet = Projectile(
+        owner: a,
+        kind: PowerUpKind.pistol,
+        position: start,
+        velocity: Offset(_bulletSpeed(), 0),
+      );
+      c.powerUps!.projectiles.add(bullet);
+      _runUntilSpent(c, bullet);
+      expect(bullet.spent, isTrue);
+      final left = {for (final line in b.fanLines) line.slotIndex};
+      expect(left.intersection(crossed), isEmpty);
+      final drop = linesBefore - b.fanLines.length;
+      expect(
+        drop,
+        greaterThanOrEqualTo(
+          crossed.length + PowerUpTuning.allOutThreads[PowerUpKind.pistol]!,
+        ),
+      );
+      expect(c.freeSlotCount - freeBefore, drop);
+    },
+  );
 
   test('bullets from an eliminated ball still fly; it fires nothing new', () {
     // Killed mid-aim: nothing is fired.
@@ -189,7 +269,14 @@ void main() {
     holder.isEliminated = true;
     _runUntilSpent(d, bullet);
     // 3 balls: crowded Arsenal damage is x2.25 (never below 0).
-    expect(target.life, math.max(0.0, PowerUpTuning.arenaLife - PowerUpTuning.arenaDamage[PowerUpKind.pistol]! * 2.25));
+    expect(
+      target.life,
+      math.max(
+        0.0,
+        PowerUpTuning.arenaLife -
+            PowerUpTuning.arenaDamage[PowerUpKind.pistol]! * 2.25,
+      ),
+    );
     expect(bystander.life, PowerUpTuning.arenaLife);
   });
 
@@ -239,8 +326,20 @@ void main() {
     final a = c.state.balls.first;
     final powerUps = c.powerUps!;
     powerUps.field
-      ..add(FieldPowerUp(kind: PowerUpKind.knife, position: a.position, spawnStep: 0))
-      ..add(FieldPowerUp(kind: PowerUpKind.apple, position: a.position + const Offset(2, 0), spawnStep: 0));
+      ..add(
+        FieldPowerUp(
+          kind: PowerUpKind.knife,
+          position: a.position,
+          spawnStep: 0,
+        ),
+      )
+      ..add(
+        FieldPowerUp(
+          kind: PowerUpKind.apple,
+          position: a.position + const Offset(2, 0),
+          spawnStep: 0,
+        ),
+      );
     _run(c, 1);
     expect(a.held, PowerUpKind.knife);
     expect(powerUps.pickups, 1);

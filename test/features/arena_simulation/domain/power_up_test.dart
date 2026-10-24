@@ -14,6 +14,7 @@ void main() {
       PowerUpKind.threadHarpoon,
       PowerUpKind.prismLaser,
       PowerUpKind.swapCannon,
+      PowerUpKind.bow,
     };
     for (final kind in PowerUpKind.values) {
       expect(kind.label, isNotEmpty);
@@ -70,6 +71,7 @@ void main() {
         PowerUpKind.phaseMine,
         PowerUpKind.portal,
         PowerUpKind.spikeWall,
+        PowerUpKind.stickyGoo,
       ]),
     );
     expect(

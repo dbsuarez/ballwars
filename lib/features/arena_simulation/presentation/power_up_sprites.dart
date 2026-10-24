@@ -232,6 +232,51 @@ class PowerUpSprites {
     }
     animatedSheet.dispose();
 
+    // Molotov fire uses a dedicated tall campfire loop. Keeping it in its own
+    // fixed four-cell sheet prevents the horizontal, eel-like silhouette of
+    // the general-purpose flame row above.
+    final campfireData = await rootBundle.load(
+      'assets/sprites/molotov-campfire.png',
+    );
+    final campfireCodec = await ui.instantiateImageCodec(
+      campfireData.buffer.asUint8List(),
+    );
+    final campfireSheet = (await campfireCodec.getNextFrame()).image;
+    campfireCodec.dispose();
+    final campfireCellWidth = campfireSheet.width / 4.0;
+    final campfireFrames = <ui.Image>[];
+    for (var frame = 0; frame < 4; frame++) {
+      final recorder = ui.PictureRecorder();
+      final sourceSize = Size(
+        campfireCellWidth,
+        campfireSheet.height.toDouble(),
+      );
+      final fitted = applyBoxFit(
+        BoxFit.contain,
+        sourceSize,
+        const Size(86, 90),
+      );
+      Canvas(recorder).drawImageRect(
+        campfireSheet,
+        Rect.fromLTWH(
+          frame * campfireCellWidth,
+          0,
+          campfireCellWidth,
+          campfireSheet.height.toDouble(),
+        ),
+        Alignment.bottomCenter.inscribe(
+          fitted.destination,
+          const Rect.fromLTWH(5, 3, 86, 90),
+        ),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      campfireFrames.add(await picture.toImage(96, 96));
+      picture.dispose();
+    }
+    _animatedEffects[AnimatedEffect.flame] = campfireFrames;
+    campfireSheet.dispose();
+
     final maximumData = await rootBundle.load(
       'assets/sprites/maximum-power.png',
     );

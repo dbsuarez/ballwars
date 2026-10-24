@@ -214,24 +214,7 @@ class PowerUpPainter {
         final angle = math.atan2(base.dy, base.dx);
         final radial = Offset(math.cos(angle), math.sin(angle));
         final tangent = Offset(-radial.dy, radial.dx);
-        final left = base - tangent * r * 0.42 + radial * r * 0.38;
-        final right = base + tangent * r * 0.42 + radial * r * 0.38;
-        final tip = base - radial * r * 0.9;
-        canvas.drawPath(
-          Path()
-            ..moveTo(left.dx, left.dy)
-            ..lineTo(tip.dx, tip.dy)
-            ..lineTo(right.dx, right.dy)
-            ..close(),
-          Paint()..color = colorOf(PowerUpKind.spikeWall),
-        );
-        canvas.drawLine(
-          left,
-          right,
-          Paint()
-            ..strokeWidth = math.max(1.5, r * 0.12)
-            ..color = const Color(0xFF681F2A),
-        );
+        _paintBoundarySpike(canvas, base, radial, tangent, r);
       }
     }
 
@@ -263,6 +246,19 @@ class PowerUpPainter {
         )
         ..close();
       canvas.drawPath(path, Paint()..color = const Color(0xFF65E34F));
+      canvas.save();
+      canvas.clipPath(path);
+      final gooSprite = PowerUpSprites.of(PowerUpKind.stickyGoo);
+      if (gooSprite != null) {
+        _drawSprite(
+          canvas,
+          gooSprite,
+          goo.position - Offset(math.cos(angle), math.sin(angle)) * r * 0.5,
+          r * 1.2 * pulse,
+          angle + math.pi / 2,
+        );
+      }
+      canvas.restore();
       canvas.drawPath(
         path,
         Paint()
@@ -430,6 +426,54 @@ class PowerUpPainter {
         canvas.drawLine(o - along, o + along, paint);
       }
     }
+  }
+
+  static void _paintBoundarySpike(
+    Canvas canvas,
+    Offset base,
+    Offset radial,
+    Offset tangent,
+    double radius,
+  ) {
+    final left = base - tangent * radius * 0.46 + radial * radius * 0.4;
+    final right = base + tangent * radius * 0.46 + radial * radius * 0.4;
+    final tip = base - radial * radius * 0.95;
+    final spike = Path()
+      ..moveTo(left.dx, left.dy)
+      ..lineTo(tip.dx, tip.dy)
+      ..lineTo(right.dx, right.dy)
+      ..close();
+    canvas.drawPath(
+      spike,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(2, radius * 0.2)
+        ..strokeJoin = StrokeJoin.round
+        ..color = const Color(0xFF271D28),
+    );
+    canvas.drawPath(spike, Paint()..color = const Color(0xFFB8BDC8));
+    canvas.drawPath(
+      Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(
+          (base - tangent * radius * 0.14 - radial * radius * 0.05).dx,
+          (base - tangent * radius * 0.14 - radial * radius * 0.05).dy,
+        )
+        ..lineTo(
+          (left + radial * radius * 0.05).dx,
+          (left + radial * radius * 0.05).dy,
+        )
+        ..close(),
+      Paint()..color = const Color(0xFFF0F4FF),
+    );
+    canvas.drawLine(
+      left,
+      right,
+      Paint()
+        ..strokeWidth = math.max(2, radius * 0.16)
+        ..strokeCap = StrokeCap.square
+        ..color = const Color(0xFF6D3F2D),
+    );
   }
 
   /// Rotation for a vertically-authored portal oval so its long axis follows

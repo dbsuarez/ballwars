@@ -460,7 +460,7 @@ class PowerUpPainter {
               canvas,
               sprite,
               shot.position,
-              r * 0.8,
+              r * 1.6,
               state.step * 0.35,
             );
           } else {

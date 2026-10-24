@@ -269,50 +269,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       _Section(
-                        title: 'MATCH MUSIC',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final track in MusicTrack.all)
-                              _TrackRow(
-                                track: track,
-                                selected: track.id == settings.musicId,
-                                playing: GameAudio.instance.isPreviewing(track),
-                                onPlay: () => _togglePreview(track),
-                                onSelect: _busy || track.id == settings.musicId
-                                    ? null
-                                    : () => _save(
-                                        settings.copyWith(musicId: track.id),
-                                        done:
-                                            '"${track.name}" is now the match music for everyone.',
-                                      ),
+                        title: 'MUSIC',
+                        child: DefaultTabController(
+                          length: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const TabBar(
+                                tabs: [
+                                  Tab(text: 'Match music'),
+                                  Tab(text: 'Home music'),
+                                ],
                               ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'HOME MUSIC',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final track in MusicTrack.menu)
-                              _TrackRow(
-                                track: track,
-                                selected: track.id == settings.menuMusicId,
-                                playing: GameAudio.instance.isPreviewing(track),
-                                onPlay: () => _togglePreview(track),
-                                onSelect:
-                                    _busy || track.id == settings.menuMusicId
-                                    ? null
-                                    : () => _save(
-                                        settings.copyWith(
-                                          menuMusicId: track.id,
-                                        ),
-                                        done:
-                                            '"${track.name}" is now the Home music for everyone.',
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 350,
+                                child: TabBarView(
+                                  children: [
+                                    ListView(
+                                      key: const PageStorageKey(
+                                        'match-music-tab',
                                       ),
+                                      padding: EdgeInsets.zero,
+                                      children: [
+                                        for (final track in MusicTrack.all)
+                                          _TrackRow(
+                                            track: track,
+                                            selected:
+                                                track.id == settings.musicId,
+                                            playing: GameAudio.instance
+                                                .isPreviewing(track),
+                                            onPlay: () => _togglePreview(track),
+                                            onSelect:
+                                                _busy ||
+                                                    track.id == settings.musicId
+                                                ? null
+                                                : () => _save(
+                                                    settings.copyWith(
+                                                      musicId: track.id,
+                                                    ),
+                                                    done:
+                                                        '"${track.name}" is now the match music for everyone.',
+                                                  ),
+                                          ),
+                                      ],
+                                    ),
+                                    ListView(
+                                      key: const PageStorageKey(
+                                        'home-music-tab',
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      children: [
+                                        for (final track in MusicTrack.menu)
+                                          _TrackRow(
+                                            track: track,
+                                            selected:
+                                                track.id ==
+                                                settings.menuMusicId,
+                                            playing: GameAudio.instance
+                                                .isPreviewing(track),
+                                            onPlay: () => _togglePreview(track),
+                                            onSelect:
+                                                _busy ||
+                                                    track.id ==
+                                                        settings.menuMusicId
+                                                ? null
+                                                : () => _save(
+                                                    settings.copyWith(
+                                                      menuMusicId: track.id,
+                                                    ),
+                                                    done:
+                                                        '"${track.name}" is now the Home music for everyone.',
+                                                  ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       _Section(

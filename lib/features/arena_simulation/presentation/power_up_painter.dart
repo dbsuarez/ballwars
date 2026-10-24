@@ -283,12 +283,15 @@ class PowerUpPainter {
         1.0,
       );
       final pulse = 0.86 + 0.14 * math.sin(state.step * 0.65).abs();
-      final orb = attack.owner.position;
+      // Keep the caster's face visible: the energy gathers in front of it,
+      // rather than replacing the ball with a glowing circle.
+      final orb =
+          attack.owner.position + attack.direction * attack.owner.radius * 1.75;
       canvas.drawCircle(
         orb,
-        r * (0.55 + charge * 1.05) * pulse,
+        r * (0.38 + charge * 0.52) * pulse,
         Paint()
-          ..shader = ui.Gradient.radial(orb, r * 1.7, [
+          ..shader = ui.Gradient.radial(orb, r, [
             Colors.white.withValues(alpha: 0.96),
             const Color(0xFF2DE7FF).withValues(alpha: 0.88),
             const Color(0x002468FF),
@@ -297,7 +300,7 @@ class PowerUpPainter {
       for (var ring = 0; ring < 3; ring++) {
         canvas.drawCircle(
           orb,
-          r * (1.3 + ring * 0.48 + charge * 0.35),
+          r * (0.72 + ring * 0.23 + charge * 0.18),
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = math.max(2, r * 0.1)
@@ -318,7 +321,7 @@ class PowerUpPainter {
       }
     }
     for (final wave in p.energyWaves) {
-      final fade = (1 - wave.age / 24).clamp(0.0, 1.0);
+      final fade = ((wave.durationSteps - wave.age) / 12).clamp(0.0, 1.0);
       final beamWidth = r * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());
       canvas.drawLine(
         wave.start,
@@ -1713,6 +1716,9 @@ class PowerUpPainter {
     int slot, {
     int firedHoldLeft = 0,
   }) {
+    // The active cast has its own charge orb and beam. Keeping the generated
+    // weapon badge here covered the caster's face and looked like it vanished.
+    if (held == PowerUpKind.energyWave && firedHoldLeft > 0) return;
     final sprite = PowerUpSprites.of(held);
     if (held == PowerUpKind.shield) {
       final angle = heldAngle(ball, weapon: held, slot: slot);

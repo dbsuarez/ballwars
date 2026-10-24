@@ -397,32 +397,29 @@ void main() {
     expect(a.held, isNull);
   });
 
-  test(
-    'Energy Wave pauses opponents, sweeps each once, then releases them',
-    () {
-      final c = _match();
-      final [a, b] = c.state.balls;
-      a.held = PowerUpKind.energyWave;
-      b.velocity = const Offset(0, 80);
+  test('Energy Wave pauses opponents, holds one beam, then releases them', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.energyWave;
+    b.velocity = const Offset(0, 80);
 
-      _run(c, PowerUpTuning.aimSteps);
-      expect(c.powerUps!.energyWaveAttacks, hasLength(1));
-      expect(b.life, PowerUpTuning.arenaLife);
+    _run(c, PowerUpTuning.aimSteps);
+    expect(c.powerUps!.energyWaveAttacks, hasLength(1));
+    expect(b.life, PowerUpTuning.arenaLife);
 
-      _run(c, EnergyWaveAttack.chargeSteps + 1);
-      expect(b.velocity, Offset.zero);
-      expect(
-        b.life,
-        PowerUpTuning.arenaLife -
-            PowerUpTuning.arenaDamage[PowerUpKind.energyWave]!,
-      );
-      expect(c.powerUps!.energyWaves, isNotEmpty);
+    _run(c, EnergyWaveAttack.chargeSteps + 1);
+    expect(b.velocity, Offset.zero);
+    expect(
+      b.life,
+      PowerUpTuning.arenaLife -
+          PowerUpTuning.arenaDamage[PowerUpKind.energyWave]!,
+    );
+    expect(c.powerUps!.energyWaves, isNotEmpty);
 
-      _run(c, EnergyWaveAttack.hitIntervalSteps + 12);
-      expect(c.powerUps!.energyWaveAttacks, isEmpty);
-      expect(b.velocity.distance, lessThan(_arenaRadius * 0.5));
-    },
-  );
+    _run(c, EnergyWaveAttack.beamSteps + 12);
+    expect(c.powerUps!.energyWaveAttacks, isEmpty);
+    expect(b.velocity.distance, lessThan(_arenaRadius * 0.5));
+  });
 
   test('Energy Wave does not erase a crowded Arsenal field', () {
     final c = MatchSimulationController(
@@ -458,14 +455,20 @@ void main() {
         ..position = positions[i]
         ..velocity = Offset.zero;
     }
-    balls.first.held = PowerUpKind.energyWave;
+    for (final ball in balls) {
+      ball.held = PowerUpKind.energyWave;
+    }
+
+    _run(c, PowerUpTuning.aimSteps);
+    expect(
+      c.powerUps!.energyWaveAttacks,
+      hasLength(1),
+      reason: 'arena-wide cinematics must run one at a time',
+    );
 
     _run(
       c,
-      PowerUpTuning.aimSteps +
-          EnergyWaveAttack.chargeSteps +
-          EnergyWaveAttack.hitIntervalSteps * 3 +
-          1,
+      EnergyWaveAttack.chargeSteps + EnergyWaveAttack.hitIntervalSteps * 3 + 1,
     );
 
     final expectedLife =
@@ -473,6 +476,21 @@ void main() {
         PowerUpTuning.arenaDamage[PowerUpKind.energyWave]!;
     expect(balls.skip(1).map((ball) => ball.life), everyElement(expectedLife));
     expect(balls.map((ball) => ball.isEliminated), everyElement(isFalse));
+  });
+
+  test('an interrupted Energy Wave always releases frozen opponents', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    b.velocity = const Offset(0, 80);
+    a.held = PowerUpKind.energyWave;
+    _run(c, PowerUpTuning.aimSteps + 1);
+    expect(b.velocity, Offset.zero);
+
+    a.isEliminated = true;
+    c.powerUps!.step();
+
+    expect(c.powerUps!.energyWaveAttacks, isEmpty);
+    expect(b.velocity, const Offset(0, 80));
   });
 
   test('a shield blocks a hook (and breaks); nothing is pulled', () {

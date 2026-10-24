@@ -368,27 +368,41 @@ class Tornado {
 }
 
 class EnergyWave {
-  EnergyWave({required this.owner, required this.start, required this.end});
+  EnergyWave({
+    required this.owner,
+    required this.start,
+    required this.end,
+    this.durationSteps = EnergyWaveAttack.beamSteps,
+  });
   final SimulationBall owner;
   final Offset start;
   final Offset end;
+  final int durationSteps;
   int age = 0;
 }
 
 class EnergyWaveAttack {
-  EnergyWaveAttack({required this.owner, required this.targets})
-    : savedOwnerVelocity = owner.velocity,
-      savedVelocities = {for (final target in targets) target: target.velocity};
+  EnergyWaveAttack({
+    required this.owner,
+    required this.targets,
+    required this.direction,
+  }) : savedOwnerVelocity = owner.velocity,
+       savedVelocities = {
+         for (final target in targets) target: target.velocity,
+       };
 
   static const int chargeSteps = 36;
   static const int hitIntervalSteps = 14;
+  static const int beamSteps = 120;
 
   final SimulationBall owner;
   final List<SimulationBall> targets;
+  final Offset direction;
   final Offset savedOwnerVelocity;
   final Map<SimulationBall, Offset> savedVelocities;
   int age = 0;
   int currentIndex = -1;
+  bool fired = false;
 }
 
 class FlameCone {

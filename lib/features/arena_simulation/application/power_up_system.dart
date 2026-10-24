@@ -142,10 +142,11 @@ class PowerUpSystem {
       (tendril) =>
           identical(tendril.owner, ball) || identical(tendril.target, ball),
     );
-    energyWaveAttacks.removeWhere(
-      (attack) =>
-          identical(attack.owner, ball) || attack.targets.contains(ball),
-    );
+    for (final attack in energyWaveAttacks.toList()) {
+      if (identical(attack.owner, ball) || attack.targets.contains(ball)) {
+        _releaseEnergyWave(attack, launchAway: false);
+      }
+    }
   }
 
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
@@ -196,7 +197,7 @@ class PowerUpSystem {
     for (final wave in energyWaves) {
       wave.age++;
     }
-    energyWaves.removeWhere((wave) => wave.age >= 24);
+    energyWaves.removeWhere((wave) => wave.age >= wave.durationSteps);
     _updateEnergyWaveAttacks();
     _updateFlameCones();
     _countDown();
@@ -1209,6 +1210,8 @@ class PowerUpSystem {
           .where(
             (weapon) =>
                 weapon.isGun &&
+                (weapon != PowerUpKind.energyWave ||
+                    energyWaveAttacks.isEmpty) &&
                 !(_firedWeaponHold[ball]?.containsKey(weapon) ?? false),
           )
           .toList();
@@ -1502,11 +1505,15 @@ class PowerUpSystem {
             return aa.compareTo(ba);
           });
     if (targets.isEmpty) return;
-    energyWaveAttacks.add(EnergyWaveAttack(owner: ball, targets: targets));
+    final toward = target.position - ball.position;
+    final direction = toward.distance == 0
+        ? const Offset(1, 0)
+        : toward / toward.distance;
+    energyWaveAttacks.add(
+      EnergyWaveAttack(owner: ball, targets: targets, direction: direction),
+    );
     final total =
-        EnergyWaveAttack.chargeSteps +
-        targets.length * EnergyWaveAttack.hitIntervalSteps +
-        12;
+        EnergyWaveAttack.chargeSteps + EnergyWaveAttack.beamSteps + 12;
     _holdFiredWeapon(ball, PowerUpKind.energyWave, steps: total);
     shots++;
   }
@@ -1514,7 +1521,7 @@ class PowerUpSystem {
   void _updateEnergyWaveAttacks() {
     for (final attack in energyWaveAttacks.toList()) {
       if (!_alive(attack.owner)) {
-        energyWaveAttacks.remove(attack);
+        _releaseEnergyWave(attack, launchAway: false);
         continue;
       }
       attack.age++;
@@ -1524,22 +1531,16 @@ class PowerUpSystem {
       }
       if (attack.age < EnergyWaveAttack.chargeSteps) continue;
 
-      final index =
-          (attack.age - EnergyWaveAttack.chargeSteps) ~/
-          EnergyWaveAttack.hitIntervalSteps;
-      if (index < attack.targets.length && index > attack.currentIndex) {
-        attack.currentIndex = index;
-        final target = attack.targets[index];
-        if (_alive(target)) {
-          final toward = target.position - attack.owner.position;
-          final direction = toward.distance == 0
-              ? const Offset(1, 0)
-              : toward / toward.distance;
-          final start = attack.owner.position + direction * attack.owner.radius;
-          final end = start + direction * match.arenaRadius * 2.4;
-          energyWaves.add(
-            EnergyWave(owner: attack.owner, start: start, end: end),
-          );
+      if (!attack.fired) {
+        attack.fired = true;
+        final start =
+            attack.owner.position + attack.direction * attack.owner.radius;
+        final end = start + attack.direction * match.arenaRadius * 2.4;
+        energyWaves.add(
+          EnergyWave(owner: attack.owner, start: start, end: end),
+        );
+        for (final target in attack.targets) {
+          if (!_alive(target)) continue;
           weaponImpacts.add(
             WeaponImpact(position: target.position, strength: 1),
           );
@@ -1556,23 +1557,31 @@ class PowerUpSystem {
       }
 
       final finishedAt =
-          EnergyWaveAttack.chargeSteps +
-          attack.targets.length * EnergyWaveAttack.hitIntervalSteps +
-          10;
+          EnergyWaveAttack.chargeSteps + EnergyWaveAttack.beamSteps;
       if (attack.age < finishedAt) continue;
-      attack.owner.velocity = attack.savedOwnerVelocity;
-      for (final target in attack.targets) {
-        if (!_alive(target)) continue;
-        final away = target.position - attack.owner.position;
-        final saved = attack.savedVelocities[target] ?? Offset.zero;
-        target.velocity = away.distance == 0
-            ? saved
-            : away /
-                  away.distance *
-                  math.max(saved.distance, match.arenaRadius * 0.42);
-      }
-      energyWaveAttacks.remove(attack);
+      _releaseEnergyWave(attack, launchAway: true);
     }
+  }
+
+  void _releaseEnergyWave(EnergyWaveAttack attack, {required bool launchAway}) {
+    if (_alive(attack.owner)) {
+      attack.owner.velocity = attack.savedOwnerVelocity;
+    }
+    for (final target in attack.targets) {
+      if (!_alive(target)) continue;
+      final saved = attack.savedVelocities[target] ?? Offset.zero;
+      if (!launchAway) {
+        target.velocity = saved;
+        continue;
+      }
+      final away = target.position - attack.owner.position;
+      target.velocity = away.distance == 0
+          ? saved
+          : away /
+                away.distance *
+                math.max(saved.distance, match.arenaRadius * 0.42);
+    }
+    energyWaveAttacks.remove(attack);
   }
 
   void _startFlamethrower(SimulationBall ball, SimulationBall target) {

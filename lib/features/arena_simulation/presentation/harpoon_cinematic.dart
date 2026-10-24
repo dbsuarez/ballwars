@@ -105,9 +105,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
               final uppercut = Curves.easeOutQuart.transform(
                 _range(t, 0.73, 0.9),
               );
-              final usesUppercut =
-                  profile.style == FinisherStyle.hook ||
-                  profile.style == FinisherStyle.melee;
+              final usesUppercut = profile.style == FinisherStyle.hook;
               final closesDistance =
                   profile.style == FinisherStyle.hook ||
                   profile.style == FinisherStyle.melee;
@@ -309,11 +307,22 @@ class _FinisherPainter extends CustomPainter {
           final shots = profile.style == FinisherStyle.barrage ? 7 : 1;
           for (var i = 0; i < shots; i++) {
             final spread = (i - (shots - 1) / 2) * radius * 0.13;
-            _paintItem(canvas, to + Offset(0, spread), radius * 0.62);
+            _paintSymbol(
+              canvas,
+              to + Offset(0, spread),
+              profile.symbol,
+              radius * (profile.style == FinisherStyle.barrage ? 0.72 : 0.9),
+            );
           }
         }
       case FinisherStyle.melee:
         if (uppercutProgress > 0) {
+          final strike = Offset.lerp(
+            loserCenter + Offset(-radius * 1.15, radius * 0.75),
+            loserCenter + Offset(radius * 0.85, -radius * 0.8),
+            uppercutProgress,
+          )!;
+          _paintItem(canvas, strike, radius * 1.35);
           final slash = Paint()
             ..color = profile.accent.withValues(alpha: 1 - impactProgress)
             ..strokeWidth = 9
@@ -327,14 +336,14 @@ class _FinisherPainter extends CustomPainter {
       case FinisherStyle.blast:
         if (hookProgress > 0 && hookProgress < 1) {
           final arc = math.sin(hookProgress * math.pi) * radius * 1.15;
-          _paintItem(canvas, to - Offset(0, arc), radius * 0.9);
+          _paintItem(canvas, to - Offset(0, arc), radius * 1.55);
         }
         if (impactProgress > 0) {
           _paintExplosion(canvas, loserCenter, impactProgress);
         }
       case FinisherStyle.trap:
         if (hookProgress > 0.35) {
-          _paintItem(canvas, loserCenter, radius * 1.15);
+          _paintItem(canvas, loserCenter, radius * 1.8);
         }
       case FinisherStyle.aura:
         final ring = Paint()
@@ -362,9 +371,7 @@ class _FinisherPainter extends CustomPainter {
     }
   }
 
-  bool get _usesUppercut =>
-      profile.style == FinisherStyle.hook ||
-      profile.style == FinisherStyle.melee;
+  bool get _usesUppercut => profile.style == FinisherStyle.hook;
 
   PowerUpKind? get _kind {
     for (final kind in PowerUpKind.values) {
@@ -391,12 +398,12 @@ class _FinisherPainter extends CustomPainter {
     final fade = 1 - progress;
     canvas.drawCircle(
       center,
-      radius * (0.45 + burst * 1.8),
+      radius * (0.7 + burst * 2.5),
       Paint()..color = profile.color.withValues(alpha: fade * 0.78),
     );
     canvas.drawCircle(
       center,
-      radius * (0.18 + burst * 1.05),
+      radius * (0.3 + burst * 1.55),
       Paint()..color = profile.accent.withValues(alpha: fade * 0.95),
     );
   }
@@ -454,6 +461,20 @@ class _FinisherPainter extends CustomPainter {
       arm,
     );
     _paintGlove(canvas, raisedGlove, radius * 0.25, fist: true);
+    final kind = _kind;
+    if (kind != null && kind.isWeapon) {
+      // Weapons are staged against the cinematic ball, not at their much
+      // smaller in-arena pickup size. A thrown grenade leaves the hand.
+      final thrown =
+          profile.style == FinisherStyle.blast && hookProgress > 0.08;
+      if (!thrown) {
+        _paintItem(
+          canvas,
+          raisedGlove + Offset(radius * 0.38, -radius * 0.18),
+          radius * 1.35,
+        );
+      }
+    }
     _paintGlove(
       canvas,
       winnerCenter + Offset(-radius * 0.9, radius * 0.32),

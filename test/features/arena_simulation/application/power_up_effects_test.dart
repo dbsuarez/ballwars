@@ -409,23 +409,18 @@ void main() {
     },
   );
 
-  test('dual wield never equips two rocket launchers', () {
+  test('rocket launcher is two-handed in a dual-wield match', () {
     final c = _match(dualWield: true);
     final ball = c.state.balls.first;
-    _give(c, ball, PowerUpKind.rocketLauncher);
+    _give(c, ball, PowerUpKind.pistol);
+    _give(c, ball, PowerUpKind.sword);
     _give(c, ball, PowerUpKind.rocketLauncher);
     expect(ball.equippedWeapons, [PowerUpKind.rocketLauncher]);
 
     _give(c, ball, PowerUpKind.sword);
-    expect(ball.equippedWeapons, [
-      PowerUpKind.rocketLauncher,
-      PowerUpKind.sword,
-    ]);
-    _give(c, ball, PowerUpKind.rocketLauncher);
-    expect(ball.equippedWeapons, [
-      PowerUpKind.sword,
-      PowerUpKind.rocketLauncher,
-    ]);
+    expect(ball.equippedWeapons, [PowerUpKind.sword]);
+    _give(c, ball, PowerUpKind.pistol);
+    expect(ball.equippedWeapons, [PowerUpKind.sword, PowerUpKind.pistol]);
   });
 
   test('in All-Out a shield halves the threads lost to the next hit', () {

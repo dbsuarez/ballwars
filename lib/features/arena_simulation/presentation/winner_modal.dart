@@ -11,6 +11,7 @@ import 'confetti_painter.dart';
 class WinnerModal extends StatefulWidget {
   final CustomBall winner;
   final double? durationSeconds;
+  final String? winningMove;
 
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
@@ -48,6 +49,7 @@ class WinnerModal extends StatefulWidget {
     super.key,
     required this.winner,
     this.durationSeconds,
+    this.winningMove,
     this.question,
     required this.onReplay,
     required this.onPlayAgain,
@@ -70,7 +72,8 @@ class WinnerModal extends StatefulWidget {
   State<WinnerModal> createState() => _WinnerModalState();
 }
 
-class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin {
+class _WinnerModalState extends State<WinnerModal>
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scaleAnim;
   late final Animation<double> _opacityAnim;
@@ -83,14 +86,23 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 700), vsync: this);
-    _scaleAnim = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 700),
+      vsync: this,
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
     _opacityAnim = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0, 0.6, curve: Curves.easeOut),
     );
     _controller.forward();
-    _confetti = AnimationController(duration: WinnerModal.confettiDuration, vsync: this)..forward();
+    _confetti = AnimationController(
+      duration: WinnerModal.confettiDuration,
+      vsync: this,
+    )..forward();
   }
 
   @override
@@ -110,11 +122,17 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
     return Container(
       margin: const EdgeInsets.only(top: 18),
       padding: const EdgeInsets.fromLTRB(14, 12, 10, 6),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: c.surfaceHigh),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: c.surfaceHigh,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Game running slow?', style: AppText.ui(14, FontWeight.w700, color: c.text)),
+          Text(
+            'Game running slow?',
+            style: AppText.ui(14, FontWeight.w700, color: c.text),
+          ),
           const SizedBox(height: 2),
           Text(
             'Turning off particle effects (sparks and confetti) can make it smoother.',
@@ -131,17 +149,31 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                       Checkbox(
                         value: _dontAskAgain,
                         visualDensity: VisualDensity.compact,
-                        onChanged: (v) => setState(() => _dontAskAgain = v ?? false),
+                        onChanged: (v) =>
+                            setState(() => _dontAskAgain = v ?? false),
                       ),
                       Flexible(
-                        child: Text("Don't ask again", style: AppText.ui(12, FontWeight.w600, color: c.muted)),
+                        child: Text(
+                          "Don't ask again",
+                          style: AppText.ui(
+                            12,
+                            FontWeight.w600,
+                            color: c.muted,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              TextButton(onPressed: () => _answerSlow(false), child: const Text('No')),
-              TextButton(onPressed: () => _answerSlow(true), child: const Text('Turn off')),
+              TextButton(
+                onPressed: () => _answerSlow(false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => _answerSlow(true),
+                child: const Text('Turn off'),
+              ),
             ],
           ),
         ],
@@ -170,13 +202,20 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
         // Covers the arena; taps pass through so the screen's own controls
         // (e.g. Restart beside it on wide screens) keep working.
         Positioned.fill(
-          child: IgnorePointer(child: ColoredBox(color: c.background.withValues(alpha: 0.9))),
+          child: IgnorePointer(
+            child: ColoredBox(color: c.background.withValues(alpha: 0.9)),
+          ),
         ),
         // Faint tiled watermark behind the card (admin setting; never takes taps).
         if (settings.watermarkEnabled)
           Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(painter: _WatermarkPainter(text: settings.watermarkText, color: c.text)),
+              child: CustomPaint(
+                painter: _WatermarkPainter(
+                  text: settings.watermarkText,
+                  color: c.text,
+                ),
+              ),
             ),
           ),
         if (widget.showEffects)
@@ -188,10 +227,20 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                 child: AnimatedBuilder(
                   animation: _confetti,
                   builder: (context, _) {
-                    final seconds = _confetti.value * WinnerModal.confettiDuration.inMilliseconds / 1000;
-                    final left = WinnerModal.confettiDuration.inMilliseconds / 1000 - seconds;
+                    final seconds =
+                        _confetti.value *
+                        WinnerModal.confettiDuration.inMilliseconds /
+                        1000;
+                    final left =
+                        WinnerModal.confettiDuration.inMilliseconds / 1000 -
+                        seconds;
                     if (left <= 0) return const SizedBox.shrink();
-                    return CustomPaint(painter: ConfettiPainter(seconds, opacity: left.clamp(0.0, 1.0)));
+                    return CustomPaint(
+                      painter: ConfettiPainter(
+                        seconds,
+                        opacity: left.clamp(0.0, 1.0),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -207,7 +256,10 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                 animation: _controller,
                 builder: (context, child) => Opacity(
                   opacity: _opacityAnim.value,
-                  child: Transform.scale(scale: 0.85 + 0.15 * _scaleAnim.value, child: child),
+                  child: Transform.scale(
+                    scale: 0.85 + 0.15 * _scaleAnim.value,
+                    child: child,
+                  ),
                 ),
                 child: SizedBox(
                   width: 340,
@@ -219,19 +271,36 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                         Padding(
                           padding: const EdgeInsets.only(bottom: 24),
                           child: Text(
-                            widget.seriesOver ? 'SERIES · ${widget.round} ROUNDS' : 'ROUND ${widget.round}',
+                            widget.seriesOver
+                                ? 'SERIES · ${widget.round} ROUNDS'
+                                : 'ROUND ${widget.round}',
                             textAlign: TextAlign.center,
-                            style: AppText.mono(11, color: c.muted, letterSpacing: 1.8),
+                            style: AppText.mono(
+                              11,
+                              color: c.muted,
+                              letterSpacing: 1.8,
+                            ),
                           ),
                         ),
-                      Center(child: CircularBallPreview(ball: widget.winner, size: 160)),
+                      Center(
+                        child: CircularBallPreview(
+                          ball: widget.winner,
+                          size: 160,
+                        ),
+                      ),
                       const SizedBox(height: 26),
                       Text(
                         widget.winner.name,
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.ui(38, FontWeight.w800, color: c.text, height: 1.05, letterSpacing: -0.6),
+                        style: AppText.ui(
+                          38,
+                          FontWeight.w800,
+                          color: c.text,
+                          height: 1.05,
+                          letterSpacing: -0.6,
+                        ),
                       ),
                       if (widget.question != null) ...[
                         const SizedBox(height: 8),
@@ -240,7 +309,11 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.ui(14, FontWeight.w600, color: c.muted),
+                          style: AppText.ui(
+                            14,
+                            FontWeight.w600,
+                            color: c.muted,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -255,17 +328,30 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                         textAlign: TextAlign.center,
                         style: AppText.ui(18, FontWeight.w600, color: c.muted),
                       ),
+                      if (widget.winningMove != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          'Winning move: ${widget.winningMove}',
+                          textAlign: TextAlign.center,
+                          style: AppText.ui(14, FontWeight.w700, color: c.text),
+                        ),
+                      ],
                       if (score != null) ...[
                         const SizedBox(height: 20),
                         Center(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: c.border),
                             ),
                             child: Text(
-                              score.map((e) => '${e.$1}  ${e.$2}').join('   ·   '),
+                              score
+                                  .map((e) => '${e.$1}  ${e.$2}')
+                                  .join('   ·   '),
                               textAlign: TextAlign.center,
                               style: AppText.mono(14, color: c.text),
                             ),
@@ -282,9 +368,15 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                       ],
                       const SizedBox(height: 28),
                       if (widget.onNextRound != null)
-                        FilledButton(onPressed: widget.onNextRound, child: const Text('Next round'))
+                        FilledButton(
+                          onPressed: widget.onNextRound,
+                          child: const Text('Next round'),
+                        )
                       else
-                        FilledButton(onPressed: widget.onPlayAgain, child: const Text('Play again')),
+                        FilledButton(
+                          onPressed: widget.onPlayAgain,
+                          child: const Text('Play again'),
+                        ),
                       const SizedBox(height: 10),
                       // Up to four secondary actions share one row: tighter padding.
                       OutlinedButtonTheme(
@@ -295,29 +387,43 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                             side: BorderSide(color: c.border),
                             foregroundColor: c.text,
                             textStyle: AppText.ui(13, FontWeight.w600),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                         child: Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton(onPressed: widget.onReplay, child: const Text('Replay')),
+                              child: OutlinedButton(
+                                onPressed: widget.onReplay,
+                                child: const Text('Replay'),
+                              ),
                             ),
                             const SizedBox(width: 10),
                             if (widget.onSaveVideo != null) ...[
                               Expanded(
-                                child: OutlinedButton(onPressed: widget.onSaveVideo, child: const Text('Save video')),
+                                child: OutlinedButton(
+                                  onPressed: widget.onSaveVideo,
+                                  child: const Text('Save video'),
+                                ),
                               ),
                               const SizedBox(width: 10),
                             ],
                             if (widget.onShareLink != null) ...[
                               Expanded(
-                                child: OutlinedButton(onPressed: widget.onShareLink, child: const Text('Share')),
+                                child: OutlinedButton(
+                                  onPressed: widget.onShareLink,
+                                  child: const Text('Share'),
+                                ),
                               ),
                               const SizedBox(width: 10),
                             ],
                             Expanded(
-                              child: OutlinedButton(onPressed: widget.onExit, child: const Text('Exit')),
+                              child: OutlinedButton(
+                                onPressed: widget.onExit,
+                                child: const Text('Exit'),
+                              ),
                             ),
                           ],
                         ),
@@ -325,9 +431,13 @@ class _WinnerModalState extends State<WinnerModal> with TickerProviderStateMixin
                       if (widget.onNextRound != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: TextButton(onPressed: widget.onPlayAgain, child: const Text('Start over')),
+                          child: TextButton(
+                            onPressed: widget.onPlayAgain,
+                            child: const Text('Start over'),
+                          ),
                         ),
-                      if (widget.onSlowAnswer != null && !_slowAnswered) _slowPrompt(c),
+                      if (widget.onSlowAnswer != null && !_slowAnswered)
+                        _slowPrompt(c),
                     ],
                   ),
                 ),
@@ -350,7 +460,14 @@ class _WatermarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final painter = TextPainter(
-      text: TextSpan(text: text, style: AppText.ui(44, FontWeight.w800, color: color.withValues(alpha: 0.04))),
+      text: TextSpan(
+        text: text,
+        style: AppText.ui(
+          44,
+          FontWeight.w800,
+          color: color.withValues(alpha: 0.04),
+        ),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     final stepX = painter.width + 48;
@@ -363,7 +480,11 @@ class _WatermarkPainter extends CustomPainter {
     var row = 0;
     for (var y = -reach; y < reach; y += stepY, row++) {
       // Every other row is shifted half a step, like bricks.
-      for (var x = -reach + (row.isOdd ? stepX / 2 : 0); x < reach; x += stepX) {
+      for (
+        var x = -reach + (row.isOdd ? stepX / 2 : 0);
+        x < reach;
+        x += stepX
+      ) {
         painter.paint(canvas, Offset(x, y));
       }
     }
@@ -371,5 +492,6 @@ class _WatermarkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_WatermarkPainter oldDelegate) => oldDelegate.text != text || oldDelegate.color != color;
+  bool shouldRepaint(_WatermarkPainter oldDelegate) =>
+      oldDelegate.text != text || oldDelegate.color != color;
 }

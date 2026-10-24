@@ -53,12 +53,29 @@ enum BallLook {
       values.where((l) => l.name == name).firstOrNull;
 }
 
+/// Cosmetic size of the sparks created when a ball hits the arena wall.
+enum WallSparkSize {
+  subtle('subtle', 'Subtle', 0.65),
+  normal('normal', 'Normal', 1.0),
+  large('large', 'Large', 1.5);
+
+  final String id;
+  final String label;
+  final double scale;
+
+  const WallSparkSize(this.id, this.label, this.scale);
+
+  static WallSparkSize? byId(String? id) =>
+      values.where((value) => value.id == id).firstOrNull;
+}
+
 class MatchConfig {
   final List<CustomBall> contestants;
   final double speedMultiplier;
 
   /// Show sparks and particles (cosmetic; the match is the same either way).
   final bool showEffects;
+  final WallSparkSize wallSparkSize;
 
   /// Round wins needed to take the series: 1 is a single round, 2 or 3 play
   /// rounds until one ball has that many wins.
@@ -90,6 +107,7 @@ class MatchConfig {
     required this.contestants,
     this.speedMultiplier = 1.0,
     this.showEffects = true,
+    this.wallSparkSize = WallSparkSize.normal,
     this.winsNeeded = 1,
     this.winCondition = WinCondition.domination,
     this.ballSize = BallSize.medium,

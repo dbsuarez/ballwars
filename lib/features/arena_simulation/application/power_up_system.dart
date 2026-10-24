@@ -269,13 +269,18 @@ class PowerUpSystem {
       ),
     );
     if (match.mode == MatchMode.arsenal) {
-      final damage = match.damage(ball, _t.arenaDamage(PowerUpKind.spikeWall));
+      final damage = match.damage(
+        ball,
+        _t.arenaDamage(PowerUpKind.spikeWall),
+        move: PowerUpKind.spikeWall.label,
+      );
       _showDamage(ball, at, damage, 0);
     } else {
       final cut = match.cutThreads(
         ball,
         _t.allOutThreads(PowerUpKind.spikeWall),
         near: at,
+        move: PowerUpKind.spikeWall.label,
       );
       _showDamage(ball, at, cut, 0);
     }
@@ -489,7 +494,7 @@ class PowerUpSystem {
                 ball.position,
               ) <=
               radius * radius) {
-            _cutLine(ball, line);
+            _cutLine(ball, line, move: kind.label);
           }
         }
       }
@@ -1005,7 +1010,7 @@ class PowerUpSystem {
           for (final line in List.of(ball.fanLines)) {
             // Rim anchors are unique, so the thread nearest a thread's own anchor is that thread.
             if (_crosses(from, end, line.startPoint, ball.position)) {
-              _cutLine(ball, line);
+              _cutLine(ball, line, move: p.kind.label);
             }
           }
         }
@@ -1133,6 +1138,7 @@ class PowerUpSystem {
         target,
         (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,
         attacker: from,
+        move: kind.label,
       );
       if (from != null &&
           (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {
@@ -1153,7 +1159,7 @@ class PowerUpSystem {
         );
       var cut = 0;
       for (final line in nearest.take(threads)) {
-        if (_cutLine(target, line)) cut++;
+        if (_cutLine(target, line, move: kind.label)) cut++;
       }
       if (from != null &&
           (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {
@@ -1190,7 +1196,7 @@ class PowerUpSystem {
                 target.position,
               ) <=
               reach * reach) {
-            _cutLine(target, line);
+            _cutLine(target, line, move: PowerUpKind.sword.label);
           }
         }
       }
@@ -1233,8 +1239,10 @@ class PowerUpSystem {
 
   /// Cuts [line] of [ball] (rim anchors are unique, so the thread nearest its own anchor is that thread)
   /// with a spark leaving the rim, like a body cut. False if it was already gone.
-  bool _cutLine(SimulationBall ball, FanLine line) {
-    if (match.cutThreads(ball, 1, near: line.startPoint) == 0) return false;
+  bool _cutLine(SimulationBall ball, FanLine line, {String? move}) {
+    if (match.cutThreads(ball, 1, near: line.startPoint, move: move) == 0) {
+      return false;
+    }
     match.state.particles.spawnRimArcs(
       origin: line.startPoint,
       normal: Offset(math.cos(line.rimAngle), math.sin(line.rimAngle)),

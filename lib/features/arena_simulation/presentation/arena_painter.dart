@@ -18,6 +18,7 @@ class ArenaPainter extends CustomPainter {
   /// Sparks and particles. Off only hides them: they are still simulated,
   /// so the match plays out the same either way.
   final bool showEffects;
+  final WallSparkSize wallSparkSize;
 
   /// The theme's background (inside the arena) and text color (the rim).
   final Color background;
@@ -31,6 +32,7 @@ class ArenaPainter extends CustomPainter {
     required this.arenaRadius,
     required this.rimAngle,
     this.showEffects = true,
+    this.wallSparkSize = WallSparkSize.normal,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
@@ -279,9 +281,12 @@ class ArenaPainter extends CustomPainter {
             1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);
         final hotness = (lifeRatio * 1.6).clamp(0.0, 1.0);
         final sparkColor = Color.lerp(particle.color, Colors.white, hotness)!;
+        final sizeScale = particle.kind == ParticleKind.wallSpark
+            ? wallSparkSize.scale
+            : 1.0;
         canvas.drawCircle(
           particle.position,
-          particle.baseRadius * lifeRatio,
+          particle.baseRadius * lifeRatio * sizeScale,
           Paint()..color = sparkColor.withValues(alpha: lifeRatio),
         );
       } else if (particle is RimArcParticle) {
@@ -313,35 +318,6 @@ class ArenaPainter extends CustomPainter {
     }
 
     PowerUpPainter.paintSpeedTrail(canvas, ball);
-
-    // Glow with edge compression (glow compresses against arena edge instead of clipping)
-    final distToCenter = ball.position.distance;
-    final edgeDist = arenaRadius - distToCenter;
-    final glowRadius = ball.radius + _ballGlowPadding;
-    final effectiveGlowRadius = edgeDist < glowRadius
-        ? glowRadius * (edgeDist / glowRadius).clamp(0.0, 1.0)
-        : glowRadius;
-
-    // Glow: a radial gradient fading out from the ball's edge (instead of an
-    // outer blur).
-    final glowOuter = effectiveGlowRadius + 6.0;
-    final edge = (ball.radius / glowOuter).clamp(0.0, 1.0);
-    final glow = ball.config.glowColor;
-    canvas.drawCircle(
-      ball.position,
-      glowOuter,
-      Paint()
-        ..shader = ui.Gradient.radial(
-          ball.position,
-          glowOuter,
-          [
-            glow.withValues(alpha: 0.45),
-            glow.withValues(alpha: 0.45),
-            glow.withValues(alpha: 0),
-          ],
-          [0, edge, 1],
-        ),
-    );
 
     if (look == BallLook.faces) {
       paintSmiley(canvas, ball, faceHealth(ball), state.balls);

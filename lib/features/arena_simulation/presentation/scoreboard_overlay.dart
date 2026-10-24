@@ -4,6 +4,7 @@ import '../../match_setup/domain/match_config.dart';
 import '../domain/fan_line.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
+import 'power_up_sprites.dart';
 
 /// One row per ball: name, current strength and round wins. Arsenal uses a
 /// compact circular life meter so the exact number stays readable on phones.
@@ -94,6 +95,23 @@ class ScoreboardOverlay extends StatelessWidget {
                       ),
                   ],
                 ),
+                if (_items(ball).isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 3,
+                    children: [
+                      for (final kind in _items(ball))
+                        Tooltip(
+                          message: kind.label,
+                          child: Semantics(
+                            label: kind.label,
+                            child: PowerUpIcon(kind, size: 20),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 if (mode == MatchMode.allOut) ...[
                   const SizedBox(height: 8),
                   HeartsRow(
@@ -121,6 +139,22 @@ class ScoreboardOverlay extends StatelessWidget {
       ],
     );
   }
+
+  List<PowerUpKind> _items(SimulationBall ball) => [
+    ...ball.equippedWeapons,
+    if (ball.speedLeft > 0) PowerUpKind.speed,
+    if (ball.frozenLeft > 0) PowerUpKind.freeze,
+    if (ball.ghostLeft > 0) PowerUpKind.ghost,
+    if (ball.magnetPending) PowerUpKind.magnet,
+    if (ball.repulsorLeft > 0) PowerUpKind.repulsor,
+    if (ball.timeBubbleLeft > 0) PowerUpKind.timeBubble,
+    if (ball.vampireLeft > 0) PowerUpKind.vampire,
+    if (ball.mirrorCharges > 0) PowerUpKind.mirror,
+    if (ball.overchargeLeft > 0) PowerUpKind.overcharge,
+    if (ball.gremlinShots > 0) PowerUpKind.gremlin,
+    if (ball.magneticFieldLeft > 0) PowerUpKind.magneticField,
+    if (ball.goldenArmorHits > 0) PowerUpKind.goldenArmor,
+  ];
 
   String _detail(SimulationBall ball) {
     final lines = ball.isEliminated

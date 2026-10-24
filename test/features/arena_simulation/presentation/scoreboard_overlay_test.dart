@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/arena_simulation/presentation/scoreboard_overlay.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
@@ -60,6 +62,27 @@ void main() {
     );
     expect(find.text('3 KOs'), findsOneWidget);
     expect(find.text('0 KOs'), findsOneWidget);
+  });
+
+  testWidgets('scoreboard shows equipped weapons and active power-ups', (tester) async {
+    final ball = _ball('a', 0)
+      ..life = 100
+      ..held = PowerUpKind.pistol
+      ..heldSecondary = PowerUpKind.sword
+      ..speedLeft = 10
+      ..goldenArmorHits = 2;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScoreboardOverlay(balls: [ball], mode: MatchMode.arsenal),
+        ),
+      ),
+    );
+    expect(find.byType(PowerUpIcon), findsNWidgets(4));
+    expect(find.bySemanticsLabel('Pistol'), findsOneWidget);
+    expect(find.bySemanticsLabel('Sword'), findsOneWidget);
+    expect(find.bySemanticsLabel('Speed'), findsOneWidget);
+    expect(find.bySemanticsLabel('Golden Armor'), findsOneWidget);
   });
 
   testWidgets('circular life remains visible on a narrow scoreboard', (tester) async {

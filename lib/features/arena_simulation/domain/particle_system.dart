@@ -9,6 +9,8 @@ abstract class BaseParticle {
   void update(double dt) => age += dt;
 }
 
+enum ParticleKind { generic, wallSpark, blood }
+
 class Particle extends BaseParticle {
   Offset position;
   Offset velocity;
@@ -16,6 +18,7 @@ class Particle extends BaseParticle {
   final double lifespan;
   final Color color;
   final double baseRadius;
+  final ParticleKind kind;
 
   Particle({
     required this.position,
@@ -23,6 +26,7 @@ class Particle extends BaseParticle {
     required this.lifespan,
     required this.color,
     required this.baseRadius,
+    this.kind = ParticleKind.generic,
   });
 
   @override
@@ -66,8 +70,14 @@ class RimArcParticle extends BaseParticle {
     final startAngle = rimAngle - angleOffset - arcLength / arenaRadius;
     final endAngle = rimAngle - angleOffset + arcLength / arenaRadius;
 
-    final startPt = Offset(math.cos(startAngle) * arenaRadius, math.sin(startAngle) * arenaRadius);
-    final endPt = Offset(math.cos(endAngle) * arenaRadius, math.sin(endAngle) * arenaRadius);
+    final startPt = Offset(
+      math.cos(startAngle) * arenaRadius,
+      math.sin(startAngle) * arenaRadius,
+    );
+    final endPt = Offset(
+      math.cos(endAngle) * arenaRadius,
+      math.sin(endAngle) * arenaRadius,
+    );
 
     return (startPt, endPt);
   }
@@ -98,13 +108,16 @@ class ParticleSystem {
       final lifespan = rng.nextDoubleRange(0.5, 1.1);
       final baseRadius = rng.nextDoubleRange(2.0, 6.0);
 
-      _particles.add(Particle(
-        position: origin,
-        velocity: velocity,
-        lifespan: lifespan,
-        color: color,
-        baseRadius: baseRadius,
-      ));
+      _particles.add(
+        Particle(
+          position: origin,
+          velocity: velocity,
+          lifespan: lifespan,
+          color: color,
+          baseRadius: baseRadius,
+          kind: ParticleKind.wallSpark,
+        ),
+      );
     }
   }
 
@@ -122,33 +135,35 @@ class ParticleSystem {
     for (var i = 0; i < count; i++) {
       final angle = baseAngle + rng.nextDoubleRange(-math.pi / 3, math.pi / 3);
       final speed = rng.nextDoubleRange(60.0, 220.0);
-      _particles.add(Particle(
-        position: origin,
-        velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
-        lifespan: rng.nextDoubleRange(0.25, 0.5),
-        color: color,
-        baseRadius: rng.nextDoubleRange(1.5, 3.5),
-      ));
+      _particles.add(
+        Particle(
+          position: origin,
+          velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
+          lifespan: rng.nextDoubleRange(0.25, 0.5),
+          color: color,
+          baseRadius: rng.nextDoubleRange(1.5, 3.5),
+          kind: ParticleKind.blood,
+        ),
+      );
     }
   }
 
   /// Spawns a burst of small green sparkles all around [origin], when a ball takes an apple.
-  void spawnSparkle({
-    required Offset origin,
-    required SeededRandom rng,
-  }) {
+  void spawnSparkle({required Offset origin, required SeededRandom rng}) {
     final count = 14 + rng.nextInt(7); // 14..20
 
     for (var i = 0; i < count; i++) {
       final angle = rng.nextDoubleRange(0, 2 * math.pi);
       final speed = rng.nextDoubleRange(40.0, 160.0);
-      _particles.add(Particle(
-        position: origin,
-        velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
-        lifespan: rng.nextDoubleRange(0.3, 0.6),
-        color: sparkleColor,
-        baseRadius: rng.nextDoubleRange(1.2, 2.8),
-      ));
+      _particles.add(
+        Particle(
+          position: origin,
+          velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
+          lifespan: rng.nextDoubleRange(0.3, 0.6),
+          color: sparkleColor,
+          baseRadius: rng.nextDoubleRange(1.2, 2.8),
+        ),
+      );
     }
   }
 
@@ -162,20 +177,25 @@ class ParticleSystem {
     final baseAngle = math.atan2(normal.dy, normal.dx);
 
     for (var i = 0; i < count; i++) {
-      final spread = rng.nextDoubleRange(-math.pi / 3, math.pi / 3); // Tighter spread
+      final spread = rng.nextDoubleRange(
+        -math.pi / 3,
+        math.pi / 3,
+      ); // Tighter spread
       final angle = baseAngle + spread;
       final speed = rng.nextDoubleRange(150.0, 400.0);
       final velocity = Offset(math.cos(angle), math.sin(angle)) * speed;
       final lifespan = rng.nextDoubleRange(0.15, 0.35); // 3-4 frames at 60fps
       final baseRadius = rng.nextDoubleRange(1.0, 2.5); // 1-2px dots
 
-      _particles.add(Particle(
-        position: origin,
-        velocity: velocity,
-        lifespan: lifespan,
-        color: Colors.white,
-        baseRadius: baseRadius,
-      ));
+      _particles.add(
+        Particle(
+          position: origin,
+          velocity: velocity,
+          lifespan: lifespan,
+          color: Colors.white,
+          baseRadius: baseRadius,
+        ),
+      );
     }
   }
 
@@ -197,13 +217,15 @@ class ParticleSystem {
       final lifespan = rng.nextDoubleRange(0.1, 0.25);
       final baseRadius = rng.nextDoubleRange(1.0, 2.0);
 
-      _particles.add(Particle(
-        position: origin,
-        velocity: velocity,
-        lifespan: lifespan,
-        color: Colors.white.withValues(alpha: 0.9),
-        baseRadius: baseRadius,
-      ));
+      _particles.add(
+        Particle(
+          position: origin,
+          velocity: velocity,
+          lifespan: lifespan,
+          color: Colors.white.withValues(alpha: 0.9),
+          baseRadius: baseRadius,
+        ),
+      );
     }
   }
 
@@ -236,15 +258,17 @@ class ParticleSystem {
       final lifespan = rng.nextDoubleRange(0.15, 0.35); // 3-4 frames at 60fps
       final arcLength = rng.nextDoubleRange(15.0, 30.0); // Arc length in pixels
 
-      _particles.add(RimArcParticle(
-        origin: origin,
-        velocity: velocity,
-        lifespan: lifespan,
-        color: Colors.white,
-        arcLength: arcLength,
-        arenaRadius: arenaRadius,
-        rimAngle: rimAngle,
-      ));
+      _particles.add(
+        RimArcParticle(
+          origin: origin,
+          velocity: velocity,
+          lifespan: lifespan,
+          color: Colors.white,
+          arcLength: arcLength,
+          arenaRadius: arenaRadius,
+          rimAngle: rimAngle,
+        ),
+      );
     }
   }
 

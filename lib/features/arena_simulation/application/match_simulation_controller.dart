@@ -95,6 +95,8 @@ class MatchSimulationController {
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
   String? _lastEliminatedId;
+  String? _winningMove;
+  final Map<SimulationBall, String> _lastMove = {};
   final Map<String, int> eliminations = {};
   final Map<SimulationBall, SimulationBall> _lastDamageBy = {};
 
@@ -379,6 +381,7 @@ class MatchSimulationController {
     SimulationBall ball,
     double amount, {
     SimulationBall? attacker,
+    String? move,
   }) {
     if (mode != MatchMode.arsenal) return 0;
     if (amount > 0 && _absorbWithGoldenArmor(ball)) return 0;
@@ -390,13 +393,14 @@ class MatchSimulationController {
     if (ball.life < before && attacker != null && !identical(ball, attacker)) {
       _lastDamageBy[ball] = attacker;
     }
+    if (ball.life < before && move != null) _lastMove[ball] = move;
     return before - ball.life;
   }
 
   /// Cuts up to [count] of [ball]'s threads and frees their rim slots, the ones anchored nearest to
   /// [near] first when it is given (otherwise in the order the ball holds them). Returns how many were
   /// cut; a ball left with none is out at the next elimination check.
-  int cutThreads(SimulationBall ball, int count, {Offset? near}) {
+  int cutThreads(SimulationBall ball, int count, {Offset? near, String? move}) {
     if (count <= 0 || ball.fanLines.isEmpty) return 0;
     if (_absorbWithGoldenArmor(ball)) return 0;
     final candidates = [...ball.fanLines];
@@ -419,6 +423,7 @@ class MatchSimulationController {
       return true;
     });
     ball.lineCount = ball.fanLines.length;
+    if (cut.isNotEmpty) _lastMove[ball] = move ?? 'Thread cut';
     return cut.length;
   }
 
@@ -436,6 +441,7 @@ class MatchSimulationController {
   /// Simulated match time so far; stops advancing once the match is finished.
   /// The last ball knocked out (the runner-up), once a match is decided.
   String? get lastEliminatedId => _lastEliminatedId;
+  String? get winningMove => _winningMove;
 
   /// How long the match has been playing, in the time passed to [tick]
   /// (so slow motion counts at the speed it is watched). Stops at the finish.
@@ -600,8 +606,18 @@ class MatchSimulationController {
               ..position += normal * ((reach - distance) / 2)
               ..velocity = normal * speedB;
             ballHits++;
-            damage(a, PowerUpTuning.arenaCollisionDamage, attacker: b);
-            damage(b, PowerUpTuning.arenaCollisionDamage, attacker: a);
+            damage(
+              a,
+              PowerUpTuning.arenaCollisionDamage,
+              attacker: b,
+              move: 'Collision',
+            );
+            damage(
+              b,
+              PowerUpTuning.arenaCollisionDamage,
+              attacker: a,
+              move: 'Collision',
+            );
             _floatingTexts.spawn(
               (a.position + b.position) / 2,
               'MAGNETIC BOUNCE!',
@@ -630,8 +646,18 @@ class MatchSimulationController {
           b.rotation -= impactAngle * 0.05;
 
           // In Arsenal, every genuine ball-to-ball bounce hurts both balls.
-          damage(a, PowerUpTuning.arenaCollisionDamage, attacker: b);
-          damage(b, PowerUpTuning.arenaCollisionDamage, attacker: a);
+          damage(
+            a,
+            PowerUpTuning.arenaCollisionDamage,
+            attacker: b,
+            move: 'Collision',
+          );
+          damage(
+            b,
+            PowerUpTuning.arenaCollisionDamage,
+            attacker: a,
+            move: 'Collision',
+          );
 
           // Melee power-ups (knife, shield bash) strike on contact.
           _powerUps?.onContact(a, b);
@@ -661,6 +687,7 @@ class MatchSimulationController {
 
         final cut = _cutLinesCrossedBy(cutter, target);
         if (cut.isEmpty) continue;
+        _lastMove[target] = 'Thread cut';
         target.hurtFlashLeft = hurtFlashSteps;
 
         // Direction from cutter to target
@@ -743,7 +770,11 @@ class MatchSimulationController {
       activeBalls = [survivor];
     }
     final knockedOut = eliminatedNow.where((b) => b.isEliminated);
-    if (knockedOut.isNotEmpty) _lastEliminatedId = knockedOut.last.config.id;
+    if (knockedOut.isNotEmpty) {
+      final last = knockedOut.last;
+      _lastEliminatedId = last.config.id;
+      _winningMove = _lastMove[last] ?? (arsenal ? 'Collision' : 'Thread cut');
+    }
     if (activeBalls.length == 1 && _balls.length > 1) {
       _winnerId = activeBalls.first.config.id;
       _status = MatchStatus.finished;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/fan_line.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
@@ -34,6 +35,28 @@ void _aimAtWall(SimulationBall ball, double degrees) {
 }
 
 void main() {
+  test('the final weapon is recorded as the winning move', () {
+    final controller = MatchSimulationController(
+      _twoBalls(),
+      arenaRadius: _arenaRadius,
+      seed: 1,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
+    final a = _ball(controller, 'a');
+    final b = _ball(controller, 'b');
+    controller.damage(
+      b,
+      100,
+      attacker: a,
+      move: PowerUpKind.pistol.label,
+    );
+    controller.tick(1 / 60);
+    expect(controller.state.winnerId, 'a');
+    expect(controller.winningMove, 'Pistol');
+  });
+
   test('Endless Battle respawns a destroyed ball and credits the attacker', () {
     final controller = MatchSimulationController(
       _twoBalls(),

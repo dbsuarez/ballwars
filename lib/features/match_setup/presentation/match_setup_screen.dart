@@ -54,6 +54,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   final math.Random _random = math.Random();
   double _speedMultiplier = 1.0;
   bool _showEffects = true;
+  WallSparkSize _wallSparkSize = WallSparkSize.normal;
   BallSize _ballSize = BallSize.medium;
   MatchMode _mode = MatchMode.threads;
   BallLook _look = BallLook.pictures;
@@ -83,6 +84,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Rounds, speed and effects start the way this device last left them.
   Future<void> _loadPrefs() async {
     final effects = await EffectsPrefs.effectsOn();
+    final wallSparkSize = WallSparkSize.byId(
+      await DevicePrefs.read('wall-spark-size'),
+    );
     final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
     final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
     final size = BallSize.byId(await DevicePrefs.read('size'));
@@ -116,6 +120,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         };
       }
       _showEffects = effects;
+      if (wallSparkSize != null) _wallSparkSize = wallSparkSize;
       if (rounds != null && const [1, 2, 3].contains(rounds)) {
         _winsNeeded = rounds;
       }
@@ -316,6 +321,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         showEffects: _showEffects,
+        wallSparkSize: _wallSparkSize,
         winsNeeded: _winsNeeded,
         ballSize: _ballSize,
         mode: _mode,
@@ -766,6 +772,20 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          _Setting(
+            label: 'WALL SPARKS',
+            child: _Cycle<WallSparkSize>(
+              values: WallSparkSize.values,
+              value: _wallSparkSize,
+              label: (value) => value.label,
+              onChanged: (value) {
+                GameAudio.instance.click();
+                setState(() => _wallSparkSize = value);
+                DevicePrefs.write('wall-spark-size', value.id);
+              },
+            ),
           ),
           const SizedBox(height: 12),
           Row(

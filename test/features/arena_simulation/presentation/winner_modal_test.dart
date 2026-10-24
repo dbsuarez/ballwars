@@ -7,7 +7,11 @@ import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 void main() {
   const winner = CustomBall(id: 'a', name: 'Alpha', primaryColor: Colors.teal, glowColor: Colors.cyan);
 
-  Future<void> pump(WidgetTester tester, {void Function(bool, bool)? onSlowAnswer}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    void Function(bool, bool)? onSlowAnswer,
+    String? winningMove,
+  }) async {
     tester.view.physicalSize = const Size(1080, 2200);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
@@ -15,12 +19,24 @@ void main() {
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
         home: Scaffold(
-          body: WinnerModal(winner: winner, onReplay: () {}, onPlayAgain: () {}, onExit: () {}, onSlowAnswer: onSlowAnswer),
+          body: WinnerModal(
+            winner: winner,
+            winningMove: winningMove,
+            onReplay: () {},
+            onPlayAgain: () {},
+            onExit: () {},
+            onSlowAnswer: onSlowAnswer,
+          ),
         ),
       ),
     );
     await tester.pump(const Duration(seconds: 1));
   }
+
+  testWidgets('shows the weapon used for the winning move', (tester) async {
+    await pump(tester, winningMove: 'Pistol');
+    expect(find.text('Winning move: Pistol'), findsOneWidget);
+  });
 
   testWidgets('asks whether to turn effects off; the answer and "don\'t ask again" are passed on', (tester) async {
     (bool, bool)? answer;

@@ -412,6 +412,9 @@ class _HomeScreenState extends State<_HomeScreen> {
     // The ball look is the viewer's own choice (cosmetic, not in links).
     final look =
         BallLook.byName(await DevicePrefs.read('look')) ?? BallLook.pictures;
+    final wallSparkSize =
+        WallSparkSize.byId(await DevicePrefs.read('wall-spark-size')) ??
+        WallSparkSize.normal;
     // endOfFrame (not addPostFrameCallback): after the awaits above the first
     // frame is long done and an idle screen never draws another one, so a
     // post-frame callback would never run. endOfFrame schedules a frame.
@@ -432,6 +435,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             endlessBattle: link.endlessBattle,
             showEffects: link.showEffects,
             look: look,
+            wallSparkSize: wallSparkSize,
           ),
           seed: link.seed,
         ),

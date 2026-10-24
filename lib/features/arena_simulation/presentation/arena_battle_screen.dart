@@ -515,6 +515,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         arenaRadius: _arenaRadius,
                         rimAngle: _rimAngle,
                         showEffects: _showEffects,
+                        wallSparkSize: widget.config.wallSparkSize,
                         repaint: _frame,
                         look: widget.config.look,
                       ),
@@ -548,6 +549,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     winner: _winnerBall!,
                     question: widget.config.question,
                     durationSeconds: _controller.elapsedSeconds,
+                    winningMove: _controller.winningMove,
                     onSaveVideo: _videoExport == null
                         ? null
                         : () {

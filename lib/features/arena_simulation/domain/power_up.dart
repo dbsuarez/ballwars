@@ -68,7 +68,11 @@ enum PowerUpKind {
   bool get isBlade => this == knife || this == sword;
 
   /// Two-handed weapons cannot share the dual-wield loadout.
-  bool get isTwoHanded => this == rocketLauncher;
+  bool get isTwoHanded =>
+      this == rocketLauncher ||
+      this == gatling ||
+      this == bow ||
+      this == threadHarpoon;
 
   /// Weapons occupy the ball's single equipment slot. Keeping this category
   /// explicit leaves room for a future multi-weapon loadout.

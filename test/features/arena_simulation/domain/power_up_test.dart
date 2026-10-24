@@ -91,6 +91,15 @@ void main() {
     );
   });
 
+  test('heavy weapons are categorized as two-handed', () {
+    expect(PowerUpKind.values.where((kind) => kind.isTwoHanded).toSet(), {
+      PowerUpKind.rocketLauncher,
+      PowerUpKind.gatling,
+      PowerUpKind.bow,
+      PowerUpKind.threadHarpoon,
+    });
+  });
+
   test(
     'only items that directly deal configured damage qualify for finishers',
     () {

@@ -19,6 +19,7 @@ class ExportVideoDialog extends StatefulWidget {
   final bool showEffects;
   final ReplayStyle style;
   final VideoEncoder encoder;
+
   /// When slow motion starts (the admin's setting), so the video matches.
   final int slowMotionLines;
   final double? slowMotionBeforeWinSeconds;
@@ -26,6 +27,7 @@ class ExportVideoDialog extends StatefulWidget {
   final MatchMode mode;
   final Set<PowerUpKind>? powerUps;
   final PowerUpConfig tuning;
+  final bool shrinkingArena;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -41,6 +43,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.mode = MatchMode.threads,
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
+    this.shrinkingArena = false,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -59,9 +62,11 @@ class ExportVideoDialog extends StatefulWidget {
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
+    bool shrinkingArena = false,
     BallLook look = BallLook.pictures,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
+    bool ballGlowEnabled = true,
     required VideoExportBackend backend,
   }) {
     return showDialog<void>(
@@ -79,12 +84,14 @@ class ExportVideoDialog extends StatefulWidget {
         mode: mode,
         powerUps: powerUps,
         tuning: tuning,
+        shrinkingArena: shrinkingArena,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
           text: colors?.text ?? const ReplayStyle().text,
           muted: colors?.muted ?? const ReplayStyle().muted,
           look: look,
+          ballGlowEnabled: ballGlowEnabled,
         ),
         encoder: backend,
         saver: backend,
@@ -125,6 +132,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         mode: widget.mode,
         powerUps: widget.powerUps,
         tuning: widget.tuning,
+        shrinkingArena: widget.shrinkingArena,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {
@@ -162,7 +170,10 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
             children: [
               LinearProgressIndicator(value: _progress),
               const SizedBox(height: 12),
-              Text('${(_progress * 100).round()}%', textAlign: TextAlign.center),
+              Text(
+                '${(_progress * 100).round()}%',
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
           actions: [
@@ -180,7 +191,10 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
           title: const Text('VIDEO SAVED'),
           content: Text(widget.saver.savedMessage),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CLOSE')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CLOSE'),
+            ),
             FilledButton.icon(
               onPressed: () => widget.saver.share(_savedVideo!),
               icon: const Icon(Icons.share),
@@ -192,7 +206,12 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         return AlertDialog(
           title: const Text('COULD NOT SAVE VIDEO'),
           content: Text(_error ?? 'Unknown error'),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('CLOSE'))],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CLOSE'),
+            ),
+          ],
         );
     }
   }

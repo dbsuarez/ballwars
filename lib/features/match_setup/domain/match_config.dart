@@ -97,6 +97,9 @@ class MatchConfig {
   /// Arsenal-only: eliminated balls respawn and the battle tracks knockouts.
   final bool endlessBattle;
 
+  /// Gradually contracts the playable boundary during the match.
+  final bool shrinkingArena;
+
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
 
@@ -116,6 +119,7 @@ class MatchConfig {
     this.powerUps,
     this.dualWield = false,
     this.endlessBattle = false,
+    this.shrinkingArena = false,
     this.tuning = PowerUpConfig.defaults,
     this.mode = MatchMode.threads,
   });

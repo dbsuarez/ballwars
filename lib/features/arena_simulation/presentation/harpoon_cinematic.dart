@@ -400,14 +400,22 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.gatling:
         if (hookProgress > 0 && hookProgress < 1) {
-          final sequence = hookProgress * 7;
-          final shot = sequence.floor().clamp(0, 6);
-          final local = sequence - shot;
-          final target = loserCenter + Offset(0, (shot - 3) * radius * 0.13);
-          _paintBullet(
-            canvas,
-            Offset.lerp(from, target, local.clamp(0.0, 1.0))!,
-            radius * 0.16,
+          // A continuous belt-fed stream: several individual rounds remain
+          // visible at once instead of one stop-start burst.
+          for (var i = 0; i < 8; i++) {
+            final local = (hookProgress * 2.8 + i / 8) % 1.0;
+            final target =
+                loserCenter + Offset(0, ((i % 5) - 2) * radius * 0.12);
+            _paintBullet(
+              canvas,
+              Offset.lerp(from, target, local)!,
+              radius * 0.14,
+            );
+          }
+          canvas.drawCircle(
+            from,
+            radius * (0.18 + 0.08 * math.sin(hookProgress * 80).abs()),
+            Paint()..color = profile.accent,
           );
         }
       case PowerUpKind.knife:
@@ -475,12 +483,25 @@ class _FinisherPainter extends CustomPainter {
           _paintExplosion(canvas, loserCenter, impactProgress);
         }
       case PowerUpKind.grenade:
+      case PowerUpKind.molotov:
         if (hookProgress > 0 && hookProgress < 1) {
           final arc = math.sin(hookProgress * math.pi) * radius * 1.4;
           _paintItem(canvas, to - Offset(0, arc), radius * 1.65);
         }
         if (impactProgress > 0) {
           _paintExplosion(canvas, loserCenter, impactProgress);
+          if (kind == PowerUpKind.molotov) {
+            for (var i = 0; i < 9; i++) {
+              final angle = i * math.pi * 2 / 9;
+              final flame =
+                  loserCenter + Offset.fromDirection(angle, radius * 1.4);
+              canvas.drawCircle(
+                flame - Offset(0, radius * 0.35 * impactProgress),
+                radius * 0.18,
+                Paint()..color = i.isEven ? profile.color : profile.accent,
+              );
+            }
+          }
         }
       case PowerUpKind.hook:
         if (hookProgress > 0 && uppercutProgress < 0.72) {
@@ -602,11 +623,17 @@ class _FinisherPainter extends CustomPainter {
             final delay = i.abs() * 0.035;
             final p = ((hookProgress - delay) / (1 - delay)).clamp(0.0, 1.0);
             final start = from + Offset(0, i * radius * 0.08);
-            final end = loserCenter + Offset(i * radius * 0.27, 0);
+            final x = i * radius * 0.24;
+            final y = -math.sqrt(
+              math.max(0, radius * radius * 0.82 * 0.82 - x * x),
+            );
+            final end = loserCenter + Offset(x, y);
             final point =
                 Offset.lerp(start, end, p)! -
                 Offset(0, math.sin(p * math.pi) * radius * 2.2);
-            _paintArrowGlyph(canvas, point, profile.accent);
+            final towardBall = loserCenter - point;
+            final angle = math.atan2(towardBall.dy, towardBall.dx);
+            _paintArrowGlyph(canvas, point, profile.accent, angle: angle);
           }
         }
       default:
@@ -642,16 +669,25 @@ class _FinisherPainter extends CustomPainter {
     _paintArrowGlyph(canvas, mid, color);
   }
 
-  void _paintArrowGlyph(Canvas canvas, Offset point, Color color) {
+  void _paintArrowGlyph(
+    Canvas canvas,
+    Offset point,
+    Color color, {
+    double angle = 0,
+  }) {
+    canvas.save();
+    canvas.translate(point.dx, point.dy);
+    canvas.rotate(angle);
     final paint = Paint()
       ..color = color
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
     final length = radius * 0.72;
-    final tail = point - Offset(length, 0);
-    canvas.drawLine(tail, point, paint);
-    canvas.drawLine(point, point - Offset(radius * 0.2, radius * 0.14), paint);
-    canvas.drawLine(point, point - Offset(radius * 0.2, -radius * 0.14), paint);
+    final tail = Offset(-length, 0);
+    canvas.drawLine(tail, Offset.zero, paint);
+    canvas.drawLine(Offset.zero, const Offset(-1, -0.7) * radius * 0.2, paint);
+    canvas.drawLine(Offset.zero, const Offset(-1, 0.7) * radius * 0.2, paint);
+    canvas.restore();
   }
 
   bool get _usesUppercut => profile.move == 'Hook';

@@ -11,9 +11,14 @@ import '../data/video_encoder.dart';
 import '../presentation/replay_frame_painter.dart';
 
 /// Renders a picture into `width * height * 4` bytes of RGBA.
-typedef FrameRasterizer = Future<Uint8List> Function(ui.Picture picture, int width, int height);
+typedef FrameRasterizer =
+    Future<Uint8List> Function(ui.Picture picture, int width, int height);
 
-Future<Uint8List> rasterizePicture(ui.Picture picture, int width, int height) async {
+Future<Uint8List> rasterizePicture(
+  ui.Picture picture,
+  int width,
+  int height,
+) async {
   final image = await picture.toImage(width, height);
   try {
     final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
@@ -45,7 +50,10 @@ class ReplayVideoExporter {
   final VideoEncoder encoder;
   final FrameRasterizer rasterize;
 
-  ReplayVideoExporter({required this.encoder, this.rasterize = rasterizePicture});
+  ReplayVideoExporter({
+    required this.encoder,
+    this.rasterize = rasterizePicture,
+  });
 
   /// Encodes the match and returns the video's local path. [onProgress]
   /// receives 0..1; throws [ExportCancelled] once [isCancelled] returns true.
@@ -61,29 +69,31 @@ class ReplayVideoExporter {
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
+    bool shrinkingArena = false,
     ReplayStyle style = const ReplayStyle(),
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
   }) async {
-    MatchSimulationController newMatch() =>
-        MatchSimulationController(
-          contestants,
-          arenaRadius: arenaRadius,
-          seed: seed,
-          arenaBackground: style.background,
-          slowMotionLines: slowMotionLines,
-          slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
-          ballScale: ballScale,
-          mode: mode,
-          powerUpKinds: powerUps,
-          tuning: tuning,
-        );
+    MatchSimulationController newMatch() => MatchSimulationController(
+      contestants,
+      arenaRadius: arenaRadius,
+      seed: seed,
+      arenaBackground: style.background,
+      slowMotionLines: slowMotionLines,
+      slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
+      ballScale: ballScale,
+      mode: mode,
+      powerUpKinds: powerUps,
+      tuning: tuning,
+      shrinkingArena: shrinkingArena,
+    );
     final frameDelta = speedMultiplier / fps;
 
     // Dry run (no rendering) to know the total frame count for progress.
     final dryRun = newMatch();
     var matchFrames = 0;
-    while (dryRun.state.status != MatchStatus.finished && matchFrames < maxMatchFrames) {
+    while (dryRun.state.status != MatchStatus.finished &&
+        matchFrames < maxMatchFrames) {
       dryRun.tick(frameDelta);
       matchFrames++;
     }
@@ -100,7 +110,9 @@ class ReplayVideoExporter {
     var written = 0;
     // Seconds into the video for the frame being drawn (moves the watermark).
     double videoTime() => written / fps;
-    Future<void> emit(void Function(ui.Canvas canvas, ui.Size size) paint) async {
+    Future<void> emit(
+      void Function(ui.Canvas canvas, ui.Size size) paint,
+    ) async {
       if (isCancelled?.call() ?? false) throw const ExportCancelled();
       final recorder = ui.PictureRecorder();
       paint(ui.Canvas(recorder), const ui.Size(width + 0.0, height + 0.0));
@@ -122,7 +134,8 @@ class ReplayVideoExporter {
             canvas,
             size,
             state,
-            arenaRadius,
+            match.arenaRadius,
+            worldRadius: arenaRadius,
             videoTime: videoTime(),
             showEffects: showEffects,
             style: style,
@@ -139,7 +152,8 @@ class ReplayVideoExporter {
             canvas,
             size,
             finalState,
-            arenaRadius,
+            match.arenaRadius,
+            worldRadius: arenaRadius,
             videoTime: videoTime(),
             showEffects: showEffects,
             style: style,
@@ -147,7 +161,9 @@ class ReplayVideoExporter {
         );
       }
 
-      final loser = finalState.balls.where((b) => b.config.id == match.lastEliminatedId).firstOrNull;
+      final loser = finalState.balls
+          .where((b) => b.config.id == match.lastEliminatedId)
+          .firstOrNull;
       for (var i = 0; i < loserFrames && loser != null; i++) {
         match.tick(frameDelta);
         await emit(
@@ -155,9 +171,10 @@ class ReplayVideoExporter {
             canvas,
             size,
             finalState,
-            arenaRadius,
+            match.arenaRadius,
             loser,
             i / loserFrames,
+            worldRadius: arenaRadius,
             videoTime: videoTime(),
             showEffects: showEffects,
             style: style,
@@ -165,7 +182,9 @@ class ReplayVideoExporter {
         );
       }
 
-      final winner = finalState.balls.where((b) => b.config.id == finalState.winnerId).firstOrNull;
+      final winner = finalState.balls
+          .where((b) => b.config.id == finalState.winnerId)
+          .firstOrNull;
       for (var i = 0; i < cardFrames && winner != null; i++) {
         await emit(
           (canvas, size) =>

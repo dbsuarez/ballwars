@@ -7,8 +7,10 @@ import '../../match_setup/domain/match_config.dart';
 class ArenaCanvas extends StatelessWidget {
   final SimulationState state;
   final double arenaRadius;
+  final double? worldRadius;
   final double rimAngle;
   final bool showEffects;
+  final bool showBallGlow;
   final WallSparkSize wallSparkSize;
 
   /// Repaints the arena when it notifies, without rebuilding any widgets.
@@ -20,8 +22,10 @@ class ArenaCanvas extends StatelessWidget {
     super.key,
     required this.state,
     required this.arenaRadius,
+    this.worldRadius,
     required this.rimAngle,
     this.showEffects = true,
+    this.showBallGlow = true,
     this.wallSparkSize = WallSparkSize.normal,
     this.repaint,
     this.look = BallLook.pictures,
@@ -36,8 +40,10 @@ class ArenaCanvas extends StatelessWidget {
         painter: ArenaPainter(
           state: state,
           arenaRadius: arenaRadius,
+          worldRadius: worldRadius,
           rimAngle: rimAngle,
           showEffects: showEffects,
+          showBallGlow: showBallGlow,
           wallSparkSize: wallSparkSize,
           background: c.background,
           rimColor: c.text,

@@ -67,7 +67,21 @@ class MatchSimulationController {
   static const int slowMotionLineThreshold = 10;
   static const double slowMotionTimeScale = 0.25;
 
-  final double arenaRadius;
+  final double initialArenaRadius;
+  final bool shrinkingArena;
+
+  static const int shrinkGraceSteps = 10 * 60;
+  static const int shrinkDurationSteps = 120 * 60;
+  static const double minimumArenaScale = 0.60;
+
+  double get arenaRadius {
+    if (!shrinkingArena || _stepCount <= shrinkGraceSteps) {
+      return initialArenaRadius;
+    }
+    final progress = ((_stepCount - shrinkGraceSteps) / shrinkDurationSteps)
+        .clamp(0.0, 1.0);
+    return initialArenaRadius * (1 - (1 - minimumArenaScale) * progress);
+  }
 
   /// The seed this match runs on. Re-running the same contestants with this
   /// seed reproduces the match exactly (used for replays and video export).
@@ -166,7 +180,7 @@ class MatchSimulationController {
 
   MatchSimulationController(
     List<CustomBall> contestants, {
-    required this.arenaRadius,
+    required double arenaRadius,
     int? seed,
     double restitution = 1.0,
     this.rimSlotCount = kRimSlotCount,
@@ -181,7 +195,9 @@ class MatchSimulationController {
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
-  }) : seed = seed ?? DateTime.now().millisecondsSinceEpoch {
+    this.shrinkingArena = false,
+  }) : initialArenaRadius = arenaRadius,
+       seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (!endlessBattle &&
         lookAhead &&
         (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
@@ -202,6 +218,7 @@ class MatchSimulationController {
         tuning: tuning,
         dualWield: dualWield,
         endlessBattle: endlessBattle,
+        shrinkingArena: shrinkingArena,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished &&
@@ -509,6 +526,7 @@ class MatchSimulationController {
   }
 
   void _stepPhysics(double dt) {
+    _physics.arenaRadius = arenaRadius;
     // Lines deactivated from outside the step (e.g. tests) free their slots.
     _pruneInactiveLines();
     for (final ball in _balls) {
@@ -672,6 +690,7 @@ class MatchSimulationController {
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
       for (final line in ball.fanLines) {
+        line.startPoint = line.rimPoint(arenaRadius);
         line.endPoint = ball.position;
       }
     }

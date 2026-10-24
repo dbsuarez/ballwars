@@ -63,6 +63,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   Set<PowerUpKind>? _powerUps;
   bool _dualWield = false;
   bool _endlessBattle = false;
+  bool _shrinkingArena = false;
 
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
@@ -94,6 +95,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final look = BallLook.byName(await DevicePrefs.read('look'));
     final dualWield = await DevicePrefs.read('dual-wield');
     final endlessBattle = await DevicePrefs.read('endless-battle');
+    final shrinkingArena = await DevicePrefs.read('shrinking-arena');
     final savedKinds = {
       for (final name in (await DevicePrefs.read('power-ups') ?? '').split(','))
         ...PowerUpKind.values.where((k) => k.name == name),
@@ -112,6 +114,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       if (look != null) _look = look;
       _dualWield = dualWield == '1';
       _endlessBattle = endlessBattle == '1';
+      _shrinkingArena = shrinkingArena == '1';
       if (savedKinds.isNotEmpty &&
           savedKinds.length < PowerUpKind.values.length) {
         _powerUps = {
@@ -329,6 +332,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
         dualWield: _mode != MatchMode.threads && _dualWield,
         endlessBattle: _mode == MatchMode.arsenal && _endlessBattle,
+        shrinkingArena: _shrinkingArena,
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode == MatchMode.threads
             ? PowerUpConfig.defaults
@@ -644,6 +648,20 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 },
               ),
           ],
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Shrinking arena'),
+            subtitle: const Text(
+              'After 10 seconds, the boundary contracts to 60% over 2 minutes',
+            ),
+            value: _shrinkingArena,
+            onChanged: (value) {
+              GameAudio.instance.click();
+              setState(() => _shrinkingArena = value);
+              DevicePrefs.write('shrinking-arena', value ? '1' : '0');
+            },
+          ),
           const SizedBox(height: 8),
           SizedBox(
             height: 36,

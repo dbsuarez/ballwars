@@ -12,7 +12,7 @@ class FanLine {
   final int slotIndex;
   final double rimAngle; // Fixed rim angle of the slot, in radians
   bool isActive;
-  final Offset startPoint; // Rim anchor
+  Offset startPoint; // Rim anchor; follows a shrinking arena.
   Offset endPoint; // Owner's center, updated every step
 
   FanLine({
@@ -26,7 +26,7 @@ class FanLine {
 
   /// Computes the rim point for this line's angle.
   Offset rimPoint(double arenaRadius) => Offset(
-        math.cos(rimAngle) * arenaRadius,
-        math.sin(rimAngle) * arenaRadius,
-      );
+    math.cos(rimAngle) * arenaRadius,
+    math.sin(rimAngle) * arenaRadius,
+  );
 }

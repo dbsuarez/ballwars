@@ -50,6 +50,9 @@ class PowerUpSystem {
   /// Recent blasts, for drawing (removed after [PowerUpTuning.explosionShowSteps]).
   final List<Explosion> explosions = [];
 
+  /// Three-second floor fires created by thrown Molotovs.
+  final List<BurningZone> burningZones = [];
+
   /// Recent portal exits and entries, retained briefly for the painter.
   final List<PortalFlash> portalFlashes = [];
 
@@ -158,12 +161,14 @@ class PowerUpSystem {
   /// (a speed boost picked up in step N runs from step N + 1).
   void step() {
     _countDown();
+    _burn();
     _updateStickyGoo();
     _triggerMines();
     _triggerPortals();
     _triggerSpikeWalls();
     _triggerStickyGoo();
     _pickUpTouched();
+    _strikeWithOrbitingFlails();
     _sweep();
     _updateFrozen();
     _moveProjectiles();
@@ -449,6 +454,12 @@ class PowerUpSystem {
       e.age++;
     }
     explosions.removeWhere((e) => e.age >= PowerUpTuning.explosionShowSteps);
+    for (final fire in burningZones) {
+      fire.age++;
+    }
+    burningZones.removeWhere(
+      (fire) => fire.age >= PowerUpTuning.molotovBurnSteps,
+    );
     for (final flash in portalFlashes) {
       flash.age++;
     }
@@ -470,6 +481,28 @@ class PowerUpSystem {
       if (ball.overchargeLeft > 0) ball.overchargeLeft--;
       if (ball.magneticFieldLeft > 0) ball.magneticFieldLeft--;
       if (!_alive(ball)) ball.magnetPending = false;
+    }
+  }
+
+  void _ignite(Offset at, SimulationBall owner) {
+    final radius = match.arenaRadius * _t.blastRadiusRatio;
+    blasts++;
+    burningZones.add(BurningZone(owner: owner, position: at, radius: radius));
+    match.state.floatingTexts.spawn(at, 'BURN!', const Color(0xFFFF7A2F));
+  }
+
+  void _burn() {
+    for (final fire in burningZones) {
+      if (fire.age % PowerUpTuning.molotovTickSteps != 0) continue;
+      for (final ball in match.state.balls) {
+        if (identical(ball, fire.owner) || !_alive(ball) || ball.isGhost) {
+          continue;
+        }
+        if ((ball.position - fire.position).distance - ball.radius <=
+            fire.radius) {
+          _hit(ball, PowerUpKind.molotov, at: ball.position, from: fire.owner);
+        }
+      }
     }
   }
 
@@ -798,6 +831,27 @@ class PowerUpSystem {
   /// fires its other rounds one every [PowerUpTuning.gatlingIntervalSteps] steps. Balls that are out
   /// (or lost their last life or thread earlier this step) or frozen neither aim nor fire (bullets
   /// already in flight still fly).
+  void _strikeWithOrbitingFlails() {
+    for (final attacker in match.state.balls) {
+      if (!_alive(attacker) ||
+          !attacker.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
+        continue;
+      }
+      for (final target in match.state.balls) {
+        if (identical(attacker, target) || !_alive(target) || target.isGhost) {
+          continue;
+        }
+        final reach = attacker.radius * 2.7 + target.radius;
+        if ((target.position - attacker.position).distance <= reach) {
+          _melee(attacker, PowerUpKind.orbitingFlail, target, [
+            ...target.equippedWeapons,
+          ]);
+          break;
+        }
+      }
+    }
+  }
+
   void _aimAndFire() {
     for (final ball in match.state.balls) {
       if (!_alive(ball)) {
@@ -856,6 +910,9 @@ class PowerUpSystem {
             case PowerUpKind.grenade:
               _throwGrenade(ball, target);
               _yell(ball, 'FIRE IN THE HOLE!');
+            case PowerUpKind.molotov:
+              _throwMolotov(ball, target);
+              _yell(ball, 'LIGHT IT UP!');
             case PowerUpKind.hook:
               _fire(
                 ball,
@@ -1021,6 +1078,22 @@ class PowerUpSystem {
     shots++;
   }
 
+  void _throwMolotov(SimulationBall ball, SimulationBall target) {
+    final toTarget = target.position - ball.position;
+    final distance = toTarget.distance;
+    final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    projectiles.add(
+      Projectile(
+        owner: ball,
+        kind: PowerUpKind.molotov,
+        position: ball.position + direction * ball.radius,
+        velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
+        landAt: target.position,
+      ),
+    );
+    shots++;
+  }
+
   /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
   void _fire(
     SimulationBall ball,
@@ -1095,7 +1168,7 @@ class PowerUpSystem {
       var end = struck == null ? to : Offset.lerp(from, to, strikeAt)!;
       final landAt = p.landAt;
       if (landAt != null) {
-        // A grenade flies over threads, and blows up on a ball or where it lands (or at the rim).
+        // A thrown explosive resolves on a ball, its target, or the rim.
         final left = (landAt - from).distance;
         final landed = struck == null && (to - from).distance >= left;
         if (landed) end = landAt;
@@ -1103,7 +1176,11 @@ class PowerUpSystem {
           p
             ..position = end
             ..spent = true;
-          _explode(end, p.owner, PowerUpKind.grenade);
+          if (p.kind == PowerUpKind.molotov) {
+            _ignite(end, p.owner);
+          } else {
+            _explode(end, p.owner, PowerUpKind.grenade);
+          }
         } else {
           p.position = end;
         }

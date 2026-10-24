@@ -458,10 +458,7 @@ void main() {
     );
     final uri = link.toUri(presetIds: {for (final b in _presets) b.id});
     expect(uri.queryParameters['endless'], '1');
-    expect(
-      ReplayLink.fromUri(uri, presets: _presets)!.endlessBattle,
-      isTrue,
-    );
+    expect(ReplayLink.fromUri(uri, presets: _presets)!.endlessBattle, isTrue);
 
     final balls = 'p.${_presets[0].id},p.${_presets[1].id}';
     expect(
@@ -471,5 +468,17 @@ void main() {
       ),
       isNull,
     );
+  });
+
+  test('Shrinking arena travels in replay links', () {
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      shrinkingArena: true,
+    );
+    final uri = link.toUri(presetIds: {for (final b in _presets) b.id});
+    expect(uri.queryParameters['shrink'], '1');
+    expect(ReplayLink.fromUri(uri, presets: _presets)!.shrinkingArena, isTrue);
   });
 }

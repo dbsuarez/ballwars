@@ -542,6 +542,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       _Section(
+                        title: 'BALLS',
+                        child: SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Outer glow in the arena',
+                            style: AppText.ui(
+                              14,
+                              FontWeight.w600,
+                              color: c.text,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Shown around every ball during matches and replays.',
+                            style: AppText.ui(
+                              13,
+                              FontWeight.w500,
+                              color: c.muted,
+                            ),
+                          ),
+                          value: settings.ballGlowEnabled,
+                          onChanged: _busy
+                              ? null
+                              : (v) => _save(
+                                  settings.copyWith(ballGlowEnabled: v),
+                                  done: v ? 'Ball glow on.' : 'Ball glow off.',
+                                ),
+                        ),
+                      ),
+                      _Section(
                         title: 'WATERMARK',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,

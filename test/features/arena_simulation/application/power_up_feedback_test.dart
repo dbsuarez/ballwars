@@ -284,6 +284,30 @@ void main() {
     },
   );
 
+  test(
+    'a Molotov leaves a visible three-second fire that damages in pulses',
+    () {
+      final c = _match();
+      final [a, b] = c.state.balls;
+      a.held = PowerUpKind.molotov;
+      _run(c, PowerUpTuning.aimSteps);
+      expect(_texts(c), contains('LIGHT IT UP!'));
+      expect(c.powerUps!.projectiles.single.kind, PowerUpKind.molotov);
+
+      for (var i = 0; i < 120 && c.powerUps!.burningZones.isEmpty; i++) {
+        _run(c, 1);
+      }
+      expect(c.powerUps!.burningZones, hasLength(1));
+      expect(c.powerUps!.explosions, isEmpty);
+      final before = b.life;
+      _run(c, PowerUpTuning.molotovTickSteps);
+      expect(b.life, before - PowerUpTuning.arenaDamage[PowerUpKind.molotov]!);
+      _run(c, PowerUpTuning.molotovBurnSteps - PowerUpTuning.molotovTickSteps);
+      expect(c.powerUps!.burningZones, isEmpty);
+      expect(a.life, PowerUpTuning.arenaLife);
+    },
+  );
+
   test('a sword strikes like a knife at double the damage and is used up', () {
     expect(
       PowerUpTuning.arenaDamage[PowerUpKind.sword],

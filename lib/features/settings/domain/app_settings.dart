@@ -11,6 +11,7 @@ class AppSettings {
 
   /// The tiled watermark behind the winner card.
   final bool watermarkEnabled;
+  final bool ballGlowEnabled;
   final String watermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
@@ -34,6 +35,7 @@ class AppSettings {
     this.headline = defaultHeadline,
     this.themeId = 'midnight',
     this.watermarkEnabled = true,
+    this.ballGlowEnabled = true,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
@@ -54,23 +56,25 @@ class AppSettings {
     String? headline,
     String? themeId,
     bool? watermarkEnabled,
+    bool? ballGlowEnabled,
     String? watermarkText,
     String? musicId,
     String? menuMusicId,
     int? slowMotionLines,
     double? Function()? slowMotionBeforeWinSeconds,
     PowerUpConfig? powerUps,
-  }) =>
-      AppSettings(
-        headline: headline ?? this.headline,
-        themeId: themeId ?? this.themeId,
-        watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
-        watermarkText: watermarkText ?? this.watermarkText,
-        musicId: musicId ?? this.musicId,
-        menuMusicId: menuMusicId ?? this.menuMusicId,
-        slowMotionLines: slowMotionLines ?? this.slowMotionLines,
-        slowMotionBeforeWinSeconds:
-            slowMotionBeforeWinSeconds == null ? this.slowMotionBeforeWinSeconds : slowMotionBeforeWinSeconds(),
-        powerUps: powerUps ?? this.powerUps,
-      );
+  }) => AppSettings(
+    headline: headline ?? this.headline,
+    themeId: themeId ?? this.themeId,
+    watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
+    ballGlowEnabled: ballGlowEnabled ?? this.ballGlowEnabled,
+    watermarkText: watermarkText ?? this.watermarkText,
+    musicId: musicId ?? this.musicId,
+    menuMusicId: menuMusicId ?? this.menuMusicId,
+    slowMotionLines: slowMotionLines ?? this.slowMotionLines,
+    slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds == null
+        ? this.slowMotionBeforeWinSeconds
+        : slowMotionBeforeWinSeconds(),
+    powerUps: powerUps ?? this.powerUps,
+  );
 }

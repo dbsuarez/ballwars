@@ -38,7 +38,8 @@ enum PowerUpKind {
   spikeWall('Spike Wall'),
   goldenArmor('Golden Armor'),
   bow('Bow'),
-  stickyGoo('Sticky Goo');
+  stickyGoo('Sticky Goo'),
+  molotov('Molotov');
 
   const PowerUpKind(this.label);
 
@@ -52,6 +53,7 @@ enum PowerUpKind {
       this == gatling ||
       this == freeze ||
       this == grenade ||
+      this == molotov ||
       this == hook ||
       this == ricochetDisc ||
       this == threadHarpoon ||
@@ -72,6 +74,7 @@ enum PowerUpKind {
       this == shield ||
       this == freeze ||
       this == grenade ||
+      this == molotov ||
       this == sword ||
       this == hook ||
       this == ricochetDisc ||
@@ -153,6 +156,20 @@ class Explosion {
   final double radius;
 
   /// Steps since it went off.
+  int age = 0;
+}
+
+/// A Molotov fire left on the floor for three seconds.
+class BurningZone {
+  BurningZone({
+    required this.owner,
+    required this.position,
+    required this.radius,
+  });
+
+  final SimulationBall owner;
+  final Offset position;
+  final double radius;
   int age = 0;
 }
 
@@ -338,6 +355,8 @@ class PowerUpTuning {
   static const int ghostSteps = 180;
   static const int specialEffectSteps = 180;
   static const int stickyGooSteps = 120;
+  static const int molotovBurnSteps = 180;
+  static const int molotovTickSteps = 30;
 
   /// Bomb blast radius as a fraction of the arena radius.
   static const double blastRadiusRatio = 0.28;
@@ -374,6 +393,7 @@ class PowerUpTuning {
     PowerUpKind.phaseMine: 40,
     PowerUpKind.spikeWall: 25,
     PowerUpKind.bow: 4,
+    PowerUpKind.molotov: 6,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -400,6 +420,7 @@ class PowerUpTuning {
     PowerUpKind.phaseMine: 18,
     PowerUpKind.spikeWall: 10,
     PowerUpKind.bow: 1,
+    PowerUpKind.molotov: 2,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -441,6 +462,8 @@ String powerUpDescription(
     PowerUpKind.grenade =>
       '$aim throws it where the target is: ${dmg(kind)} to everyone near where it '
           'blows up but the thrower.',
+    PowerUpKind.molotov =>
+      '$aim throws it where the target is. The area burns for 3 s, dealing ${dmg(kind)} every 0.5 s.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '

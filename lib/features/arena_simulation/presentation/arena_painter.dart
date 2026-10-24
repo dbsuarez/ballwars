@@ -13,11 +13,13 @@ import '../../match_setup/domain/match_config.dart';
 class ArenaPainter extends CustomPainter {
   final SimulationState state;
   final double arenaRadius;
+  final double? worldRadius;
   final double rimAngle;
 
   /// Sparks and particles. Off only hides them: they are still simulated,
   /// so the match plays out the same either way.
   final bool showEffects;
+  final bool showBallGlow;
   final WallSparkSize wallSparkSize;
 
   /// The theme's background (inside the arena) and text color (the rim).
@@ -30,8 +32,10 @@ class ArenaPainter extends CustomPainter {
   ArenaPainter({
     required this.state,
     required this.arenaRadius,
+    this.worldRadius,
     required this.rimAngle,
     this.showEffects = true,
+    this.showBallGlow = true,
     this.wallSparkSize = WallSparkSize.normal,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
@@ -46,7 +50,8 @@ class ArenaPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     // Leave room for the rim's stroke and glow so they aren't clipped at the edges.
-    final scale = size.shortestSide / (2 * (arenaRadius + _rimMargin));
+    final scale =
+        size.shortestSide / (2 * ((worldRadius ?? arenaRadius) + _rimMargin));
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -319,6 +324,19 @@ class ArenaPainter extends CustomPainter {
 
     PowerUpPainter.paintSpeedTrail(canvas, ball);
 
+    if (showBallGlow) {
+      canvas.drawCircle(
+        ball.position,
+        ball.radius + 4,
+        Paint()..color = ball.config.glowColor.withValues(alpha: 0.18),
+      );
+      canvas.drawCircle(
+        ball.position,
+        ball.radius + 2,
+        Paint()..color = ball.config.glowColor.withValues(alpha: 0.28),
+      );
+    }
+
     if (look == BallLook.faces) {
       paintSmiley(canvas, ball, faceHealth(ball), state.balls);
     } else {
@@ -330,7 +348,7 @@ class ArenaPainter extends CustomPainter {
         ball.cachedUiImage,
       );
     }
-    PowerUpPainter.paintBallEffects(canvas, ball);
+    PowerUpPainter.paintBallEffects(canvas, ball, step: state.step);
     if (look == BallLook.faces) {
       paintHands(canvas, ball);
     }

@@ -145,6 +145,15 @@ class FinisherProfile {
       style: FinisherStyle.blast,
       symbol: '●',
     ),
+    'Molotov': FinisherProfile(
+      move: 'Molotov',
+      yell: 'LIGHT IT UP!',
+      impactYell: 'BURN!',
+      color: Color(0xFFFF5A20),
+      accent: Color(0xFFFFD23F),
+      style: FinisherStyle.blast,
+      symbol: 'F',
+    ),
     'Sword': FinisherProfile(
       move: 'Sword',
       yell: 'FINAL STRIKE!',

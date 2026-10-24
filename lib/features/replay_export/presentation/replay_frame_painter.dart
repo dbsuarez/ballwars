@@ -17,6 +17,7 @@ class ReplayFramePainter {
   static const Size designSize = Size(720, 1280);
   static const double _arenaSide = 680;
   static const double _arenaTop = 330;
+
   /// Look of the frames being drawn; set by each public paint call.
   static ReplayStyle _style = const ReplayStyle();
   static const Color _gold = Color(0xFFFFD700);
@@ -32,6 +33,7 @@ class ReplayFramePainter {
     Size size,
     SimulationState state,
     double arenaRadius, {
+    double? worldRadius,
     required double videoTime,
     bool showEffects = true,
     ReplayStyle style = const ReplayStyle(),
@@ -46,8 +48,10 @@ class ReplayFramePainter {
       ArenaPainter(
         state: state,
         arenaRadius: arenaRadius,
+        worldRadius: worldRadius,
         rimAngle: 0,
         showEffects: showEffects,
+        showBallGlow: _style.ballGlowEnabled,
         background: _style.background,
         rimColor: _style.text,
         look: _style.look,
@@ -72,13 +76,15 @@ class ReplayFramePainter {
 
       const center = Offset(360, 560);
       const radius = 150.0;
-      canvas.drawCircle(
-        center,
-        radius + 6,
-        Paint()
-          ..color = winner.config.glowColor.withValues(alpha: 0.7)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 18),
-      );
+      if (_style.ballGlowEnabled) {
+        canvas.drawCircle(
+          center,
+          radius + 6,
+          Paint()
+            ..color = winner.config.glowColor.withValues(alpha: 0.7)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 18),
+        );
+      }
       _paintBallFace(canvas, winner, center, radius);
 
       _paintText(
@@ -91,7 +97,15 @@ class ReplayFramePainter {
         letterSpacing: 2,
         maxWidth: 680,
       );
-      _paintText(canvas, 'WINS!', 52, FontWeight.w900, _gold, y: 840, letterSpacing: 4);
+      _paintText(
+        canvas,
+        'WINS!',
+        52,
+        FontWeight.w900,
+        _gold,
+        y: 840,
+        letterSpacing: 4,
+      );
       _paintText(
         canvas,
         String.fromCharCode(Icons.emoji_events.codePoint),
@@ -122,11 +136,21 @@ class ReplayFramePainter {
     double arenaRadius,
     SimulationBall loser,
     double progress, {
+    double? worldRadius,
     required double videoTime,
     bool showEffects = true,
     ReplayStyle style = const ReplayStyle(),
   }) {
-    paintMatch(canvas, size, state, arenaRadius, videoTime: videoTime, showEffects: showEffects, style: style);
+    paintMatch(
+      canvas,
+      size,
+      state,
+      arenaRadius,
+      worldRadius: worldRadius,
+      videoTime: videoTime,
+      showEffects: showEffects,
+      style: style,
+    );
     final double opacity;
     final double scale;
     if (progress < 0.2) {
@@ -140,9 +164,15 @@ class ReplayFramePainter {
       scale = 1 + 0.3 * (progress - 0.7) / 0.3;
     }
     canvas.save();
-    canvas.scale(size.width / designSize.width, size.height / designSize.height);
+    canvas.scale(
+      size.width / designSize.width,
+      size.height / designSize.height,
+    );
     final center = Offset(designSize.width / 2, _arenaTop + _arenaSide / 2);
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)));
+    canvas.saveLayer(
+      null,
+      Paint()..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0)),
+    );
     _paintBallFace(canvas, loser, center, 150 * scale);
     paintLoserCross(canvas, center, 150 * scale, progress);
     canvas.restore();
@@ -152,7 +182,12 @@ class ReplayFramePainter {
   /// A red X stamped over the eliminated ball (radius [radius] at [center]),
   /// so the big ball reads as the loser, not the winner. It slams in just
   /// after the ball pops in ([progress] as in [paintLoser]).
-  static void paintLoserCross(Canvas canvas, Offset center, double radius, double progress) {
+  static void paintLoserCross(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double progress,
+  ) {
     final t = ((progress - 0.12) / 0.12).clamp(0.0, 1.0);
     if (t <= 0) return;
     final arm = radius * 0.62 * (1.5 - 0.5 * Curves.easeOut.transform(t));
@@ -166,22 +201,39 @@ class ReplayFramePainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = width;
-    canvas.drawCircle(center, radius, Paint()..color = Color.fromRGBO(0, 0, 0, 0.35 * t));
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()..color = Color.fromRGBO(0, 0, 0, 0.35 * t),
+    );
     canvas.drawPath(path, stroke(Colors.white, radius * 0.26));
     canvas.drawPath(path, stroke(const Color(0xFFE5484D), radius * 0.17));
   }
 
-  static void _withDesignSpace(Canvas canvas, Size size, double videoTime, VoidCallback paint) {
+  static void _withDesignSpace(
+    Canvas canvas,
+    Size size,
+    double videoTime,
+    VoidCallback paint,
+  ) {
     canvas.drawRect(Offset.zero & size, Paint()..color = _style.background);
     canvas.save();
-    canvas.scale(size.width / designSize.width, size.height / designSize.height);
+    canvas.scale(
+      size.width / designSize.width,
+      size.height / designSize.height,
+    );
     paint();
     _paintWatermark(canvas, videoTime);
     canvas.restore();
   }
 
-  static TextPainter _watermarkText() =>
-      _layout(watermark, 32, FontWeight.w800, _style.text.withValues(alpha: 0.35), letterSpacing: 2);
+  static TextPainter _watermarkText() => _layout(
+    watermark,
+    32,
+    FontWeight.w800,
+    _style.text.withValues(alpha: 0.35),
+    letterSpacing: 2,
+  );
 
   static void _paintWatermark(Canvas canvas, double videoTime) {
     final text = _watermarkText();
@@ -197,13 +249,28 @@ class ReplayFramePainter {
     }
 
     return Offset(
-      bounce(_watermarkStart.dx + videoTime * _watermarkVelocity.dx, designSize.width - textSize.width),
-      bounce(_watermarkStart.dy + videoTime * _watermarkVelocity.dy, designSize.height - textSize.height),
+      bounce(
+        _watermarkStart.dx + videoTime * _watermarkVelocity.dx,
+        designSize.width - textSize.width,
+      ),
+      bounce(
+        _watermarkStart.dy + videoTime * _watermarkVelocity.dy,
+        designSize.height - textSize.height,
+      ),
     );
   }
 
   static void _paintHeader(Canvas canvas, {required bool dimmed}) {
-    _paintText(canvas, _style.headline, 64, FontWeight.w800, _style.text, y: 130, letterSpacing: 1, maxWidth: 680);
+    _paintText(
+      canvas,
+      _style.headline,
+      64,
+      FontWeight.w800,
+      _style.text,
+      y: 130,
+      letterSpacing: 1,
+      maxWidth: 680,
+    );
     _paintText(
       canvas,
       'ROUND 1',
@@ -216,7 +283,13 @@ class ReplayFramePainter {
   }
 
   static void _paintSlowMotionBadge(Canvas canvas) {
-    final label = _layout('SLOW MOTION', 22, FontWeight.w700, _style.text, letterSpacing: 2);
+    final label = _layout(
+      'SLOW MOTION',
+      22,
+      FontWeight.w700,
+      _style.text,
+      letterSpacing: 2,
+    );
     const dotGap = 22.0;
     final width = label.width + dotGap + 32;
     final rect = RRect.fromRectAndRadius(
@@ -228,12 +301,28 @@ class ReplayFramePainter {
       Paint()..color = Color.lerp(_style.background, _style.text, 0.09)!,
     );
     final left = rect.left + 16;
-    canvas.drawCircle(Offset(left + 6, 275), 6, Paint()..color = const Color(0xFFFF7A59));
+    canvas.drawCircle(
+      Offset(left + 6, 275),
+      6,
+      Paint()..color = const Color(0xFFFF7A59),
+    );
     label.paint(canvas, Offset(left + dotGap, 275 - label.height / 2));
   }
 
-  static void _paintBallFace(Canvas canvas, SimulationBall ball, Offset center, double radius) {
-    BallFacePainter.paint(canvas, center, radius, ball.config, ball.cachedUiImage, rimWidth: 4);
+  static void _paintBallFace(
+    Canvas canvas,
+    SimulationBall ball,
+    Offset center,
+    double radius,
+  ) {
+    BallFacePainter.paint(
+      canvas,
+      center,
+      radius,
+      ball.config,
+      ball.cachedUiImage,
+      rimWidth: 4,
+    );
   }
 
   static TextPainter _layout(
@@ -252,7 +341,9 @@ class ReplayFramePainter {
           fontSize: fontSize,
           fontWeight: weight,
           // Manrope is a variable font: the weight goes on its wght axis.
-          fontVariations: fontFamily == null ? [FontVariation('wght', weight.value.toDouble())] : null,
+          fontVariations: fontFamily == null
+              ? [FontVariation('wght', weight.value.toDouble())]
+              : null,
           color: color,
           letterSpacing: letterSpacing,
           fontFamily: fontFamily ?? 'Manrope',
@@ -286,7 +377,10 @@ class ReplayFramePainter {
       fontFamily: fontFamily,
       maxWidth: maxWidth,
     );
-    painter.paint(canvas, Offset(math.max(0, (designSize.width - painter.width) / 2), y));
+    painter.paint(
+      canvas,
+      Offset(math.max(0, (designSize.width - painter.width) / 2), y),
+    );
   }
 }
 
@@ -296,6 +390,7 @@ class ReplayStyle {
   final Color background;
   final Color text;
   final Color muted;
+  final bool ballGlowEnabled;
 
   /// Ball look (pictures or faces), as in the app.
   final BallLook look;
@@ -305,6 +400,7 @@ class ReplayStyle {
     this.background = const Color(0xFF0A0A0B),
     this.text = const Color(0xFFF2F2F0),
     this.muted = const Color(0xFF959596),
+    this.ballGlowEnabled = true,
     this.look = BallLook.pictures,
   });
 }

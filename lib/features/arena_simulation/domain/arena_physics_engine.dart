@@ -18,7 +18,7 @@ class CollisionResult {
 }
 
 class ArenaPhysicsEngine {
-  final double arenaRadius;
+  double arenaRadius;
   final SeededRandom rng;
   final double restitution;
 
@@ -29,18 +29,21 @@ class ArenaPhysicsEngine {
   /// Reflects [ball] off the arena wall if it has reached or crossed the boundary.
   /// Uses continuous collision detection to handle high velocities.
   /// Returns a CollisionResult with the wall anchor point if a bounce occurred.
-  CollisionResult? resolveWallCollision(SimulationBall ball, {Offset? previousPosition}) {
+  CollisionResult? resolveWallCollision(
+    SimulationBall ball, {
+    Offset? previousPosition,
+  }) {
     final d = ball.position.distance;
     final maxDist = arenaRadius - ball.radius;
-    
+
     // Check if ball is currently outside or on the boundary
     final currentlyOutside = d >= maxDist;
-    
+
     // Also check if ball crossed the boundary this frame (CCD)
     bool crossedBoundary = false;
     Offset? collisionNormal;
     Offset? collisionPoint;
-    
+
     if (previousPosition != null) {
       final prevD = previousPosition.distance;
       // Check if line segment from previous to current crosses the boundary
@@ -58,7 +61,7 @@ class ArenaPhysicsEngine {
         }
       }
     }
-    
+
     // Fallback 1: if ball is currently outside but we didn't detect crossing (edge case),
     // force a collision with current position
     if (currentlyOutside && !crossedBoundary) {
@@ -66,7 +69,7 @@ class ArenaPhysicsEngine {
       collisionNormal = d == 0 ? const Offset(1.0, 0.0) : ball.position / d;
       collisionPoint = collisionNormal * maxDist;
     }
-    
+
     // Fallback 2: ultimate safety net - if ball center is past the arena wall (past arenaRadius),
     // it has completely tunneled through. Force it back to the wall.
     if (d > arenaRadius) {
@@ -74,14 +77,16 @@ class ArenaPhysicsEngine {
       collisionNormal = d == 0 ? const Offset(1.0, 0.0) : ball.position / d;
       collisionPoint = collisionNormal * maxDist;
     }
-    
+
     // If currently inside and didn't cross, no collision
     if (!currentlyOutside && !crossedBoundary) return null;
-    
+
     // Use CCD collision point/normal if available, otherwise use current position
-    final normal = collisionNormal ?? (d == 0 ? const Offset(1.0, 0.0) : ball.position / d);
+    final normal =
+        collisionNormal ??
+        (d == 0 ? const Offset(1.0, 0.0) : ball.position / d);
     final contactPt = collisionPoint ?? (normal * maxDist);
-    
+
     final dot = ball.velocity.dx * normal.dx + ball.velocity.dy * normal.dy;
     var reflected = ball.velocity - normal * (2 * dot);
 
@@ -131,7 +136,8 @@ class ArenaPhysicsEngine {
 
     // Impulse with restitution: J = (1 + e) * (v_rel · n) / (1/m_a + 1/m_b)
     final invMassSum = 1.0 / massA + 1.0 / massB;
-    final impulseScalar = (1.0 + restitution) * relativeNormalVelocity / invMassSum;
+    final impulseScalar =
+        (1.0 + restitution) * relativeNormalVelocity / invMassSum;
 
     a.velocity -= normal * (impulseScalar / massA);
     b.velocity += normal * (impulseScalar / massB);

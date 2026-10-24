@@ -49,6 +49,7 @@ class PowerUpPainter {
     PowerUpKind.goldenArmor: Color(0xFFFFD54F),
     PowerUpKind.bow: Color(0xFFC98A43),
     PowerUpKind.stickyGoo: Color(0xFF65E34F),
+    PowerUpKind.molotov: Color(0xFFFF6A2A),
   };
 
   /// The color a power-up is drawn in.
@@ -65,6 +66,57 @@ class PowerUpPainter {
     final p = state.powerUps;
     if (p == null) return;
     final r = p.fieldRadius;
+
+    for (final fire in p.burningZones) {
+      final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;
+      final pulse = 0.92 + 0.08 * math.sin(state.step * 0.35);
+      canvas.drawCircle(
+        fire.position,
+        fire.radius,
+        Paint()..color = const Color(0xFFFF5A20).withValues(alpha: 0.18 * life),
+      );
+      canvas.drawCircle(
+        fire.position,
+        fire.radius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, r * 0.14)
+          ..color = const Color(0xFFFFA126).withValues(alpha: 0.9 * life),
+      );
+      if (showEffects) {
+        for (var i = 0; i < 11; i++) {
+          final angle =
+              i * 2 * math.pi / 11 + state.step * (i.isEven ? 0.018 : -0.012);
+          final distance = fire.radius * (0.2 + (i % 4) * 0.18);
+          final base =
+              fire.position +
+              Offset(math.cos(angle), math.sin(angle)) * distance;
+          final height = r * (0.45 + (i % 3) * 0.18) * pulse;
+          final flame = Path()
+            ..moveTo(base.dx - r * 0.13, base.dy)
+            ..quadraticBezierTo(
+              base.dx,
+              base.dy - height,
+              base.dx + r * 0.13,
+              base.dy,
+            )
+            ..quadraticBezierTo(
+              base.dx,
+              base.dy - height * 0.35,
+              base.dx - r * 0.13,
+              base.dy,
+            )
+            ..close();
+          canvas.drawPath(
+            flame,
+            Paint()
+              ..color =
+                  (i.isEven ? const Color(0xFFFF4B20) : const Color(0xFFFFD23F))
+                      .withValues(alpha: 0.9 * life),
+          );
+        }
+      }
+    }
 
     for (final e in p.explosions) {
       final t = e.age / PowerUpTuning.explosionShowSteps;
@@ -296,14 +348,10 @@ class PowerUpPainter {
           continue;
         }
         if (shot.landAt != null) {
-          // A grenade in flight: its icon, tumbling.
-          final sprite = PowerUpSprites.of(PowerUpKind.grenade);
+          // A thrown explosive in flight: its own icon, tumbling.
+          final sprite = PowerUpSprites.of(shot.kind);
           if (sprite == null) {
-            canvas.drawCircle(
-              shot.position,
-              r * 0.4,
-              Paint()..color = colorOf(PowerUpKind.grenade),
-            );
+            drawGlyph(canvas, shot.kind, shot.position, r * 0.5);
           } else {
             _drawSprite(
               canvas,
@@ -708,7 +756,29 @@ class PowerUpPainter {
   /// Looks drawn over [ball]: a frozen ball gets an icy tint, and what it holds is drawn on it. A gun
   /// sits on its edge pointing at its target (or the way it moves), a knife points the way it moves, and
   /// a shield is held on the side it faces.
-  static void paintBallEffects(Canvas canvas, SimulationBall ball) {
+  static void paintBallEffects(
+    Canvas canvas,
+    SimulationBall ball, {
+    int step = 0,
+  }) {
+    if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
+      final angle = step * 0.14;
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      final flail = ball.position + direction * ball.radius * 2.25;
+      canvas.drawLine(
+        ball.position + direction * ball.radius * 0.72,
+        flail,
+        Paint()
+          ..color = const Color(0xFFB8C2CC)
+          ..strokeWidth = math.max(2, ball.radius * 0.1),
+      );
+      final sprite = PowerUpSprites.of(PowerUpKind.orbitingFlail);
+      if (sprite == null) {
+        drawGlyph(canvas, PowerUpKind.orbitingFlail, flail, ball.radius * 0.42);
+      } else {
+        _drawSprite(canvas, sprite, flail, ball.radius * 0.9, angle);
+      }
+    }
     if (ball.timeBubbleLeft > 0) {
       canvas.drawCircle(
         ball.position,
@@ -839,7 +909,10 @@ class PowerUpPainter {
       );
     }
     for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
-      _paintHeldWeapon(canvas, ball, ball.equippedWeapons[slot], slot);
+      final weapon = ball.equippedWeapons[slot];
+      if (weapon != PowerUpKind.orbitingFlail) {
+        _paintHeldWeapon(canvas, ball, weapon, slot);
+      }
     }
   }
 

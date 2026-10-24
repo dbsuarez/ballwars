@@ -74,6 +74,7 @@ class PowerUpConfig {
     PowerUpKind.phaseMine,
     PowerUpKind.spikeWall,
     PowerUpKind.bow,
+    PowerUpKind.molotov,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.
@@ -280,6 +281,8 @@ class PowerUpConfig {
       ? ' (per pellet)'
       : kind == PowerUpKind.gatling
       ? ' (per round)'
+      : kind == PowerUpKind.molotov
+      ? ' (per burn tick)'
       : '';
 
   static final Map<String, TuningField> _byId = {

@@ -163,6 +163,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       tuning: widget.config.tuning,
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
+      shrinkingArena: widget.config.shrinkingArena,
     );
     _roundCounted = replaySeed != null;
     _state = _controller.state;
@@ -366,6 +367,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       tuning: widget.config.tuning,
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
+      shrinkingArena: widget.config.shrinkingArena,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -562,9 +564,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     child: RepaintBoundary(
                       child: ArenaCanvas(
                         state: _state,
-                        arenaRadius: _arenaRadius,
+                        arenaRadius: _controller.arenaRadius,
+                        worldRadius: _arenaRadius,
                         rimAngle: _rimAngle,
                         showEffects: _showEffects,
+                        showBallGlow: AppSettingsScope.of(
+                          context,
+                        ).ballGlowEnabled,
                         wallSparkSize: widget.config.wallSparkSize,
                         repaint: _frame,
                         look: widget.config.look,
@@ -641,8 +647,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               look: widget.config.look,
                               powerUps: widget.config.powerUps,
                               tuning: widget.config.tuning,
+                              shrinkingArena: widget.config.shrinkingArena,
                               headline: headline,
                               colors: c,
+                              ballGlowEnabled: AppSettingsScope.of(
+                                context,
+                              ).ballGlowEnabled,
                               backend: _videoExport,
                             );
                           },

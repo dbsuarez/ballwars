@@ -44,6 +44,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasSlowMotionColumn = false;
   bool _hasMenuMusicColumn = false;
   bool _hasPowerUpsColumn = false;
+  bool _hasBallGlowColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
     : _writer = writer ?? _client;
@@ -76,10 +77,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasSlowMotionColumn = row.containsKey('slow_motion_lines');
     _hasMenuMusicColumn = row.containsKey('menu_music');
     _hasPowerUpsColumn = row.containsKey('power_ups');
+    _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
+      ballGlowEnabled: row['ball_glow_enabled'] as bool? ?? true,
       watermarkText:
           row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
@@ -111,6 +114,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasSlowMotionColumn)
             'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
           if (_hasPowerUpsColumn) 'power_ups': settings.powerUps.toJson(),
+          if (_hasBallGlowColumn) 'ball_glow_enabled': settings.ballGlowEnabled,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)

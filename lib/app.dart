@@ -433,6 +433,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             tuning: link.tuning,
             dualWield: link.dualWield,
             endlessBattle: link.endlessBattle,
+            shrinkingArena: link.shrinkingArena,
             showEffects: link.showEffects,
             look: look,
             wallSparkSize: wallSparkSize,

@@ -621,7 +621,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                               ],
                             ),
-                            const SizedBox(height: 18),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'BRANDING',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                             Text(
                               'Arena text',
                               style: AppText.ui(
@@ -665,14 +672,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                               child: const Text('Save arena text'),
                             ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'WATERMARK',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+                            const Divider(height: 32),
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text(

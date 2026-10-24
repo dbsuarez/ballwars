@@ -71,6 +71,7 @@ flutter:
   # 8-bit sounds made by tool/sounds/make_sounds.py.
   assets:
     - assets/sounds/
+    - assets/sprites/
 
   # Bundled fonts (SIL Open Font License, see assets/fonts/*-OFL.txt).
   # Manrope is a variable font: weights are set with FontVariation('wght').

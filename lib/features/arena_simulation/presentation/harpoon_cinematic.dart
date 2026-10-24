@@ -586,6 +586,28 @@ class _FinisherPainter extends CustomPainter {
           );
           _paintItem(canvas, disc, radius * 1.25);
         }
+      case PowerUpKind.boomerang:
+        if (hookProgress > 0 && hookProgress < 1) {
+          final point = hookProgress < 0.58
+              ? Offset.lerp(from, loserCenter, hookProgress / 0.58)!
+              : Offset.lerp(
+                  loserCenter,
+                  winnerCenter,
+                  (hookProgress - 0.58) / 0.42,
+                )!;
+          final sprite = PowerUpSprites.boomerangProjectile;
+          if (sprite != null) {
+            _paintRaster(
+              canvas,
+              sprite,
+              point,
+              radius * 1.25,
+              rotation: hookProgress * math.pi * 8,
+            );
+          } else {
+            _paintItem(canvas, point, radius * 1.25);
+          }
+        }
       case PowerUpKind.orbitingFlail:
         if (hookProgress > 0) {
           final angle = hookProgress * math.pi * 4;

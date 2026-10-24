@@ -18,6 +18,7 @@ void main() {
       PowerUpKind.bow,
       PowerUpKind.molotov,
       PowerUpKind.rocketLauncher,
+      PowerUpKind.boomerang,
     };
     for (final kind in PowerUpKind.values) {
       expect(kind.label, isNotEmpty);

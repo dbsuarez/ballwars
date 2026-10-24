@@ -53,6 +53,7 @@ class PowerUpPainter {
     PowerUpKind.molotov: Color(0xFFFF6A2A),
     PowerUpKind.rocketLauncher: Color(0xFF98A84B),
     PowerUpKind.omegaTendrils: Color(0xFFE21D35),
+    PowerUpKind.boomerang: Color(0xFF20DDF2),
   };
 
   /// The color a power-up is drawn in.
@@ -450,6 +451,21 @@ class PowerUpPainter {
             );
           } else {
             drawGlyph(canvas, shot.kind, shot.position, r * 0.6);
+          }
+          continue;
+        }
+        if (shot.kind == PowerUpKind.boomerang) {
+          final sprite = PowerUpSprites.boomerangProjectile;
+          if (sprite != null) {
+            _drawSprite(
+              canvas,
+              sprite,
+              shot.position,
+              r * 0.8,
+              state.step * 0.35,
+            );
+          } else {
+            drawGlyph(canvas, shot.kind, shot.position, r * 0.65);
           }
           continue;
         }

@@ -423,6 +423,22 @@ void main() {
     expect(ball.equippedWeapons, [PowerUpKind.sword, PowerUpKind.pistol]);
   });
 
+  test('boomerang can hit several opponents only once per throw', () {
+    final c = _match(count: 3);
+    final [owner, first, second] = c.state.balls;
+    owner.position = const Offset(-180, 0);
+    first.position = const Offset(-40, 0);
+    second.position = const Offset(100, 0);
+
+    _give(c, owner, PowerUpKind.boomerang);
+    _run(c, 420);
+
+    expect(first.life, lessThan(_life));
+    expect(second.life, lessThan(_life));
+    expect(c.powerUps!.hits, 2);
+    expect(c.powerUps!.projectiles.where((shot) => !shot.spent), isEmpty);
+  });
+
   test('in All-Out a shield halves the threads lost to the next hit', () {
     final c = _match(mode: MatchMode.allOut);
     final [a, b] = c.state.balls;

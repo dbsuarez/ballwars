@@ -148,6 +148,24 @@ class ParticleSystem {
     }
   }
 
+  /// Small bright contact flash used when a weapon visibly connects.
+  void spawnImpact({required Offset origin, required SeededRandom rng}) {
+    final count = 8 + rng.nextInt(5);
+    for (var i = 0; i < count; i++) {
+      final angle = rng.nextDoubleRange(0, 2 * math.pi);
+      final speed = rng.nextDoubleRange(70.0, 190.0);
+      _particles.add(
+        Particle(
+          position: origin,
+          velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
+          lifespan: rng.nextDoubleRange(0.12, 0.28),
+          color: i.isEven ? Colors.white : const Color(0xFFFFD43B),
+          baseRadius: rng.nextDoubleRange(1.2, 2.8),
+        ),
+      );
+    }
+  }
+
   /// Spawns a burst of small green sparkles all around [origin], when a ball takes an apple.
   void spawnSparkle({required Offset origin, required SeededRandom rng}) {
     final count = 14 + rng.nextInt(7); // 14..20

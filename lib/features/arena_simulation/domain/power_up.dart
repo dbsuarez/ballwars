@@ -41,7 +41,8 @@ enum PowerUpKind {
   stickyGoo('Sticky Goo'),
   molotov('Molotov'),
   rocketLauncher('Rocket Launcher'),
-  omegaTendrils('Omega Tendrils');
+  omegaTendrils('Omega Tendrils'),
+  boomerang('Boomerang');
 
   const PowerUpKind(this.label);
 
@@ -62,7 +63,8 @@ enum PowerUpKind {
       this == prismLaser ||
       this == swapCannon ||
       this == bow ||
-      this == rocketLauncher;
+      this == rocketLauncher ||
+      this == boomerang;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -93,7 +95,8 @@ enum PowerUpKind {
       this == prismLaser ||
       this == swapCannon ||
       this == bow ||
-      this == rocketLauncher;
+      this == rocketLauncher ||
+      this == boomerang;
 
   /// Traps spawn close to the arena boundary and arm when collected.
   bool get isTrap =>
@@ -141,6 +144,7 @@ class Projectile {
     this.volley = 0,
     this.landAt,
     this.target,
+    this.returning = false,
   });
 
   /// A grenade's landing point (where its target was when thrown); null for bullets.
@@ -152,6 +156,8 @@ class Projectile {
   Offset position;
   Offset velocity;
   int wallBounces = 0;
+  bool returning;
+  final Set<SimulationBall> hitTargets = {};
 
   /// Shots fired as one attack (a shotgun blast, a gatling burst) share a non-zero id, so a shield
   /// that breaks on the first of them softens the rest too. 0: a single shot.
@@ -409,6 +415,7 @@ class PowerUpTuning {
     PowerUpKind.molotov: 6,
     PowerUpKind.rocketLauncher: 45,
     PowerUpKind.omegaTendrils: 12,
+    PowerUpKind.boomerang: 18,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -438,6 +445,7 @@ class PowerUpTuning {
     PowerUpKind.molotov: 2,
     PowerUpKind.rocketLauncher: 16,
     PowerUpKind.omegaTendrils: 3,
+    PowerUpKind.boomerang: 7,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -485,6 +493,8 @@ String powerUpDescription(
       '$aim fires one homing missile that pursues its target until it hits: ${dmg(kind)}.',
     PowerUpKind.omegaTendrils =>
       'Cheat power: unavoidable tendrils grab every opponent and slam them for ${dmg(kind)}.',
+    PowerUpKind.boomerang =>
+      '$aim throws once for ${dmg(kind)}, returns to its owner, then drops.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '

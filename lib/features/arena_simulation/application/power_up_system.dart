@@ -1040,6 +1040,9 @@ class PowerUpSystem {
             case PowerUpKind.rocketLauncher:
               _fireRocket(ball, target);
               _yell(ball, 'TARGET LOCKED!');
+            case PowerUpKind.boomerang:
+              _fire(ball, target, kind, 0, speedRatio: 0.72);
+              _yell(ball, 'COMING BACK!');
             default:
               _fire(ball, target, kind, 0);
               _yell(ball, 'BANG!');
@@ -1269,6 +1272,14 @@ class PowerUpSystem {
           }
         }
       }
+      if (p.kind == PowerUpKind.boomerang && p.returning) {
+        final home = p.owner.position - from;
+        if (home.distance <= p.owner.radius * 1.15) {
+          p.spent = true;
+          continue;
+        }
+        p.velocity = home / home.distance * (match.arenaRadius * 0.72);
+      }
       var projectileScale = 1.0;
       for (final ball in balls) {
         if (ball.timeBubbleLeft > 0 &&
@@ -1286,7 +1297,10 @@ class PowerUpSystem {
       SimulationBall? struck;
       var strikeAt = double.infinity;
       for (final ball in balls) {
-        if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) {
+        if (identical(ball, p.owner) ||
+            ball.isEliminated ||
+            ball.isGhost ||
+            (p.kind == PowerUpKind.boomerang && p.hitTargets.contains(ball))) {
           continue;
         }
         final t = _entry(
@@ -1353,11 +1367,15 @@ class PowerUpSystem {
           _yell(struck, 'RETURN TO SENDER!');
           continue;
         }
-        p.spent = true;
+        p.spent = p.kind != PowerUpKind.boomerang;
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
         } else {
           _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+          if (p.kind == PowerUpKind.boomerang) {
+            p.hitTargets.add(struck);
+            p.position += p.velocity / p.velocity.distance * 2;
+          }
           if (p.kind == PowerUpKind.rocketLauncher) {
             explosions.add(
               Explosion(
@@ -1369,7 +1387,11 @@ class PowerUpSystem {
         }
       } else if (end.distance >= match.arenaRadius &&
           p.kind != PowerUpKind.rocketLauncher) {
-        if ((p.kind == PowerUpKind.ricochetDisc ||
+        if (p.kind == PowerUpKind.boomerang) {
+          p
+            ..position = end / end.distance * (match.arenaRadius - 2)
+            ..returning = true;
+        } else if ((p.kind == PowerUpKind.ricochetDisc ||
                 p.kind == PowerUpKind.prismLaser) &&
             p.wallBounces == 0) {
           final normal = end.distance == 0
@@ -1427,6 +1449,7 @@ class PowerUpSystem {
     hits++;
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
+    match.state.particles.spawnImpact(origin: impact, rng: rng);
     var share = 1.0;
     final shielded = match.mode == MatchMode.arsenal
         ? 1 - _t.shieldBlock

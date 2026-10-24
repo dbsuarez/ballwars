@@ -59,12 +59,15 @@ class PowerUpSprites {
   static ui.Image? _rocketMissile;
   static ui.Image? _omegaTendrilsIcon;
   static ui.Image? _omegaTendrilsAttack;
+  static ui.Image? _boomerangIcon;
+  static ui.Image? _boomerangProjectile;
   static Future<void>? _loading;
 
   /// [kind]'s image (16 x 16 px), or null before [load] has finished.
   static ui.Image? of(PowerUpKind kind) => switch (kind) {
     PowerUpKind.rocketLauncher => _rocketLauncher,
     PowerUpKind.omegaTendrils => _omegaTendrilsIcon,
+    PowerUpKind.boomerang => _boomerangIcon,
     _ => _images[kind],
   };
   static ui.Image? effect(EffectSprite kind) => _effects[kind];
@@ -76,6 +79,7 @@ class PowerUpSprites {
 
   static ui.Image? get rocketMissile => _rocketMissile;
   static ui.Image? get omegaTendrilsAttack => _omegaTendrilsAttack;
+  static ui.Image? get boomerangProjectile => _boomerangProjectile;
 
   /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
@@ -318,6 +322,36 @@ class PowerUpSprites {
     _omegaTendrilsIcon = await omegaCell(0, 64);
     _omegaTendrilsAttack = await omegaCell(1, 96);
     omegaSheet.dispose();
+
+    final boomerangData = await rootBundle.load('assets/sprites/boomerang.png');
+    final boomerangCodec = await ui.instantiateImageCodec(
+      boomerangData.buffer.asUint8List(),
+    );
+    final boomerangSheet = (await boomerangCodec.getNextFrame()).image;
+    boomerangCodec.dispose();
+    final boomerangHalf = boomerangSheet.width / 2.0;
+    Future<ui.Image> boomerangCell(int column, int size) async {
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImageRect(
+        boomerangSheet,
+        Rect.fromLTWH(
+          column * boomerangHalf,
+          0,
+          boomerangHalf,
+          boomerangSheet.height.toDouble(),
+        ),
+        Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble()),
+        Paint()..filterQuality = FilterQuality.none,
+      );
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(size, size);
+      picture.dispose();
+      return image;
+    }
+
+    _boomerangIcon = await boomerangCell(0, 64);
+    _boomerangProjectile = await boomerangCell(1, 96);
+    boomerangSheet.dispose();
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {

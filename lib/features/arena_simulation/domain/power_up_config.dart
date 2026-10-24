@@ -77,6 +77,7 @@ class PowerUpConfig {
     PowerUpKind.molotov,
     PowerUpKind.rocketLauncher,
     PowerUpKind.omegaTendrils,
+    PowerUpKind.boomerang,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.

@@ -352,6 +352,15 @@ class FinisherProfile {
       style: FinisherStyle.hook,
       symbol: 'O',
     ),
+    'Boomerang': FinisherProfile(
+      move: 'Boomerang',
+      yell: 'COMING BACK!',
+      impactYell: 'RETURN HIT!',
+      color: Color(0xFF20DDF2),
+      accent: Color(0xFFFFFFFF),
+      style: FinisherStyle.barrage,
+      symbol: 'B',
+    ),
     'Collision': FinisherProfile(
       move: 'Collision',
       yell: 'FULL SPEED!',

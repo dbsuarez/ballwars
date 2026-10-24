@@ -7,6 +7,7 @@ import '../../arena_simulation/domain/power_up_config.dart';
 import '../domain/app_settings.dart';
 import 'power_up_tuning_screen.dart';
 import 'app_settings_scope.dart';
+import 'finisher_gallery_screen.dart';
 
 /// Settings. Players see only the admin sign-in; once the admin signs in
 /// (email + password, listed in the `admins` table) they can change the
@@ -69,17 +70,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await action();
       if (mounted && done != null) setState(() => _message = done);
     } catch (e) {
-      if (mounted) setState(() => _message = '$e'.replaceFirst('Bad state: ', ''));
+      if (mounted) {
+        setState(() => _message = '$e'.replaceFirst('Bad state: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _signIn() async {
-    final result = await showDialog<(String, String, bool)>(context: context, builder: (_) => const _SignInDialog());
+    final result = await showDialog<(String, String, bool)>(
+      context: context,
+      builder: (_) => const _SignInDialog(),
+    );
     if (result == null) return;
     await _run(() async {
-      await _scope!.adminAuth!.signIn(result.$1, result.$2, rememberMe: result.$3);
+      await _scope!.adminAuth!.signIn(
+        result.$1,
+        result.$2,
+        rememberMe: result.$3,
+      );
       if (mounted) setState(() => _isAdmin = true);
     });
   }
@@ -91,9 +101,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _cleanUpImages() async {
     var removed = 0;
-    await _run(() async => removed = await widget.adminGroups!.cleanUpUnusedImages());
+    await _run(
+      () async => removed = await widget.adminGroups!.cleanUpUnusedImages(),
+    );
     if (mounted && _message == null) {
-      setState(() => _message = removed == 0 ? 'No unused images.' : 'Removed $removed unused images.');
+      setState(
+        () => _message = removed == 0
+            ? 'No unused images.'
+            : 'Removed $removed unused images.',
+      );
     }
   }
 
@@ -144,7 +160,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             appBar: AppBar(
               title: const Text('Settings'),
               bottom: _busy
-                  ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator())
+                  ? const PreferredSize(
+                      preferredSize: Size.fromHeight(2),
+                      child: LinearProgressIndicator(),
+                    )
                   : null,
             ),
             body: Align(
@@ -157,7 +176,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (_message != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(_message!, style: AppText.ui(13, FontWeight.w600, color: c.muted)),
+                        child: Text(
+                          _message!,
+                          style: AppText.ui(
+                            13,
+                            FontWeight.w600,
+                            color: c.muted,
+                          ),
+                        ),
                       ),
                     if (!hasBackend)
                       Text(
@@ -166,7 +192,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       )
                     else if (_isAdmin == null)
                       const Center(
-                        child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(),
+                        ),
                       )
                     else if (_isAdmin == false)
                       _Section(
@@ -176,10 +205,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           children: [
                             Text(
                               'The headline, theme and match music are set by the admin for everyone.',
-                              style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
+                              style: AppText.ui(
+                                14,
+                                FontWeight.w500,
+                                color: c.muted,
+                                height: 1.5,
+                              ),
                             ),
                             const SizedBox(height: 16),
-                            OutlinedButton(onPressed: _busy ? null : _signIn, child: const Text('Admin sign-in')),
+                            OutlinedButton(
+                              onPressed: _busy ? null : _signIn,
+                              child: const Text('Admin sign-in'),
+                            ),
                           ],
                         ),
                       )
@@ -193,13 +230,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               controller: _headline,
                               maxLength: 30,
                               textCapitalization: TextCapitalization.characters,
-                              decoration: const InputDecoration(hintText: AppSettings.defaultHeadline),
+                              decoration: const InputDecoration(
+                                hintText: AppSettings.defaultHeadline,
+                              ),
                             ),
                             FilledButton(
                               onPressed: _busy || _headline.text.trim().isEmpty
                                   ? null
                                   : () => _save(
-                                      settings.copyWith(headline: _headline.text.trim()),
+                                      settings.copyWith(
+                                        headline: _headline.text.trim(),
+                                      ),
                                       done: 'Headline saved for everyone.',
                                     ),
                               child: const Text('Save headline'),
@@ -219,8 +260,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 selected: preset.id == settings.themeId,
                                 onTap: _busy
                                     ? null
-                                    : () =>
-                                          _save(settings.copyWith(themeId: preset.id), done: 'Theme set for everyone.'),
+                                    : () => _save(
+                                        settings.copyWith(themeId: preset.id),
+                                        done: 'Theme set for everyone.',
+                                      ),
                               ),
                           ],
                         ),
@@ -240,7 +283,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ? null
                                     : () => _save(
                                         settings.copyWith(musicId: track.id),
-                                        done: '"${track.name}" is now the match music for everyone.',
+                                        done:
+                                            '"${track.name}" is now the match music for everyone.',
                                       ),
                               ),
                           ],
@@ -257,11 +301,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 selected: track.id == settings.menuMusicId,
                                 playing: GameAudio.instance.isPreviewing(track),
                                 onPlay: () => _togglePreview(track),
-                                onSelect: _busy || track.id == settings.menuMusicId
+                                onSelect:
+                                    _busy || track.id == settings.menuMusicId
                                     ? null
                                     : () => _save(
-                                        settings.copyWith(menuMusicId: track.id),
-                                        done: '"${track.name}" is now the Home music for everyone.',
+                                        settings.copyWith(
+                                          menuMusicId: track.id,
+                                        ),
+                                        done:
+                                            '"${track.name}" is now the Home music for everyone.',
                                       ),
                               ),
                           ],
@@ -271,25 +319,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'SLOW MOTION',
                         child: Builder(
                           builder: (context) {
-                            final beforeWin = _slowBeforeWin ?? settings.slowMotionBeforeWinSeconds != null;
-                            final lines = _slowMotionLines ?? settings.slowMotionLines;
+                            final beforeWin =
+                                _slowBeforeWin ??
+                                settings.slowMotionBeforeWinSeconds != null;
+                            final lines =
+                                _slowMotionLines ?? settings.slowMotionLines;
                             final seconds =
                                 _slowSeconds ??
                                 settings.slowMotionBeforeWinSeconds ??
                                 AppSettings.defaultSlowMotionBeforeWinSeconds;
                             final changed = beforeWin
                                 ? settings.slowMotionBeforeWinSeconds != seconds
-                                : settings.slowMotionBeforeWinSeconds != null || settings.slowMotionLines != lines;
+                                : settings.slowMotionBeforeWinSeconds != null ||
+                                      settings.slowMotionLines != lines;
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 SegmentedButton<bool>(
                                   segments: const [
-                                    ButtonSegment(value: false, label: Text('By lines')),
-                                    ButtonSegment(value: true, label: Text('Before the win')),
+                                    ButtonSegment(
+                                      value: false,
+                                      label: Text('By lines'),
+                                    ),
+                                    ButtonSegment(
+                                      value: true,
+                                      label: Text('Before the win'),
+                                    ),
                                   ],
                                   selected: {beforeWin},
-                                  onSelectionChanged: _busy ? null : (v) => setState(() => _slowBeforeWin = v.first),
+                                  onSelectionChanged: _busy
+                                      ? null
+                                      : (v) => setState(
+                                          () => _slowBeforeWin = v.first,
+                                        ),
                                 ),
                                 const SizedBox(height: 14),
                                 Text(
@@ -298,7 +360,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       : lines == 0
                                       ? 'Off: matches never slow down.'
                                       : 'Starts when one of the last two balls is down to $lines lines or fewer for good.',
-                                  style: AppText.ui(14, FontWeight.w600, color: c.text),
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w600,
+                                    color: c.text,
+                                  ),
                                 ),
                                 if (beforeWin)
                                   Slider(
@@ -307,7 +373,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     max: 5,
                                     divisions: 9,
                                     label: '${seconds.toStringAsFixed(1)} s',
-                                    onChanged: _busy ? null : (v) => setState(() => _slowSeconds = v),
+                                    onChanged: _busy
+                                        ? null
+                                        : (v) =>
+                                              setState(() => _slowSeconds = v),
                                   )
                                 else
                                   Slider(
@@ -316,14 +385,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     max: 60,
                                     divisions: 60,
                                     label: lines == 0 ? 'Off' : '$lines',
-                                    onChanged: _busy ? null : (v) => setState(() => _slowMotionLines = v.round()),
+                                    onChanged: _busy
+                                        ? null
+                                        : (v) => setState(
+                                            () => _slowMotionLines = v.round(),
+                                          ),
                                   ),
                                 Text(
                                   beforeWin
                                       ? 'Game time; slow motion plays it 4x slower. The app plays each match ahead to know the moment.'
                                       : 'Default ${AppSettings.defaultSlowMotionLines}. Each ball starts with about 90 lines. '
                                             "A ball that will recover doesn't trigger it.",
-                                  style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.4),
+                                  style: AppText.ui(
+                                    12,
+                                    FontWeight.w500,
+                                    color: c.muted,
+                                    height: 1.4,
+                                  ),
                                 ),
                                 const SizedBox(height: 12),
                                 OutlinedButton(
@@ -331,12 +409,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       ? null
                                       : () => _save(
                                           beforeWin
-                                              ? settings.copyWith(slowMotionBeforeWinSeconds: () => seconds)
+                                              ? settings.copyWith(
+                                                  slowMotionBeforeWinSeconds:
+                                                      () => seconds,
+                                                )
                                               : settings.copyWith(
                                                   slowMotionLines: lines,
-                                                  slowMotionBeforeWinSeconds: () => null,
+                                                  slowMotionBeforeWinSeconds:
+                                                      () => null,
                                                 ),
-                                          done: 'Slow motion saved for everyone.',
+                                          done:
+                                              'Slow motion saved for everyone.',
                                         ),
                                   child: const Text('Save slow motion'),
                                 ),
@@ -355,25 +438,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ? 'Damage, times and spawning for Arsenal and All-Out: all at their defaults.'
                                   : 'Damage, times and spawning for Arsenal and All-Out: '
                                         '${settings.powerUps.overrides.length} changed from the defaults.',
-                              style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
+                              style: AppText.ui(
+                                14,
+                                FontWeight.w500,
+                                color: c.muted,
+                                height: 1.5,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             OutlinedButton(
                               onPressed: _busy
                                   ? null
                                   : () async {
-                                      final config = await Navigator.of(context).push<PowerUpConfig>(
-                                        MaterialPageRoute(
-                                          builder: (_) => PowerUpTuningScreen(initial: settings.powerUps),
-                                        ),
-                                      );
-                                      if (config == null || !mounted || config == settings.powerUps) return;
+                                      final config = await Navigator.of(context)
+                                          .push<PowerUpConfig>(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  PowerUpTuningScreen(
+                                                    initial: settings.powerUps,
+                                                  ),
+                                            ),
+                                          );
+                                      if (config == null ||
+                                          !mounted ||
+                                          config == settings.powerUps) {
+                                        return;
+                                      }
                                       await _save(
-                                        AppSettingsScope.of(this.context).copyWith(powerUps: config),
-                                        done: 'Power-up numbers saved for everyone.',
+                                        AppSettingsScope.of(
+                                          this.context,
+                                        ).copyWith(powerUps: config),
+                                        done:
+                                            'Power-up numbers saved for everyone.',
                                       );
                                     },
                               child: const Text('Edit power-up numbers'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _Section(
+                        title: 'FINISHERS',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Preview every weapon, power-up, trap and core finishing move.',
+                              style: AppText.ui(
+                                14,
+                                FontWeight.w500,
+                                color: c.muted,
+                                height: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              key: const ValueKey('open-finisher-gallery'),
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const FinisherGalleryScreen(),
+                                ),
+                              ),
+                              icon: const Icon(Icons.movie_filter_rounded),
+                              label: const Text('Open finisher gallery'),
                             ),
                           ],
                         ),
@@ -387,28 +514,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               contentPadding: EdgeInsets.zero,
                               title: Text(
                                 'Tiled watermark on the winner card',
-                                style: AppText.ui(14, FontWeight.w600, color: c.text),
+                                style: AppText.ui(
+                                  14,
+                                  FontWeight.w600,
+                                  color: c.text,
+                                ),
                               ),
                               value: settings.watermarkEnabled,
                               onChanged: _busy
                                   ? null
                                   : (v) => _save(
                                       settings.copyWith(watermarkEnabled: v),
-                                      done: v ? 'Watermark on.' : 'Watermark off.',
+                                      done: v
+                                          ? 'Watermark on.'
+                                          : 'Watermark off.',
                                     ),
                             ),
                             TextField(
                               controller: _watermark,
                               maxLength: 30,
                               enabled: settings.watermarkEnabled,
-                              decoration: const InputDecoration(hintText: AppSettings.defaultWatermark),
+                              decoration: const InputDecoration(
+                                hintText: AppSettings.defaultWatermark,
+                              ),
                               onChanged: (_) => setState(() {}),
                             ),
                             OutlinedButton(
-                              onPressed: _busy || !settings.watermarkEnabled || _watermark.text.trim().isEmpty
+                              onPressed:
+                                  _busy ||
+                                      !settings.watermarkEnabled ||
+                                      _watermark.text.trim().isEmpty
                                   ? null
                                   : () => _save(
-                                      settings.copyWith(watermarkText: _watermark.text.trim()),
+                                      settings.copyWith(
+                                        watermarkText: _watermark.text.trim(),
+                                      ),
                                       done: 'Watermark saved.',
                                     ),
                               child: const Text('Save watermark text'),
@@ -451,10 +591,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Expanded(
                               child: Text(
                                 _scope?.adminAuth?.email ?? 'Admin',
-                                style: AppText.ui(14, FontWeight.w600, color: c.text),
+                                style: AppText.ui(
+                                  14,
+                                  FontWeight.w600,
+                                  color: c.text,
+                                ),
                               ),
                             ),
-                            TextButton(onPressed: _busy ? null : _signOut, child: const Text('Sign out')),
+                            TextButton(
+                              onPressed: _busy ? null : _signOut,
+                              child: const Text('Sign out'),
+                            ),
                           ],
                         ),
                       ),
@@ -505,7 +652,9 @@ class _TrackRow extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
                   size: 20,
                   color: selected ? c.text : c.muted,
                 ),
@@ -514,16 +663,24 @@ class _TrackRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(track.name, style: AppText.ui(14, FontWeight.w700, color: c.text)),
+                      Text(
+                        track.name,
+                        style: AppText.ui(14, FontWeight.w700, color: c.text),
+                      ),
                       const SizedBox(height: 2),
-                      Text(track.mood, style: AppText.ui(12, FontWeight.w500, color: c.muted)),
+                      Text(
+                        track.mood,
+                        style: AppText.ui(12, FontWeight.w500, color: c.muted),
+                      ),
                     ],
                   ),
                 ),
                 IconButton(
                   tooltip: playing ? 'Stop' : 'Play ${track.name}',
                   onPressed: onPlay,
-                  icon: Icon(playing ? Icons.stop_rounded : Icons.play_arrow_rounded),
+                  icon: Icon(
+                    playing ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                  ),
                 ),
               ],
             ),
@@ -548,7 +705,10 @@ class _Section extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: AppText.mono(11, color: c.muted, letterSpacing: 1.6)),
+          Text(
+            title,
+            style: AppText.mono(11, color: c.muted, letterSpacing: 1.6),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -563,7 +723,11 @@ class _ThemeSwatch extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
 
-  const _ThemeSwatch({required this.preset, required this.selected, this.onTap});
+  const _ThemeSwatch({
+    required this.preset,
+    required this.selected,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -583,7 +747,10 @@ class _ThemeSwatch extends StatelessWidget {
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: selected ? c.text : Colors.transparent, width: 2),
+              border: Border.all(
+                color: selected ? c.text : Colors.transparent,
+                width: 2,
+              ),
             ),
             child: Container(
               decoration: BoxDecoration(
@@ -592,7 +759,14 @@ class _ThemeSwatch extends StatelessWidget {
                 border: Border.all(color: c.border),
               ),
               alignment: Alignment.center,
-              child: Text('Aa', style: AppText.ui(18, FontWeight.w800, color: preset.foreground)),
+              child: Text(
+                'Aa',
+                style: AppText.ui(
+                  18,
+                  FontWeight.w800,
+                  color: preset.foreground,
+                ),
+              ),
             ),
           ),
         ),
@@ -620,7 +794,8 @@ class _SignInDialogState extends State<_SignInDialog> {
     super.dispose();
   }
 
-  void _submit() => Navigator.of(context).pop((_email.text, _password.text, _rememberMe));
+  void _submit() =>
+      Navigator.of(context).pop((_email.text, _password.text, _rememberMe));
 
   @override
   Widget build(BuildContext context) {
@@ -654,7 +829,10 @@ class _SignInDialogState extends State<_SignInDialog> {
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(onPressed: _submit, child: const Text('Sign in')),
       ],
     );

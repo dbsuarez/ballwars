@@ -270,6 +270,19 @@ class StickyGoo {
 
   final Offset position;
   final int spawnStep;
+
+  /// Separate goo clumps distributed along the same curved rim as spike walls.
+  List<Offset> blobPositions(double spacing, {int count = 7}) {
+    final radius = position.distance;
+    if (radius == 0) return List<Offset>.filled(count, Offset.zero);
+    final centerAngle = math.atan2(position.dy, position.dx);
+    final angleStep = spacing / radius;
+    final start = -(count - 1) / 2;
+    return [
+      for (var i = 0; i < count; i++)
+        Offset.fromDirection(centerAngle + (start + i) * angleStep, radius),
+    ];
+  }
 }
 
 /// A hooked ball being reeled in by [owner]: it moves straight toward the owner until they touch (or

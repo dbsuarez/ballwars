@@ -399,10 +399,15 @@ class PowerUpSystem {
   void _triggerStickyGoo() {
     if (stickyGoo.isEmpty) return;
     for (final goo in List<StickyGoo>.of(stickyGoo)) {
+      final blobs = goo.blobPositions(fieldRadius * 0.72);
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
-        if ((ball.position - goo.position).distance >=
-            ball.radius + fieldRadius) {
+        final touches = blobs.any(
+          (blob) =>
+              (ball.position - blob).distance <
+              ball.radius + fieldRadius * 0.48,
+        );
+        if (!touches) {
           continue;
         }
         stickyGoo.remove(goo);

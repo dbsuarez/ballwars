@@ -287,61 +287,33 @@ class PowerUpPainter {
 
     for (final goo in p.stickyGoo) {
       final pulse = 0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
-      final angle = math.atan2(goo.position.dy, goo.position.dx);
-      final halfAngle = r * 1.2 * pulse / arenaRadius;
-      final innerRadius = arenaRadius - r * 1.15;
-      final start = angle - halfAngle;
-      final sweep = halfAngle * 2;
-      final outerStart = Offset(math.cos(start), math.sin(start)) * arenaRadius;
-      final innerEnd =
-          Offset(math.cos(angle + halfAngle), math.sin(angle + halfAngle)) *
-          innerRadius;
-      final path = Path()
-        ..moveTo(outerStart.dx, outerStart.dy)
-        ..arcTo(
-          Rect.fromCircle(center: Offset.zero, radius: arenaRadius),
-          start,
-          sweep,
-          false,
-        )
-        ..lineTo(innerEnd.dx, innerEnd.dy)
-        ..arcTo(
-          Rect.fromCircle(center: Offset.zero, radius: innerRadius),
-          angle + halfAngle,
-          -sweep,
-          false,
-        )
-        ..close();
-      canvas.drawPath(path, Paint()..color = const Color(0xFF65E34F));
-      canvas.save();
-      canvas.clipPath(path);
-      final gooSprite = PowerUpSprites.of(PowerUpKind.stickyGoo);
-      if (gooSprite != null) {
-        _drawSprite(
-          canvas,
-          gooSprite,
-          goo.position - Offset(math.cos(angle), math.sin(angle)) * r * 0.5,
-          r * 1.2 * pulse,
-          angle + math.pi / 2,
+      final blobs = goo.blobPositions(r * 0.72);
+      for (var i = 0; i < blobs.length; i++) {
+        final blob = blobs[i];
+        final angle = math.atan2(blob.dy, blob.dx);
+        canvas.save();
+        canvas.translate(blob.dx, blob.dy);
+        canvas.rotate(angle);
+        final wobble = 0.92 + 0.08 * math.sin(state.step * 0.16 + i * 1.7);
+        final rect = Rect.fromCenter(
+          center: Offset.zero,
+          width: r * 0.94 * pulse,
+          height: r * 0.62 * wobble,
         );
-      }
-      canvas.restore();
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(1.5, r * 0.12)
-          ..color = const Color(0xFF287A2C),
-      );
-      for (final offset in const [-0.55, 0.0, 0.58]) {
-        final bubbleAngle = angle + halfAngle * offset;
-        final bubbleRadius =
-            arenaRadius - r * (0.35 + 0.4 * (1 - offset.abs()));
+        canvas.drawOval(rect, Paint()..color = const Color(0xFF65E34F));
+        canvas.drawOval(
+          rect,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(1.5, r * 0.1)
+            ..color = const Color(0xFF287A2C),
+        );
         canvas.drawCircle(
-          Offset(math.cos(bubbleAngle), math.sin(bubbleAngle)) * bubbleRadius,
-          r * 0.13,
+          Offset(-r * 0.08, -r * 0.12),
+          r * 0.1,
           Paint()..color = const Color(0xFFB5FF73),
         );
+        canvas.restore();
       }
     }
 

@@ -236,7 +236,7 @@ void main() {
   });
 
   testWidgets(
-    'weapons can be chosen for power-up modes; All switches every one; Done needs at least one',
+    'weapon cards toggle selections; select all works; Done needs at least one',
     (tester) async {
       await pumpSetup(tester);
       expect(find.textContaining('Weapons'), findsNothing);
@@ -264,16 +264,21 @@ void main() {
       // All off: nothing left, so Done waits for a pick.
       expect(find.text('Weapons, power-ups & traps'), findsOneWidget);
       expect(find.text('Weapons'), findsOneWidget);
-      await tester.tap(
-        find.widgetWithText(SwitchListTile, 'All weapons & power-ups'),
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(SwitchListTile),
+        ),
+        findsNothing,
       );
+      expect(find.byIcon(Icons.check_circle_rounded), findsWidgets);
+      await tester.tap(find.widgetWithText(TextButton, 'Clear'));
       await tester.pump();
       expect(done().onPressed, isNull);
       expect(find.text('Pick at least one.'), findsOneWidget);
 
-      final first = find.widgetWithText(
-        SwitchListTile,
-        PowerUpKind.values.first.label,
+      final first = find.byKey(
+        ValueKey('selection-card-${PowerUpKind.values.first.name}'),
       );
       await tester.ensureVisible(first);
       await tester.pumpAndSettle();
@@ -290,9 +295,7 @@ void main() {
       // All on again.
       await tester.tap(find.text('Pickups: 1 of $selectableCount'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.widgetWithText(SwitchListTile, 'All weapons & power-ups'),
-      );
+      await tester.tap(find.widgetWithText(TextButton, 'Select all'));
       await tester.pump();
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();

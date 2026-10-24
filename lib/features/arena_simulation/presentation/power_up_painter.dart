@@ -114,13 +114,17 @@ class PowerUpPainter {
       final pulse =
           0.5 +
           0.5 * math.sin((state.step - item.spawnStep) * 2 * math.pi / 60);
-      _paintToken(
-        canvas,
-        item.kind,
-        item.position,
-        r * (0.96 + 0.08 * pulse),
-        0.5 + 0.5 * pulse,
-      );
+      if (item.kind.isTrap) {
+        _paintTrap(canvas, item.kind, item.position, r * (0.96 + 0.08 * pulse));
+      } else {
+        _paintToken(
+          canvas,
+          item.kind,
+          item.position,
+          r * (0.96 + 0.08 * pulse),
+          0.5 + 0.5 * pulse,
+        );
+      }
     }
 
     for (final portal in p.portals) {
@@ -178,15 +182,19 @@ class PowerUpPainter {
     }
 
     for (final bomb in p.mines) {
-      // Armed: ringed in its owner's color, with a red light blinking twice a second.
+      // Armed traps sit directly on the arena instead of looking like pickup
+      // balls. The short owner-colored footing preserves ownership feedback.
       final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
-      _paintToken(
-        canvas,
-        bomb.kind,
-        bomb.position,
-        r,
-        bomb.kind == PowerUpKind.phaseMine ? 0.18 : 1,
-        ring: bomb.owner.config.primaryColor,
+      _paintTrap(canvas, bomb.kind, bomb.position, r);
+      canvas.drawLine(
+        bomb.position + Offset(-r * 0.65, r * 0.78),
+        bomb.position + Offset(r * 0.65, r * 0.78),
+        Paint()
+          ..strokeWidth = math.max(2, r * 0.14)
+          ..strokeCap = StrokeCap.round
+          ..color = bomb.owner.config.primaryColor.withValues(
+            alpha: bomb.kind == PowerUpKind.phaseMine ? 0.35 : 0.9,
+          ),
       );
       canvas.drawCircle(
         bomb.position + Offset(r * 0.62, -r * 0.62),
@@ -477,6 +485,22 @@ class PowerUpPainter {
       drawGlyph(canvas, kind, c, r * 0.62);
     } else {
       _drawSprite(canvas, sprite, c, r * 0.68, 0);
+    }
+  }
+
+  /// Arena traps are fixtures, not collectible balls: draw only their sprite
+  /// (or vector glyph while sprites load), with no white orb, ring, or glow.
+  static void _paintTrap(
+    Canvas canvas,
+    PowerUpKind kind,
+    Offset center,
+    double radius,
+  ) {
+    final sprite = PowerUpSprites.of(kind);
+    if (sprite == null) {
+      drawGlyph(canvas, kind, center, radius * 0.9);
+    } else {
+      _drawSprite(canvas, sprite, center, radius * 0.95, 0);
     }
   }
 

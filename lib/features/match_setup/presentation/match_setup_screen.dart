@@ -1035,8 +1035,8 @@ enum _CategoryFilter {
       values.where((f) => f.name == name).firstOrNull;
 }
 
-/// Which power-ups can spawn: a switch per power-up with its icon and what it does (damage in life for
-/// Arsenal, in lines for All-Out), and an All switch. Done needs at least one on.
+/// Which power-ups can spawn: compact cards with an icon, description and
+/// corner checkmark. Done needs at least one selection.
 class _WeaponsDialog extends StatefulWidget {
   final Set<PowerUpKind> initial;
   final bool arsenal;
@@ -1057,7 +1057,6 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 700;
     final weapons = PowerUpKind.values.where((kind) => kind.isWeapon);
     final powerUps = PowerUpKind.values.where((kind) => kind.isPowerUp);
     final traps = PowerUpKind.values.where((kind) => kind.isTrap);
@@ -1080,39 +1079,37 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
-            // Switches every weapon on or off at once (then pick at least one).
-            SwitchListTile(
-              title: const Text('All weapons & power-ups'),
-              subtitle: selectedCount == 0
-                  ? Text(
-                      'Pick at least one.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 8, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      selectedCount == 0
+                          ? 'Pick at least one.'
+                          : '$selectedCount selected',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: selectedCount == 0
+                            ? Theme.of(context).colorScheme.error
+                            : null,
                       ),
-                    )
-                  : null,
-              value: selectedCount == selectable.length,
-              onChanged: (v) => setState(
-                () => v ? _on.addAll(selectable) : _on.removeAll(selectable),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _on.addAll(selectable)),
+                    child: const Text('Select all'),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _on.removeAll(selectable)),
+                    child: const Text('Clear'),
+                  ),
+                ],
               ),
             ),
             const Divider(height: 1),
-            if (wide)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _section('Weapons', weapons)),
-                  Expanded(child: _section('Power-ups', powerUps)),
-                  Expanded(child: _trapSection(traps)),
-                ],
-              )
-            else ...[
-              _section('Weapons', weapons),
-              const Divider(height: 20),
-              _section('Power-ups', powerUps),
-              const Divider(height: 20),
-              _trapSection(traps),
-            ],
+            _section('Weapons', weapons),
+            _section('Power-ups', powerUps),
+            _trapSection(traps),
           ],
         ),
       ),
@@ -1139,23 +1136,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
         child: Text(title, style: Theme.of(context).textTheme.titleMedium),
       ),
-      for (final kind in kinds)
-        SwitchListTile(
-          dense: true,
-          isThreeLine: true,
-          secondary: PowerUpIcon(kind),
-          title: Text(kind.label),
-          subtitle: Text(
-            powerUpDescription(
-              kind,
-              arsenal: widget.arsenal,
-              config: widget.config,
-            ),
-          ),
-          value: _on.contains(kind),
-          onChanged: (v) =>
-              setState(() => v ? _on.add(kind) : _on.remove(kind)),
-        ),
+      _cardGrid(kinds, selectable: true),
     ],
   );
 
@@ -1169,21 +1150,93 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
       ),
-      for (final kind in kinds)
-        ListTile(
-          dense: true,
-          isThreeLine: true,
-          leading: PowerUpIcon(kind),
-          title: Text(kind.label),
-          subtitle: Text(
-            powerUpDescription(
-              kind,
-              arsenal: widget.arsenal,
-              config: widget.config,
-            ),
-          ),
-          trailing: const Icon(Icons.lock_outline_rounded, size: 18),
-        ),
+      _cardGrid(kinds, selectable: false),
     ],
   );
+
+  Widget _cardGrid(Iterable<PowerUpKind> kinds, {required bool selectable}) =>
+      LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 8.0;
+          final columns = constraints.maxWidth >= 560 ? 2 : 1;
+          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final kind in kinds)
+                  SizedBox(
+                    width: width - (columns == 1 ? 16 : 8),
+                    height: 112,
+                    child: _itemCard(kind, selectable: selectable),
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+
+  Widget _itemCard(PowerUpKind kind, {required bool selectable}) {
+    final selected = selectable ? _on.contains(kind) : true;
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: selected
+          ? colors.secondaryContainer.withValues(alpha: 0.55)
+          : null,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('selection-card-${kind.name}'),
+        onTap: selectable
+            ? () => setState(() => selected ? _on.remove(kind) : _on.add(kind))
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PowerUpIcon(kind, size: 40),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      kind.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      powerUpDescription(
+                        kind,
+                        arsenal: widget.arsenal,
+                        config: widget.config,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                selectable
+                    ? selected
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined
+                    : Icons.lock_outline_rounded,
+                size: 22,
+                color: selectable && selected ? colors.primary : colors.outline,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

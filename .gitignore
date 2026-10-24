@@ -1,5 +1,7 @@
 .worktrees/
 docs/output_frames/
+mynotes_bw.txt
+docs/2026-10-23-app-audit.md
 
 # Miscellaneous
 *.class

@@ -76,6 +76,16 @@ enum PowerUpKind {
       this == bow ||
       this == threadHarpoon;
 
+  /// Camera emphasis for a successful hit; subtle shots stay crisp while
+  /// heavyweight attacks move the whole arena.
+  double get impactWeight => switch (this) {
+    rocketLauncher || omegaTendrils => 1.0,
+    grenade || mine || phaseMine || molotov => 0.8,
+    sword || orbitingFlail || spikeWall || threadHarpoon => 0.48,
+    shotgun || bow || ricochetDisc || boomerang => 0.3,
+    _ => 0.16,
+  };
+
   /// Weapons occupy the ball's single equipment slot. Keeping this category
   /// explicit leaves room for a future multi-weapon loadout.
   bool get isWeapon =>
@@ -175,6 +185,14 @@ class Explosion {
   final double radius;
 
   /// Steps since it went off.
+  int age = 0;
+}
+
+class WeaponImpact {
+  WeaponImpact({required this.position, required this.strength});
+
+  final Offset position;
+  final double strength;
   int age = 0;
 }
 

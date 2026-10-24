@@ -49,6 +49,7 @@ class PowerUpSystem {
 
   /// Recent blasts, for drawing (removed after [PowerUpTuning.explosionShowSteps]).
   final List<Explosion> explosions = [];
+  final List<WeaponImpact> weaponImpacts = [];
 
   /// Three-second floor fires created by thrown Molotovs.
   final List<BurningZone> burningZones = [];
@@ -548,6 +549,10 @@ class PowerUpSystem {
       e.age++;
     }
     explosions.removeWhere((e) => e.age >= PowerUpTuning.explosionShowSteps);
+    for (final impact in weaponImpacts) {
+      impact.age++;
+    }
+    weaponImpacts.removeWhere((impact) => impact.age >= 12);
     for (final fire in burningZones) {
       fire.age++;
     }
@@ -1449,7 +1454,17 @@ class PowerUpSystem {
     hits++;
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
-    match.state.particles.spawnImpact(origin: impact, rng: rng);
+    final (impactColor, impactAccent) = _impactColors(kind);
+    match.state.particles.spawnImpact(
+      origin: impact,
+      rng: rng,
+      color: impactColor,
+      accent: impactAccent,
+      count: 7 + (kind.impactWeight * 10).round(),
+    );
+    weaponImpacts.add(
+      WeaponImpact(position: impact, strength: kind.impactWeight),
+    );
     var share = 1.0;
     final shielded = match.mode == MatchMode.arsenal
         ? 1 - _t.shieldBlock
@@ -1528,6 +1543,28 @@ class PowerUpSystem {
       rng: rng,
     );
   }
+
+  (Color, Color) _impactColors(PowerUpKind kind) => switch (kind) {
+    PowerUpKind.freeze => (const Color(0xFF79E8FF), const Color(0xFFFFFFFF)),
+    PowerUpKind.molotov => (const Color(0xFFFF5A1F), const Color(0xFFFFD43B)),
+    PowerUpKind.rocketLauncher ||
+    PowerUpKind.grenade => (const Color(0xFFFF7A3D), const Color(0xFFFFFFFF)),
+    PowerUpKind.omegaTendrils => (
+      const Color(0xFFE21D35),
+      const Color(0xFFFF6578),
+    ),
+    PowerUpKind.boomerang || PowerUpKind.ricochetDisc => (
+      const Color(0xFF20DDF2),
+      const Color(0xFFFFFFFF),
+    ),
+    PowerUpKind.prismLaser => (
+      const Color(0xFFFF4FD8),
+      const Color(0xFF5BE7FF),
+    ),
+    PowerUpKind.knife ||
+    PowerUpKind.sword => (const Color(0xFFDCE5EC), const Color(0xFFFFD43B)),
+    _ => (const Color(0xFFFFFFFF), const Color(0xFFFFD43B)),
+  };
 
   /// All-Out sword sweep: while [SimulationBall.sweepLeft] runs, a ball cuts every opponent thread that
   /// passes within [PowerUpTuning.sweepReach] times its radius (wider than its body). Ghosts on either side

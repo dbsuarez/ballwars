@@ -443,6 +443,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
           1 - explosion.age / PowerUpTuning.explosionShowSteps.toDouble();
       if (life > strength) strength = life;
     }
+    for (final impact in _state.powerUps!.weaponImpacts) {
+      final life = 1 - impact.age / 12.0;
+      final weighted = life * impact.strength;
+      if (weighted > strength) strength = weighted;
+    }
     if (strength <= 0) return Offset.zero;
     final magnitude = 7.0 * strength * strength;
     return Offset(
@@ -906,44 +911,55 @@ class _VersusHeader extends StatelessWidget {
               ),
             ),
           Expanded(
-            child: AnimatedOpacity(
-              opacity: balls[i].isEliminated ? 0.3 : 1,
-              duration: const Duration(milliseconds: 300),
-              child: Column(
-                children: [
-                  if (look == BallLook.faces)
-                    // The picture with its smiley at its lower right, overlapping a little, same base line.
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        CircularBallPreview(ball: balls[i].config, size: size),
-                        Positioned(
-                          right: -size * smileyScale * 0.45,
-                          bottom: 0,
-                          child: CustomPaint(
-                            size: Size.square(size * smileyScale),
-                            painter: _SmileyPainter(balls[i], balls),
-                          ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final ballSize = math.min(size, constraints.maxWidth * 0.72);
+                return AnimatedOpacity(
+                  opacity: balls[i].isEliminated ? 0.3 : 1,
+                  duration: const Duration(milliseconds: 300),
+                  child: Column(
+                    children: [
+                      if (look == BallLook.faces)
+                        // The picture with its smiley at its lower right, overlapping a little, same base line.
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            CircularBallPreview(
+                              ball: balls[i].config,
+                              size: ballSize,
+                            ),
+                            Positioned(
+                              right: -ballSize * smileyScale * 0.45,
+                              bottom: 0,
+                              child: CustomPaint(
+                                size: Size.square(ballSize * smileyScale),
+                                painter: _SmileyPainter(balls[i], balls),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        CircularBallPreview(
+                          ball: balls[i].config,
+                          size: ballSize,
                         ),
-                      ],
-                    )
-                  else
-                    CircularBallPreview(ball: balls[i].config, size: size),
-                  SizedBox(height: compact ? 4 : 10),
-                  Text(
-                    balls[i].config.name,
-                    maxLines: compact ? 1 : 2,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.ui(
-                      compact ? 12 : (balls.length <= 2 ? 16 : 13),
-                      FontWeight.w700,
-                      color: c.text,
-                      height: 1.2,
-                    ),
+                      SizedBox(height: compact ? 4 : 10),
+                      Text(
+                        balls[i].config.name,
+                        maxLines: compact ? 1 : 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.ui(
+                          compact ? 12 : (balls.length <= 2 ? 16 : 13),
+                          FontWeight.w700,
+                          color: c.text,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],

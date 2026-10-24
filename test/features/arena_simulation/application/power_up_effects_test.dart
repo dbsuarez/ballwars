@@ -431,11 +431,16 @@ void main() {
     second.position = const Offset(100, 0);
 
     _give(c, owner, PowerUpKind.boomerang);
+    _run(c, PowerUpTuning.aimSteps + 2);
+    final shot = c.powerUps!.projectiles.single;
+    final launchSpot = shot.returnTo;
+    owner.position = const Offset(-180, 80);
     _run(c, 420);
 
     expect(first.life, lessThan(_life));
     expect(second.life, lessThan(_life));
     expect(c.powerUps!.hits, 2);
+    expect(shot.position, launchSpot);
     expect(c.powerUps!.projectiles.where((shot) => !shot.spent), isEmpty);
   });
 

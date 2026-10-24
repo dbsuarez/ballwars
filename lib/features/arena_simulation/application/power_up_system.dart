@@ -1245,6 +1245,7 @@ class PowerUpSystem {
             direction *
             (match.arenaRadius * (speedRatio ?? _t.bulletSpeedRatio)),
         volley: volley,
+        returnTo: kind == PowerUpKind.boomerang ? ball.position : null,
       ),
     );
     shots++;
@@ -1278,8 +1279,10 @@ class PowerUpSystem {
         }
       }
       if (p.kind == PowerUpKind.boomerang && p.returning) {
-        final home = p.owner.position - from;
+        final returnSpot = p.returnTo ?? p.owner.position;
+        final home = returnSpot - from;
         if (home.distance <= p.owner.radius * 1.15) {
+          p.position = returnSpot;
           p.spent = true;
           continue;
         }

@@ -397,6 +397,33 @@ class _FinisherPainter extends CustomPainter {
     Offset to,
   ) {
     switch (kind) {
+      case PowerUpKind.lightningStrikes:
+        if (hookProgress > 0 && uppercutProgress < 0.75) {
+          final progress = (hookProgress * 1.5).clamp(0.0, 1.0);
+          final top = Offset(loserCenter.dx, 0);
+          final end = Offset.lerp(top, loserCenter, progress)!;
+          for (var bolt = -1; bolt <= 1; bolt++) {
+            final path = Path()..moveTo(top.dx + bolt * radius * 0.3, top.dy);
+            for (var i = 1; i <= 8; i++) {
+              final point = Offset.lerp(top, end, i / 8)!;
+              final zig = i == 8 ? 0.0 : (i.isEven ? -1 : 1) * radius * 0.28;
+              path.lineTo(point.dx + zig + bolt * radius * 0.2, point.dy);
+            }
+            canvas.drawPath(path, Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = radius * 0.16
+              ..color = const Color(0xFF62BFFF).withValues(alpha: 0.7));
+            canvas.drawPath(path, Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = radius * 0.05
+              ..color = const Color(0xFFF4FCFF));
+          }
+          if (progress >= 1) {
+            canvas.drawCircle(loserCenter, radius * 1.2, Paint()
+              ..color = const Color(0xFFBDEBFF).withValues(alpha: 0.28));
+          }
+        }
+
       case PowerUpKind.pistol:
         if (hookProgress > 0 && hookProgress < 1) {
           _paintBullet(canvas, to, radius * 0.22);

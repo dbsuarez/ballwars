@@ -689,13 +689,13 @@ class MatchSimulationController {
             ballHits++;
             damage(
               a,
-              PowerUpTuning.arenaCollisionDamage,
+              _bodyCollisionDamage(b),
               attacker: b,
               move: 'Collision',
             );
             damage(
               b,
-              PowerUpTuning.arenaCollisionDamage,
+              _bodyCollisionDamage(a),
               attacker: a,
               move: 'Collision',
             );
@@ -729,13 +729,13 @@ class MatchSimulationController {
           // In Arsenal, every genuine ball-to-ball bounce hurts both balls.
           damage(
             a,
-            PowerUpTuning.arenaCollisionDamage,
+            _bodyCollisionDamage(b),
             attacker: b,
             move: 'Collision',
           );
           damage(
             b,
-            PowerUpTuning.arenaCollisionDamage,
+            _bodyCollisionDamage(a),
             attacker: a,
             move: 'Collision',
           );
@@ -914,6 +914,13 @@ class MatchSimulationController {
           _crowdSpeedFactor(_balls.length);
     _floatingTexts.spawn(ball.position, 'RESPAWN!', ball.config.primaryColor);
   }
+
+  /// A ball without either equipped weapon uses the admin's unarmed damage.
+  /// Buffs do not count as equipment. Ordinary armed bumps keep their base damage.
+  double _bodyCollisionDamage(SimulationBall attacker) =>
+      attacker.held == null && attacker.heldSecondary == null
+          ? tuning.unarmedCollisionDamage
+          : PowerUpTuning.arenaCollisionDamage;
 
   /// Keeps the bounce directions from the elastic collision but applies only
   /// [collisionSpeedTransfer] of its speed exchange, then rescales both balls

@@ -41,7 +41,12 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   MatchSimulationController? _match;
   bool _paused = true;
   bool _randomSpawns = false;
-  bool _endless = false;
+  bool _endless = true;
+  GameAudio get _audio => GameAudio.instance;
+  (int, int, int, int, int, int) _heardPowerUps = (0, 0, 0, 0, 0, 0);
+  int _heardGatling = 0;
+  int _heardWallHits = 0;
+  int _heardBallHits = 0;
   double _speed = 1;
   MatchMode _mode = MatchMode.arsenal;
   String _layout = 'Separated';
@@ -75,11 +80,19 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     if (!mounted) return;
     setState(() {
       _allowed = allowed;
-      if (allowed) _reset();
+      if (allowed) {
+        _audio.stopMenuMusic();
+        _reset();
+      }
     });
   }
 
   void _reset() {
+    _audio.stopMusic();
+    _heardPowerUps = (0, 0, 0, 0, 0, 0);
+    _heardGatling = 0;
+    _heardWallHits = 0;
+    _heardBallHits = 0;
     if (_ticker.isActive) _ticker.stop();
     _match = MatchSimulationController(
       _balls,
@@ -119,7 +132,41 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     // Ignore background/resume gaps instead of skipping ahead in the fight.
     if (dt <= 0 || dt > 0.25) return;
     setState(() => _match!.tick(dt * _speed));
-    if (_match!.state.status == MatchStatus.finished) _ticker.stop();
+    _playTestSounds();
+    if (_match!.state.status == MatchStatus.finished) {
+      _ticker.stop();
+      _audio.stopMusic();
+    }
+  }
+
+  void _playTestSounds() {
+    final controller = _match!;
+    if (controller.wallHits > _heardWallHits) _audio.bounce();
+    if (controller.ballHits > _heardBallHits) _audio.collide();
+    _heardWallHits = controller.wallHits;
+    _heardBallHits = controller.ballHits;
+    final p = controller.powerUps;
+    if (p == null) return;
+    final (shots, hits, slashes, blocks, blasts, pickups) = _heardPowerUps;
+    if (p.gatlingShots > _heardGatling) {
+      _audio.gatling();
+    } else if (p.shots > shots) {
+      p.shots - shots >= 5 ? _audio.shotgun() : _audio.shot();
+    }
+    _heardGatling = p.gatlingShots;
+    if (p.hits > hits) _audio.hit();
+    if (p.slashes > slashes) _audio.slash();
+    if (p.blocks > blocks) _audio.shield();
+    if (p.blasts > blasts) _audio.bomb();
+    if (p.pickups > pickups) _audio.pickup();
+    _heardPowerUps = (
+      p.shots,
+      p.hits,
+      p.slashes,
+      p.blocks,
+      p.blasts,
+      p.pickups,
+    );
   }
 
   void _give(int index) {
@@ -143,6 +190,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   @override
   void dispose() {
     _ticker.dispose();
+    if (_allowed == true) {
+      _audio.stopMusic();
+      _audio.startMenuMusic();
+    }
     super.dispose();
   }
 
@@ -153,8 +204,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       _previous = null;
       if (_paused) {
         _ticker.stop();
+        _audio.pauseMusic();
       } else {
         _ticker.start();
+        _audio.startMusic();
       }
     });
   }
@@ -171,6 +224,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
+      _audio.pauseMusic();
       _previous = null;
     });
     final selected = await showModalBottomSheet<Object>(
@@ -197,6 +251,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
+      _audio.pauseMusic();
       _previous = null;
     });
     final profile = FinisherProfile.forMove(kind.label);
@@ -349,6 +404,24 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     ]);
   }
 
+  Future<void> _showItemInfo(int index) async {
+    final item = _savedItems[index];
+    if (item == null) return;
+    setState(() {
+      _paused = true;
+      _ticker.stop();
+      _audio.pauseMusic();
+      _previous = null;
+    });
+    await showDialog<void>(context: context, builder: (context) => AlertDialog(
+      title: Text(item.label),
+      content: SingleChildScrollView(child: Text(powerUpDescription(
+        item, arsenal: _mode == MatchMode.arsenal, config: _match!.tuning,
+      ))),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+    ));
+  }
+
   Widget _controls() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -366,6 +439,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               child: Text(_savedItems[i]?.label ?? 'Choose item',
                   maxLines: 1, overflow: TextOverflow.ellipsis),
             )),
+            IconButton(
+              tooltip: 'Item info for Ball ${i == 0 ? "A" : "B"}',
+              onPressed: _savedItems[i] == null ? null : () => _showItemInfo(i),
+              icon: const Icon(Icons.info_outline),
+            ),
             IconButton(
               tooltip: 'Give item again to Ball ${i == 0 ? "A" : "B"}',
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
@@ -386,6 +464,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
+      _audio.pauseMusic();
       _previous = null;
     });
     await showModalBottomSheet<void>(
@@ -443,6 +522,27 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
+  Widget _audioToggle({required bool music}) {
+    final on = music ? _audio.musicOn : _audio.effectsOn;
+    return IconButton(
+      tooltip: '${music ? "Background music" : "Sound effects"}: ${on ? "on" : "off"}',
+      onPressed: () async {
+        if (music) {
+          await _audio.setMusicOn(!on);
+          if (_paused) _audio.pauseMusic();
+        } else {
+          await _audio.setEffectsOn(!on);
+        }
+        if (mounted) setState(() {});
+      },
+      icon: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(music ? (on ? Icons.music_note : Icons.music_off)
+            : (on ? Icons.volume_up : Icons.volume_off), size: 20),
+        Text(music ? 'BG' : 'SFX', style: const TextStyle(fontSize: 9)),
+      ]),
+    );
+  }
+
   Widget _playback() {
     final match = _match!;
     final finished = match.state.status == MatchStatus.finished;
@@ -471,6 +571,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
               onPressed: !_paused || finished ? null : () => setState(() {
                 match.tick(MatchSimulationController.fixedTimestep / match.playbackSpeedUp);
+                _playTestSounds();
               }),
               child: const Text('Step frame'),
             )),
@@ -502,8 +603,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       enabled: !_paused && _match!.state.status != MatchStatus.finished,
       child: Scaffold(
       appBar: AppBar(
-        title: const Text('Power-up Tests'),
-        actions: [IconButton(tooltip: 'Fight setup',
+        title: const Text('Power-up Tests', maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [
+          _audioToggle(music: true),
+          _audioToggle(music: false),
+          IconButton(tooltip: 'Fight setup',
             onPressed: _showSetup, icon: const Icon(Icons.tune))],
       ),
       bottomNavigationBar: _playback(),

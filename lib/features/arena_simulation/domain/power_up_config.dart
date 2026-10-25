@@ -171,6 +171,14 @@ class PowerUpConfig {
       max: 50,
       integer: true,
     ),
+    TuningField(
+      'unarmedCollision',
+      'Unequipped ball collision damage',
+      _arsenal,
+      PowerUpTuning.arenaCollisionDamage,
+      min: 0,
+      max: 200,
+    ),
     for (final kind in damageKinds)
       TuningField(
         'dmg.${kind.name}',
@@ -338,6 +346,7 @@ class PowerUpConfig {
   double arenaDamage(PowerUpKind kind) => _byId.containsKey('dmg.${kind.name}')
       ? value('dmg.${kind.name}').toDouble()
       : 0;
+  double get unarmedCollisionDamage => value('unarmedCollision').toDouble();
   double get arenaShieldBash => value('bash').toDouble();
   double get shieldBlock => _share('block');
   double get arenaAppleHeal => value('heal').toDouble();

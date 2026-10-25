@@ -403,7 +403,15 @@ class PowerUpPainter {
         _paintRocketExplosion(canvas, e.position, e.radius, t, fade);
         continue;
       }
-      if (showEffects) {
+      if (e.kind == PowerUpKind.grenade) {
+        canvas.drawCircle(e.position, e.radius * (0.35 + 0.65 * t), Paint()
+          ..shader = ui.Gradient.radial(e.position, e.radius, [
+            const Color(0xFFFFF1A0).withValues(alpha: fade),
+            const Color(0xFFFF6B23).withValues(alpha: fade * 0.65),
+            const Color(0x00FF6B23),
+          ]));
+      }
+      if (showEffects && e.kind != PowerUpKind.grenade) {
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.explosion,
           (t * 4).floor().clamp(0, 3),
@@ -1042,20 +1050,7 @@ class PowerUpPainter {
     // Grows from a ball's edge outward as it travels.
     final travelled = (shot.position - shot.owner.position).distance;
     final grow = (travelled / (r * 8)).clamp(0.0, 1.0);
-    final sprite = PowerUpSprites.effectFrame(
-      AnimatedEffect.iceImpact,
-      (grow * 4).floor().clamp(0, 3),
-    );
-    if (sprite != null) {
-      _drawEffect(
-        canvas,
-        sprite,
-        shot.position - dir * r * 0.55,
-        r * (1.15 + grow * 0.7),
-        angle,
-      );
-      return;
-    }
+    // Draw this effect directly so adjacent atlas cells cannot bleed into it.
     // A soft frosty glow around the blast (a gradient, no blur).
     final glowR = r * (1.2 + 1.2 * grow);
     canvas.drawCircle(
@@ -1266,6 +1261,8 @@ class PowerUpPainter {
   static const Map<PowerUpKind, double> _iconAngle = {
     PowerUpKind.knife: -math.pi / 4,
     PowerUpKind.sword: -math.pi / 4,
+    PowerUpKind.hook: -math.pi / 4,
+    PowerUpKind.threadHarpoon: -math.pi / 4,
   };
 
   /// The direction in which [ball]'s held item is drawn. Kept public so the
@@ -1304,7 +1301,9 @@ class PowerUpPainter {
     final dir = Offset(math.cos(angle), math.sin(angle));
     final distance = held == PowerUpKind.shield
         ? ball.radius
-        : ball.radius * 1.2;
+        : held?.isBlade == true ? ball.radius * 2.0
+        : held == PowerUpKind.hook || held == PowerUpKind.threadHarpoon
+        ? ball.radius * 1.55 : ball.radius * 1.2;
     return ball.position + dir * distance;
   }
 
@@ -1533,11 +1532,15 @@ class PowerUpPainter {
           canvas,
           maximumPower,
           ball.position,
-          ball.radius * 1.7,
+          ball.radius * 2.5,
           0,
           opacity: 0.92,
         );
       }
+      canvas.drawCircle(ball.position, ball.radius, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(1.5, ball.radius * 0.1)
+        ..color = const Color(0xFFFFD000).withValues(alpha: 0.85));
       for (var i = 0; i < 4; i++) {
         final a = i * math.pi / 2 + ball.overchargeLeft * 0.1;
         canvas.drawCircle(
@@ -1746,7 +1749,7 @@ class PowerUpPainter {
     }
     if (sprite == null) {
       final badge = heldCenter(ball, weapon: held, slot: slot);
-      final r = math.max(6.0, ball.radius * 0.36);
+      final r = math.max(6.0, ball.radius * (held.isBlade ? 0.72 : 0.36));
       canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
       drawGlyph(canvas, held, badge, r * 0.62);
       return;
@@ -1766,7 +1769,7 @@ class PowerUpPainter {
       canvas,
       sprite,
       center,
-      ball.radius * 0.9,
+      ball.radius * (held.isBlade ? 1.8 : 0.9),
       angle,
       iconAngle: _iconAngle[held] ?? 0,
       flip: dir.dx < 0,

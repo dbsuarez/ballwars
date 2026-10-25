@@ -93,4 +93,25 @@ void main() {
     expect(target.burningLeft, greaterThan(0));
   });
 
+  test('swap cannon exchanges positions and emits teleport endpoints', () {
+    final match = _match();
+    final a = match.state.balls[0];
+    final b = match.state.balls[1];
+    a.velocity = Offset.zero;
+    b.velocity = Offset.zero;
+    final from = a.position;
+    final to = b.position;
+    match.powerUps!.projectiles.add(Projectile(
+      owner: a, kind: PowerUpKind.swapCannon,
+      position: b.position - Offset(b.radius, 0),
+      velocity: const Offset(100, 0),
+    ));
+    match.tick(MatchSimulationController.fixedTimestep);
+    expect(a.position, to);
+    expect(b.position, from);
+    expect(match.powerUps!.portalFlashes, isNotEmpty);
+    expect(match.powerUps!.portalFlashes.last.from, from);
+    expect(match.powerUps!.portalFlashes.last.to, to);
+  });
+
 }

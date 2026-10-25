@@ -1926,7 +1926,9 @@ class PowerUpSystem {
       target
         ..position = oldPosition
         ..velocity = oldVelocity;
+      portalFlashes.add(PortalFlash(from: oldPosition, to: from.position));
       _yell(from, 'SWITCHEROO!');
+      _yell(target, 'SWAPPED!');
     }
     final bash = kind == PowerUpKind.shield;
     if (match.mode == MatchMode.arsenal) {

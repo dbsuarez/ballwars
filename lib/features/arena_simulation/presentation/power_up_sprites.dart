@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -113,12 +114,16 @@ class PowerUpSprites {
         fitted.destination,
         const Rect.fromLTWH(0, 0, 64, 64),
       );
+      if (kind == PowerUpKind.vampire || kind == PowerUpKind.repulsor) {
+        paintIcon(Canvas(recorder), kind, const Rect.fromLTWH(0, 0, 64, 64));
+      } else {
       Canvas(recorder).drawImageRect(
         sheet,
         source,
         destination,
         Paint()..filterQuality = FilterQuality.none,
       );
+      }
       final picture = recorder.endRecording();
       _images[kind] = await picture.toImage(64, 64);
       picture.dispose();
@@ -215,6 +220,9 @@ class PowerUpSprites {
           ),
           const Size.square(86),
         );
+        if (kind == AnimatedEffect.explosion || kind == AnimatedEffect.iceImpact) {
+          _paintIsolatedEffect(Canvas(recorder), kind, frame);
+        } else {
         Canvas(recorder).drawImageRect(
           animatedSheet,
           Rect.fromLTWH(
@@ -229,6 +237,7 @@ class PowerUpSprites {
           ),
           Paint()..filterQuality = FilterQuality.none,
         );
+        }
         final picture = recorder.endRecording();
         frames.add(await picture.toImage(96, 96));
         picture.dispose();
@@ -597,6 +606,32 @@ class PowerUpSprites {
     PowerUpKind.spikeWall: Rect.fromLTRB(974, 695, 1165, 887),
     PowerUpKind.stickyGoo: Rect.fromLTRB(1165, 695, 1360, 887),
   };
+
+  /// Independent frames cannot include pixels from neighboring atlas cells.
+  static void _paintIsolatedEffect(Canvas canvas, AnimatedEffect kind, int frame) {
+    const center = Offset(48, 48);
+    final radius = 18.0 + frame * 7;
+    final ice = kind == AnimatedEffect.iceImpact;
+    final color = ice ? const Color(0xFF7FDBFF) : const Color(0xFFFF7722);
+    canvas.drawCircle(center, radius, Paint()
+      ..shader = ui.Gradient.radial(center, radius, [
+        const Color(0xFFFFF8DA), color.withValues(alpha: 0.85),
+        color.withValues(alpha: 0),
+      ]));
+    for (var i = 0; i < 8; i++) {
+      final angle = i * math.pi / 4;
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      canvas.drawLine(center + direction * radius * 0.35,
+          center + direction * radius, Paint()
+            ..strokeWidth = ice ? 2 : 5
+            ..strokeCap = StrokeCap.round
+            ..color = ice ? const Color(0xFFE7FAFF) : const Color(0xFFFFCB55));
+    }
+    canvas.drawCircle(center, radius * 0.7, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = color);
+  }
 
   /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).
   static void paintIcon(Canvas canvas, PowerUpKind kind, Rect rect) {

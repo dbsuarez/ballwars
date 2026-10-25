@@ -32,6 +32,7 @@ void main() {
     }
     expect(d.arenaDamage(PowerUpKind.apple), 0);
     expect(d.arenaShieldBash, PowerUpTuning.arenaShieldBash);
+    expect(d.unarmedCollisionDamage, PowerUpTuning.arenaCollisionDamage);
     expect(d.shieldBlock, closeTo(PowerUpTuning.shieldBlock, 1e-9));
     expect(d.arenaAppleHeal, PowerUpTuning.arenaAppleHeal);
     expect(d.arenaMaxLife, PowerUpTuning.arenaMaxLife);
@@ -126,4 +127,37 @@ void main() {
     final config = PowerUpConfig.defaults.withValue('dmg.pistol', 33);
     expect(powerUpDescription(PowerUpKind.pistol, arsenal: true, config: config), contains('33 damage'));
   });
+  test('unarmed collision tuning follows the attacking ball equipment', () {
+    MatchSimulationController collide({required double damage, bool armedA = false}) {
+      final match = MatchSimulationController(
+        _balls, arenaRadius: 200, seed: 42, lookAhead: false,
+        slowMotionLines: 0, mode: MatchMode.arsenal,
+        tuning: PowerUpConfig.defaults.withValue('unarmedCollision', damage),
+      );
+      match.powerUps!.automaticSpawning = false;
+      final a = match.state.balls[0];
+      final b = match.state.balls[1];
+      a.position = Offset(-a.radius * 0.9, 0);
+      b.position = Offset(b.radius * 0.9, 0);
+      a.velocity = const Offset(100, 0);
+      b.velocity = const Offset(-100, 0);
+      if (armedA) a.held = PowerUpKind.pistol;
+      match.tick(MatchSimulationController.fixedTimestep);
+      return match;
+    }
+    final tuned = collide(damage: 12);
+    expect(tuned.state.balls[0].life, PowerUpTuning.arenaLife - 12);
+    expect(tuned.state.balls[1].life, PowerUpTuning.arenaLife - 12);
+    final disabled = collide(damage: 0);
+    expect(disabled.state.balls.every((b) => b.life == PowerUpTuning.arenaLife), isTrue);
+    final mixed = collide(damage: 0, armedA: true);
+    expect(mixed.state.balls[0].life, PowerUpTuning.arenaLife);
+    expect(mixed.state.balls[1].life, PowerUpTuning.arenaLife - PowerUpTuning.arenaCollisionDamage);
+  });
+
+  test('unarmed collision damage round-trips in replay tuning', () {
+    final config = PowerUpConfig.defaults.withValue('unarmedCollision', 12);
+    expect(PowerUpConfig.decode(config.encode()!)!.unarmedCollisionDamage, 12);
+  });
+
 }

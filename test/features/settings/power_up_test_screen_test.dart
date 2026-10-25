@@ -1,3 +1,4 @@
+import 'package:ballwars/core/audio/game_audio.dart';
 import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/settings/data/app_settings_repository.dart';
@@ -119,6 +120,43 @@ void main() {
     final after = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
     expect(after.step, initial.step);
     expect(after.balls.first.held, PowerUpKind.pistol);
+    expect(find.text('Play'), findsOneWidget);
+  });
+
+  testWidgets('tests default to endless and expose BG and SFX toggles', (tester) async {
+    final audio = GameAudio.instance;
+    final originalMusic = audio.musicOn;
+    final originalEffects = audio.effectsOn;
+    addTearDown(() async {
+      await audio.setMusicOn(originalMusic);
+      await audio.setEffectsOn(originalEffects);
+    });
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+    expect(arena.state.powerUps!.match.endlessBattle, isTrue);
+    expect(find.text('BG').hitTestable(), findsOneWidget);
+    expect(find.text('SFX').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('SFX'));
+    await tester.pumpAndSettle();
+    expect(audio.effectsOn, !originalEffects);
+    await tester.tap(find.text('BG'));
+    await tester.pumpAndSettle();
+    expect(audio.musicOn, !originalMusic);
+  });
+
+  testWidgets('item info beside re-equip explains the selected power and pauses', (tester) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Play'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Item info for Ball A'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Pistol'), findsWidgets);
+    expect(find.textContaining('fires one shot'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
     expect(find.text('Play'), findsOneWidget);
   });
 

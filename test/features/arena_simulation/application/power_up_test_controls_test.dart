@@ -68,4 +68,29 @@ void main() {
     expect(match.powerUps!.portals, hasLength(1));
     expect(match.stepCount, 0);
   });
+  test('tornado DoT hurts without marking the target as burning', () {
+    final match = _match();
+    final target = match.state.balls[1];
+    match.powerUps!.damageOverTime.add(DamageOverTime(
+      target: target, kind: PowerUpKind.tornado,
+      owner: match.state.balls[0], stepsLeft: PowerUpTuning.damageOverTimeSteps,
+    ));
+    final life = target.life;
+    match.tick(MatchSimulationController.fixedTimestep);
+    expect(target.life, lessThan(life));
+    expect(target.burningLeft, 0);
+    expect(target.poisonLeft, 0);
+  });
+
+  test('fire DoT retains the burning visual', () {
+    final match = _match();
+    final target = match.state.balls[1];
+    match.powerUps!.damageOverTime.add(DamageOverTime(
+      target: target, kind: PowerUpKind.fireWall,
+      owner: match.state.balls[0], stepsLeft: PowerUpTuning.damageOverTimeSteps,
+    ));
+    match.tick(MatchSimulationController.fixedTimestep);
+    expect(target.burningLeft, greaterThan(0));
+  });
+
 }

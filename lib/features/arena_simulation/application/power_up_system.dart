@@ -596,10 +596,15 @@ class PowerUpSystem {
     );
     if (kind == PowerUpKind.poisonSwamp) {
       target.poisonLeft = PowerUpTuning.damageOverTimeSteps;
-    } else {
+    } else if (_isFireDamage(kind)) {
       target.burningLeft = PowerUpTuning.damageOverTimeSteps;
     }
   }
+
+  bool _isFireDamage(PowerUpKind kind) =>
+      kind == PowerUpKind.fireWall ||
+      kind == PowerUpKind.flamethrower ||
+      kind == PowerUpKind.molotov;
 
   void _updateFireWallsAndDamageOverTime() {
     for (final wall in fireWalls.toList()) {
@@ -632,7 +637,7 @@ class PowerUpSystem {
       effect.stepsLeft -= 1;
       if (effect.kind == PowerUpKind.poisonSwamp) {
         effect.target.poisonLeft = effect.stepsLeft;
-      } else {
+      } else if (_isFireDamage(effect.kind)) {
         effect.target.burningLeft = effect.stepsLeft;
       }
       if (effect.age % PowerUpTuning.damageOverTimeTickSteps == 1) {

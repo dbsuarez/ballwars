@@ -1216,11 +1216,11 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => _update(() => _on.addAll(selectable)),
+                    onPressed: () => setState(() => _on.addAll(selectable)),
                     child: const Text('Select all'),
                   ),
                   TextButton(
-                    onPressed: () => _update(() => _on.removeAll(selectable)),
+                    onPressed: () => setState(() => _on.removeAll(selectable)),
                     child: const Text('Clear'),
                   ),
                 ],
@@ -1316,7 +1316,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
       child: InkWell(
         key: ValueKey('selection-card-${kind.name}'),
         onTap: selectable
-            ? () => _update(() => selected ? _on.remove(kind) : _on.add(kind))
+            ? () => setState(() => selected ? _on.remove(kind) : _on.add(kind))
             : null,
         child: Padding(
           padding: const EdgeInsets.all(12),

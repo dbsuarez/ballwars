@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// PostgREST inspects response.request.method when handling maybeSingle GETs.
+// Its JSON response is a row array; maybeSingle unwraps it inside the SDK.
 void main() {
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
 
@@ -17,12 +19,12 @@ void main() {
     };
     final client = SupabaseClient('https://example.supabase.co', 'test-key',
       httpClient: MockClient((request) async {
-        if (offline) return http.Response('offline', 503);
+        if (offline) return http.Response('offline', 503, request: request);
         if (request.method == 'PATCH') {
           row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
-          return http.Response(jsonEncode([row]), 200, headers: {'content-type': 'application/json'});
+          return http.Response(jsonEncode([row]), 200, request: request, headers: {'content-type': 'application/json'});
         }
-        return http.Response(jsonEncode(row), 200, headers: {'content-type': 'application/json'});
+        return http.Response(jsonEncode([row]), 200, request: request, headers: {'content-type': 'application/json'});
       }),
     );
     addTearDown(client.dispose);
@@ -40,8 +42,8 @@ void main() {
     final client = SupabaseClient('https://example.supabase.co', 'test-key',
       httpClient: MockClient((request) async {
         if (request.method == 'PATCH') writes++;
-        return http.Response(jsonEncode({'id': 1, 'headline': 'WHO WINS?', 'theme': 'midnight'}),
-          200, headers: {'content-type': 'application/json'});
+        return http.Response(jsonEncode([{'id': 1, 'headline': 'WHO WINS?', 'theme': 'midnight'}]),
+          200, request: request, headers: {'content-type': 'application/json'});
       }),
     );
     addTearDown(client.dispose);

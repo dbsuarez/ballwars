@@ -113,4 +113,22 @@ void main() {
       expect(tester.hasRunningAnimations, isFalse);
     },
   );
+  testWidgets('Mayhem winner screen ranks the complete knockout tally', (tester) async {
+    const other = CustomBall(id: 'b', name: 'Beta', primaryColor: Colors.red, glowColor: Colors.red);
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.build(AppPalettes.midnight),
+      home: Scaffold(body: WinnerModal(
+        winner: winner, mayhemTally: const [(other, 0), (winner, 4)],
+        showEffects: false, onReplay: () {}, onPlayAgain: () {}, onExit: () {},
+      )),
+    ));
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.text('MAYHEM TALLY'), findsOneWidget);
+    expect(find.text('4 KOs'), findsOneWidget);
+    expect(find.text('0 KOs'), findsOneWidget);
+    final first = tester.getTopLeft(find.byKey(const ValueKey('mayhem-result-a')));
+    final second = tester.getTopLeft(find.byKey(const ValueKey('mayhem-result-b')));
+    expect(first.dy, lessThan(second.dy));
+  });
+
 }

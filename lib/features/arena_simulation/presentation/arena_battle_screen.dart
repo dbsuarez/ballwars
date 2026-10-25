@@ -700,6 +700,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                 Positioned.fill(
                   child: WinnerModal(
                     winner: _winnerBall!,
+                    mayhemTally: widget.config.mayhem ? [
+                      for (final ball in _state.balls)
+                        (ball.config, _controller.eliminations[ball.config.id] ?? 0),
+                    ] : null,
                     question: widget.config.question,
                     durationSeconds: _controller.elapsedSeconds,
                     winningMove: _controller.winningMove,

@@ -13,6 +13,9 @@ class WinnerModal extends StatefulWidget {
   final double? durationSeconds;
   final String? winningMove;
 
+  /// Final Mayhem knockouts for every contestant, including zero scores.
+  final List<(CustomBall, int)>? mayhemTally;
+
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
 
@@ -53,6 +56,7 @@ class WinnerModal extends StatefulWidget {
     required this.winner,
     this.durationSeconds,
     this.winningMove,
+    this.mayhemTally,
     this.question,
     required this.onReplay,
     this.onReplayFinisher,
@@ -194,6 +198,49 @@ class _WinnerModalState extends State<WinnerModal>
   String _time(double seconds) {
     final m = seconds ~/ 60;
     return '$m:${(seconds - m * 60).toStringAsFixed(1).padLeft(4, '0')}';
+  }
+
+  Widget _mayhemResults(BuildContext context) {
+    final c = BallWarsColors.of(context);
+    final rows = [...widget.mayhemTally!]
+      ..sort((a, b) {
+        final score = b.$2.compareTo(a.$2);
+        return score != 0 ? score : a.$1.name.compareTo(b.$1.name);
+      });
+
+    return Card(
+      key: const ValueKey('mayhem-final-tally'),
+      margin: const EdgeInsets.only(top: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('MAYHEM TALLY', style: AppText.mono(12, color: c.muted)),
+          const SizedBox(height: 6),
+          for (var i = 0; i < rows.length; i++)
+            Builder(builder: (context) {
+              final (ball, knockouts) = rows[i];
+              final rank = rows.indexWhere((row) => row.$2 == knockouts) + 1;
+              return Padding(
+                key: ValueKey('mayhem-result-${ball.id}'),
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: [
+                  SizedBox(width: 24, child: Text('$rank', style: AppText.mono(12, color: c.muted))),
+                  Container(width: 8, height: 8, decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: ball.primaryColor)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(ball.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: AppText.ui(13, FontWeight.w700, color: c.text))),
+                  if (ball.id == widget.winner.id) ...[
+                    Icon(Icons.emoji_events, size: 16, color: c.text),
+                    const SizedBox(width: 6),
+                  ],
+                  Text('$knockouts KOs', style: AppText.mono(12, color: c.text)),
+                ]),
+              );
+            }),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -371,6 +418,7 @@ class _WinnerModalState extends State<WinnerModal>
                           ),
                         ),
                       ],
+                      if (widget.mayhemTally != null) _mayhemResults(context),
                       if (widget.durationSeconds != null) ...[
                         const SizedBox(height: 12),
                         Text(

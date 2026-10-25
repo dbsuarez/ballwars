@@ -5,6 +5,7 @@ import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
+import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
@@ -1113,7 +1114,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 for (final kind in kinds)
                   SizedBox(
                     width: width - (columns == 1 ? 16 : 8),
-                    height: 112,
+                    height: 132,
                     child: _itemCard(kind, selectable: selectable),
                   ),
               ],
@@ -1153,14 +1154,10 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      kind.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleSmall?.copyWith(color: appColors.text),
-                    ),
+                    PowerUpName(kind, tuning: widget.config,
+                      style: Theme.of(context).textTheme.titleSmall),
+                    if (widget.config.rarityOf(kind) != null) Text(widget.config.rarityOf(kind)!.label,
+                      style: TextStyle(fontSize: 10, color: appColors.muted)),
                     const SizedBox(height: 4),
                     Text(
                       powerUpDescription(

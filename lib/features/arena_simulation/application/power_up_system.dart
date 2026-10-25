@@ -1,3 +1,4 @@
+import 'power_up_spawn_selector.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -1018,7 +1019,7 @@ class PowerUpSystem {
         ? kinds.where((kind) => !kind.isTrap).toList()
         : kinds;
     if (eligibleKinds.isEmpty && forcedKind == null) return;
-    final kind = forcedKind ?? eligibleKinds[rng.nextInt(eligibleKinds.length)];
+    final kind = forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);

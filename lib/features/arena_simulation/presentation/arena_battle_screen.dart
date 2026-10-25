@@ -244,7 +244,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
           _winnerBall = _state.balls
               .firstWhere((b) => b.config.id == _state.winnerId)
               .config;
-          // The last ball knocked out (the runner-up in 3-4 ball matches).
+          // Mayhem supplies last place by final KO/life ranking; other modes use the last knockout.
           final loserId = _controller.lastEliminatedId;
           _loserBall = _state.balls
               .firstWhere(
@@ -594,6 +594,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final scoreboard = ListenableBuilder(
       listenable: _frame,
       builder: (context, _) => ScoreboardOverlay(
+        tuning: widget.config.tuning,
         mode: widget.config.mode,
         compact: MediaQuery.sizeOf(context).height >= MediaQuery.sizeOf(context).width,
         balls: _state.balls,

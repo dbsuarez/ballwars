@@ -88,12 +88,13 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
       if (v == null || !v.isFinite) return null;
       config = config.withValue(f.id, v);
     }
+    if (PowerUpRarity.values.every((rarity) => config.rarityWeight(rarity) == 0)) return null;
     return config;
   }
 
   void _restoreDefaults() {
     setState(() {
-      for (final f in PowerUpConfig.fields) {
+      for (final f in PowerUpConfig.fields.where((field) => !field.id.startsWith('tier.'))) {
         _text[f.id]!.text = _format(f, f.defaultValue);
       }
     });
@@ -104,7 +105,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
     final c = BallWarsColors.of(context);
     final config = _config;
     final groups = <String, List<TuningField>>{};
-    for (final f in PowerUpConfig.fields) {
+    for (final f in PowerUpConfig.fields.where((field) => !field.id.startsWith('tier.'))) {
       groups.putIfAbsent(f.group, () => []).add(f);
     }
     // As wide as Home's and Settings' column on big screens, so switching between them feels even.
@@ -120,7 +121,8 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
               children: [
                 Text(
                   'For everyone\'s Arsenal and All-Out matches. Shared replays keep the numbers they were played '
-                  'with. Values outside the allowed range are clamped.',
+                  'with. Values outside the allowed range are clamped. Rarity weights default to 50/30/20. '
+                  'Weights are normalized across enabled tiers; traps stay separate. At least one weight must be above zero.',
                   style: AppText.ui(
                     13,
                     FontWeight.w500,
@@ -155,7 +157,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
                                   style: AppText.ui(
                                     14,
                                     FontWeight.w700,
-                                    color: c.text,
+                                    color: _kind(f) == null ? c.text : (config ?? widget.initial).rarityOf(_kind(f)!)?.color ?? c.text,
                                   ),
                                 ),
                                 const SizedBox(height: 2),

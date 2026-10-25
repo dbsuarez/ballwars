@@ -117,6 +117,7 @@ void main() {
     expect(match.state.status, MatchStatus.finished);
     expect(match.state.winnerId, contestants[3].id);
     expect(match.winningMove, 'Knockout lead');
+    expect(match.lastEliminatedId, contestants.last.id);
   });
 
   test('Threads mode plays exactly as before', () {
@@ -398,4 +399,19 @@ void main() {
       expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 40);
     },
   );
+  test('Mayhem cinematic loser is lowest KOs then lowest remaining life', () {
+    final contestants = List.generate(6, (i) => CustomBall(
+      id: 'mayhem-$i', name: 'Ball $i', primaryColor: Colors.red, glowColor: Colors.red));
+    final match = MatchSimulationController(contestants,
+      arenaRadius: _arenaRadius, mode: MatchMode.arsenal,
+      endlessBattle: true, mayhem: true, lookAhead: false, seed: 42);
+    match.eliminations[contestants[0].id] = 8;
+    match.state.balls[0].life = 1;
+    match.state.balls[4].life = 12;
+    match.state.balls[5].life = 20;
+    match.tick(MatchSimulationController.mayhemDurationSeconds);
+    expect(match.state.winnerId, contestants[0].id);
+    expect(match.lastEliminatedId, contestants[4].id);
+  });
+
 }

@@ -501,6 +501,7 @@ class PowerUpPainter {
           item.position,
           r * (0.90 + 0.20 * pulse),
           0.35 + 0.65 * pulse,
+          ring: p.match.tuning.rarityOf(item.kind)?.color,
         );
       }
     }

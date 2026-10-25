@@ -3,6 +3,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../domain/fan_line.dart';
 import '../domain/power_up.dart';
+import '../domain/power_up_config.dart';
 import '../domain/simulation_ball.dart';
 import 'power_up_sprites.dart';
 
@@ -17,6 +18,7 @@ class ScoreboardOverlay extends StatelessWidget {
 
   final MatchMode mode;
   final bool compact;
+  final PowerUpConfig tuning;
 
   const ScoreboardOverlay({
     super.key,
@@ -25,6 +27,7 @@ class ScoreboardOverlay extends StatelessWidget {
     this.eliminations,
     this.mode = MatchMode.threads,
     this.compact = false,
+    this.tuning = PowerUpConfig.defaults,
   });
 
   Widget _compactCards(BuildContext context) {
@@ -172,7 +175,7 @@ class ScoreboardOverlay extends StatelessWidget {
                                         style: AppText.ui(
                                           11,
                                           FontWeight.w600,
-                                          color: c.muted,
+                                          color: tuning.rarityOf(kind)?.color ?? c.muted,
                                         ),
                                       ),
                                       const SizedBox(width: 6),

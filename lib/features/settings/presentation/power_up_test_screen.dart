@@ -7,9 +7,11 @@ import 'package:flutter/scheduler.dart';
 
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_canvas.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
+import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import 'app_settings_scope.dart';
@@ -249,7 +251,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const _ItemPicker(),
+      builder: (_) => _ItemPicker(tuning: _match!.tuning),
     );
     if (!mounted || selected == null) return;
     setState(() {
@@ -431,10 +433,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       _previous = null;
     });
     await showDialog<void>(context: context, builder: (context) => AlertDialog(
-      title: Text(item.label),
-      content: SingleChildScrollView(child: Text(powerUpDescription(
-        item, arsenal: _mode == MatchMode.arsenal, config: _match!.tuning,
-      ))),
+      title: PowerUpName(item, tuning: _match!.tuning),
+      content: SingleChildScrollView(child: Text(
+        '${_match!.tuning.rarityOf(item)?.label ?? "Trap"}\n\n${powerUpDescription(item,
+            arsenal: _mode == MatchMode.arsenal, config: _match!.tuning)}',
+      )),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
     ));
   }
@@ -453,8 +456,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               key: ValueKey('choose-item-$i'),
               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
               onPressed: () => _chooseItem(i),
-              child: Text(_savedItems[i]?.label ?? 'Choose item',
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: _savedItems[i] == null ? const Text('Choose item')
+                  : PowerUpName(_savedItems[i]!, tuning: _match!.tuning),
             )),
             IconButton(
               tooltip: 'Item info for Ball ${i == 0 ? "A" : "B"}',
@@ -656,7 +659,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 }
 
 class _ItemPicker extends StatefulWidget {
-  const _ItemPicker();
+  const _ItemPicker({required this.tuning});
+  final PowerUpConfig tuning;
 
   @override
   State<_ItemPicker> createState() => _ItemPickerState();
@@ -718,8 +722,8 @@ class _ItemPickerState extends State<_ItemPicker> {
                     return ListTile(
                       minVerticalPadding: 12,
                       leading: PowerUpIcon(item, size: 32),
-                      title: Text(item.label),
-                      subtitle: Text(item.isTrap ? 'Trap' : item.isWeapon ? 'Weapon' : 'Power-up'),
+                      title: PowerUpName(item, tuning: widget.tuning),
+                      subtitle: Text('${widget.tuning.rarityOf(item)?.label ?? "Trap"}${item.isTrap ? "" : item.isWeapon ? " weapon" : " power-up"}'),
                       trailing: const Icon(Icons.add_circle_outline),
                       onTap: () => Navigator.pop(context, item),
                     );

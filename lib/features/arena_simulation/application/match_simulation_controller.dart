@@ -560,6 +560,8 @@ class MatchSimulationController {
         return _balls.indexOf(a).compareTo(_balls.indexOf(b));
       });
     _winnerId = ranked.first.config.id;
+    // The visual loser must match the bottom of the final KO/life tally.
+    _lastEliminatedId = ranked.length > 1 ? ranked.last.config.id : null;
     _winningMove = 'Knockout lead';
     _status = MatchStatus.finished;
   }

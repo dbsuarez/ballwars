@@ -417,14 +417,14 @@ void main() {
       final back = ReplayLink.fromUri(uri, presets: _presets)!;
       expect(back.tuning, tuning);
 
-      // Defaults add nothing, so older apps keep reading these links.
+      // Default rarity assignments and weights still travel with new replays.
       final plain = ReplayLink(
         seed: 5,
         speedMultiplier: 1,
         contestants: [_presets[0], _presets[1]],
         mode: MatchMode.arsenal,
       ).toUri(presetIds: {for (final b in _presets) b.id});
-      expect(plain.queryParameters.containsKey('t'), isFalse);
+      expect(plain.queryParameters.containsKey('t'), isTrue);
       expect(
         ReplayLink.fromUri(plain, presets: _presets)!.tuning,
         PowerUpConfig.defaults,

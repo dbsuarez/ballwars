@@ -6,6 +6,7 @@ import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/presentation/finisher_profile.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
+import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import 'app_settings_scope.dart';
 
@@ -270,6 +271,7 @@ class _FinisherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
+    final item = PowerUpKind.values.where((kind) => kind.label == profile.move).firstOrNull;
     return Card(
       margin: EdgeInsets.zero,
       color: c.surfaceHigh,
@@ -283,10 +285,9 @@ class _FinisherCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    profile.move,
-                    style: AppText.ui(14, FontWeight.w800, color: c.text),
-                  ),
+                  if (item != null) PowerUpName(item, tuning: AppSettingsScope.of(context).powerUps,
+                      style: AppText.ui(14, FontWeight.w800, color: c.text))
+                  else Text(profile.move, style: AppText.ui(14, FontWeight.w800, color: c.text)),
                   const SizedBox(height: 2),
                   Text(
                     '${profile.yell}  •  ${profile.impactYell}',

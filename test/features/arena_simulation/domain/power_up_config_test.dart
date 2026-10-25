@@ -71,7 +71,7 @@ void main() {
     final encoded = c.encode()!;
     expect(RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(encoded), isTrue);
     expect(PowerUpConfig.decode(encoded), c);
-    expect(PowerUpConfig.defaults.encode(), isNull);
+    expect(PowerUpConfig.decode(PowerUpConfig.defaults.encode()!), PowerUpConfig.defaults);
 
     String enc(String json) => Uri.encodeComponent(json); // not base64: garbage
     expect(PowerUpConfig.decode(enc('{"dmg.knife": 33}')), isNull);

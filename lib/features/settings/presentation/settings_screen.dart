@@ -6,6 +6,7 @@ import '../../custom_groups/presentation/my_groups_screen.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../domain/app_settings.dart';
 import 'power_up_tuning_screen.dart';
+import 'power_up_rarity_screen.dart';
 import 'app_settings_scope.dart';
 import 'finisher_gallery_screen.dart';
 import 'power_up_test_screen.dart';
@@ -585,6 +586,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       );
                                     },
                               child: const Text('Edit power-up numbers'),
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton(
+                              key: const ValueKey('edit-item-rarities'),
+                              onPressed: _busy ? null : () async {
+                                final config = await Navigator.of(context).push<PowerUpConfig>(
+                                  MaterialPageRoute(builder: (_) => PowerUpRarityScreen(initial: settings.powerUps)),
+                                );
+                                if (!mounted || config == null || config == settings.powerUps) return;
+                                await _save(AppSettingsScope.of(this.context).copyWith(powerUps: config),
+                                    done: 'Item rarities saved for everyone.');
+                              },
+                              child: const Text('Edit item rarities'),
                             ),
                           ],
                         ),

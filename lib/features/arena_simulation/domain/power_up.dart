@@ -4,6 +4,16 @@ import 'dart:ui';
 import 'power_up_config.dart';
 import 'simulation_ball.dart';
 
+enum PowerUpRarity {
+  normal('Normal', Color(0xFFFFFFFF)),
+  rare('Rare', Color(0xFF58A6FF)),
+  epic('Epic', Color(0xFFB775FF));
+
+  const PowerUpRarity(this.label, this.color);
+  final String label;
+  final Color color;
+}
+
 /// Pickups a ball can collect in the Arsenal and All-Out match modes.
 enum PowerUpKind {
   pistol('Pistol'),
@@ -138,6 +148,18 @@ enum PowerUpKind {
 
   /// Power-ups apply immediately and never replace an equipped weapon.
   bool get isPowerUp => !isWeapon && !isTrap;
+
+  /// Traps retain their separate spawn rules and have no rarity tier.
+  PowerUpRarity? get rarity {
+    if (isTrap) return null;
+    return switch (this) {
+      pistol || knife || apple || speed || magnet || bow || waterGun => PowerUpRarity.normal,
+      gatling || threadHarpoon || ghost || overcharge || goldenArmor ||
+      rocketLauncher || omegaTendrils || fireWall || lightningStrikes ||
+      earthquake || tornado || energyWave || flamethrower => PowerUpRarity.epic,
+      _ => PowerUpRarity.rare,
+    };
+  }
 
   /// Whether this item can directly remove life or threads and therefore be
   /// credited as a finishing move under [config]. Buffs that merely improve

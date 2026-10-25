@@ -90,6 +90,14 @@ class PowerUpConfig {
 
   /// Everything the admin can change, in the order Settings shows it.
   static final List<TuningField> fields = [
+    for (final kind in PowerUpKind.values.where((kind) => !kind.isTrap))
+      TuningField('tier.${kind.name}', kind.label, 'Rarity assignments', kind.rarity!.index,
+        min: 0, max: 2, integer: true),
+    for (final entry in const {'normal': 50, 'rare': 30, 'epic': 20}.entries)
+      TuningField('rarity.${entry.key}',
+        '${entry.key[0].toUpperCase()}${entry.key.substring(1)} spawn weight',
+        'Rarity spawn weights', entry.value, min: 0, max: 100,
+        unit: TuningUnit.percent),
     TuningField(
       'firstSpawn',
       'First power-up after',
@@ -335,6 +343,14 @@ class PowerUpConfig {
           .round()
           .clamp(1, 1 << 30);
 
+  PowerUpRarity? rarityOf(PowerUpKind kind) => kind.isTrap ? null :
+      PowerUpRarity.values[value('tier.${kind.name}').toInt().clamp(0, 2)];
+
+  PowerUpConfig withRarity(PowerUpKind kind, PowerUpRarity rarity) =>
+      kind.isTrap ? this : withValue('tier.${kind.name}', rarity.index);
+
+  double rarityWeight(PowerUpRarity rarity) => value('rarity.${rarity.name}').toDouble();
+
   double get fieldRadiusRatio => value('fieldSize').toDouble();
   int get aimSteps => _steps('aim');
   double get bulletSpeedRatio => value('bulletSpeed').toDouble();
@@ -397,10 +413,18 @@ class PowerUpConfig {
     return config;
   }
 
-  /// For a link: the changed values as base64url JSON, or null when everything is default.
-  String? encode() => isDefault
-      ? null
-      : base64Url.encode(utf8.encode(jsonEncode(toJson()))).replaceAll('=', '');
+  /// Replay JSON includes changed tuning plus a compact rarity snapshot.
+  String? encode() {
+    final payload = <String, Object>{...toJson()};
+    // Snapshot the current rarity assignments and weights for new replays.
+    payload.removeWhere((key, _) => key.startsWith('tier.'));
+    payload['_tiers'] = PowerUpKind.values.map((kind) =>
+        kind.isTrap ? '-' : '${rarityOf(kind)!.index}').join();
+    for (final rarity in PowerUpRarity.values) {
+      payload['rarity.${rarity.name}'] = rarityWeight(rarity);
+    }
+    return base64Url.encode(utf8.encode(jsonEncode(payload))).replaceAll('=', '');
+  }
 
   /// Strict, for links (they come from anywhere): null when [text] isn't something [encode] could have made
   /// (bad encoding, unknown keys, non-numbers or values out of range).
@@ -411,7 +435,22 @@ class PowerUpConfig {
       final json = jsonDecode(utf8.decode(base64Url.decode(padded)));
       if (json is! Map) return null;
       var config = PowerUpConfig.defaults;
+      final tiers = json['_tiers'];
+      if (tiers != null) {
+        if (tiers is! String || tiers.length != PowerUpKind.values.length) return null;
+        for (final kind in PowerUpKind.values) {
+          final digit = tiers[kind.index];
+          if (kind.isTrap) {
+            if (digit != '-') return null;
+          } else {
+            final index = int.tryParse(digit);
+            if (index == null || index < 0 || index > 2) return null;
+            config = config.withRarity(kind, PowerUpRarity.values[index]);
+          }
+        }
+      }
       for (final entry in json.entries) {
+        if (entry.key == '_tiers') continue;
         final f = entry.key is String ? _byId[entry.key] : null;
         final value = entry.value;
         if (f == null ||

@@ -617,7 +617,7 @@ class PowerUpSprites {
       ..shader = ui.Gradient.radial(center, radius, [
         const Color(0xFFFFF8DA), color.withValues(alpha: 0.85),
         color.withValues(alpha: 0),
-      ]));
+      ], const [0.0, 0.55, 1.0]));
     for (var i = 0; i < 8; i++) {
       final angle = i * math.pi / 4;
       final direction = Offset(math.cos(angle), math.sin(angle));

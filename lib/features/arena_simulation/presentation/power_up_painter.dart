@@ -295,7 +295,7 @@ class PowerUpPainter {
             Colors.white.withValues(alpha: 0.96),
             const Color(0xFF2DE7FF).withValues(alpha: 0.88),
             const Color(0x002468FF),
-          ]),
+          ], const [0.0, 0.55, 1.0]),
       );
       for (var ring = 0; ring < 3; ring++) {
         canvas.drawCircle(
@@ -409,7 +409,7 @@ class PowerUpPainter {
             const Color(0xFFFFF1A0).withValues(alpha: fade),
             const Color(0xFFFF6B23).withValues(alpha: fade * 0.65),
             const Color(0x00FF6B23),
-          ]));
+          ], const [0.0, 0.55, 1.0]));
       }
       if (showEffects && e.kind != PowerUpKind.grenade) {
         final sprite = PowerUpSprites.effectFrame(
@@ -610,7 +610,7 @@ class PowerUpPainter {
                 Colors.white,
                 const Color(0xFF27E5FF),
                 const Color(0x00216CFF),
-              ]),
+              ], const [0.0, 0.55, 1.0]),
           );
         }
       }

@@ -14,7 +14,7 @@ class WinnerModal extends StatefulWidget {
   final String? winningMove;
 
   /// Final Mayhem knockouts for every contestant, including zero scores.
-  final List<(CustomBall, int)>? mayhemTally;
+  final List<(CustomBall, int, double)>? mayhemTally;
 
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
@@ -202,10 +202,14 @@ class _WinnerModalState extends State<WinnerModal>
 
   Widget _mayhemResults(BuildContext context) {
     final c = BallWarsColors.of(context);
-    final rows = [...widget.mayhemTally!]
+    final original = widget.mayhemTally!;
+    final rows = [...original]
       ..sort((a, b) {
         final score = b.$2.compareTo(a.$2);
-        return score != 0 ? score : a.$1.name.compareTo(b.$1.name);
+        if (score != 0) return score;
+        final life = b.$3.compareTo(a.$3);
+        if (life != 0) return life;
+        return original.indexOf(a).compareTo(original.indexOf(b));
       });
 
     return Card(
@@ -215,11 +219,13 @@ class _WinnerModalState extends State<WinnerModal>
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text('MAYHEM TALLY', style: AppText.mono(12, color: c.muted)),
+          Text('Knockouts first / remaining life breaks ties',
+              style: AppText.ui(11, FontWeight.w500, color: c.muted)),
           const SizedBox(height: 6),
           for (var i = 0; i < rows.length; i++)
             Builder(builder: (context) {
-              final (ball, knockouts) = rows[i];
-              final rank = rows.indexWhere((row) => row.$2 == knockouts) + 1;
+              final (ball, knockouts, life) = rows[i];
+              final rank = rows.indexWhere((row) => row.$2 == knockouts && row.$3 == life) + 1;
               return Padding(
                 key: ValueKey('mayhem-result-${ball.id}'),
                 padding: const EdgeInsets.symmetric(vertical: 3),
@@ -235,6 +241,8 @@ class _WinnerModalState extends State<WinnerModal>
                     const SizedBox(width: 6),
                   ],
                   Text('$knockouts KOs', style: AppText.mono(12, color: c.text)),
+                  const SizedBox(width: 10),
+                  Text('${life.toStringAsFixed(1)} HP', style: AppText.mono(12, color: c.muted)),
                 ]),
               );
             }),

@@ -702,7 +702,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     winner: _winnerBall!,
                     mayhemTally: widget.config.mayhem ? [
                       for (final ball in _state.balls)
-                        (ball.config, _controller.eliminations[ball.config.id] ?? 0),
+                        (ball.config, _controller.eliminations[ball.config.id] ?? 0, ball.life),
                     ] : null,
                     question: widget.config.question,
                     durationSeconds: _controller.elapsedSeconds,

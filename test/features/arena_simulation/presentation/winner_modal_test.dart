@@ -118,14 +118,15 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       theme: AppTheme.build(AppPalettes.midnight),
       home: Scaffold(body: WinnerModal(
-        winner: winner, mayhemTally: const [(other, 0), (winner, 4)],
+        winner: winner, mayhemTally: const [(other, 4, 25.0), (winner, 4, 72.5)],
         showEffects: false, onReplay: () {}, onPlayAgain: () {}, onExit: () {},
       )),
     ));
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('MAYHEM TALLY'), findsOneWidget);
-    expect(find.text('4 KOs'), findsOneWidget);
-    expect(find.text('0 KOs'), findsOneWidget);
+    expect(find.text('4 KOs'), findsNWidgets(2));
+    expect(find.text('72.5 HP'), findsOneWidget);
+    expect(find.text('25.0 HP'), findsOneWidget);
     final first = tester.getTopLeft(find.byKey(const ValueKey('mayhem-result-a')));
     final second = tester.getTopLeft(find.byKey(const ValueKey('mayhem-result-b')));
     expect(first.dy, lessThan(second.dy));

@@ -528,8 +528,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       tooltip: '${music ? "Background music" : "Sound effects"}: ${on ? "on" : "off"}',
       onPressed: () async {
         if (music) {
-          await _audio.setMusicOn(!on);
-          if (_paused) _audio.pauseMusic();
+          // Start during the tap gesture, before waiting on preference storage.
+          // An explicit BGM preview also works while the simulation is paused.
+          final saved = _audio.setMusicOn(!on);
+          if (!on) _audio.startMusic();
+          await saved;
         } else {
           await _audio.setEffectsOn(!on);
         }

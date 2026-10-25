@@ -285,8 +285,12 @@ class PowerUpPainter {
       final pulse = 0.86 + 0.14 * math.sin(state.step * 0.65).abs();
       // Keep the caster's face visible: the energy gathers in front of it,
       // rather than replacing the ball with a glowing circle.
+      final beamDirection = attack.age < EnergyWaveAttack.chargeSteps
+          ? attack.direction
+          : Offset.fromDirection(EnergyWaveAttack.sweepStart(attack.direction) +
+              EnergyWaveAttack.sweepProgress(attack.age - EnergyWaveAttack.chargeSteps) * 2 * math.pi);
       final orb =
-          attack.owner.position + attack.direction * attack.owner.radius * 1.75;
+          attack.owner.position + beamDirection * attack.owner.radius * 1.75;
       canvas.drawCircle(
         orb,
         r * (0.38 + charge * 0.52) * pulse,
@@ -321,27 +325,39 @@ class PowerUpPainter {
       }
     }
     for (final wave in p.energyWaves) {
+      final initial = wave.end - wave.start;
+      final progress = EnergyWaveAttack.sweepProgress(wave.age);
+      final angle = EnergyWaveAttack.sweepStart(initial) + progress * 2 * math.pi;
+      final direction = Offset.fromDirection(angle);
+      final start = wave.owner.position + direction * wave.owner.radius;
+      final end = start + direction * arenaRadius * 2.4;
+      // The translucent fan records the area already swept by the beam.
+      canvas.save();
+      canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: arenaRadius)));
+      canvas.drawArc(Rect.fromCircle(center: wave.owner.position, radius: arenaRadius * 2.4),
+        EnergyWaveAttack.sweepStart(initial), progress * 2 * math.pi, true,
+        Paint()..color = const Color(0xFF32E4FF).withValues(alpha: 0.07));
       final fade = ((wave.durationSteps - wave.age) / 12).clamp(0.0, 1.0);
       final beamWidth = r * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());
       canvas.drawLine(
-        wave.start,
-        wave.end,
+        start,
+        end,
         Paint()
           ..strokeCap = StrokeCap.round
           ..strokeWidth = beamWidth * 1.7
           ..color = const Color(0xFF167DFF).withValues(alpha: fade * 0.35),
       );
       canvas.drawLine(
-        wave.start,
-        wave.end,
+        start,
+        end,
         Paint()
           ..strokeCap = StrokeCap.round
           ..strokeWidth = beamWidth
           ..color = const Color(0xFF32E4FF).withValues(alpha: fade * 0.9),
       );
       canvas.drawLine(
-        wave.start,
-        wave.end,
+        start,
+        end,
         Paint()
           ..strokeCap = StrokeCap.round
           ..strokeWidth = beamWidth * 0.38
@@ -349,7 +365,7 @@ class PowerUpPainter {
       );
       for (var i = 0; i < 3; i++) {
         canvas.drawCircle(
-          wave.start,
+          start,
           beamWidth * (0.7 + i * 0.3 + wave.age * 0.025),
           Paint()
             ..style = PaintingStyle.stroke
@@ -359,6 +375,7 @@ class PowerUpPainter {
             ).withValues(alpha: fade * (0.8 - i * 0.2)),
         );
       }
+      canvas.restore();
     }
     for (final cone in p.flameCones) {
       final direction = Offset.fromDirection(cone.angle);
@@ -1261,7 +1278,8 @@ class PowerUpPainter {
   static const Map<PowerUpKind, double> _iconAngle = {
     PowerUpKind.knife: -math.pi / 4,
     PowerUpKind.sword: -math.pi / 4,
-    PowerUpKind.hook: -math.pi / 4,
+    // Hook and harpoon artwork have opposite handle orientations.
+    PowerUpKind.hook: 3 * math.pi / 4,
     PowerUpKind.threadHarpoon: -math.pi / 4,
   };
 

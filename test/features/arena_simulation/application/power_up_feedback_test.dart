@@ -397,7 +397,7 @@ void main() {
     expect(a.held, isNull);
   });
 
-  test('Energy Wave pauses opponents, holds one beam, then releases them', () {
+  test('Energy Wave pauses opponents, sweeps one beam, then releases them', () {
     final c = _match();
     final [a, b] = c.state.balls;
     a.held = PowerUpKind.energyWave;
@@ -407,7 +407,7 @@ void main() {
     expect(c.powerUps!.energyWaveAttacks, hasLength(1));
     expect(b.life, PowerUpTuning.arenaLife);
 
-    _run(c, EnergyWaveAttack.chargeSteps + 1);
+    _run(c, EnergyWaveAttack.chargeSteps + EnergyWaveAttack.beamSteps - 1);
     expect(b.velocity, Offset.zero);
     expect(
       b.life,
@@ -466,10 +466,10 @@ void main() {
       reason: 'arena-wide cinematics must run one at a time',
     );
 
-    _run(
-      c,
-      EnergyWaveAttack.chargeSteps + EnergyWaveAttack.hitIntervalSteps * 3 + 1,
-    );
+    _run(c, EnergyWaveAttack.chargeSteps);
+    expect(balls.map((ball) => ball.life), everyElement(PowerUpTuning.arenaLife),
+      reason: 'opponents must not all take damage when the beam first appears');
+    _run(c, EnergyWaveAttack.beamSteps - 1);
 
     final expectedLife =
         PowerUpTuning.arenaLife -

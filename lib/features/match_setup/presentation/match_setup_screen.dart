@@ -985,7 +985,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   ),
                 ),
               ),
-
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  key: const ValueKey('match-settings-all-set'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: const Size(0, 52),
+                  ),
+                  child: const Text('All set'),
+                ),
+              ),
             ],
           ),
         ],

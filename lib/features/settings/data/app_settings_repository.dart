@@ -68,7 +68,11 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           .retry(enabled: false)
           .timeout(const Duration(seconds: 8));
       if (row != null) {
-        await OfflineStore.instance.write(key, utf8.encode(jsonEncode(row)));
+        try {
+          await OfflineStore.instance.write(key, utf8.encode(jsonEncode(row)));
+        } catch (_) {
+          // A cache failure must not discard freshly loaded server settings.
+        }
       }
     } catch (_) {
       final saved = await OfflineStore.instance.read(key);
@@ -116,6 +120,10 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 
   @override
   Future<void> save(AppSettings settings) async {
+    if (!_hasPowerUpsColumn && !settings.powerUps.isDefault) {
+      throw StateError('Power-up settings could not be saved: the power_ups '
+          'column was not loaded. Reload settings; if it is missing, apply migration 011.');
+    }
     final updated = await _writer
         .from('app_settings')
         .update({
@@ -143,10 +151,17 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)
-        .select('id');
+        .select();
     // RLS turns a non-admin update into "0 rows", not an error.
     if (updated.isEmpty) {
       throw StateError('Only the admin can change settings.');
+    }
+    try {
+      await OfflineStore.instance.write(
+        'settings', utf8.encode(jsonEncode(updated.first)),
+      );
+    } catch (_) {
+      // The server save succeeded; report cache failure separately on next load.
     }
   }
 }
@@ -192,8 +207,11 @@ class SupabaseAdminAuth implements AdminAuth {
     if (saved == null || saved.isEmpty) return;
     try {
       await client.auth.recoverSession(saved);
-    } on AuthException {
-      await DevicePrefs.write(_sessionKey, ''); // Expired or revoked.
+    } on AuthException catch (error) {
+      // Retryable network/server failures must not erase a remembered session.
+      if (const {'400', '401', '403'}.contains(error.statusCode?.toString())) {
+        await DevicePrefs.write(_sessionKey, '');
+      }
     } catch (_) {
       // Offline: keep it for next time.
     }
@@ -220,6 +238,9 @@ class SupabaseAdminAuth implements AdminAuth {
     String password, {
     bool rememberMe = false,
   }) async {
+    // Finish startup restoration before beginning a new login. Otherwise the
+    // lazy restore can recover an old token over the newly authenticated one.
+    await _restore();
     _rememberSession = rememberMe;
     await DevicePrefs.write(_rememberKey, rememberMe ? '1' : '');
     try {

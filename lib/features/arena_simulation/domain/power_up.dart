@@ -402,7 +402,14 @@ class EnergyWaveAttack {
   final Map<SimulationBall, Offset> savedVelocities;
   int age = 0;
   int currentIndex = -1;
+  final Set<SimulationBall> hitTargets = {};
   bool fired = false;
+
+  static double sweepStart(Offset direction) =>
+      math.atan2(direction.dy, direction.dx) - 0.15;
+
+  static double sweepProgress(int beamAge) =>
+      (beamAge / (beamSteps - 1)).clamp(0.0, 1.0);
 }
 
 class FlameCone {
@@ -688,7 +695,7 @@ String powerUpDescription(
     PowerUpKind.tornado =>
       'Summons a pursuing wind vortex for 3 s. It pulls nearby opponents inward and deals ${dmg(kind)} over time.',
     PowerUpKind.energyWave =>
-      '$aim unleashes a thick arena-scale beam for ${dmg(kind)} and heavy knockback.',
+      '$aim sweeps a full circle around the arena over 2 s, hitting each opponent once for ${dmg(kind)} before knockback.',
     PowerUpKind.flamethrower =>
       '$aim sprays a sustained fire cone for 1.5 s: ${dmg(kind)} per pulse plus burn damage over time.',
     PowerUpKind.shield =>

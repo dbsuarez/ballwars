@@ -9,6 +9,7 @@ class DevicePrefs {
 
   static Future<String?> read(String key) async {
     try {
+      await _writes;
       final bytes = await OfflineStore.instance.read('pref:$key');
       return bytes == null ? null : utf8.decode(bytes);
     } catch (_) {
@@ -16,9 +17,19 @@ class DevicePrefs {
     }
   }
 
-  static Future<void> write(String key, Object value) async {
-    try {
-      await OfflineStore.instance.write('pref:$key', utf8.encode('$value'));
-    } catch (_) {}
+  // Auth refresh and explicit sign-in may save at the same time. Serialize
+  // writes so Android's atomic file replacement cannot race on one temp file.
+  static Future<void> _writes = Future.value();
+
+  static Future<void> write(String key, Object value) {
+    final store = OfflineStore.instance;
+    final bytes = utf8.encode('$value');
+    final next = _writes.then((_) async {
+      try {
+        await store.write('pref:$key', bytes);
+      } catch (_) {}
+    });
+    _writes = next;
+    return next;
   }
 }

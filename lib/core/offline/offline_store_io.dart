@@ -9,6 +9,7 @@ OfflineStore? createPlatformStore() => FileOfflineStore();
 /// One file per key in `<app support dir>/offline`, named by a hash of the
 /// key. That folder belongs to the app and is removed with it.
 class FileOfflineStore implements OfflineStore {
+  final Map<String, Future<void>> _writes = {};
   final Future<Directory> _dir = getApplicationSupportDirectory().then(
     (d) => Directory('${d.path}${Platform.pathSeparator}offline').create(recursive: true),
   );
@@ -27,6 +28,10 @@ class FileOfflineStore implements OfflineStore {
 
   @override
   Future<Uint8List?> read(String key) async {
+    final pending = _writes[key];
+    if (pending != null) {
+      try { await pending; } catch (_) {}
+    }
     final file = await _file(key);
     try {
       return await file.readAsBytes();
@@ -37,11 +42,19 @@ class FileOfflineStore implements OfflineStore {
 
   @override
   Future<void> write(String key, Uint8List bytes) async {
-    final file = await _file(key);
-    // Write then rename, so a half-written file is never read back.
-    final tmp = File('${file.path}.tmp');
-    await tmp.writeAsBytes(bytes, flush: true);
-    await tmp.rename(file.path);
+    final previous = _writes[key] ?? Future<void>.value();
+    final next = previous.catchError((Object _) {}).then((_) async {
+      final file = await _file(key);
+      final tmp = File('${file.path}.tmp');
+      await tmp.writeAsBytes(bytes, flush: true);
+      await tmp.rename(file.path);
+    });
+    _writes[key] = next;
+    try {
+      await next;
+    } finally {
+      if (identical(_writes[key], next)) _writes.remove(key);
+    }
   }
 
   @override

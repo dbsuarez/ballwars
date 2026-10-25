@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'persistent_preferences_store.dart';
 import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'offline_store.dart';
@@ -13,9 +15,27 @@ extension type _BallwarsStore._(JSObject _) implements JSObject {
   external JSPromise<JSArray<JSString>> missing(JSArray<JSString> keys);
 }
 
+@JS('localStorage')
+external _BrowserStorage get _browserStorage;
+
+extension type _BrowserStorage._(JSObject _) implements JSObject {
+  external String? getItem(String key);
+  external void setItem(String key, String value);
+}
+
 OfflineStore? createPlatformStore() {
   final api = _api;
-  return api != null && api.supported() ? WebOfflineStore._(api) : null;
+  final resources = api != null && api.supported()
+      ? WebOfflineStore._(api) : MemoryOfflineStore();
+  return PersistentPreferencesStore(
+    resources: resources,
+    readPersistent: (key) async {
+      final value = _browserStorage.getItem('ballwars:persistent:$key');
+      return value == null ? null : base64Decode(value);
+    },
+    writePersistent: (key, bytes) async =>
+        _browserStorage.setItem('ballwars:persistent:$key', base64Encode(bytes)),
+  );
 }
 
 /// The browser's Cache Storage (survives reloads and works offline).

@@ -392,8 +392,13 @@ void main() {
     await openSettings(tester);
     expect(find.text('Shrinking arena'), findsOneWidget);
     expect(find.byType(Card), findsWidgets);
-    await closeSettings(tester);
+    final allSet = find.byKey(const ValueKey('match-settings-all-set'));
+    await tester.ensureVisible(allSet);
+    await tester.pumpAndSettle();
+    await tester.tap(allSet);
+    await tester.pumpAndSettle();
     expect(find.text('Shrinking arena'), findsNothing);
+    expect(find.text('Start').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

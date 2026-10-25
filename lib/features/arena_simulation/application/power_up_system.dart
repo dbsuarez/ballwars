@@ -1551,21 +1551,24 @@ class PowerUpSystem {
         energyWaves.add(
           EnergyWave(owner: attack.owner, start: start, end: end),
         );
-        for (final target in attack.targets) {
-          if (!_alive(target)) continue;
-          weaponImpacts.add(
-            WeaponImpact(position: target.position, strength: 1),
-          );
-          _hit(
-            target,
-            PowerUpKind.energyWave,
-            at: target.position,
-            from: attack.owner,
-            unavoidable: true,
-            scaleForCrowd: false,
-          );
-          _yell(target, 'BLASTED!');
-        }
+      }
+
+      // Damage each target once, when the rotating beam reaches its bearing.
+      final progress = EnergyWaveAttack.sweepProgress(
+        attack.age - EnergyWaveAttack.chargeSteps,
+      );
+      final startAngle = EnergyWaveAttack.sweepStart(attack.direction);
+      for (final target in attack.targets) {
+        if (!_alive(target) || attack.hitTargets.contains(target)) continue;
+        final delta = target.position - attack.owner.position;
+        final bearing = (math.atan2(delta.dy, delta.dx) - startAngle) %
+            (2 * math.pi);
+        if (bearing > progress * 2 * math.pi + 0.000001) continue;
+        attack.hitTargets.add(target);
+        weaponImpacts.add(WeaponImpact(position: target.position, strength: 1));
+        _hit(target, PowerUpKind.energyWave, at: target.position,
+          from: attack.owner, unavoidable: true, scaleForCrowd: false);
+        _yell(target, 'BLASTED!');
       }
 
       final finishedAt =

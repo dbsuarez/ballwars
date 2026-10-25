@@ -1,3 +1,4 @@
+import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/settings/data/app_settings_repository.dart';
 import 'package:ballwars/features/settings/domain/app_settings.dart';
@@ -99,4 +100,26 @@ void main() {
     expect(find.text('Play').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('arena corner icon previews the selected finisher without changing the fight', (tester) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    final initial = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
+    final preview = find.byKey(const ValueKey('item-preview-0'));
+    expect(preview.hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('item-preview-1')).hitTestable(), findsOneWidget);
+    await tester.tap(preview);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final cinematic = tester.widget<HarpoonCinematic>(find.byType(HarpoonCinematic));
+    expect(cinematic.move, 'Pistol');
+    expect(cinematic.winner.name, 'Ball A');
+    expect(cinematic.loser.name, 'Ball B');
+    await tester.tap(find.byTooltip('Close preview'));
+    await tester.pumpAndSettle();
+    final after = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
+    expect(after.step, initial.step);
+    expect(after.balls.first.held, PowerUpKind.pistol);
+    expect(find.text('Play'), findsOneWidget);
+  });
+
 }

@@ -1,3 +1,6 @@
+import '../../../core/audio/game_audio.dart';
+import '../../arena_simulation/presentation/finisher_profile.dart';
+import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../../core/widgets/screen_awake.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -188,20 +191,139 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     });
   }
 
+  Future<void> _previewFinisher(int index) async {
+    final kind = _savedItems[index];
+    if (kind == null) return;
+    setState(() {
+      _paused = true;
+      _ticker.stop();
+      _previous = null;
+    });
+    final profile = FinisherProfile.forMove(kind.label);
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (previewContext) => ScreenAwake(
+        enabled: true,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: SafeArea(child: Stack(children: [
+            Positioned.fill(child: HarpoonCinematic(
+              winner: _balls[index],
+              loser: _balls[1 - index],
+              move: kind.label,
+              onHookFired: () => _launchSound(profile),
+              onImpact: () => _impactSound(profile),
+              onFinished: () {
+                GameAudio.instance.win();
+                Navigator.of(previewContext).maybePop();
+              },
+            )),
+            Positioned(top: 8, right: 8, child: IconButton.filledTonal(
+              tooltip: 'Close preview',
+              onPressed: () => Navigator.of(previewContext).maybePop(),
+              icon: const Icon(Icons.close),
+            )),
+          ])),
+        ),
+      ),
+    ));
+    // Keep the test paused on return so the next action is deliberate.
+  }
+
+  Widget _itemPreview(int index) {
+    final item = _savedItems[index];
+    final label = item == null ? 'Ball ${index == 0 ? "A" : "B"}: no item'
+        : 'Preview ${item.label} finisher for Ball ${index == 0 ? "A" : "B"}';
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: label,
+        button: true,
+        enabled: item != null,
+        child: InkWell(
+          key: ValueKey('item-preview-$index'),
+          onTap: item == null ? null : () => _previewFinisher(index),
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox.square(dimension: 64, child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              // A fixed frame and crosshairs make centering and bleed visible.
+              Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+                border: Border.all(color: _balls[index].primaryColor.withValues(alpha: 0.6)),
+                borderRadius: BorderRadius.circular(8),
+              ))),
+              Container(width: 1, height: 64, color: Colors.white12),
+              Container(width: 64, height: 1, color: Colors.white12),
+              if (item != null) PowerUpIcon(item, size: 48)
+              else const Icon(Icons.remove, color: Colors.white38),
+            ],
+          )),
+        ),
+      ),
+    );
+  }
+
+  void _launchSound(FinisherProfile profile) {
+    final audio = GameAudio.instance;
+    switch (profile.style) {
+      case FinisherStyle.projectile:
+        audio.shot();
+      case FinisherStyle.barrage:
+        profile.move == 'Gatling' ? audio.gatling() : audio.shotgun();
+      case FinisherStyle.melee:
+        audio.slash();
+      case FinisherStyle.blast:
+      case FinisherStyle.trap:
+        audio.bomb();
+      case FinisherStyle.hook:
+        audio.shotgun();
+      case FinisherStyle.aura:
+        audio.shield();
+      case FinisherStyle.warp:
+        audio.pickup();
+    }
+  }
+
+  void _impactSound(FinisherProfile profile) {
+    final audio = GameAudio.instance;
+    switch (profile.style) {
+      case FinisherStyle.projectile:
+      case FinisherStyle.barrage:
+      case FinisherStyle.hook:
+        audio.hit();
+      case FinisherStyle.melee:
+        audio.collide();
+      case FinisherStyle.blast:
+      case FinisherStyle.trap:
+        audio.bomb();
+      case FinisherStyle.aura:
+        audio.shield();
+      case FinisherStyle.warp:
+        audio.pickup();
+    }
+  }
+
   Widget _arena() {
     final match = _match!;
     final state = match.state;
     final finished = state.status == MatchStatus.finished;
     return Column(children: [
-      Expanded(child: Center(child: AspectRatio(
-        aspectRatio: 1,
-        child: RepaintBoundary(child: ArenaCanvas(
-          state: state,
-          arenaRadius: match.arenaRadius,
-          rimAngle: 0,
-          look: BallLook.faces,
-        )),
-      ))),
+      Expanded(child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(child: Center(child: AspectRatio(
+            aspectRatio: 1,
+            child: RepaintBoundary(child: ArenaCanvas(
+              state: state,
+              arenaRadius: match.arenaRadius,
+              rimAngle: 0,
+              look: BallLook.faces,
+            )),
+          ))),
+          Positioned(left: 4, bottom: 0, child: _itemPreview(0)),
+          Positioned(right: 4, bottom: 0, child: _itemPreview(1)),
+        ],
+      )),
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(finished

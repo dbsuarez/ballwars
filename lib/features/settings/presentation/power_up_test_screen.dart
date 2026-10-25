@@ -668,9 +668,11 @@ class _ItemPickerState extends State<_ItemPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final query = _query.trim().toLowerCase();
+    final searching = query.isNotEmpty;
     final items = PowerUpKind.values.where(
-      (kind) => (_tab == 0 ? kind.isWeapon : _tab == 1 ? kind.isPowerUp : kind.isTrap) &&
-          kind.label.toLowerCase().contains(_query.toLowerCase()),
+      (kind) => (searching || (_tab == 0 ? kind.isWeapon : _tab == 1 ? kind.isPowerUp : kind.isTrap)) &&
+          kind.label.toLowerCase().contains(query),
     ).toList()..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -689,7 +691,7 @@ class _ItemPickerState extends State<_ItemPicker> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
               decoration: const InputDecoration(
-                labelText: 'Search weapons, power-ups and traps',
+                labelText: 'Search all items',
                 prefixIcon: Icon(Icons.search),
               ),
               onChanged: (value) => setState(() => _query = value),
@@ -697,6 +699,10 @@ class _ItemPickerState extends State<_ItemPicker> {
           ),
           TabBar(onTap: (index) => setState(() => _tab = index),
             tabs: const [Tab(text: 'Weapons'), Tab(text: 'Power-ups'), Tab(text: 'Traps')]),
+          if (searching) const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: Text('Results from all categories'),
+          ),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.block),

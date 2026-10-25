@@ -73,6 +73,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _mayhem = false;
   bool _shrinkingArena = false;
   bool _finishersOn = true;
+  bool _settingCards = true;
 
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
@@ -95,6 +96,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   Future<void> _loadPrefs() async {
     final effects = await EffectsPrefs.effectsOn();
     final finishers = await EffectsPrefs.finishersOn();
+    final settingCards = await DevicePrefs.read('match-settings-layout') != 'list';
     final wallSparkSize = WallSparkSize.byId(
       await DevicePrefs.read('wall-spark-size'),
     );
@@ -137,6 +139,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _powerUps = _modePowerUps[_mode];
       _showEffects = effects;
       _finishersOn = finishers;
+      _settingCards = settingCards;
       if (wallSparkSize != null) _wallSparkSize = wallSparkSize;
       if (rounds != null && const [1, 2, 3].contains(rounds)) {
         _winsNeeded = rounds;
@@ -609,7 +612,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     builder: (context) => AlertDialog(
       title: const Text('Match settings guide'),
       content: const SingleChildScrollView(child: Text(
-        'Tap anywhere on a setting row to cycle its choices.\n\n'
+        'Choose List or Cards above the settings. Your layout is remembered on this device. Tap anywhere on a row or card to cycle its choices.\n\n'
         'ROUNDS: One round or first to two/three wins.\n'
         'SPEED: Playback at 0.5x, 1x or 2x.\n'
         'PICKUPS: Choose enabled weapons and power-ups; traps stay on.\n'
@@ -644,6 +647,24 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   IconButton(tooltip: 'Close match settings', icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(sheetContext)),
                 ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Align(alignment: Alignment.centerRight,
+                  child: SizedBox(width: 220, child: SegmentedButton<bool>(
+                  key: const ValueKey('match-settings-layout'),
+                  segments: const [
+                    ButtonSegment(value: false, icon: Icon(Icons.view_list), label: Text('List')),
+                    ButtonSegment(value: true, icon: Icon(Icons.grid_view), label: Text('Cards')),
+                  ],
+                  selected: {_settingCards},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selected) {
+                    final cards = selected.first;
+                    _update(() => _settingCards = cards);
+                    DevicePrefs.write('match-settings-layout', cards ? 'cards' : 'list');
+                  },
+                ))),
               ),
               Flexible(child: SingleChildScrollView(child: _settingsPanel(BallWarsColors.of(context)))),
               SafeArea(top: false, child: Padding(
@@ -791,6 +812,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     );
   }
 
+  bool get _useSettingCards => _settingCards;
+
   Widget _choice<T>(IconData icon, String title, List<T> values, T value,
       String Function(T) label, void Function(T) change, {String? tooltip}) {
     final next = values[(values.indexOf(value) + 1) % values.length];
@@ -800,7 +823,23 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 52),
         child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(children: [
+          child: _useSettingCards ? Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                Icon(icon, size: 20), const SizedBox(width: 8),
+                Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12))),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: Text(label(value), maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700))),
+                const Icon(Icons.unfold_more, size: 18),
+              ]),
+            ],
+          ) : Row(children: [
             Icon(icon, size: 22), const SizedBox(width: 12),
             Expanded(child: Text(title)),
             const SizedBox(width: 8),
@@ -814,14 +853,41 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     return tooltip == null ? tile : Tooltip(message: tooltip, child: tile);
   }
 
-  Widget _settingsGroup(String title, List<Widget> rows) => Card(
-    margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Padding(padding: const EdgeInsets.fromLTRB(12, 12, 12, 4), child: Text(title,
-          style: const TextStyle(fontWeight: FontWeight.w700))),
-      ...rows,
-    ]),
-  );
+  Widget _settingsGroup(String title, List<Widget> rows) {
+    if (!_useSettingCards) {
+      // Preserve the existing grouped list layout.
+      return Card(
+        margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(padding: const EdgeInsets.fromLTRB(12, 12, 12, 4), child: Text(title,
+              style: const TextStyle(fontWeight: FontWeight.w700))),
+          ...rows,
+        ]),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w700))),
+        LayoutBuilder(builder: (context, bounds) {
+          final columns = bounds.maxWidth >= 600 ? 3 : bounds.maxWidth >= 280 ? 2 : 1;
+          final width = (bounds.maxWidth - 8 * (columns - 1)) / columns;
+          final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+          return Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final row in rows) SizedBox(width: width, height: 112 * scale,
+              child: Card(
+                key: const ValueKey('individual-setting-card'),
+                margin: EdgeInsets.zero,
+                clipBehavior: Clip.antiAlias,
+                child: row,
+              ),
+            ),
+          ]);
+        }),
+      ]),
+    );
+  }
 
   Widget _settingsPanel(BallWarsColors c) => Column(
     mainAxisSize: MainAxisSize.min,

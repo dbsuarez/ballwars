@@ -162,4 +162,20 @@ void main() {
     expect(find.text('Play'), findsOneWidget);
   });
 
+  testWidgets('search spans all categories and clearing restores the selected tab', (tester) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'apple');
+    await tester.pump();
+    expect(find.text('Apple'), findsOneWidget);
+    expect(find.text('Results from all categories'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    expect(find.text('Apple'), findsNothing);
+    expect(find.text('Boomerang'), findsOneWidget);
+    expect(find.text('Results from all categories'), findsNothing);
+  });
+
 }

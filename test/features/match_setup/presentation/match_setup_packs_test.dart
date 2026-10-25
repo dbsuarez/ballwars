@@ -33,6 +33,13 @@ void main() {
 
   Future<void> pumpSetup(WidgetTester tester) async {
     started = null;
+    // These existing cases exercise the retained List layout. Card defaults
+    // and user selection are covered by match_settings_layout_test.dart.
+    await tester.runAsync(() async {
+      if (await DevicePrefs.read('match-settings-layout') == null) {
+        await DevicePrefs.write('match-settings-layout', 'list');
+      }
+    });
     tester.view.physicalSize = const Size(1080, 2000);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);

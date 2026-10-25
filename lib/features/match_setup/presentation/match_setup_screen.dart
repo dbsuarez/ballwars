@@ -23,6 +23,8 @@ import '../domain/match_config.dart';
 class MatchSetupScreen extends StatefulWidget {
   /// Built-in packs; null hides them (e.g. in tests or offline builds).
   final BallPackRepository? packRepository;
+  final MatchMode? initialMode;
+  final bool initialMayhem;
 
   /// The user's own groups (My Groups); null hides them.
   final CustomGroupRepository? customGroups;
@@ -31,6 +33,8 @@ class MatchSetupScreen extends StatefulWidget {
   const MatchSetupScreen({
     super.key,
     this.packRepository,
+    this.initialMode,
+    this.initialMayhem = false,
     this.customGroups,
     required this.onStartBattle,
   });
@@ -72,6 +76,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _dualWield = false;
   bool _endlessBattle = false;
   bool _mayhem = false;
+  int _mayhemSeconds = 120;
   bool _shrinkingArena = false;
   bool _finishersOn = true;
   bool _settingCards = true;
@@ -89,6 +94,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   @override
   void initState() {
     super.initState();
+    _mode = widget.initialMode ?? MatchMode.threads;
+    _mayhem = widget.initialMayhem && _mode == MatchMode.arsenal;
     _load();
     _loadPrefs();
   }
@@ -109,6 +116,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final dualWield = await DevicePrefs.read('dual-wield');
     final endlessBattle = await DevicePrefs.read('endless-battle');
     final mayhem = await DevicePrefs.read('mayhem');
+    final duration = int.tryParse(await DevicePrefs.read('mayhem-seconds') ?? '120') ?? 120;
     final shrinkingArena = await DevicePrefs.read('shrinking-arena');
     final legacy = await DevicePrefs.read('power-ups');
     for (final gameMode in MatchMode.values) {
@@ -131,11 +139,12 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         _category = _shown.firstOrNull?.id;
       }
       if (size != null) _ballSize = size;
-      if (mode != null) _mode = mode;
+      _mode = widget.initialMode ?? mode ?? MatchMode.threads;
       if (look != null) _look = look;
       _dualWield = dualWield == '1';
       _endlessBattle = endlessBattle == '1';
-      _mayhem = mayhem == '1' && _mode == MatchMode.arsenal;
+      _mayhem = (widget.initialMode != null ? widget.initialMayhem : mayhem == '1') && _mode == MatchMode.arsenal;
+      _mayhemSeconds = const [30, 60, 120, 180, 300, 600].contains(duration) ? duration : 120;
       _shrinkingArena = shrinkingArena == '1';
       _powerUps = _modePowerUps[_mode];
       _showEffects = effects;
@@ -356,6 +365,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         endlessBattle:
             _mode == MatchMode.arsenal && (_endlessBattle || _mayhem),
         mayhem: _mode == MatchMode.arsenal && _mayhem,
+        mayhemSeconds: _mayhemSeconds,
         shrinkingArena: _shrinkingArena,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
         // The admin's power-up numbers; part of the match (and of its replay link).
@@ -618,7 +628,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         'SPEED: Playback at 0.5x, 1x or 2x.\n'
         'PICKUPS: Choose enabled weapons and power-ups; traps stay on.\n'
         'DUAL WIELD: Carry two compatible weapons. Two-handed weapons occupy both slots.\n'
-        'MAYHEM: Six balls, two minutes, respawns. Most KOs wins; remaining life breaks ties.\n'
+        'MAYHEM: Six balls, your chosen match time, respawns. Most KOs wins; remaining life breaks ties.\n'
         'ENDLESS BATTLE: Respawn eliminated balls and count KOs.\n'
         'SHRINKING ARENA: Boundary contracts after ten seconds.\n'
         'EFFECTS: Show particles and visual feedback.\n'
@@ -693,7 +703,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       child: Column(mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           // The kind of match: the thread game, weapons only, or both.
-          SegmentedButton<MatchMode>(
+          if (widget.initialMode == null) SegmentedButton<MatchMode>(
             segments: [
               for (final m in MatchMode.values)
                 ButtonSegment(value: m, label: Text(m.label)),
@@ -913,7 +923,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               _update(() => _dualWield = v); DevicePrefs.write('dual-wield', v ? '1' : '0');
             }),
           if (_mode == MatchMode.arsenal) ...[
-            _choice(Icons.whatshot, 'Mayhem', const [false, true], _mayhem,
+            if (widget.initialMode == null) _choice(Icons.whatshot, 'Mayhem', const [false, true], _mayhem,
               (v) => v ? 'On' : 'Off', (v) {
                 _update(() {
                   _mayhem = v;
@@ -923,6 +933,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   }
                 });
                 DevicePrefs.write('mayhem', v ? '1' : '0');
+              }),
+            if (_mayhem) _choice(Icons.timer, 'Match time', const [30, 60, 120, 180, 300, 600], _mayhemSeconds,
+              (v) => v < 60 ? '${v}s' : '${v ~/ 60} min', (v) {
+                _update(() => _mayhemSeconds = v);
+                DevicePrefs.write('mayhem-seconds', v);
               }),
             if (!_mayhem) _choice(Icons.all_inclusive, 'Endless Battle', const [false, true], _endlessBattle,
               (v) => v ? 'On' : 'Off', (v) {

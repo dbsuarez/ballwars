@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import '../offline/offline_store.dart';
 
 /// A background track: match music (`assets/sounds/bgm_<id>.wav`) or Home
@@ -82,7 +82,14 @@ class GameAudio with WidgetsBindingObserver {
   bool _menuWanted = false; // Outside a match.
   bool _foreground = true;
   bool _slow = false;
-  final Map<String, DateTime> _lastPlayed = {};
+  final Map<String, int> _lastPlayed = {};
+  final Stopwatch _effectClock = Stopwatch()..start();
+  Future<void> _musicQueue = Future.value();
+  Future<void> _menuQueue = Future.value();
+  int _menuEpoch = 0;
+
+  @visibleForTesting
+  static AudioPlayer Function()? playerFactory;
 
   bool get musicOn => _musicOn;
 
@@ -108,7 +115,7 @@ class GameAudio with WidgetsBindingObserver {
     if (_menu?.state == PlayerState.playing) _startMenu(restart: true);
   }
 
-  bool get _playEffects => enabled && _effectsOn;
+  bool get _playEffects => enabled && _effectsOn && _foreground;
 
   bool get _playMusic => enabled && _musicOn && _foreground;
 
@@ -138,12 +145,16 @@ class GameAudio with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _foreground = true;
-      if (_playMusic && _musicWanted && !_musicPausedByUser) _guard(() async => _music?.resume());
+      resetEffects();
+      if (_playMusic && _musicWanted && !_musicPausedByUser) _startMusic();
       if (_playMenu && _menuWanted) _startMenu();
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+    } else {
       _foreground = false;
-      _guard(() async => _music?.pause());
-      _guard(() async => _menu?.pause());
+      _musicEpoch++;
+      _menuEpoch++;
+      resetEffects();
+      _queueMusic(() async => _music?.pause());
+      _queueMenu(() async => _menu?.pause());
       stopPreview();
     }
   }
@@ -152,7 +163,7 @@ class GameAudio with WidgetsBindingObserver {
     _musicOn = on;
     if (!_playMusic) {
       _musicEpoch++;
-      _guard(() async => _music?.pause());
+      _queueMusic(() async => _music?.pause());
     } else if (_musicWanted && !_musicPausedByUser) {
       _startMusic();
     }
@@ -162,7 +173,8 @@ class GameAudio with WidgetsBindingObserver {
   Future<void> setMenuMusicOn(bool on) async {
     _menuMusicOn = on;
     if (!_playMenu) {
-      _guard(() async => _menu?.pause());
+      _menuEpoch++;
+      _queueMenu(() async => _menu?.pause());
     } else if (_menuWanted) {
       _startMenu();
     }
@@ -171,6 +183,7 @@ class GameAudio with WidgetsBindingObserver {
 
   Future<void> setEffectsOn(bool on) async {
     _effectsOn = on;
+    resetEffects();
     await _writeFlag(_effectsKey, on);
   }
 
@@ -202,6 +215,17 @@ class GameAudio with WidgetsBindingObserver {
   void out() => _play('out', 0.7);
 
   void win() => _play('win', 0.85);
+
+  void whistle() => _play('whistle', 0.8);
+
+  /// Start each match with fresh players; native players can lose their
+  /// reusable sound handle after completion or an audio focus interruption.
+  void resetEffects() {
+    final old = _voices.values.toList();
+    _voices.clear();
+    _lastPlayed.clear();
+    for (final voices in old) voices.dispose();
+  }
 
   // Power-ups (Arsenal / All-Out). Rapid repeats (gatling, pellets) are thinned out.
   void shot() => _play('shot', 0.45, gap: 50);
@@ -243,18 +267,26 @@ class GameAudio with WidgetsBindingObserver {
   /// A match starts: Home music steps aside for the match music.
   void stopMenuMusic() {
     _menuWanted = false;
-    _guard(() async => _menu?.pause());
+    _menuEpoch++;
+    _queueMenu(() async => _menu?.pause());
   }
 
   void _startMenu({bool restart = false}) {
-    _guard(() async {
-      final menu = _menu ??= _newPlayer()..setReleaseMode(ReleaseMode.loop);
+    final epoch = ++_menuEpoch;
+    _queueMenu(() async {
+      bool wanted() => epoch == _menuEpoch && _playMenu && _menuWanted;
+      if (!wanted()) return;
+      final menu = _menu ??= _newPlayer();
+      await menu.setReleaseMode(ReleaseMode.loop);
+      if (!wanted()) return;
       if (!restart && menu.state == PlayerState.paused) {
         await menu.resume();
         return;
       }
       await menu.setVolume(_menuVolume);
+      if (!wanted()) return;
       await menu.play(AssetSource(_menuTrack.asset));
+      if (!_playMenu || !_menuWanted) await menu.pause();
     });
   }
 
@@ -271,7 +303,7 @@ class GameAudio with WidgetsBindingObserver {
   void pauseMusic() {
     _musicEpoch++;
     _musicPausedByUser = true;
-    _guard(() async => _music?.pause());
+    _queueMusic(() async => _music?.pause());
   }
 
   void resumeMusic() {
@@ -283,7 +315,7 @@ class GameAudio with WidgetsBindingObserver {
     _musicEpoch++;
     _musicWanted = false;
     slowMotion = false;
-    _guard(() async => _music?.stop());
+    _queueMusic(() async => _music?.stop());
   }
 
   set slowMotion(bool slow) {
@@ -291,7 +323,7 @@ class GameAudio with WidgetsBindingObserver {
     _slow = slow;
     final music = _music;
     if (music == null) return;
-    _guard(() async {
+    _queueMusic(() async {
       await music.setPlaybackRate(slow ? 0.8 : 1.0);
       await music.setVolume(slow ? _musicVolume * 0.45 : _musicVolume);
     });
@@ -299,11 +331,13 @@ class GameAudio with WidgetsBindingObserver {
 
   void _startMusic({bool restart = false}) {
     final epoch = ++_musicEpoch;
-    _guard(() async {
+    _queueMusic(() async {
       bool wanted() => epoch == _musicEpoch && _playMusic && _musicWanted && !_musicPausedByUser;
       if (!wanted()) return;
       final music = _music ??= _newPlayer();
       await music.setReleaseMode(ReleaseMode.loop);
+      await music.setPlaybackRate(_slow ? 0.8 : 1.0);
+      await music.setVolume(_slow ? _musicVolume * 0.45 : _musicVolume);
       if (!wanted()) return;
       if (!restart && music.state == PlayerState.paused) {
         await music.resume();
@@ -326,11 +360,11 @@ class GameAudio with WidgetsBindingObserver {
   void preview(MusicTrack track, {VoidCallback? onDone}) {
     if (!enabled) return;
     _previewing = track.asset;
-    _guard(() async => _menu?.pause());
+    _queueMenu(() async => _menu?.pause());
     _guard(() async {
       final player = _preview ??= _newPlayer();
       await player.stop();
-      await player.setReleaseMode(ReleaseMode.stop);
+      await player.setReleaseMode(ReleaseMode.stop).timeout(const Duration(seconds: 3));
       await player.play(AssetSource(track.asset), volume: 0.6);
       await player.onPlayerComplete.first;
       if (_previewing == track.asset) {
@@ -357,9 +391,9 @@ class GameAudio with WidgetsBindingObserver {
   void _play(String name, double volume, {int gap = 0}) {
     if (!_playEffects) return;
     if (gap > 0) {
-      final now = DateTime.now();
+      final now = _effectClock.elapsedMilliseconds;
       final last = _lastPlayed[name];
-      if (last != null && now.difference(last).inMilliseconds < gap) return;
+      if (last != null && now - last < gap) return;
       _lastPlayed[name] = now;
     }
     _voices.putIfAbsent(name, () => _Voices(name)).play(volume);
@@ -369,7 +403,27 @@ class GameAudio with WidgetsBindingObserver {
   /// frame while a player plays (FramePositionUpdater): it keeps the app drawing at the screen's full rate
   /// (120 Hz) even on still screens and sends a platform call per frame, which on Android runs on the
   /// same thread as the app and made every screen slow while music played. Nothing here reads positions.
-  static AudioPlayer _newPlayer() => AudioPlayer()..positionUpdater = null;
+  static AudioPlayer _newPlayer() => playerFactory?.call() ?? (AudioPlayer()..positionUpdater = null);
+
+  void _queueMenu(Future<void> Function() action) {
+    _menuQueue = _menuQueue.then((_) => action().timeout(const Duration(seconds: 4)))
+        .catchError((Object e) {
+          debugPrint('GameAudio menu: $e');
+          final failed = _menu;
+          _menu = null;
+          if (failed != null) _guard(failed.dispose);
+        });
+  }
+
+  void _queueMusic(Future<void> Function() action) {
+    _musicQueue = _musicQueue.then((_) => action().timeout(const Duration(seconds: 4)))
+        .catchError((Object e) {
+          debugPrint('GameAudio music: $e');
+          final failed = _music;
+          _music = null;
+          if (failed != null) _guard(failed.dispose);
+        });
+  }
 
   static void _guard(Future<void> Function() action) {
     unawaited(action().catchError((Object e) => debugPrint('GameAudio: $e')));
@@ -380,15 +434,48 @@ class GameAudio with WidgetsBindingObserver {
 class _Voices {
   final String name;
   final List<AudioPlayer> _players = [];
+  final Set<AudioPlayer> _busy = {};
+  bool _disposed = false;
   int _next = 0;
-
   static const int _count = 3;
 
   _Voices(this.name);
 
   void play(double volume) {
+    if (_disposed) return;
     if (_players.length < _count) _players.add(GameAudio._newPlayer());
-    final player = _players[_next++ % _players.length];
-    GameAudio._guard(() => player.play(AssetSource('sounds/$name.wav'), volume: volume, mode: kIsWeb ? PlayerMode.mediaPlayer : PlayerMode.lowLatency));
+    AudioPlayer? available;
+    for (var i = 0; i < _players.length; i++) {
+      final candidate = _players[_next++ % _players.length];
+      if (!_busy.contains(candidate)) { available = candidate; break; }
+    }
+    if (available == null) return; // Never issue overlapping commands to a player.
+    final player = available;
+    _busy.add(player);
+    GameAudio._guard(() async {
+      try {
+        // Keep reusable media players on both platforms. Low-latency native
+        // sound handles have gone silent after repeated match/restart cycles.
+        await player.setReleaseMode(ReleaseMode.stop).timeout(const Duration(seconds: 3));
+        if (_disposed) return;
+        await player.play(AssetSource('sounds/$name.wav'), volume: volume,
+            mode: PlayerMode.mediaPlayer).timeout(const Duration(seconds: 3));
+      } catch (_) {
+        _players.remove(player);
+        try { await player.dispose(); } catch (_) {}
+        rethrow; // Logged; the next event gets a new player instead of a dead one.
+      } finally {
+        _busy.remove(player);
+        if (_disposed) { try { await player.dispose(); } catch (_) {} }
+      }
+    });
+  }
+
+  void dispose() {
+    _disposed = true;
+    for (final player in _players.where((p) => !_busy.contains(p)).toList()) {
+      GameAudio._guard(player.dispose);
+    }
+    _players.clear();
   }
 }

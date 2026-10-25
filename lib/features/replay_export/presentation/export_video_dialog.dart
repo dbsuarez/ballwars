@@ -27,6 +27,10 @@ class ExportVideoDialog extends StatefulWidget {
   final MatchMode mode;
   final Set<PowerUpKind>? powerUps;
   final PowerUpConfig tuning;
+  final bool endlessBattle;
+  final bool dualWield;
+  final bool mayhem;
+  final int mayhemSeconds;
   final bool shrinkingArena;
   final double minimumArenaScale;
   final VideoSaver saver;
@@ -44,6 +48,10 @@ class ExportVideoDialog extends StatefulWidget {
     this.mode = MatchMode.threads,
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
+    this.endlessBattle = false,
+    this.dualWield = false,
+    this.mayhem = false,
+    this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.style = const ReplayStyle(),
@@ -64,6 +72,10 @@ class ExportVideoDialog extends StatefulWidget {
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
+    bool endlessBattle = false,
+    bool dualWield = false,
+    bool mayhem = false,
+    int mayhemSeconds = 120,
     bool shrinkingArena = false,
     double minimumArenaScale = 0.60,
     BallLook look = BallLook.pictures,
@@ -90,6 +102,10 @@ class ExportVideoDialog extends StatefulWidget {
         mode: mode,
         powerUps: powerUps,
         tuning: tuning,
+        endlessBattle: endlessBattle,
+        dualWield: dualWield,
+        mayhem: mayhem,
+        mayhemSeconds: mayhemSeconds,
         shrinkingArena: shrinkingArena,
         minimumArenaScale: minimumArenaScale,
         style: ReplayStyle(
@@ -142,6 +158,10 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         mode: widget.mode,
         powerUps: widget.powerUps,
         tuning: widget.tuning,
+        endlessBattle: widget.endlessBattle,
+        dualWield: widget.dualWield,
+        mayhem: widget.mayhem,
+        mayhemSeconds: widget.mayhemSeconds,
         shrinkingArena: widget.shrinkingArena,
         minimumArenaScale: widget.minimumArenaScale,
         style: widget.style,

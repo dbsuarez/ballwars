@@ -25,7 +25,7 @@ class PowerUpTestScreen extends StatefulWidget {
 }
 
 class _PowerUpTestScreenState extends State<PowerUpTestScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const _balls = [
     CustomBall(
       id: 'test-a', name: 'Ball A',
@@ -42,6 +42,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   bool? _allowed;
   MatchSimulationController? _match;
   bool _paused = true;
+  bool _foreground = true;
   bool _randomSpawns = false;
   bool _endless = true;
   GameAudio get _audio => GameAudio.instance;
@@ -59,6 +60,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ticker = createTicker(_tick);
   }
 
@@ -124,14 +126,21 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       final kind = _savedItems[i];
       if (kind != null) _applyItem(i, kind);
     }
+    _audio.resetEffects();
     _paused = true;
+    _previous = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
     _previous = null;
   }
 
   void _tick(Duration elapsed) {
     final previous = _previous;
     _previous = elapsed;
-    if (_paused || previous == null || _match == null) return;
+    if (!_foreground || _paused || previous == null || _match == null) return;
     final dt = (elapsed - previous).inMicroseconds / 1000000;
     // Ignore background/resume gaps instead of skipping ahead in the fight.
     if (dt <= 0 || dt > 0.25) return;
@@ -211,6 +220,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     if (_allowed == true) {
       _audio.stopMusic();

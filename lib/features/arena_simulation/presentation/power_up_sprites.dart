@@ -567,6 +567,43 @@ class PowerUpSprites {
     await loadExtraSheet('assets/sprites/flamethrower.png', [
       PowerUpKind.flamethrower,
     ]);
+    // Fit visible artwork, rather than the transparent sheet cell, into
+    // the icon. Keep a two-pixel safety border and preserve its proportions.
+    for (final kind in _images.keys.toList()) {
+      final original = _images[kind]!;
+      final fitted = await fitVisibleArtwork(original);
+      _images[kind] = fitted;
+      if (!identical(original, fitted)) original.dispose();
+    }
+    if (_rocketLauncher != null) _rocketLauncher = await fitVisibleArtwork(_rocketLauncher!);
+    if (_omegaTendrilsIcon != null) _omegaTendrilsIcon = await fitVisibleArtwork(_omegaTendrilsIcon!);
+    if (_boomerangIcon != null) _boomerangIcon = await fitVisibleArtwork(_boomerangIcon!);
+  }
+
+  /// Returns a fitted copy; the caller retains ownership of the input image.
+  static Future<ui.Image> fitVisibleArtwork(ui.Image image) async {
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    if (bytes == null) return image;
+    var left = image.width, top = image.height, right = -1, bottom = -1;
+    for (var y = 0; y < image.height; y++) {
+      for (var x = 0; x < image.width; x++) {
+        if (bytes.getUint8((y * image.width + x) * 4 + 3) < 16) continue;
+        left = math.min(left, x); right = math.max(right, x);
+        top = math.min(top, y); bottom = math.max(bottom, y);
+      }
+    }
+    if (right < left) return image;
+    final source = Rect.fromLTRB(left.toDouble(), top.toDouble(),
+        (right + 1).toDouble(), (bottom + 1).toDouble());
+    final fitted = applyBoxFit(BoxFit.contain, source.size, const Size.square(60));
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(image, source,
+      Alignment.center.inscribe(fitted.destination, const Rect.fromLTWH(2, 2, 60, 60)),
+      Paint()..filterQuality = FilterQuality.none);
+    final picture = recorder.endRecording();
+    final result = await picture.toImage(64, 64);
+    picture.dispose();
+    return result;
   }
 
   static const Map<PowerUpKind, Rect> _sheetRects = {
@@ -640,7 +677,19 @@ class PowerUpSprites {
       _paintFallbackIcon(canvas, kind, rect);
       return;
     }
-    final cell = Size(rect.width / pixelSize, rect.height / pixelSize);
+    var left = pixelSize, top = pixelSize, right = -1, bottom = -1;
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < rows[y].length; x++) {
+        if (pixelPalette[rows[y][x]] == null) continue;
+        left = math.min(left, x); right = math.max(right, x);
+        top = math.min(top, y); bottom = math.max(bottom, y);
+      }
+    }
+    if (right < left) return;
+    final scale = math.min(rect.width / (right - left + 1), rect.height / (bottom - top + 1)) * 0.94;
+    final cell = Size.square(scale);
+    final origin = rect.center - Offset((right - left + 1) * scale / 2,
+        (bottom - top + 1) * scale / 2);
     final paint = Paint()..isAntiAlias = false;
     for (var y = 0; y < rows.length; y++) {
       final row = rows[y];
@@ -650,8 +699,8 @@ class PowerUpSprites {
         paint.color = color;
         canvas.drawRect(
           Rect.fromLTWH(
-            rect.left + x * cell.width,
-            rect.top + y * cell.height,
+            origin.dx + (x - left) * cell.width,
+            origin.dy + (y - top) * cell.height,
             cell.width,
             cell.height,
           ),

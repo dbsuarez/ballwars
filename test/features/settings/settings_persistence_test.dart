@@ -54,4 +54,40 @@ void main() {
     )), throwsStateError);
     expect(writes, 0);
   });
+  test('missing branding columns cannot silently discard edited branding', () async {
+    var writes = 0;
+    final client = SupabaseClient('https://example.supabase.co', 'test-key',
+      httpClient: MockClient((request) async {
+        if (request.method == 'PATCH') writes++;
+        return http.Response(jsonEncode([{'id': 1, 'headline': 'WHO WINS?', 'theme': 'midnight'}]),
+          200, request: request, headers: {'content-type': 'application/json'});
+      }));
+    addTearDown(client.dispose);
+    final repository = SupabaseAppSettingsRepository(client);
+    final loaded = await repository.load();
+    await expectLater(repository.save(loaded.copyWith(arenaTitle: 'My Arena')), throwsStateError);
+    expect(writes, 0);
+  });
+
+  test('confirmed branding survives a fresh repository and offline load', () async {
+    var offline = false;
+    final row = <String, dynamic>{'id': 1, 'headline': 'WHO WINS?', 'theme': 'midnight',
+      'arena_title': 'dbsuarez', 'arena_subtitle': 'bakbakan na'};
+    final client = SupabaseClient('https://example.supabase.co', 'test-key',
+      httpClient: MockClient((request) async {
+        if (offline) return http.Response('offline', 503, request: request);
+        if (request.method == 'PATCH') row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
+        return http.Response(jsonEncode([row]), 200, request: request,
+          headers: {'content-type': 'application/json'});
+      }));
+    addTearDown(client.dispose);
+    final repository = SupabaseAppSettingsRepository(client);
+    final loaded = await repository.load();
+    await repository.save(loaded.copyWith(arenaTitle: 'My Arena', arenaSubtitle: 'Fight!'));
+    offline = true;
+    final reopened = await SupabaseAppSettingsRepository(client).load();
+    expect(reopened.arenaTitle, 'My Arena');
+    expect(reopened.arenaSubtitle, 'Fight!');
+  });
+
 }

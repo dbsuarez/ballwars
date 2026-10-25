@@ -164,6 +164,7 @@ class MatchSimulationController {
   final bool endlessBattle;
   final bool mayhem;
   static const double mayhemDurationSeconds = 120;
+  final int mayhemSeconds;
 
   /// How long a "Faces" ball winces after a hit or a lost thread (cosmetic).
   static const int hurtFlashSteps = 18;
@@ -200,6 +201,7 @@ class MatchSimulationController {
     this.dualWield = false,
     this.endlessBattle = false,
     this.mayhem = false,
+    this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.bloodColor = const Color(0xFFD9152B),
@@ -226,6 +228,7 @@ class MatchSimulationController {
         dualWield: dualWield,
         endlessBattle: endlessBattle,
         mayhem: mayhem,
+        mayhemSeconds: mayhemSeconds,
         shrinkingArena: shrinkingArena,
         minimumArenaScale: minimumArenaScale,
         bloodColor: bloodColor,
@@ -519,8 +522,10 @@ class MatchSimulationController {
       return;
     }
 
+    if (!realDeltaSeconds.isFinite || realDeltaSeconds <= 0) return;
+    if (mayhem) realDeltaSeconds = math.min(realDeltaSeconds, math.max(0.0, mayhemSeconds - _elapsedSeconds));
     _elapsedSeconds += realDeltaSeconds;
-    if (mayhem && _elapsedSeconds >= mayhemDurationSeconds) {
+    if (mayhem && _elapsedSeconds >= mayhemSeconds) {
       _finishMayhem();
       _particles.update(realDeltaSeconds);
       _floatingTexts.update(realDeltaSeconds);

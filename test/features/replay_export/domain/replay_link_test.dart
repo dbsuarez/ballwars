@@ -489,12 +489,19 @@ void main() {
       mode: MatchMode.arsenal,
       endlessBattle: true,
       mayhem: true,
+      mayhemSeconds: 300,
     );
     final ids = {for (final ball in six) ball.id};
     final uri = link.toUri(presetIds: ids);
     expect(uri.queryParameters['mayhem'], '1');
     final restored = ReplayLink.fromUri(uri, presets: six)!;
     expect(restored.mayhem, isTrue);
+    expect(restored.mayhemSeconds, 300);
+    for (final bad in ['0', '-30', 'oops', '1801']) {
+      expect(ReplayLink.fromUri(uri.replace(queryParameters: {
+        ...uri.queryParameters, 'duration': bad,
+      }), presets: six), isNull);
+    }
     expect(restored.contestants, hasLength(ReplayLink.mayhemBalls));
 
     final two = 'p.${_presets[0].id},p.${_presets[1].id}';

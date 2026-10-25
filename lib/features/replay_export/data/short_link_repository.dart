@@ -24,6 +24,12 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
 
   @override
   Future<String> create(Map<String, String> replayQuery) async {
+    // The current table cannot store these options. Let the caller keep its
+    // full link rather than return a short link that changes the match.
+    const stored = {'seed', 'speed', 'fx', 'balls', 'size', 'q', 't'};
+    if (replayQuery.keys.any((key) => !stored.contains(key))) {
+      throw StateError('This match uses options that require the full replay link.');
+    }
     // Links are tied to the device's (anonymous) account, which the database
     // uses to limit how many one device can make (migration 007).
     if (_client.auth.currentUser == null) await _client.auth.signInAnonymously();

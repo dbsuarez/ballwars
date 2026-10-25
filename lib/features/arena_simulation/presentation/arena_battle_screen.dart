@@ -55,6 +55,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   double _rimAngle = 0.0;
   late SimulationState _state;
   bool _isPaused = false;
+  bool _foreground = true;
 
   // Particle effects: start as the match was set up; the winner card can
   // turn them off for the rest of the series ("Game running slow?").
@@ -172,6 +173,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
       mayhem: widget.config.mayhem,
+      mayhemSeconds: widget.config.mayhemSeconds,
       shrinkingArena: widget.config.shrinkingArena,
       minimumArenaScale: widget.config.minimumArenaScale,
       bloodColor: AppSettingsScope.of(context).bloodColor,
@@ -194,6 +196,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _heardCuts = 0;
     _heardKnockouts = 0;
     _heardGatling = 0;
+    _audio.resetEffects();
     _audio.startMusic();
     _matchGeneration++;
     if (widget.config.mode != MatchMode.threads) {
@@ -215,7 +218,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
     final dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
     _lastElapsed = elapsed;
-    if (dt <= 0 || _isPaused) return;
+    if (dt <= 0 || _isPaused || !_foreground) return;
 
     _controller.tick(dt * widget.config.speedMultiplier);
 
@@ -236,6 +239,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     if (isFinished && !_endPending && !_showDissolve && !_dissolveComplete) {
       setState(() => _endPending = true); // Dims the header right away.
       _audio.stopMusic();
+      if (widget.config.mayhem) _audio.whistle();
       final generation = _matchGeneration;
       bool current() => mounted && generation == _matchGeneration;
       Future.delayed(_endPause, () {
@@ -380,7 +384,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// counted, so there's no time jump. (GameAudio pauses and resumes music.)
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _skipNextDelta = true;
+    _foreground = state == AppLifecycleState.resumed;
+    _skipNextDelta = true;
   }
 
   /// Copies a link that replays this exact match in the web app: a short
@@ -399,6 +404,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
       mayhem: widget.config.mayhem,
+      mayhemSeconds: widget.config.mayhemSeconds,
       shrinkingArena: widget.config.shrinkingArena,
       minimumArenaScale: widget.config.minimumArenaScale,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
@@ -606,7 +612,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     );
 
     return ScreenAwake(
-      enabled: !_isPaused && !finished,
+      enabled: !_isPaused && _foreground && !finished,
       child: Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -647,6 +653,24 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           ),
                         ),
                       ),
+                      Positioned(bottom: 0, left: 0, child: IconButton.filledTonal(
+                        tooltip: _audio.effectsOn ? 'SFX: on' : 'SFX: off',
+                        icon: Icon(_audio.effectsOn ? Icons.volume_up : Icons.volume_off),
+                        onPressed: () {
+                          final on = !_audio.effectsOn;
+                          _audio.setEffectsOn(on);
+                          if (on) _audio.click();
+                          setState(() {});
+                        },
+                      )),
+                      Positioned(bottom: 0, right: 0, child: IconButton.filledTonal(
+                        tooltip: _audio.musicOn ? 'BGM: on' : 'BGM: off',
+                        icon: Icon(_audio.musicOn ? Icons.music_note : Icons.music_off),
+                        onPressed: () {
+                          _audio.setMusicOn(!_audio.musicOn);
+                          setState(() {});
+                        },
+                      )),
                       // Positioned like the arena: a non-positioned child would
                       // size the Stack (to nothing, while there's no badge).
                       Positioned.fill(
@@ -755,6 +779,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               look: widget.config.look,
                               powerUps: widget.config.powerUps,
                               tuning: widget.config.tuning,
+                              endlessBattle: widget.config.endlessBattle,
+                              dualWield: widget.config.dualWield,
+                              mayhem: widget.config.mayhem,
+                              mayhemSeconds: widget.config.mayhemSeconds,
                               shrinkingArena: widget.config.shrinkingArena,
                               minimumArenaScale:
                                   widget.config.minimumArenaScale,

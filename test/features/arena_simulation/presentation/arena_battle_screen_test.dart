@@ -53,6 +53,23 @@ void main() {
     },
   );
 
+  testWidgets('hidden arena stays stopped and resuming skips the background gap', (tester) async {
+    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls,
+      mode: MatchMode.arsenal, endlessBattle: true, mayhem: true, mayhemSeconds: 30)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final before = tester.widget<Text>(find.byKey(const Key('match-timer'))).data;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pump(const Duration(seconds: 40));
+    expect(tester.widget<Text>(find.byKey(const Key('match-timer'))).data, before);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 5));
+    expect(tester.widget<Text>(find.byKey(const Key('match-timer'))).data, before);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.widget<Text>(find.byKey(const Key('match-timer'))).data, isNot(before));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('pause button toggles between pause and play icons', (
     tester,
   ) async {

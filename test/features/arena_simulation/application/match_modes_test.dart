@@ -120,7 +120,20 @@ void main() {
     expect(match.lastEliminatedId, contestants.last.id);
   });
 
-  test('Threads mode plays exactly as before', () {
+  test('Mayhem honors selected time and clamps overshooting terminal frames', () {
+    final match = MatchSimulationController(_balls, arenaRadius: _arenaRadius,
+      seed: 42, lookAhead: false, mode: MatchMode.arsenal,
+      endlessBattle: true, mayhem: true, mayhemSeconds: 30);
+    match.tick(29.9);
+    expect(match.state.status, isNot(MatchStatus.finished));
+    match.tick(13);
+    expect(match.state.status, MatchStatus.finished);
+    expect(match.elapsedSeconds, 30);
+    match.tick(10);
+    expect(match.elapsedSeconds, 30);
+  });
+
+  test('Threads mode plays exactly as before' , () {
     for (final (count, seed, winner, wallHits, ballHits, steps)
         in _threadsBaseline) {
       final c = MatchSimulationController(

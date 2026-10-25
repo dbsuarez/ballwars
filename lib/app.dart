@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/audio/game_audio.dart';
@@ -273,10 +275,14 @@ class _HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<_HomeScreen> {
   BallPackRepository get _packs => widget.packs;
+  String _version = '1.14.10';
 
   @override
   void initState() {
     super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = info.version);
+    }).catchError((Object _) {});
     // Home music plays everywhere outside matches (browsers start it on the
     // first tap; see GameAudio.click).
     GameAudio.instance.startMenuMusic();
@@ -434,6 +440,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             dualWield: link.dualWield,
             endlessBattle: link.endlessBattle,
             mayhem: link.mayhem,
+            mayhemSeconds: link.mayhemSeconds,
             shrinkingArena: link.shrinkingArena,
             minimumArenaScale: link.minimumArenaScale,
             showEffects: link.showEffects,
@@ -446,12 +453,14 @@ class _HomeScreenState extends State<_HomeScreen> {
     );
   }
 
-  void _openMatchSetup() {
+  void _openMatchSetup([MatchMode mode = MatchMode.threads, bool mayhem = false]) {
     GameAudio.instance.click();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => MatchSetupScreen(
           packRepository: _packs,
+          initialMode: mode,
+          initialMayhem: mayhem,
           customGroups: widget.customGroups,
           onStartBattle: (config) {
             Navigator.of(context).push(
@@ -566,10 +575,18 @@ class _HomeScreenState extends State<_HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  FilledButton(
-                    onPressed: _openMatchSetup,
-                    child: const Text('Start a match'),
-                  ),
+                  Text('Version $_version', textAlign: TextAlign.center,
+                    style: AppText.ui(12, FontWeight.w500, color: c.muted)),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center,
+                    children: [
+                      FilledButton(onPressed: () => _openMatchSetup(MatchMode.threads), child: const Text('Threads')),
+                      FilledButton(onPressed: () => _openMatchSetup(MatchMode.arsenal, true), child: const Text('Mayhem')),
+                      FilledButton(onPressed: () => _openMatchSetup(MatchMode.allOut), child: const Text('All-Out')),
+                    ]),
+                  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                    TextButton.icon(onPressed: () => SystemNavigator.pop(),
+                      icon: const Icon(Icons.exit_to_app), label: const Text('Quit game')),
                   if (customGroups != null) ...[
                     const SizedBox(height: 12),
                     _HomeTile(

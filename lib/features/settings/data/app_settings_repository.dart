@@ -87,7 +87,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasPowerUpsColumn = row.containsKey('power_ups');
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
     _hasBloodColorColumn = row.containsKey('blood_color');
-    _hasArenaTextColumns = row.containsKey('arena_title');
+    _hasArenaTextColumns = row.containsKey('arena_title') && row.containsKey('arena_subtitle');
     _hasMinimumArenaScaleColumn = row.containsKey('minimum_arena_scale');
     return AppSettings(
       headline: row['headline'] as String,
@@ -124,6 +124,11 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       throw StateError('Power-up settings could not be saved: the power_ups '
           'column was not loaded. Reload settings; if it is missing, apply migration 011.');
     }
+    if (!_hasArenaTextColumns &&
+        (settings.arenaTitle != AppSettings.defaultArenaTitle ||
+         settings.arenaSubtitle != AppSettings.defaultArenaSubtitle)) {
+      throw StateError('Arena branding was not saved: reload settings. If arena_title or arena_subtitle is missing, apply migration 014_arena_text.sql.');
+    }
     final updated = await _writer
         .from('app_settings')
         .update({
@@ -155,6 +160,11 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     // RLS turns a non-admin update into "0 rows", not an error.
     if (updated.isEmpty) {
       throw StateError('Only the admin can change settings.');
+    }
+    if (_hasArenaTextColumns &&
+        (updated.first['arena_title'] != settings.arenaTitle.trim() ||
+         updated.first['arena_subtitle'] != settings.arenaSubtitle.trim())) {
+      throw StateError('The server did not confirm the arena branding. Reload settings before saving again.');
     }
     try {
       await OfflineStore.instance.write(

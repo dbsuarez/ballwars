@@ -97,8 +97,9 @@ class MatchConfig {
   /// Arsenal-only: eliminated balls respawn and the battle tracks knockouts.
   final bool endlessBattle;
 
-  /// Arsenal-only six-ball, two-minute knockout battle with respawns.
+  /// Arsenal-only six-ball timed knockout battle with respawns.
   final bool mayhem;
+  final int mayhemSeconds;
 
   /// Gradually contracts the playable boundary during the match.
   final bool shrinkingArena;
@@ -126,6 +127,7 @@ class MatchConfig {
     this.dualWield = false,
     this.endlessBattle = false,
     this.mayhem = false,
+    this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.tuning = PowerUpConfig.defaults,

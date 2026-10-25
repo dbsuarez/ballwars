@@ -12,15 +12,15 @@ Updated: 2026-10-25 (UTC)
 - Edited project in this workspace: `/workspace/ballwars`.
 - Direct Git access failed because the cloud network proxy was unreachable. The assistant did not push commits, create release tags or deploy anything directly.
 - The owner uploads ZIPs into GitHub Codespaces from Android and runs Git commands there.
-- Latest delivered cumulative archive: `ballwars-update-v016.zip`.
+- Latest delivered cumulative archive: `ballwars-update-v017.zip`.
 - All numbered archives are cumulative. Apply the newest archive rather than stacking older versions on top of it.
 - ZIP versions are separate from Android release tags.
 
 ## User preferences and current scope
 
 - Mobile usability is a priority: avoid repeated vertical swiping during testing, keep the arena visible and make controls easy to reach.
-- Main menu now selects Threads, Mayhem or All-Out. The earlier deferral was superseded by the owner. The old Start a match button is replaced with the installed version, mode buttons and Android-only Quit game. Web has no Quit game. Match Setup retains Start to launch the actual fight.
-- Use numbered, cumulative ZIPs: next update should be `ballwars-update-v017.zip`.
+- Main menu now selects Threads, Arsenal, Mayhem or All-Out. The earlier deferral was superseded by the owner. The old Start a match button is replaced with the installed version, mode buttons and Android-only Quit game. Web has no Quit game. Match Setup retains Start to launch the actual fight.
+- Use numbered, cumulative ZIPs: next update should be `ballwars-update-v018.zip`.
 - Include copy/paste deployment commands with updates.
 - Do not use en/em dashes in product UI text, per the supplied `CLAUDE.md`.
 - Reuse the existing admin authorization (`AdminAuth.isAdmin()`). The user calls this superadmin; no separate superadmin role was introduced.
@@ -740,4 +740,39 @@ After CI succeeds, if unused:
 ```bash
 git tag v1.14.10
 git push origin v1.14.10
+```
+
+
+## v017 - restore separate Arsenal entry
+
+- Main menu now has four equal-width buttons in a mobile-friendly 2x2 layout:
+  Threads / Arsenal, then Mayhem / All-Out.
+- Arsenal opens MatchMode.arsenal with initialMayhem=false, preserving ordinary
+  2-4-player selection and its optional Endless Battle setting.
+- Mayhem still opens MatchMode.arsenal with initialMayhem=true, requiring six balls.
+  Entry arguments override saved Mayhem preferences, so selecting Arsenal cannot
+  accidentally reopen Mayhem from the previous session.
+- Version candidate is 1.14.11+11411, next ZIP v018. All v016 changes retained.
+- Extended existing home navigation test to verify all four entries and their
+  initialMode/initialMayhem arguments. Flutter/Dart remain unavailable; tests
+  and builds were not run here. Source not pushed or deployed.
+
+Commands after uploading v017 ZIP to the existing Codespace repository:
+
+```bash
+git switch master
+git pull --ff-only origin master
+unzip -o ballwars-update-v017.zip
+flutter pub get
+flutter test
+git add lib test pubspec.yaml assets/sounds/whistle.wav supabase/migrations/014_arena_text.sql BALLWARS-HANDOFF.md UPDATE-VERSION.txt UPDATE-INSTRUCTIONS.txt
+git commit -m "Restore separate Arsenal mode on main menu v017"
+git push origin master
+```
+
+After CI succeeds, if unused:
+
+```bash
+git tag v1.14.11
+git push origin v1.14.11
 ```

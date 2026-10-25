@@ -275,7 +275,7 @@ class _HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<_HomeScreen> {
   BallPackRepository get _packs => widget.packs;
-  String _version = '1.14.10';
+  String _version = '1.14.11';
 
   @override
   void initState() {
@@ -578,12 +578,27 @@ class _HomeScreenState extends State<_HomeScreen> {
                   Text('Version $_version', textAlign: TextAlign.center,
                     style: AppText.ui(12, FontWeight.w500, color: c.muted)),
                   const SizedBox(height: 8),
-                  Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center,
-                    children: [
-                      FilledButton(onPressed: () => _openMatchSetup(MatchMode.threads), child: const Text('Threads')),
-                      FilledButton(onPressed: () => _openMatchSetup(MatchMode.arsenal, true), child: const Text('Mayhem')),
-                      FilledButton(onPressed: () => _openMatchSetup(MatchMode.allOut), child: const Text('All-Out')),
+                  Column(children: [
+                    Row(children: [
+                      Expanded(child: FilledButton(
+                        onPressed: () => _openMatchSetup(MatchMode.threads),
+                        child: const Text('Threads'))),
+                      const SizedBox(width: 8),
+                      Expanded(child: FilledButton(
+                        onPressed: () => _openMatchSetup(MatchMode.arsenal),
+                        child: const Text('Arsenal'))),
                     ]),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(child: FilledButton(
+                        onPressed: () => _openMatchSetup(MatchMode.arsenal, true),
+                        child: const Text('Mayhem'))),
+                      const SizedBox(width: 8),
+                      Expanded(child: FilledButton(
+                        onPressed: () => _openMatchSetup(MatchMode.allOut),
+                        child: const Text('All-Out'))),
+                    ]),
+                  ]),
                   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
                     TextButton.icon(onPressed: () => SystemNavigator.pop(),
                       icon: const Icon(Icons.exit_to_app), label: const Text('Quit game')),

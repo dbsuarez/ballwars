@@ -1,25 +1,25 @@
-Ball Wars cumulative update v016
-Release candidate: v1.14.10 (only tag after CI succeeds; tag must be unused).
+Ball Wars cumulative update v017
+Release candidate: v1.14.11 (only tag after CI succeeds; tag must be unused).
 Contains all earlier numbered fixes plus this session. Apply over your repository,
 not as a standalone Flutter project. Existing assets/platform files are retained.
 New asset whistle.wav and package_info_plus dependency must be included.
 No new SQL migration. Existing 014 required for arena branding; included for reference.
-See BALLWARS-HANDOFF.md v016 section for changes, validation limits and commands.
+See BALLWARS-HANDOFF.md v017 section for changes, validation limits and commands.
 
 Commands in the existing repo:
 git switch master
 git pull --ff-only origin master
-unzip -o ballwars-update-v016.zip
+unzip -o ballwars-update-v017.zip
 flutter pub get
 flutter analyze
 flutter test
 git add lib test pubspec.yaml assets/sounds/whistle.wav supabase/migrations/014_arena_text.sql BALLWARS-HANDOFF.md UPDATE-VERSION.txt UPDATE-INSTRUCTIONS.txt
-git commit -m "Improve match audio recovery and Mayhem controls v016"
+git commit -m "Restore separate Arsenal mode on main menu v017"
 git push origin master
 
 After CI succeeds and tag is unused:
-git tag v1.14.10
-git push origin v1.14.10
+git tag v1.14.11
+git push origin v1.14.11
 
 Flutter/Dart builds and tests were not run in the assistant workspace.
 Real-device audio and browser autoplay behavior still require verification.

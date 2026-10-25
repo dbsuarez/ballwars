@@ -10,6 +10,10 @@ class EffectsPrefs {
   static const String _effectsKey = 'pref:effects';
   static const String _askKey = 'pref:ask-effects';
 
+  static Future<bool> finishersOn() => _read('pref:finishers', true);
+
+  static Future<void> setFinishersOn(bool on) => _write('pref:finishers', on);
+
   static Future<bool> effectsOn() => _read(_effectsKey, true);
 
   static Future<void> setEffectsOn(bool on) => _write(_effectsKey, on);

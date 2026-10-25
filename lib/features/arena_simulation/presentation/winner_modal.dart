@@ -236,13 +236,13 @@ class _WinnerModalState extends State<WinnerModal>
                   const SizedBox(width: 8),
                   Expanded(child: Text(ball.name, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: AppText.ui(13, FontWeight.w700, color: c.text))),
-                  if (ball.id == widget.winner.id) ...[
-                    Icon(Icons.emoji_events, size: 16, color: c.text),
-                    const SizedBox(width: 6),
-                  ],
-                  Text('$knockouts KOs', style: AppText.mono(12, color: c.text)),
-                  const SizedBox(width: 10),
-                  Text('${life.toStringAsFixed(1)} HP', style: AppText.mono(12, color: c.muted)),
+                  SizedBox(width: 22, child: ball.id == widget.winner.id
+                      ? Icon(Icons.emoji_events, size: 16, color: c.text) : null),
+                  SizedBox(width: 54, child: Text('$knockouts KOs', textAlign: TextAlign.right,
+                      style: AppText.mono(12, color: c.text))),
+                  const SizedBox(width: 8),
+                  SizedBox(width: 72, child: Text('${life.toStringAsFixed(1)} HP', textAlign: TextAlign.right,
+                      style: AppText.mono(12, color: c.muted))),
                 ]),
               );
             }),

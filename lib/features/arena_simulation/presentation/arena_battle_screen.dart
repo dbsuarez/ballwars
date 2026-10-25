@@ -90,6 +90,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   CustomBall? _winnerBall;
   bool _dissolveComplete = false;
   bool _showHarpoonCinematic = false;
+  bool _finishersOn = true;
 
   // A beat after the last line is cut before the loser dissolves and the
   // winner banner shows. [_matchGeneration] cancels it if RETRY is pressed.
@@ -109,6 +110,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       duration: _loserShowDuration,
       vsync: this,
     );
+    EffectsPrefs.finishersOn().then((on) {
+      if (mounted) setState(() => _finishersOn = on);
+    });
     EffectsPrefs.askWhenSlow().then((ask) {
       if (mounted) setState(() => _askSlow = ask);
     });
@@ -186,6 +190,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _heardWallHits = 0;
     _heardBallHits = 0;
     _heardPowerUps = (0, 0, 0, 0, 0, 0);
+    _heardInteractions.clear();
+    _heardCuts = 0;
+    _heardKnockouts = 0;
     _heardGatling = 0;
     _audio.startMusic();
     _matchGeneration++;
@@ -252,7 +259,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         // from: 0, so the dissolve plays again after a RETRY.
         _dissolveController.forward(from: 0).then((_) {
           if (!current()) return;
-          final hasFinisher = _controller.winningMove != null;
+          final hasFinisher = _finishersOn && _controller.winningMove != null;
           if (!hasFinisher) _audio.win();
           setState(() {
             _dissolveComplete = true;
@@ -283,7 +290,24 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
   /// Plays a sound for each kind of power-up event that happened since the last frame. Ten new shots at
   /// once is a shotgun blast.
+  final Map<String, int> _heardInteractions = {};
+  int _heardCuts = 0;
+  int _heardKnockouts = 0;
+
   void _playPowerUpSounds() {
+    final soundController = _controller;
+    if (soundController.threadCuts < _heardCuts || soundController.knockouts < _heardKnockouts) {
+      _heardInteractions.clear();
+    }
+    if (soundController.threadCuts > _heardCuts) _audio.interaction('cut');
+    if (soundController.knockouts > _heardKnockouts) _audio.interaction('out');
+    _heardCuts = soundController.threadCuts;
+    _heardKnockouts = soundController.knockouts;
+    for (final event in soundController.powerUps?.interactionSounds.entries ?? const <MapEntry<String, int>>[]) {
+      if (event.value > (_heardInteractions[event.key] ?? 0)) _audio.interaction(event.key);
+      _heardInteractions[event.key] = event.value;
+    }
+
     final p = _controller.powerUps;
     if (p == null) return;
     final (shots, hits, slashes, blocks, blasts, pickups) = _heardPowerUps;
@@ -592,11 +616,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             final arena = ListenableBuilder(
               listenable: _frame,
               builder: (context, _) => Transform.translate(
-                offset: _screenShakeOffset(),
+                offset: _screenShakeOffset().scale(0.2, 0.2),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 5,
+                    vertical: 0,
                   ),
                   child: Stack(
                     children: [
@@ -606,6 +630,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                             state: _state,
                             arenaRadius: _controller.arenaRadius,
                             worldRadius: _arenaRadius,
+                            rimInset: 0,
                             rimAngle: _rimAngle,
                             showEffects: _showEffects,
                             showBallGlow: AppSettingsScope.of(

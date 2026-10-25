@@ -38,6 +38,14 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
   late final AnimationController _controller;
   bool _hookSoundPlayed = false;
   bool _impactSoundPlayed = false;
+  bool _finished = false;
+
+  void _finish() {
+    if (_finished || !mounted) return;
+    _finished = true;
+    _controller.stop();
+    widget.onFinished();
+  }
 
   @override
   void initState() {
@@ -46,7 +54,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
       vsync: this,
       duration: const Duration(milliseconds: 4300),
     )..addListener(_playTimedSounds);
-    _controller.forward().whenComplete(widget.onFinished);
+    _controller.forward().whenComplete(_finish);
   }
 
   void _playTimedSounds() {
@@ -183,6 +191,15 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                       bounds,
                     ),
                     _name(widget.loser.name, loserX, loserY, diameter, bounds),
+                    Positioned(
+                      right: 12, bottom: 12,
+                      child: FilledButton.tonalIcon(
+                        key: const ValueKey('skip-finisher'),
+                        onPressed: _finish,
+                        icon: const Icon(Icons.skip_next),
+                        label: const Text('Skip'),
+                      ),
+                    ),
                   ],
                 ),
               );

@@ -87,4 +87,17 @@ void main() {
     expect(find.text('KABOOM!'), findsOneWidget);
     expect(find.text('UPPERCUT!'), findsNothing);
   });
+  testWidgets('Skip completes a finisher exactly once', (tester) async {
+    var finished = 0;
+    await tester.pumpWidget(MaterialApp(home: HarpoonCinematic(
+      winner: const CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.red),
+      loser: const CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.blue),
+      move: 'Hook', onFinished: () => finished++,
+    )));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('skip-finisher')));
+    await tester.pump(const Duration(seconds: 5));
+    expect(finished, 1);
+  });
+
 }

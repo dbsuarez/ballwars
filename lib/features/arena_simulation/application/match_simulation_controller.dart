@@ -105,6 +105,8 @@ class MatchSimulationController {
   /// (the screen plays one when they go up). They draw nothing from the RNG.
   int wallHits = 0;
   int ballHits = 0;
+  int threadCuts = 0;
+  int knockouts = 0;
   double _elapsedSeconds = 0.0;
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
@@ -771,6 +773,7 @@ class MatchSimulationController {
         if (identical(target, cutter)) continue;
 
         final cut = _cutLinesCrossedBy(cutter, target);
+        threadCuts += cut.length;
         if (cut.isEmpty) continue;
         _lastMove[target] = 'Thread cut';
         target.hurtFlashLeft = hurtFlashSteps;
@@ -807,6 +810,7 @@ class MatchSimulationController {
 
       if (arsenal ? ball.life <= 0 : ball.fanLines.isEmpty) {
         ball.isEliminated = true;
+        knockouts++;
         eliminatedNow.add(ball);
         _floatingTexts.spawn(
           ball.position,

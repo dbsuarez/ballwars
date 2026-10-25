@@ -141,7 +141,8 @@ void main() {
     await openSettings(tester);
     await tester.tap(find.text('1 round'));
     await tester.tap(find.text('1×'));
-    await tester.tap(find.text('On'));
+    await tester.ensureVisible(find.byKey(const ValueKey('setting-Effects')));
+    await tester.tap(find.byKey(const ValueKey('setting-Effects')));
     await tester.pump();
     await closeSettings(tester);
     await tester.tap(find.byIcon(Icons.shuffle));
@@ -188,7 +189,8 @@ void main() {
   ) async {
     await pumpSetup(tester);
     await openSettings(tester);
-    await tester.tap(find.text('Medium'));
+    await tester.ensureVisible(find.byKey(const ValueKey('setting-Size')));
+    await tester.tap(find.byKey(const ValueKey('setting-Size')));
     await tester.pump();
     expect(find.text('Large'), findsOneWidget);
     await closeSettings(tester);
@@ -406,6 +408,49 @@ void main() {
     expect(find.text('Shrinking arena'), findsNothing);
     expect(find.text('Start').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings rows fill the drawer width and All set stays outside the scroll', (tester) async {
+    await pumpSetup(tester);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpAndSettle();
+    await openSettings(tester);
+    final rounds = find.byKey(const ValueKey('setting-Rounds'));
+    expect(tester.getSize(rounds).width, greaterThan(300));
+    final rect = tester.getRect(rounds);
+    await tester.tapAt(Offset(rect.left + 5, rect.center.dy));
+    await tester.pumpAndSettle();
+    expect(find.text('First to 2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('match-settings-all-set')).hitTestable(), findsOneWidget);
+    await tester.tap(find.byTooltip('Match settings info'));
+    await tester.pumpAndSettle();
+    expect(find.text('Match settings guide'), findsOneWidget);
+  });
+
+  testWidgets('finisher choice is remembered and pickup categories have tabs', (tester) async {
+    await pumpSetup(tester);
+    await openSettings(tester);
+    final finishers = find.byKey(const ValueKey('setting-Finishers'));
+    await tester.ensureVisible(finishers);
+    await tester.tap(finishers);
+    await tester.pumpAndSettle();
+    await closeSettings(tester);
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester);
+    await openSettings(tester);
+    expect(find.descendant(of: find.byKey(const ValueKey('setting-Finishers')),
+        matching: find.text('Off')), findsOneWidget);
+    await closeSettings(tester);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pumpAndSettle();
+    await openSettings(tester);
+    await tester.tap(find.text('Pickups: All'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TabBar), findsOneWidget);
+    await tester.tap(find.text('Power-ups'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('selection-card-apple')).hitTestable(), findsOneWidget);
   });
 
 }

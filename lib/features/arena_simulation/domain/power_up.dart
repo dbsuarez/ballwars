@@ -373,11 +373,15 @@ class EnergyWave {
     required this.start,
     required this.end,
     this.durationSteps = EnergyWaveAttack.beamSteps,
+    this.sweepStartAngle,
+    this.sweepEndAngle,
   });
   final SimulationBall owner;
   final Offset start;
   final Offset end;
   final int durationSteps;
+  final double? sweepStartAngle;
+  final double? sweepEndAngle;
   int age = 0;
 }
 
@@ -389,7 +393,11 @@ class EnergyWaveAttack {
   }) : savedOwnerVelocity = owner.velocity,
        savedVelocities = {
          for (final target in targets) target: target.velocity,
-       };
+       } {
+    final bounds = sweepBounds(owner.position, targets.map((ball) => ball.position));
+    startAngle = bounds.$1;
+    endAngle = bounds.$2;
+  }
 
   static const int chargeSteps = 36;
   static const int hitIntervalSteps = 14;
@@ -398,6 +406,8 @@ class EnergyWaveAttack {
   final SimulationBall owner;
   final List<SimulationBall> targets;
   final Offset direction;
+  late final double startAngle;
+  late final double endAngle;
   final Offset savedOwnerVelocity;
   final Map<SimulationBall, Offset> savedVelocities;
   int age = 0;
@@ -405,8 +415,27 @@ class EnergyWaveAttack {
   final Set<SimulationBall> hitTargets = {};
   bool fired = false;
 
-  static double sweepStart(Offset direction) =>
-      math.atan2(direction.dy, direction.dx) - 0.15;
+  /// The smallest sector containing every opponent, as seen from the caster.
+  /// Exclude the largest empty angular gap, handling the -pi/pi boundary.
+  static (double, double) sweepBounds(Offset caster, Iterable<Offset> targets) {
+    final angles = targets.map((target) {
+      final delta = target - caster;
+      return math.atan2(delta.dy, delta.dx) % (2 * math.pi);
+    }).toList()..sort();
+    if (angles.isEmpty) return (0, 0);
+    var gap = -1.0;
+    var startIndex = 0;
+    for (var i = 0; i < angles.length; i++) {
+      final next = i + 1 < angles.length ? angles[i + 1] : angles.first + 2 * math.pi;
+      if (next - angles[i] > gap) {
+        gap = next - angles[i];
+        startIndex = (i + 1) % angles.length;
+      }
+    }
+    final padding = math.min(0.15, gap / 4);
+    final start = angles[startIndex] - padding;
+    return (start, start + (2 * math.pi - gap) + 2 * padding);
+  }
 
   static double sweepProgress(int beamAge) =>
       (beamAge / (beamSteps - 1)).clamp(0.0, 1.0);
@@ -695,7 +724,7 @@ String powerUpDescription(
     PowerUpKind.tornado =>
       'Summons a pursuing wind vortex for 3 s. It pulls nearby opponents inward and deals ${dmg(kind)} over time.',
     PowerUpKind.energyWave =>
-      '$aim sweeps a full circle around the arena over 2 s, hitting each opponent once for ${dmg(kind)} before knockback.',
+      '$aim sweeps from the leftmost to the rightmost opponent over 2 s, hitting each opponent once for ${dmg(kind)} before knockback.',
     PowerUpKind.flamethrower =>
       '$aim sprays a sustained fire cone for 1.5 s: ${dmg(kind)} per pulse plus burn damage over time.',
     PowerUpKind.shield =>

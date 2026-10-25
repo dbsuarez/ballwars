@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../offline/offline_store.dart';
 
 /// A background track: match music (`assets/sounds/bgm_<id>.wav`) or Home
@@ -59,6 +60,7 @@ class GameAudio with WidgetsBindingObserver {
 
   bool enabled = false;
   bool _musicOn = true;
+  int _musicEpoch = 0;
   bool _menuMusicOn = true;
   bool _effectsOn = true;
 
@@ -149,8 +151,9 @@ class GameAudio with WidgetsBindingObserver {
   Future<void> setMusicOn(bool on) async {
     _musicOn = on;
     if (!_playMusic) {
+      _musicEpoch++;
       _guard(() async => _music?.pause());
-    } else if (_musicWanted) {
+    } else if (_musicWanted && !_musicPausedByUser) {
       _startMusic();
     }
     await _writeFlag(_musicKey, on);
@@ -217,6 +220,18 @@ class GameAudio with WidgetsBindingObserver {
 
   void hit() => _play('hit', 0.5, gap: 60);
 
+  /// Existing sounds mapped to otherwise silent interactions.
+  void interaction(String event) {
+    switch (event) {
+      case 'warp': pickup();
+      case 'freeze':
+      case 'repel': shield();
+      case 'trap': hit();
+      case 'cut': slash();
+      case 'out': out();
+    }
+  }
+
   // --- Home music (everywhere outside matches) -------------------------------
 
   /// Outside a match (app start, back from a match).
@@ -254,16 +269,18 @@ class GameAudio with WidgetsBindingObserver {
 
   /// The match is paused.
   void pauseMusic() {
+    _musicEpoch++;
     _musicPausedByUser = true;
     _guard(() async => _music?.pause());
   }
 
   void resumeMusic() {
     _musicPausedByUser = false;
-    if (_playMusic && _musicWanted) _guard(() async => _music?.resume());
+    if (_playMusic && _musicWanted) _startMusic();
   }
 
   void stopMusic() {
+    _musicEpoch++;
     _musicWanted = false;
     slowMotion = false;
     _guard(() async => _music?.stop());
@@ -281,14 +298,20 @@ class GameAudio with WidgetsBindingObserver {
   }
 
   void _startMusic({bool restart = false}) {
+    final epoch = ++_musicEpoch;
     _guard(() async {
-      final music = _music ??= _newPlayer()..setReleaseMode(ReleaseMode.loop);
+      bool wanted() => epoch == _musicEpoch && _playMusic && _musicWanted && !_musicPausedByUser;
+      if (!wanted()) return;
+      final music = _music ??= _newPlayer();
+      await music.setReleaseMode(ReleaseMode.loop);
+      if (!wanted()) return;
       if (!restart && music.state == PlayerState.paused) {
         await music.resume();
-        return;
+      } else {
+        await music.play(AssetSource(_track.asset),
+            volume: _slow ? _musicVolume * 0.45 : _musicVolume);
       }
-      await music.setVolume(_slow ? _musicVolume * 0.45 : _musicVolume);
-      await music.play(AssetSource(_track.asset));
+      if (!wanted() && (!_playMusic || !_musicWanted || _musicPausedByUser)) await music.pause();
     });
   }
 
@@ -366,6 +389,6 @@ class _Voices {
   void play(double volume) {
     if (_players.length < _count) _players.add(GameAudio._newPlayer());
     final player = _players[_next++ % _players.length];
-    GameAudio._guard(() => player.play(AssetSource('sounds/$name.wav'), volume: volume, mode: PlayerMode.lowLatency));
+    GameAudio._guard(() => player.play(AssetSource('sounds/$name.wav'), volume: volume, mode: kIsWeb ? PlayerMode.mediaPlayer : PlayerMode.lowLatency));
   }
 }

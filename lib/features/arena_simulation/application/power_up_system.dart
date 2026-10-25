@@ -84,6 +84,8 @@ class PowerUpSystem {
 
   /// How many power-ups balls have picked up so far (the screen plays a sound when it goes up).
   int pickups = 0;
+  final Map<String, int> interactionSounds = {};
+  void _sound(String event) => interactionSounds.update(event, (value) => value + 1, ifAbsent: () => 1);
 
   /// Bullets, pellets and freeze shots fired so far (the screen plays a sound when it goes up).
   int shots = 0;
@@ -264,6 +266,7 @@ class PowerUpSystem {
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
     if (p.kind == PowerUpKind.mine || p.kind == PowerUpKind.phaseMine) {
+      _sound('trap');
       mines.add(
         ArmedMine(
           owner: ball,
@@ -509,6 +512,7 @@ class PowerUpSystem {
     }
     ball.position = destination;
     portalFlashes.add(PortalFlash(from: entrance, to: destination));
+    _sound('warp');
     _yell(ball, 'WARP SPEED!');
   }
 
@@ -547,6 +551,7 @@ class PowerUpSystem {
         ball
           ..stickyGooLeft = PowerUpTuning.stickyGooSteps
           ..velocity = Offset.zero;
+        _sound('trap');
         _yell(ball, 'STUCK!');
         break;
       }
@@ -566,6 +571,7 @@ class PowerUpSystem {
         }
         poisonSwamps.remove(swamp);
         _applyDamageOverTime(ball, PowerUpKind.poisonSwamp);
+        _sound('trap');
         _yell(ball, 'POISONED!');
         break;
       }
@@ -653,6 +659,7 @@ class PowerUpSystem {
   }
 
   void _hitSpikes(SimulationBall ball, Offset at) {
+    _sound('trap');
     final inward = ball.position.distance == 0
         ? const Offset(0, 1)
         : -ball.position / ball.position.distance;
@@ -1549,7 +1556,8 @@ class PowerUpSystem {
             attack.owner.position + attack.direction * attack.owner.radius;
         final end = start + attack.direction * match.arenaRadius * 2.4;
         energyWaves.add(
-          EnergyWave(owner: attack.owner, start: start, end: end),
+          EnergyWave(owner: attack.owner, start: start, end: end,
+            sweepStartAngle: attack.startAngle, sweepEndAngle: attack.endAngle),
         );
       }
 
@@ -1557,13 +1565,13 @@ class PowerUpSystem {
       final progress = EnergyWaveAttack.sweepProgress(
         attack.age - EnergyWaveAttack.chargeSteps,
       );
-      final startAngle = EnergyWaveAttack.sweepStart(attack.direction);
+      final startAngle = attack.startAngle;
       for (final target in attack.targets) {
         if (!_alive(target) || attack.hitTargets.contains(target)) continue;
         final delta = target.position - attack.owner.position;
         final bearing = (math.atan2(delta.dy, delta.dx) - startAngle) %
             (2 * math.pi);
-        if (bearing > progress * 2 * math.pi + 0.000001) continue;
+        if (bearing > progress * (attack.endAngle - attack.startAngle) + 0.000001) continue;
         attack.hitTargets.add(target);
         weaponImpacts.add(WeaponImpact(position: target.position, strength: 1));
         _hit(target, PowerUpKind.energyWave, at: target.position,
@@ -1880,6 +1888,7 @@ class PowerUpSystem {
   }) {
     if (target.isGhost && !unavoidable) return;
     if (target.magneticFieldLeft > 0 && !unavoidable) {
+      _sound('repel');
       _yell(target, 'REPELLED!');
       return;
     }
@@ -1912,6 +1921,7 @@ class PowerUpSystem {
       share = shielded;
     }
     if (kind == PowerUpKind.freeze) {
+      _sound('freeze');
       final steps = (_t.freezeSteps * share).round();
       if (steps > target.frozenLeft) {
         if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
@@ -1930,6 +1940,7 @@ class PowerUpSystem {
         ..position = oldPosition
         ..velocity = oldVelocity;
       portalFlashes.add(PortalFlash(from: oldPosition, to: from.position));
+      _sound('warp');
       _yell(from, 'SWITCHEROO!');
       _yell(target, 'SWAPPED!');
     }

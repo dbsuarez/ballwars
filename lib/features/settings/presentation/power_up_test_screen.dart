@@ -88,8 +88,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   void _reset() {
-    _audio.stopMusic();
     _heardPowerUps = (0, 0, 0, 0, 0, 0);
+    _heardInteractions.clear();
+    _heardCuts = 0;
+    _heardKnockouts = 0;
     _heardGatling = 0;
     _heardWallHits = 0;
     _heardBallHits = 0;
@@ -139,7 +141,24 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     }
   }
 
+  final Map<String, int> _heardInteractions = {};
+  int _heardCuts = 0;
+  int _heardKnockouts = 0;
+
   void _playTestSounds() {
+    final soundController = _match!;
+    if (soundController.threadCuts < _heardCuts || soundController.knockouts < _heardKnockouts) {
+      _heardInteractions.clear();
+    }
+    if (soundController.threadCuts > _heardCuts) _audio.interaction('cut');
+    if (soundController.knockouts > _heardKnockouts) _audio.interaction('out');
+    _heardCuts = soundController.threadCuts;
+    _heardKnockouts = soundController.knockouts;
+    for (final event in soundController.powerUps?.interactionSounds.entries ?? const <MapEntry<String, int>>[]) {
+      if (event.value > (_heardInteractions[event.key] ?? 0)) _audio.interaction(event.key);
+      _heardInteractions[event.key] = event.value;
+    }
+
     final controller = _match!;
     if (controller.wallHits > _heardWallHits) _audio.bounce();
     if (controller.ballHits > _heardBallHits) _audio.collide();
@@ -173,6 +192,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     final kind = _items[index];
     _savedItems[index] = kind;
     _applyItem(index, kind);
+    _playTestSounds();
   }
 
   void _applyItem(int index, PowerUpKind kind) {
@@ -204,7 +224,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       _previous = null;
       if (_paused) {
         _ticker.stop();
-        _audio.pauseMusic();
       } else {
         _ticker.start();
         _audio.startMusic();
@@ -224,7 +243,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
-      _audio.pauseMusic();
       _previous = null;
     });
     final selected = await showModalBottomSheet<Object>(
@@ -251,7 +269,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
-      _audio.pauseMusic();
       _previous = null;
     });
     final profile = FinisherProfile.forMove(kind.label);
@@ -371,6 +388,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             child: RepaintBoundary(child: ArenaCanvas(
               state: state,
               arenaRadius: match.arenaRadius,
+              rimInset: 0,
               rimAngle: 0,
               look: BallLook.faces,
             )),
@@ -410,7 +428,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
-      _audio.pauseMusic();
       _previous = null;
     });
     await showDialog<void>(context: context, builder: (context) => AlertDialog(
@@ -464,7 +481,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       _paused = true;
       _ticker.stop();
-      _audio.pauseMusic();
       _previous = null;
     });
     await showModalBottomSheet<void>(
@@ -532,9 +548,13 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           // An explicit BGM preview also works while the simulation is paused.
           final saved = _audio.setMusicOn(!on);
           if (!on) _audio.startMusic();
+          setState(() {});
           await saved;
         } else {
-          await _audio.setEffectsOn(!on);
+          final saved = _audio.setEffectsOn(!on);
+          if (!on) _audio.click();
+          setState(() {});
+          await saved;
         }
         if (mounted) setState(() {});
       },
@@ -625,7 +645,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           }
           return Column(children: [
             Expanded(child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8), child: _arena())),
+              padding: const EdgeInsets.symmetric(horizontal: 5), child: _arena())),
             _controls(),
           ]);
         }),
@@ -644,17 +664,19 @@ class _ItemPicker extends StatefulWidget {
 
 class _ItemPickerState extends State<_ItemPicker> {
   String _query = '';
+  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
     final items = PowerUpKind.values.where(
-      (kind) => kind.label.toLowerCase().contains(_query.toLowerCase()),
-    ).toList();
+      (kind) => (_tab == 0 ? kind.isWeapon : _tab == 1 ? kind.isPowerUp : kind.isTrap) &&
+          kind.label.toLowerCase().contains(_query.toLowerCase()),
+    ).toList()..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * 0.75,
-        child: Column(children: [
+        child: DefaultTabController(length: 3, child: Column(children: [
           ListTile(
             title: const Text('Choose an item'),
             trailing: IconButton(
@@ -673,6 +695,8 @@ class _ItemPickerState extends State<_ItemPicker> {
               onChanged: (value) => setState(() => _query = value),
             ),
           ),
+          TabBar(onTap: (index) => setState(() => _tab = index),
+            tabs: const [Tab(text: 'Weapons'), Tab(text: 'Power-ups'), Tab(text: 'Traps')]),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.block),
@@ -695,7 +719,7 @@ class _ItemPickerState extends State<_ItemPicker> {
                     );
                   },
                 )),
-        ]),
+        ])),
       ),
     );
   }

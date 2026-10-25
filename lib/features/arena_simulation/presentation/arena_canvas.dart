@@ -8,6 +8,7 @@ class ArenaCanvas extends StatelessWidget {
   final SimulationState state;
   final double arenaRadius;
   final double? worldRadius;
+  final double? rimInset;
   final double rimAngle;
   final bool showEffects;
   final bool showBallGlow;
@@ -25,6 +26,7 @@ class ArenaCanvas extends StatelessWidget {
     required this.state,
     required this.arenaRadius,
     this.worldRadius,
+    this.rimInset,
     required this.rimAngle,
     this.showEffects = true,
     this.showBallGlow = true,
@@ -45,6 +47,7 @@ class ArenaCanvas extends StatelessWidget {
           state: state,
           arenaRadius: arenaRadius,
           worldRadius: worldRadius,
+          rimInset: rimInset,
           rimAngle: rimAngle,
           showEffects: showEffects,
           showBallGlow: showBallGlow,

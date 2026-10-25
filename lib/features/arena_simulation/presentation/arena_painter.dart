@@ -14,6 +14,7 @@ class ArenaPainter extends CustomPainter {
   final SimulationState state;
   final double arenaRadius;
   final double? worldRadius;
+  final double? rimInset;
   final double rimAngle;
 
   /// Sparks and particles. Off only hides them: they are still simulated,
@@ -35,6 +36,7 @@ class ArenaPainter extends CustomPainter {
     required this.state,
     required this.arenaRadius,
     this.worldRadius,
+    this.rimInset,
     required this.rimAngle,
     this.showEffects = true,
     this.showBallGlow = true,
@@ -55,7 +57,9 @@ class ArenaPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     // Leave room for the rim's stroke and glow so they aren't clipped at the edges.
     final scale =
-        size.shortestSide / (2 * ((worldRadius ?? arenaRadius) + _rimMargin));
+        rimInset == null
+        ? size.shortestSide / (2 * ((worldRadius ?? arenaRadius) + _rimMargin))
+        : (size.shortestSide - 2 * rimInset!) / (2 * (worldRadius ?? arenaRadius));
 
     canvas.save();
     canvas.translate(center.dx, center.dy);

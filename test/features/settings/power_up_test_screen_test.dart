@@ -88,6 +88,8 @@ void main() {
     expect(find.byType(Scrollable), findsNothing);
     await tester.tap(find.byKey(const ValueKey('choose-item-1')));
     await tester.pumpAndSettle();
+    expect(find.byType(TabBar), findsOneWidget);
+    expect(find.text('Boomerang').hitTestable(), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'shotgun');
     await tester.pump();
     expect(find.text('Shotgun'), findsOneWidget);

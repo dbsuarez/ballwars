@@ -287,8 +287,8 @@ class PowerUpPainter {
       // rather than replacing the ball with a glowing circle.
       final beamDirection = attack.age < EnergyWaveAttack.chargeSteps
           ? attack.direction
-          : Offset.fromDirection(EnergyWaveAttack.sweepStart(attack.direction) +
-              EnergyWaveAttack.sweepProgress(attack.age - EnergyWaveAttack.chargeSteps) * 2 * math.pi);
+          : Offset.fromDirection(attack.startAngle +
+              EnergyWaveAttack.sweepProgress(attack.age - EnergyWaveAttack.chargeSteps) * (attack.endAngle - attack.startAngle));
       final orb =
           attack.owner.position + beamDirection * attack.owner.radius * 1.75;
       canvas.drawCircle(
@@ -327,7 +327,9 @@ class PowerUpPainter {
     for (final wave in p.energyWaves) {
       final initial = wave.end - wave.start;
       final progress = EnergyWaveAttack.sweepProgress(wave.age);
-      final angle = EnergyWaveAttack.sweepStart(initial) + progress * 2 * math.pi;
+      final startAngle = wave.sweepStartAngle ?? math.atan2(initial.dy, initial.dx);
+      final endAngle = wave.sweepEndAngle ?? startAngle;
+      final angle = startAngle + progress * (endAngle - startAngle);
       final direction = Offset.fromDirection(angle);
       final start = wave.owner.position + direction * wave.owner.radius;
       final end = start + direction * arenaRadius * 2.4;
@@ -335,7 +337,7 @@ class PowerUpPainter {
       canvas.save();
       canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: arenaRadius)));
       canvas.drawArc(Rect.fromCircle(center: wave.owner.position, radius: arenaRadius * 2.4),
-        EnergyWaveAttack.sweepStart(initial), progress * 2 * math.pi, true,
+        startAngle, progress * (endAngle - startAngle), true,
         Paint()..color = const Color(0xFF32E4FF).withValues(alpha: 0.07));
       final fade = ((wave.durationSteps - wave.age) / 12).clamp(0.0, 1.0);
       final beamWidth = r * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());

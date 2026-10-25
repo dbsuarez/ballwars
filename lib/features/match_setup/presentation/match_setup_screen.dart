@@ -935,6 +935,22 @@ class _Tag extends StatelessWidget {
   }
 }
 
+enum _CategoryFilter {
+  mine('Mine', 'Mine'),
+  defaults('Default', null),
+  shared('Shared', 'Shared');
+
+  final String label;
+
+  /// The [BallPack.tag] of the categories it shows (null: built-in packs).
+  final String? tag;
+
+  const _CategoryFilter(this.label, this.tag);
+
+  static _CategoryFilter? byName(String? name) =>
+      values.where((f) => f.name == name).firstOrNull;
+}
+
 /// Which power-ups can spawn: compact cards with an icon, description and
 /// corner checkmark. Done needs at least one selection.
 class _WeaponsDialog extends StatefulWidget {

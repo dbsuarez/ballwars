@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:ballwars/core/offline/offline_store.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/settings/data/app_settings_repository.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -245,4 +246,39 @@ void main() {
       expect(reopened.arenaSubtitle, 'Fight!');
     },
   );
+
+  test('arena decoration is persisted and restored offline', () async {
+    var offline = false;
+    final row = <String, dynamic>{
+      'id': 1,
+      'headline': 'WHO WINS?',
+      'theme': 'midnight',
+      'arena_decoration': 'defaultArena',
+    };
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      httpClient: MockClient((request) async {
+        if (offline) return http.Response('offline', 503, request: request);
+        if (request.method == 'PATCH') {
+          row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
+        }
+        return http.Response(
+          jsonEncode([row]),
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+    final repository = SupabaseAppSettingsRepository(client);
+    final loaded = await repository.load();
+    await repository.save(
+      loaded.copyWith(arenaDecoration: ArenaDecoration.wilderness),
+    );
+    offline = true;
+    final reopened = await SupabaseAppSettingsRepository(client).load();
+    expect(reopened.arenaDecoration, ArenaDecoration.wilderness);
+  });
 }

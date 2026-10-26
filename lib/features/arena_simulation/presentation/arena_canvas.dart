@@ -3,6 +3,7 @@ import '../../../core/theme/app_theme.dart';
 import '../domain/simulation_state.dart';
 import 'arena_painter.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../settings/domain/app_settings.dart';
 
 class ArenaCanvas extends StatelessWidget {
   final SimulationState state;
@@ -15,6 +16,7 @@ class ArenaCanvas extends StatelessWidget {
   final String arenaTitle;
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
+  final ArenaDecoration arenaDecoration;
 
   /// Repaints the arena when it notifies, without rebuilding any widgets.
   final Listenable? repaint;
@@ -33,6 +35,7 @@ class ArenaCanvas extends StatelessWidget {
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
+    this.arenaDecoration = ArenaDecoration.defaultArena,
     this.repaint,
     this.look = BallLook.pictures,
   });
@@ -54,6 +57,7 @@ class ArenaCanvas extends StatelessWidget {
           arenaTitle: arenaTitle,
           arenaSubtitle: arenaSubtitle,
           wallSparkSize: wallSparkSize,
+          arenaDecoration: arenaDecoration,
           background: c.background,
           rimColor: c.text,
           repaint: repaint,

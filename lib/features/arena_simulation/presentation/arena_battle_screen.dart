@@ -178,6 +178,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       shrinkingArena: widget.config.shrinkingArena,
       minimumArenaScale: widget.config.minimumArenaScale,
       bloodColor: AppSettingsScope.of(context).bloodColor,
+      arenaDecoration: AppSettingsScope.of(context).arenaDecoration,
     );
     _roundCounted = replaySeed != null;
     _state = _controller.state;
@@ -666,6 +667,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               arenaSubtitle: AppSettingsScope.of(
                                 context,
                               ).arenaSubtitle,
+                              arenaDecoration: AppSettingsScope.of(
+                                context,
+                              ).arenaDecoration,
                               wallSparkSize: widget.config.wallSparkSize,
                               repaint: _frame,
                               look: widget.config.look,

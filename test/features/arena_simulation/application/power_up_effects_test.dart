@@ -11,6 +11,7 @@ import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart'
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
 
 const _arenaRadius = 260.0;
 const _life = PowerUpTuning.arenaLife;
@@ -46,6 +47,7 @@ MatchSimulationController _match({
   bool dualWield = false,
   PowerUpConfig tuning = PowerUpConfig.defaults,
   SkillLibrary skillLibrary = SkillLibrary.defaults,
+  ArenaDecoration arenaDecoration = ArenaDecoration.defaultArena,
 }) {
   final c = MatchSimulationController(
     _balls.take(count).toList(),
@@ -57,6 +59,7 @@ MatchSimulationController _match({
     dualWield: dualWield,
     tuning: tuning,
     skillLibrary: skillLibrary,
+    arenaDecoration: arenaDecoration,
   );
   final balls = c.state.balls;
   for (final b in balls) {
@@ -728,6 +731,92 @@ void main() {
       PowerUpKind.rocketLauncher,
       PowerUpKind.sword,
     ]);
+  });
+
+  test('timer and damage-taken triggers activate deterministically', () {
+    final timer = SkillLibrary.defaults
+        .create('Pulse', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.timer,
+          targeting: SkillTargeting.nearestOpponent,
+          delivery: SkillDelivery.instant,
+          effectType: SkillEffectType.damage,
+          triggerIntervalSeconds: 0.5,
+          arsenalDamage: 7,
+        );
+    final timerMatch = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        timer,
+        PowerUpConfig.defaults,
+      ),
+    );
+    timerMatch.powerUps!.automaticSpawning = false;
+    _run(timerMatch, 30);
+    expect(timerMatch.state.balls[1].life, _life - 7);
+
+    final retaliation = SkillLibrary.defaults
+        .create('Second Wind', PowerUpKind.shield)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.damageTaken,
+          targeting: SkillTargeting.self,
+          delivery: SkillDelivery.instant,
+          effectType: SkillEffectType.heal,
+          cooldownSeconds: 1,
+          arsenalDamage: 6,
+        );
+    final damageMatch = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        retaliation,
+        PowerUpConfig.defaults,
+      ),
+    );
+    damageMatch.powerUps!.automaticSpawning = false;
+    final hurt = damageMatch.state.balls.first;
+    damageMatch.damage(hurt, 20, attacker: damageMatch.state.balls.last);
+    _run(damageMatch, 1);
+    expect(hurt.life, _life - 14);
+  });
+
+  test('elimination trigger credits the attacker and applies its effect', () {
+    final finisherReward = SkillLibrary.defaults
+        .create('Victory Heal', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.elimination,
+          targeting: SkillTargeting.self,
+          delivery: SkillDelivery.instant,
+          effectType: SkillEffectType.heal,
+          cooldownSeconds: 1,
+          arsenalDamage: 10,
+        );
+    final c = _match(
+      count: 3,
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        finisherReward,
+        PowerUpConfig.defaults,
+      ),
+    );
+    c.powerUps!.automaticSpawning = false;
+    final [owner, victim, _] = c.state.balls;
+    owner.life = 50;
+    victim.life = 1;
+    c.damage(victim, 5, attacker: owner, move: 'Test hit');
+    _run(c, 1);
+    expect(owner.life, 60);
+  });
+
+  test('arena decoration deploys its automatic themed hazard', () {
+    final c = _match(arenaDecoration: ArenaDecoration.space);
+    c.powerUps!
+      ..automaticSpawning = false
+      ..spawnTestArenaHazard();
+    expect(c.powerUps!.arenaThemeHazards, isNotEmpty);
+    expect(
+      c.powerUps!.arenaThemeHazards.single.kind,
+      ArenaThemeHazardKind.gravityWell,
+    );
   });
 
   test('boomerang can hit several opponents only once per throw', () {

@@ -51,6 +51,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasArenaTextColumns = false;
   bool _hasMinimumArenaScaleColumn = false;
   bool _hasSkillLibraryColumn = false;
+  bool _hasArenaDecorationColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
     : _writer = writer ?? _client;
@@ -93,6 +94,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         row.containsKey('arena_title') && row.containsKey('arena_subtitle');
     _hasMinimumArenaScaleColumn = row.containsKey('minimum_arena_scale');
     _hasSkillLibraryColumn = row.containsKey('skill_library');
+    _hasArenaDecorationColumn = row.containsKey('arena_decoration');
     final legacyPowerUps = PowerUpConfig.fromJson(row['power_ups']);
     final skillLibrary = SkillLibrary.fromJson(row['skill_library']);
     return AppSettings(
@@ -111,6 +113,10 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       minimumArenaScale:
           (row['minimum_arena_scale'] as num?)?.toDouble() ??
           AppSettings.defaultMinimumArenaScale,
+      arenaDecoration: ArenaDecoration.values.firstWhere(
+        (value) => value.name == row!['arena_decoration'],
+        orElse: () => ArenaDecoration.defaultArena,
+      ),
       watermarkText:
           row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
@@ -145,6 +151,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         'Skill Management could not be saved: apply migration 016_skill_library.sql and reload settings.',
       );
     }
+    if (!_hasArenaDecorationColumn &&
+        settings.arenaDecoration != ArenaDecoration.defaultArena) {
+      throw StateError(
+        'Arena decoration was not saved: apply migration 017_arena_decoration.sql and reload settings.',
+      );
+    }
     final updated = await _writer
         .from('app_settings')
         .update({
@@ -171,6 +183,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
             'arena_subtitle': settings.arenaSubtitle.trim(),
           if (_hasMinimumArenaScaleColumn)
             'minimum_arena_scale': settings.minimumArenaScale,
+          if (_hasArenaDecorationColumn)
+            'arena_decoration': settings.arenaDecoration.name,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)

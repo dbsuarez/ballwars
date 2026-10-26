@@ -37,7 +37,7 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 
 ### Remaining
 
-- [ ] Add timer, damage-taken, and elimination triggers.
+- [x] Add timer, damage-taken, and elimination triggers.
 - [ ] Add chosen-direction and arena-location targeting.
 - [ ] Add beam, aura, orbit, and boundary-hazard delivery.
 - [x] Add DoT, shield, pull, teleport, stun, and equipment effects.
@@ -52,8 +52,8 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 
 **Status: Not started**
 
-- [ ] Add custom skills to Power-up Test.
-- [ ] Add full projectile and effect playback previews.
+- [x] Add custom skills to Power-up Test, including unsaved editor drafts.
+- [x] Add full projectile and effect playback through the live test arena.
 - [x] Add sound, yell, callout, and finisher previews.
 - [x] Show clear validation errors for impossible combinations.
 - [x] Add deterministic simulation tests for the initial composed runtime.

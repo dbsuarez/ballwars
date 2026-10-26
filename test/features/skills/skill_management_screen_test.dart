@@ -206,9 +206,22 @@ void main() {
     await tester.drag(find.byType(ListView).last, const Offset(0, -220));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
-    expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
     expect(find.byKey(const ValueKey('skill-bubble-type')), findsOneWidget);
     expect(find.byKey(const ValueKey('callout-bubble-shout')), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('skill-yell')), 'GO!');
+    await tester.pumpAndSettle();
+    final shortBubble = tester.getSize(
+      find.byKey(const ValueKey('callout-style-preview')),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-yell')),
+      'UNLEASH THE GRAVITY STORM!',
+    );
+    await tester.pumpAndSettle();
+    final longBubble = tester.getSize(
+      find.byKey(const ValueKey('callout-style-preview')),
+    );
+    expect(longBubble.width, greaterThan(shortBubble.width));
     await tester.tap(find.byKey(const ValueKey('skill-bubble-type')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Thought - quiet or psychic').last);
@@ -217,6 +230,12 @@ void main() {
       find.byKey(const ValueKey('callout-bubble-thought')),
       findsOneWidget,
     );
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-effect-type')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
+    expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
     await tester.dragUntilVisible(
       find.byKey(const ValueKey('preview-skill')),
       find.byType(ListView).last,
@@ -229,6 +248,7 @@ void main() {
     expect(find.text('Gravity Burst'), findsWidgets);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('test-skill-live')), findsOneWidget);
   });
 
   testWidgets('invalid composed combinations are explained and cannot save', (

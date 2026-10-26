@@ -10,6 +10,7 @@ import 'ball_face_painter.dart';
 import 'power_up_painter.dart';
 import 'ball_face_expression.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../settings/domain/app_settings.dart';
 
 class ArenaPainter extends CustomPainter {
   final SimulationState state;
@@ -25,6 +26,7 @@ class ArenaPainter extends CustomPainter {
   final String arenaTitle;
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
+  final ArenaDecoration arenaDecoration;
 
   /// The theme's background (inside the arena) and text color (the rim).
   final Color background;
@@ -44,6 +46,7 @@ class ArenaPainter extends CustomPainter {
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
+    this.arenaDecoration = ArenaDecoration.defaultArena,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
@@ -86,7 +89,28 @@ class ArenaPainter extends CustomPainter {
 
   void _paintBackground(Canvas canvas) {
     final visibleRadius = state.arenaRadius;
-    // A barely-there lift toward the center, in the theme's colors.
+    canvas.save();
+    canvas.clipPath(
+      Path()
+        ..addOval(Rect.fromCircle(center: Offset.zero, radius: visibleRadius)),
+    );
+    switch (arenaDecoration) {
+      case ArenaDecoration.defaultArena:
+        _paintDefaultFloor(canvas, visibleRadius);
+      case ArenaDecoration.space:
+        _paintSpaceFloor(canvas, visibleRadius);
+      case ArenaDecoration.desert:
+        _paintDesertFloor(canvas, visibleRadius);
+      case ArenaDecoration.wilderness:
+        _paintWildernessFloor(canvas, visibleRadius);
+      case ArenaDecoration.neonGrid:
+        _paintNeonFloor(canvas, visibleRadius);
+    }
+    canvas.restore();
+    _paintArenaText(canvas);
+  }
+
+  void _paintDefaultFloor(Canvas canvas, double visibleRadius) {
     final paint = Paint()
       ..shader = ui.Gradient.radial(Offset.zero, visibleRadius, [
         Color.lerp(background, rimColor, 0.05)!,
@@ -94,7 +118,125 @@ class ArenaPainter extends CustomPainter {
       ]);
     canvas.drawCircle(Offset.zero, visibleRadius, paint);
     _paintGrid(canvas);
-    _paintArenaText(canvas);
+  }
+
+  void _paintSpaceFloor(Canvas canvas, double radius) {
+    canvas.drawCircle(
+      Offset.zero,
+      radius,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          Offset(-radius * 0.25, -radius * 0.3),
+          radius * 1.35,
+          const [Color(0xFF18245A), Color(0xFF050611)],
+        ),
+    );
+    canvas.drawCircle(
+      Offset(radius * 0.25, radius * 0.1),
+      radius * 0.55,
+      Paint()..color = const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+    );
+    final star = Paint()..color = const Color(0xFFE7F7FF);
+    for (var i = 0; i < 80; i++) {
+      final x = math.sin(i * 91.17) * radius * 0.92;
+      final y = math.cos(i * 47.31) * radius * 0.92;
+      canvas.drawCircle(Offset(x, y), i % 9 == 0 ? 1.8 : 0.8, star);
+    }
+  }
+
+  void _paintDesertFloor(Canvas canvas, double radius) {
+    canvas.drawCircle(
+      Offset.zero,
+      radius,
+      Paint()..color = const Color(0xFFC88746),
+    );
+    final dune = Paint()
+      ..color = const Color(0xFFF0C276).withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.16;
+    for (var i = -2; i <= 2; i++) {
+      final y = i * radius * 0.35;
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(i.isEven ? -radius * 0.25 : radius * 0.25, y),
+          width: radius * 1.7,
+          height: radius * 0.55,
+        ),
+        math.pi * 0.08,
+        math.pi * 0.84,
+        false,
+        dune,
+      );
+    }
+    final grain = Paint()
+      ..color = const Color(0xFF7A4828).withValues(alpha: 0.28);
+    for (var i = 0; i < 55; i++) {
+      canvas.drawCircle(
+        Offset(
+          math.sin(i * 17.3) * radius * 0.9,
+          math.cos(i * 33.7) * radius * 0.9,
+        ),
+        1.1,
+        grain,
+      );
+    }
+  }
+
+  void _paintWildernessFloor(Canvas canvas, double radius) {
+    canvas.drawCircle(
+      Offset.zero,
+      radius,
+      Paint()
+        ..shader = ui.Gradient.radial(Offset.zero, radius, const [
+          Color(0xFF315B37),
+          Color(0xFF102A1B),
+        ]),
+    );
+    final rings = Paint()
+      ..color = const Color(0xFF9CCC65).withValues(alpha: 0.13)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    for (var i = 1; i <= 6; i++) {
+      canvas.drawCircle(Offset.zero, radius * i / 7, rings);
+    }
+    final leaves = Paint()
+      ..color = const Color(0xFFB7D66A).withValues(alpha: 0.35);
+    for (var i = 0; i < 32; i++) {
+      final at = Offset(math.sin(i * 13.7), math.cos(i * 29.1)) * radius * 0.82;
+      canvas.drawOval(Rect.fromCenter(center: at, width: 9, height: 4), leaves);
+    }
+  }
+
+  void _paintNeonFloor(Canvas canvas, double radius) {
+    canvas.drawCircle(
+      Offset.zero,
+      radius,
+      Paint()..color = const Color(0xFF050912),
+    );
+    final grid = Paint()
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.22)
+      ..strokeWidth = 1.5;
+    final step = radius / 6;
+    for (var i = -6; i <= 6; i++) {
+      canvas.drawLine(
+        Offset(i * step, -radius),
+        Offset(i * step, radius),
+        grid,
+      );
+      canvas.drawLine(
+        Offset(-radius, i * step),
+        Offset(radius, i * step),
+        grid,
+      );
+    }
+    canvas.drawCircle(
+      Offset.zero,
+      radius * 0.62,
+      Paint()
+        ..color = const Color(0xFFFF2BD6).withValues(alpha: 0.22)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
   }
 
   void _paintArenaText(Canvas canvas) {

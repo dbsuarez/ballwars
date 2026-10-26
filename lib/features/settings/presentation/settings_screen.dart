@@ -291,6 +291,95 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         if (_settingsTab == 2)
                           _Section(
+                            title: 'ARENA',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Arena decoration',
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w600,
+                                    color: c.text,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Changes the floor inside the arena without changing its size or physics.',
+                                  style: AppText.ui(
+                                    13,
+                                    FontWeight.w500,
+                                    color: c.muted,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    for (final decoration
+                                        in ArenaDecoration.values)
+                                      ChoiceChip(
+                                        key: ValueKey(
+                                          'arena-decoration-${decoration.name}',
+                                        ),
+                                        avatar: CircleAvatar(
+                                          backgroundColor: switch (decoration) {
+                                            ArenaDecoration.defaultArena =>
+                                              const Color(0xFF181A20),
+                                            ArenaDecoration.space =>
+                                              const Color(0xFF18245A),
+                                            ArenaDecoration.desert =>
+                                              const Color(0xFFC88746),
+                                            ArenaDecoration.wilderness =>
+                                              const Color(0xFF315B37),
+                                            ArenaDecoration.neonGrid =>
+                                              const Color(0xFF00B8D4),
+                                          },
+                                        ),
+                                        label: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(decoration.label),
+                                            Text(
+                                              switch (decoration) {
+                                                ArenaDecoration.defaultArena =>
+                                                  'Spike Wall',
+                                                ArenaDecoration.space =>
+                                                  'Gravity Well',
+                                                ArenaDecoration.desert =>
+                                                  'Quicksand',
+                                                ArenaDecoration.wilderness =>
+                                                  'Vine Snare',
+                                                ArenaDecoration.neonGrid =>
+                                                  'Laser Gate',
+                                              },
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        selected:
+                                            settings.arenaDecoration ==
+                                            decoration,
+                                        onSelected: _busy
+                                            ? null
+                                            : (_) => _save(
+                                                settings.copyWith(
+                                                  arenaDecoration: decoration,
+                                                ),
+                                                done:
+                                                    '${decoration.label} arena saved.',
+                                              ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (_settingsTab == 2)
+                          _Section(
                             title: 'THEME',
                             child: Wrap(
                               spacing: 12,

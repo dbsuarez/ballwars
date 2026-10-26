@@ -10,6 +10,7 @@ import '../../arena_simulation/presentation/power_up_painter.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../../settings/presentation/power_up_test_screen.dart';
 import '../domain/skill_library.dart';
 
 class SkillManagementScreen extends StatefulWidget {
@@ -387,6 +388,10 @@ class _SkillEditorState extends State<_SkillEditor> {
       ),
     if (widget.skill.isComposed)
       'screenShake': TextEditingController(text: '${widget.skill.screenShake}'),
+    if (widget.skill.isComposed)
+      'triggerInterval': TextEditingController(
+        text: '${widget.skill.triggerIntervalSeconds}',
+      ),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
@@ -489,6 +494,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('tickInterval', defaults.tickIntervalSeconds);
       number('cooldown', defaults.cooldownSeconds);
       number('screenShake', defaults.screenShake);
+      number('triggerInterval', defaults.triggerIntervalSeconds);
     });
   }
 
@@ -554,6 +560,14 @@ class _SkillEditorState extends State<_SkillEditor> {
     );
   }
 
+  Future<void> _testInLiveArena() async {
+    final skill = _result;
+    if (skill == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => PowerUpTestScreen(initialSkill: skill)),
+    );
+  }
+
   void _showInfo() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
@@ -562,7 +576,7 @@ class _SkillEditorState extends State<_SkillEditor> {
         child: Text(
           'ACTIVE IN MATCHES replaces the built-in skill using the same carrier slot. Only one custom skill per carrier can be active.\n\n'
           'CARRIER SLOT AND ICON decides which arena pickup is replaced and supplies its category and icon.\n\n'
-          'TRIGGER decides when the behavior runs: on pickup, after aiming and firing, or when colliding with another ball.\n\n'
+          'TRIGGER decides when the behavior runs: on pickup, after aiming and firing, on collision, on a repeating match timer, after its owner takes damage, or after its owner eliminates an opponent. Timer and reactive triggers are innate while the custom skill is active; they do not require collecting the carrier.\n\n'
           'TARGETING chooses the owner, nearest opponent, or every opponent.\n\n'
           'DELIVERY chooses an immediate effect, a traveling projectile, or an area effect.\n\n'
           'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
@@ -611,6 +625,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       startDelaySeconds: _double('startDelay'),
       tickIntervalSeconds: _double('tickInterval'),
       cooldownSeconds: _double('cooldown'),
+      triggerIntervalSeconds: _double('triggerInterval'),
       yell: _yell.text,
       calloutStyle: _calloutStyle,
       bubbleType: _bubbleType,
@@ -677,6 +692,16 @@ class _SkillEditorState extends State<_SkillEditor> {
                   label: const Text('Restore defaults'),
                 ),
               ),
+              TextField(
+                key: const ValueKey('skill-yell'),
+                controller: _yell,
+                maxLength: 60,
+                decoration: const InputDecoration(
+                  labelText: 'Yell',
+                  helperText: 'Comic callout shown when the skill activates.',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
               _CalloutPreview(
                 text: _yell.text.trim().isEmpty ? 'BANG!' : _yell.text.trim(),
                 style: _calloutStyle,
@@ -740,8 +765,19 @@ class _SkillEditorState extends State<_SkillEditor> {
                     for (final value in SkillTrigger.values)
                       DropdownMenuItem(value: value, child: Text(value.name)),
                   ],
-                  onChanged: (value) => setState(() => _trigger = value),
+                  onChanged: (value) => setState(() {
+                    _trigger = value;
+                    if ((value == SkillTrigger.damageTaken ||
+                            value == SkillTrigger.elimination) &&
+                        (_double('cooldown') ?? 0) < 0.1) {
+                      _numbers['cooldown']!.text = '1';
+                    }
+                  }),
                 ),
+                if (_trigger == SkillTrigger.timer) ...[
+                  const SizedBox(height: 12),
+                  _number('triggerInterval', 'Trigger every', suffix: 's'),
+                ],
                 const SizedBox(height: 12),
                 DropdownButtonFormField<SkillTargeting>(
                   key: const ValueKey('skill-targeting'),
@@ -919,16 +955,6 @@ class _SkillEditorState extends State<_SkillEditor> {
                   ),
                 ],
               ],
-              TextField(
-                key: const ValueKey('skill-yell'),
-                controller: _yell,
-                maxLength: 60,
-                decoration: const InputDecoration(
-                  labelText: 'Yell',
-                  helperText: 'Comic callout shown when the skill activates.',
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
               if (_numbers.containsKey('arsenal'))
                 _number('arsenal', 'Initial / hit damage', suffix: 'life'),
               if (_numbers.containsKey('allOut'))
@@ -971,6 +997,13 @@ class _SkillEditorState extends State<_SkillEditor> {
                 onPressed: result == null ? null : _previewSkill,
                 icon: const Icon(Icons.play_circle_outline),
                 label: const Text('Preview skill'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const ValueKey('test-skill-live'),
+                onPressed: result == null ? null : _testInLiveArena,
+                icon: const Icon(Icons.sports_esports_outlined),
+                label: const Text('Test in live arena'),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -1163,10 +1196,13 @@ class _CalloutPreview extends StatelessWidget {
       ),
     };
     return Center(
-      child: SizedBox(
+      child: ConstrainedBox(
         key: const ValueKey('callout-style-preview'),
-        width: 280,
-        height: 82,
+        constraints: const BoxConstraints(
+          minWidth: 110,
+          maxWidth: 280,
+          minHeight: 68,
+        ),
         child: CustomPaint(
           key: ValueKey('callout-bubble-${bubbleType.name}'),
           painter: _CalloutBubblePainter(
@@ -1176,19 +1212,17 @@ class _CalloutPreview extends StatelessWidget {
             strokeWidth: style == SkillCalloutStyle.special ? 4 : 2.5,
             glow: style == SkillCalloutStyle.special,
           ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(30, 12, 30, 22),
-              child: Text(
-                text,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: colors.$2,
-                  fontWeight: FontWeight.w900,
-                  fontSize: style == SkillCalloutStyle.special ? 18 : 15,
-                ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(30, 16, 30, 25),
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.$2,
+                fontWeight: FontWeight.w900,
+                fontSize: style == SkillCalloutStyle.special ? 18 : 15,
               ),
             ),
           ),
@@ -1277,8 +1311,13 @@ class _CalloutBubblePainter extends CustomPainter {
     const points = 24;
     for (var i = 0; i < points; i++) {
       final angle = -math.pi / 2 + i * math.pi * 2 / points;
-      final radius = i.isEven ? size.height * 0.46 : size.height * 0.34;
-      final point = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      final outer = i.isEven;
+      final point =
+          center +
+          Offset(
+            math.cos(angle) * size.width * (outer ? 0.48 : 0.40),
+            math.sin(angle) * size.height * (outer ? 0.46 : 0.34),
+          );
       if (i == 0) {
         path.moveTo(point.dx, point.dy);
       } else {

@@ -7,6 +7,7 @@ import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/arena_physics_engine.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
@@ -72,6 +73,7 @@ class MatchSimulationController {
   final bool shrinkingArena;
   final double minimumArenaScale;
   final Color bloodColor;
+  final ArenaDecoration arenaDecoration;
 
   static const int shrinkGraceSteps = 10 * 60;
   static const int shrinkDurationSteps = 120 * 60;
@@ -208,6 +210,7 @@ class MatchSimulationController {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.bloodColor = const Color(0xFFD9152B),
+    this.arenaDecoration = ArenaDecoration.defaultArena,
   }) : initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (!endlessBattle &&
@@ -236,6 +239,7 @@ class MatchSimulationController {
         shrinkingArena: shrinkingArena,
         minimumArenaScale: minimumArenaScale,
         bloodColor: bloodColor,
+        arenaDecoration: arenaDecoration,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished &&
@@ -446,7 +450,13 @@ class MatchSimulationController {
   /// Cuts up to [count] of [ball]'s threads and frees their rim slots, the ones anchored nearest to
   /// [near] first when it is given (otherwise in the order the ball holds them). Returns how many were
   /// cut; a ball left with none is out at the next elimination check.
-  int cutThreads(SimulationBall ball, int count, {Offset? near, String? move}) {
+  int cutThreads(
+    SimulationBall ball,
+    int count, {
+    Offset? near,
+    String? move,
+    SimulationBall? attacker,
+  }) {
     if (count <= 0 || ball.fanLines.isEmpty) return 0;
     if (_absorbWithGoldenArmor(ball)) return 0;
     final candidates = [...ball.fanLines];
@@ -469,6 +479,9 @@ class MatchSimulationController {
       return true;
     });
     ball.lineCount = ball.fanLines.length;
+    if (cut.isNotEmpty && attacker != null && !identical(ball, attacker)) {
+      _lastDamageBy[ball] = attacker;
+    }
     if (cut.isNotEmpty) _lastMove[ball] = move ?? 'Thread cut';
     return cut.length;
   }
@@ -796,6 +809,7 @@ class MatchSimulationController {
         final cut = _cutLinesCrossedBy(cutter, target);
         threadCuts += cut.length;
         if (cut.isEmpty) continue;
+        _lastDamageBy[target] = cutter;
         _lastMove[target] = 'Thread cut';
         target.hurtFlashLeft = hurtFlashSteps;
 
@@ -840,6 +854,8 @@ class MatchSimulationController {
         );
       }
     }
+
+    _powerUps?.onEliminations(eliminatedNow, _lastDamageBy);
 
     if (endlessBattle && eliminatedNow.isNotEmpty) {
       for (final ball in eliminatedNow) {

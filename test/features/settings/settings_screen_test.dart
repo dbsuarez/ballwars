@@ -230,10 +230,15 @@ void main() {
     await tester.tap(find.text('Appearance'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const ValueKey('arena-decoration-desert')));
+    await tester.pumpAndSettle();
+    expect(repo.saved.last.arenaDecoration, ArenaDecoration.desert);
+    expect(settings.value.arenaDecoration, ArenaDecoration.desert);
+
     expect(settings.value.ballGlowEnabled, isTrue);
     await tester.tap(find.text('Outer glow in the arena'));
     await tester.pumpAndSettle();
-    expect(repo.saved.single.ballGlowEnabled, isFalse);
+    expect(repo.saved.last.ballGlowEnabled, isFalse);
     expect(settings.value.ballGlowEnabled, isFalse);
 
     const purple = Color(0xFF8E44AD);

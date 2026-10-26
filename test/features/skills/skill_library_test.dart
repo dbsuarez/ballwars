@@ -165,6 +165,7 @@ void main() {
           startDelaySeconds: 99,
           tickIntervalSeconds: 0,
           cooldownSeconds: 99,
+          triggerIntervalSeconds: 0,
         );
     final decoded = SkillDefinition.fromJson(skill.toJson())!;
 
@@ -175,6 +176,7 @@ void main() {
     expect(decoded.startDelaySeconds, 30);
     expect(decoded.tickIntervalSeconds, 0.1);
     expect(decoded.cooldownSeconds, 60);
+    expect(decoded.triggerIntervalSeconds, 0.5);
     expect(decoded.compatibilityIssues, isEmpty);
   });
 

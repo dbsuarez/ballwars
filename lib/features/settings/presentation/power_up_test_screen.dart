@@ -15,11 +15,15 @@ import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../skills/domain/skill_library.dart';
 import 'app_settings_scope.dart';
 
 /// Runs actual matches with local, admin-only scenario controls.
 class PowerUpTestScreen extends StatefulWidget {
-  const PowerUpTestScreen({super.key});
+  const PowerUpTestScreen({super.key, this.initialSkill});
+
+  /// An unsaved editor draft to inject into this test session only.
+  final SkillDefinition? initialSkill;
 
   @override
   State<PowerUpTestScreen> createState() => _PowerUpTestScreenState();
@@ -90,6 +94,16 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     }
     if (!mounted) return;
     if (allowed) await _loadRememberedChoices();
+    final initialSkill = widget.initialSkill;
+    if (allowed && initialSkill != null) {
+      _items[0] = initialSkill.baseKind;
+      _savedItems[0] = initialSkill.baseKind;
+      _pickerTabs[0] = initialSkill.baseKind.isWeapon
+          ? 0
+          : initialSkill.baseKind.isTrap
+          ? 2
+          : 1;
+    }
     if (!mounted) return;
     setState(() {
       _allowed = allowed;
@@ -128,15 +142,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     _heardWallHits = 0;
     _heardBallHits = 0;
     if (_ticker.isActive) _ticker.stop();
+    final settings = AppSettingsScope.of(context);
+    final initialSkill = widget.initialSkill;
+    final skillLibrary = initialSkill == null
+        ? settings.skillLibrary
+        : settings.skillLibrary.withDefinition(
+            initialSkill.copyWith(enabled: true),
+            settings.powerUps,
+          );
     _match = MatchSimulationController(
       _balls,
       arenaRadius: 200,
       seed: 42,
       mode: _mode,
-      tuning: AppSettingsScope.of(context).powerUps,
+      tuning: settings.powerUps,
+      skillLibrary: skillLibrary,
       lookAhead: false,
       slowMotionLines: 0,
       endlessBattle: _endless,
+      arenaDecoration: settings.arenaDecoration,
     );
     _match!.powerUps!.automaticSpawning = _randomSpawns;
     final balls = _match!.state.balls;
@@ -491,6 +515,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         arenaSubtitle: AppSettingsScope.of(
                           context,
                         ).arenaSubtitle,
+                        arenaDecoration: AppSettingsScope.of(
+                          context,
+                        ).arenaDecoration,
                       ),
                     ),
                   ),

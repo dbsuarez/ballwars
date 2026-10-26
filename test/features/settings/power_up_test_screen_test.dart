@@ -7,6 +7,7 @@ import 'package:ballwars/features/settings/presentation/app_settings_scope.dart'
 import 'package:ballwars/features/settings/presentation/power_up_test_screen.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_canvas.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,12 +32,12 @@ class _Auth implements AdminAuth {
   Future<void> signOut() async {}
 }
 
-Widget _app(bool admin) => AppSettingsScope(
+Widget _app(bool admin, {SkillDefinition? initialSkill}) => AppSettingsScope(
   settings: ValueNotifier(AppSettings.defaults),
   adminAuth: _Auth(admin),
   child: MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
-    home: const PowerUpTestScreen(),
+    home: PowerUpTestScreen(initialSkill: initialSkill),
   ),
 );
 
@@ -70,6 +71,25 @@ void main() {
     expect(find.text('Paused - 0.0 s'), findsOneWidget);
     final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
     expect(arena.state.balls.first.held, PowerUpKind.pistol);
+  });
+
+  testWidgets('an unsaved skill opens preselected in the live test arena', (
+    tester,
+  ) async {
+    final draft = SkillLibrary.defaults
+        .create('Instant Rush', PowerUpKind.speed)
+        .copyWith(
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.self,
+          delivery: SkillDelivery.instant,
+          effectType: SkillEffectType.speed,
+          durationSeconds: 4,
+        );
+    await tester.pumpWidget(_app(true, initialSkill: draft));
+    await tester.pumpAndSettle();
+
+    final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+    expect(arena.state.balls.first.speedLeft, 4 * 60);
   });
 
   testWidgets(

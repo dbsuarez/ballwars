@@ -14,6 +14,24 @@ enum PowerUpRarity {
   final Color color;
 }
 
+enum ArenaThemeHazardKind { gravityWell, quicksand, vineSnare, laserGate }
+
+class ArenaThemeHazard {
+  ArenaThemeHazard({
+    required this.kind,
+    required this.position,
+    required this.spawnStep,
+    this.angle = 0,
+  });
+
+  final ArenaThemeHazardKind kind;
+  final Offset position;
+  final int spawnStep;
+  final double angle;
+  int age = 0;
+  final Set<SimulationBall> affected = {};
+}
+
 /// Pickups a ball can collect in the Arsenal and All-Out match modes.
 enum PowerUpKind {
   pistol('Pistol'),

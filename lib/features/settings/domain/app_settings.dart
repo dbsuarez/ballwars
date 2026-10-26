@@ -3,6 +3,17 @@ import 'dart:ui';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../skills/domain/skill_library.dart';
 
+enum ArenaDecoration {
+  defaultArena('Default'),
+  space('Space'),
+  desert('Desert'),
+  wilderness('Wilderness'),
+  neonGrid('Neon Grid');
+
+  const ArenaDecoration(this.label);
+  final String label;
+}
+
 /// App-wide settings, set by the admin and shown to everyone
 /// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005, 006, 009 and 011).
 class AppSettings {
@@ -19,6 +30,7 @@ class AppSettings {
   final String arenaTitle;
   final String arenaSubtitle;
   final double minimumArenaScale;
+  final ArenaDecoration arenaDecoration;
   final String watermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
@@ -48,6 +60,7 @@ class AppSettings {
     this.arenaTitle = defaultArenaTitle,
     this.arenaSubtitle = defaultArenaSubtitle,
     this.minimumArenaScale = defaultMinimumArenaScale,
+    this.arenaDecoration = ArenaDecoration.defaultArena,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
@@ -78,6 +91,7 @@ class AppSettings {
     String? arenaTitle,
     String? arenaSubtitle,
     double? minimumArenaScale,
+    ArenaDecoration? arenaDecoration,
     String? watermarkText,
     String? musicId,
     String? menuMusicId,
@@ -94,6 +108,7 @@ class AppSettings {
     arenaTitle: arenaTitle ?? this.arenaTitle,
     arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,
     minimumArenaScale: minimumArenaScale ?? this.minimumArenaScale,
+    arenaDecoration: arenaDecoration ?? this.arenaDecoration,
     watermarkText: watermarkText ?? this.watermarkText,
     musicId: musicId ?? this.musicId,
     menuMusicId: menuMusicId ?? this.menuMusicId,

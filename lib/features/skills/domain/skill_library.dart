@@ -3,7 +3,14 @@ import '../../arena_simulation/domain/power_up_config.dart';
 
 enum SkillVisualMode { sprite, vector }
 
-enum SkillTrigger { pickup, aimedFire, collision }
+enum SkillTrigger {
+  pickup,
+  aimedFire,
+  collision,
+  timer,
+  damageTaken,
+  elimination,
+}
 
 enum SkillTargeting { self, nearestOpponent, allOpponents }
 
@@ -69,6 +76,7 @@ class SkillDefinition {
     this.startDelaySeconds = 0,
     this.tickIntervalSeconds = 0.5,
     this.cooldownSeconds = 0,
+    this.triggerIntervalSeconds = 5,
     this.effectColor = 0xFFFF6B6B,
     this.screenShake = 0,
     this.handedness = SkillHandedness.carrierDefault,
@@ -103,6 +111,7 @@ class SkillDefinition {
   final double startDelaySeconds;
   final double tickIntervalSeconds;
   final double cooldownSeconds;
+  final double triggerIntervalSeconds;
   final int effectColor;
   final double screenShake;
   final SkillHandedness handedness;
@@ -141,6 +150,7 @@ class SkillDefinition {
     double? startDelaySeconds,
     double? tickIntervalSeconds,
     double? cooldownSeconds,
+    double? triggerIntervalSeconds,
     int? effectColor,
     double? screenShake,
     SkillHandedness? handedness,
@@ -176,6 +186,8 @@ class SkillDefinition {
     startDelaySeconds: startDelaySeconds ?? this.startDelaySeconds,
     tickIntervalSeconds: tickIntervalSeconds ?? this.tickIntervalSeconds,
     cooldownSeconds: cooldownSeconds ?? this.cooldownSeconds,
+    triggerIntervalSeconds:
+        triggerIntervalSeconds ?? this.triggerIntervalSeconds,
     effectColor: effectColor ?? this.effectColor,
     screenShake: screenShake ?? this.screenShake,
     handedness: handedness ?? this.handedness,
@@ -212,6 +224,7 @@ class SkillDefinition {
     'start_delay_seconds': startDelaySeconds,
     'tick_interval_seconds': tickIntervalSeconds,
     'cooldown_seconds': cooldownSeconds,
+    'trigger_interval_seconds': triggerIntervalSeconds,
     'effect_color': effectColor,
     'screen_shake': screenShake,
     'handedness': handedness.name,
@@ -278,6 +291,7 @@ class SkillDefinition {
       startDelaySeconds: decimal('start_delay_seconds') ?? 0,
       tickIntervalSeconds: decimal('tick_interval_seconds') ?? 0.5,
       cooldownSeconds: decimal('cooldown_seconds') ?? 0,
+      triggerIntervalSeconds: decimal('trigger_interval_seconds') ?? 5,
       effectColor: integer('effect_color') ?? 0xFFFF6B6B,
       screenShake: decimal('screen_shake') ?? 0,
       handedness: enumValue(
@@ -314,6 +328,7 @@ class SkillDefinition {
     startDelaySeconds: startDelaySeconds.clamp(0, 30),
     tickIntervalSeconds: tickIntervalSeconds.clamp(0.1, 10),
     cooldownSeconds: cooldownSeconds.clamp(0, 60),
+    triggerIntervalSeconds: triggerIntervalSeconds.clamp(0.5, 120),
     effectColor: effectColor.clamp(0, 0xFFFFFFFF),
     screenShake: screenShake.clamp(0, 1),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
@@ -327,6 +342,11 @@ class SkillDefinition {
             trigger == SkillTrigger.collision) &&
         !baseKind.isWeapon) {
       issues.add('Aimed fire and collision triggers require a weapon carrier.');
+    }
+    if ((trigger == SkillTrigger.damageTaken ||
+            trigger == SkillTrigger.elimination) &&
+        cooldownSeconds < 0.1) {
+      issues.add('Reactive triggers require a cooldown of at least 0.1 s.');
     }
     if (delivery == SkillDelivery.projectile &&
         trigger != SkillTrigger.aimedFire) {

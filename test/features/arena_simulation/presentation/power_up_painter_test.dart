@@ -10,6 +10,7 @@ import 'package:ballwars/features/arena_simulation/presentation/power_up_pixel_a
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
 
 const _balls = [
   CustomBall(
@@ -31,22 +32,31 @@ void main() {
 
   test('visible artwork fills icon without clipping or stretching', () async {
     final recorder = ui.PictureRecorder();
-    ui.Canvas(recorder).drawRect(const Rect.fromLTWH(24, 16, 16, 32), Paint()..color = Colors.red);
+    ui.Canvas(recorder).drawRect(
+      const Rect.fromLTWH(24, 16, 16, 32),
+      Paint()..color = Colors.red,
+    );
     final picture = recorder.endRecording();
     final input = await picture.toImage(64, 64);
     final fitted = await PowerUpSprites.fitVisibleArtwork(input);
-    final bytes = (await fitted.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+    final bytes = (await fitted.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
+    ))!;
     final pixels = <Offset>[];
     for (var y = 0; y < 64; y++) {
       for (var x = 0; x < 64; x++) {
-        if (bytes.getUint8((y * 64 + x) * 4 + 3) > 16) pixels.add(Offset(x.toDouble(), y.toDouble()));
+        if (bytes.getUint8((y * 64 + x) * 4 + 3) > 16) {
+          pixels.add(Offset(x.toDouble(), y.toDouble()));
+        }
       }
     }
     expect(pixels.map((p) => p.dy).reduce(math.min), 2);
     expect(pixels.map((p) => p.dy).reduce(math.max), 61);
     expect(pixels.map((p) => p.dx).reduce(math.min), 17);
     expect(pixels.map((p) => p.dx).reduce(math.max), 46);
-    input.dispose(); fitted.dispose(); picture.dispose();
+    input.dispose();
+    fitted.dispose();
+    picture.dispose();
   });
 
   test(
@@ -89,6 +99,16 @@ void main() {
       p.stickyGoo.add(const StickyGoo(position: Offset(-180, 0), spawnStep: 0));
       p.slashMarks.add(SlashMark(position: const Offset(20, 20), angle: 1));
       p.explosions.add(Explosion(position: const Offset(30, 30), radius: 70));
+      for (final kind in ArenaThemeHazardKind.values) {
+        p.arenaThemeHazards.add(
+          ArenaThemeHazard(
+            kind: kind,
+            position: Offset(kind.index * 35.0 - 50, 0),
+            spawnStep: 0,
+            angle: 0.7,
+          ),
+        );
+      }
       a
         ..held = PowerUpKind.shield
         ..aimTarget = b
@@ -101,11 +121,14 @@ void main() {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
       PowerUpPainter.paint(canvas, c.state, 260);
-      ArenaPainter(
-        state: c.state,
-        arenaRadius: 260,
-        rimAngle: 0,
-      ).paint(canvas, const Size(600, 600));
+      for (final decoration in ArenaDecoration.values) {
+        ArenaPainter(
+          state: c.state,
+          arenaRadius: 260,
+          rimAngle: 0,
+          arenaDecoration: decoration,
+        ).paint(canvas, const Size(600, 600));
+      }
       expect(recorder.endRecording(), isNotNull);
     },
   );

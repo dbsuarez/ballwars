@@ -6,6 +6,7 @@ import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
 import '../domain/power_up.dart';
@@ -28,7 +29,11 @@ import 'match_simulation_controller.dart';
 /// Balls yell what they do ("BANG!", "SHIELD BASH!") and every hit shows the damage taken, as floating
 /// labels (drawn only; no randomness).
 class PowerUpSystem {
-  PowerUpSystem(this.match, this.rng);
+  PowerUpSystem(this.match, this.rng) {
+    for (final ball in match.state.balls) {
+      _lastVital[ball] = _vital(ball);
+    }
+  }
 
   /// The match this system belongs to (for [MatchSimulationController.damage] and
   /// [MatchSimulationController.cutThreads]).
@@ -49,6 +54,7 @@ class PowerUpSystem {
   final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
   final List<_CustomDamageOverTime> _customDamageOverTime = [];
   final Map<(SimulationBall, String), int> _composedCooldownUntil = {};
+  final Map<SimulationBall, double> _lastVital = {};
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -80,6 +86,7 @@ class PowerUpSystem {
   final List<EnergyWave> energyWaves = [];
   final List<EnergyWaveAttack> energyWaveAttacks = [];
   final List<FlameCone> flameCones = [];
+  final List<ArenaThemeHazard> arenaThemeHazards = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
   final List<SlashMark> slashMarks = [];
@@ -249,7 +256,12 @@ class PowerUpSystem {
   void spawnTestItem(PowerUpKind kind) =>
       _spawn(match.stepCount + 1, forcedKind: kind);
 
+  /// Deploys the selected arena decoration's environmental hazard in tests.
+  void spawnTestArenaHazard() => _spawnArenaThemeHazard(match.stepCount + 1);
+
   void step() {
+    _processPassiveTriggers();
+    _updateArenaThemeHazards();
     _updateFiredWeaponHold();
     _updateScheduledComposedEffects();
     _updateCustomDamageOverTime();
@@ -282,11 +294,165 @@ class PowerUpSystem {
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
     if (automaticSpawning &&
+        number >= _t.trapStartSteps &&
+        (number - _t.trapStartSteps) % (15 * 60) == 0) {
+      _spawnArenaThemeHazard(number);
+    }
+    if (automaticSpawning &&
         number >= _t.firstSpawnSteps &&
         (number - _t.firstSpawnSteps) % _t.spawnInterval(_ballCount) == 0) {
       _spawn(number);
     }
     _turnShields();
+  }
+
+  void _spawnArenaThemeHazard(int number) {
+    if (match.arenaDecoration == ArenaDecoration.defaultArena) {
+      _spawn(number, forcedKind: PowerUpKind.spikeWall);
+      return;
+    }
+    final kind = switch (match.arenaDecoration) {
+      ArenaDecoration.space => ArenaThemeHazardKind.gravityWell,
+      ArenaDecoration.desert => ArenaThemeHazardKind.quicksand,
+      ArenaDecoration.wilderness => ArenaThemeHazardKind.vineSnare,
+      ArenaDecoration.neonGrid => ArenaThemeHazardKind.laserGate,
+      ArenaDecoration.defaultArena => throw StateError('Handled above'),
+    };
+    final angle = rng.nextDoubleRange(0, math.pi * 2);
+    final distance = kind == ArenaThemeHazardKind.laserGate
+        ? 0.0
+        : rng.nextDoubleRange(0.18, 0.62) * match.arenaRadius;
+    arenaThemeHazards.add(
+      ArenaThemeHazard(
+        kind: kind,
+        position: Offset(math.cos(angle), math.sin(angle)) * distance,
+        spawnStep: number,
+        angle: angle,
+      ),
+    );
+    if (arenaThemeHazards.length > 2) arenaThemeHazards.removeAt(0);
+  }
+
+  void _updateArenaThemeHazards() {
+    final radius = match.arenaRadius * 0.18;
+    for (final hazard in arenaThemeHazards.toList()) {
+      hazard.age++;
+      if (hazard.age >= 10 * 60) {
+        arenaThemeHazards.remove(hazard);
+        continue;
+      }
+      for (final ball in match.state.balls) {
+        if (!_alive(ball) || ball.isGhost) continue;
+        final offset = hazard.position - ball.position;
+        switch (hazard.kind) {
+          case ArenaThemeHazardKind.gravityWell:
+            if (offset.distance < radius * 2.2 && offset.distance > 0) {
+              ball.velocity +=
+                  offset / offset.distance * match.arenaRadius * 0.012;
+            }
+          case ArenaThemeHazardKind.quicksand:
+            if (offset.distance < radius) {
+              ball.velocity *= 0.93;
+              if (hazard.age % 60 == 0) {
+                _damageArenaHazard(ball, 2, 1, 'Quicksand');
+              }
+            }
+          case ArenaThemeHazardKind.vineSnare:
+            if (offset.distance < radius && hazard.affected.add(ball)) {
+              _gooVelocity[ball] = ball.velocity;
+              ball
+                ..stickyGooLeft = 2 * 60
+                ..velocity = Offset.zero;
+              _yell(ball, 'VINE SNARE!');
+            }
+          case ArenaThemeHazardKind.laserGate:
+            final direction = Offset(
+              math.cos(hazard.angle),
+              math.sin(hazard.angle),
+            );
+            final distanceToBeam =
+                (ball.position.dx * direction.dy -
+                        ball.position.dy * direction.dx)
+                    .abs();
+            if (distanceToBeam < ball.radius * 0.45) {
+              if (hazard.affected.add(ball)) {
+                _damageArenaHazard(ball, 8, 3, 'Laser Gate');
+                weaponImpacts.add(
+                  WeaponImpact(position: ball.position, strength: 0.35),
+                );
+              }
+            } else {
+              hazard.affected.remove(ball);
+            }
+        }
+      }
+    }
+  }
+
+  void _damageArenaHazard(
+    SimulationBall ball,
+    double arsenalDamage,
+    int allOutLines,
+    String move,
+  ) {
+    final lost = match.mode == MatchMode.arsenal
+        ? match.damage(ball, arsenalDamage, move: move)
+        : match.cutThreads(ball, allOutLines, near: ball.position, move: move);
+    _showDamage(ball, ball.position, lost, 0);
+  }
+
+  double _vital(SimulationBall ball) => match.mode == MatchMode.arsenal
+      ? ball.life
+      : ball.fanLines.length.toDouble();
+
+  Iterable<SkillDefinition> _activeComposedSkills(SkillTrigger trigger) sync* {
+    for (final kind in PowerUpKind.values) {
+      final skill = match.skillLibrary.activeFor(kind, _t);
+      if (skill.custom &&
+          skill.enabled &&
+          skill.isComposed &&
+          skill.trigger == trigger) {
+        yield skill;
+      }
+    }
+  }
+
+  void _processPassiveTriggers() {
+    final number = match.stepCount + 1;
+    final timerSkills = _activeComposedSkills(SkillTrigger.timer).toList();
+    final damageSkills = _activeComposedSkills(
+      SkillTrigger.damageTaken,
+    ).toList();
+    for (final ball in match.state.balls) {
+      final current = _vital(ball);
+      final tookDamage = current < (_lastVital[ball] ?? current);
+      _lastVital[ball] = current;
+      if (!_alive(ball)) continue;
+      for (final skill in timerSkills) {
+        final interval = (skill.triggerIntervalSeconds * 60).round();
+        if (number % interval == 0) _executeComposed(ball, skill);
+      }
+      if (tookDamage) {
+        for (final skill in damageSkills) {
+          _executeComposed(ball, skill);
+        }
+      }
+    }
+  }
+
+  void onEliminations(
+    Iterable<SimulationBall> eliminated,
+    Map<SimulationBall, SimulationBall> attackers,
+  ) {
+    final skills = _activeComposedSkills(SkillTrigger.elimination).toList();
+    if (skills.isEmpty) return;
+    for (final victim in eliminated) {
+      final owner = attackers[victim];
+      if (owner == null || !_alive(owner)) continue;
+      for (final skill in skills) {
+        _executeComposed(owner, skill, primary: victim);
+      }
+    }
   }
 
   void _holdFiredWeapon(
@@ -1020,7 +1186,7 @@ class PowerUpSystem {
                 ball.position,
               ) <=
               radius * radius) {
-            _cutLine(ball, line, move: skillName(kind));
+            _cutLine(ball, line, move: skillName(kind), attacker: owner);
           }
         }
       }
@@ -1331,7 +1497,9 @@ class PowerUpSystem {
     if ((_composedCooldownUntil[cooldownKey] ?? 0) > match.stepCount) return;
     final targets = switch (skill.targeting) {
       SkillTargeting.self => [owner],
-      SkillTargeting.nearestOpponent => [?primary ?? _nearestTarget(owner)],
+      SkillTargeting.nearestOpponent => [
+        ?primary != null && _alive(primary) ? primary : _nearestTarget(owner),
+      ],
       SkillTargeting.allOpponents => [
         for (final target in match.state.balls)
           if (!identical(target, owner) && _alive(target)) target,
@@ -1471,6 +1639,7 @@ class PowerUpSystem {
             skill.allOutDamage ?? 0,
             near: target.position,
             move: skill.name,
+            attacker: owner,
           );
           _showDamage(target, target.position, cut, 0);
         }
@@ -2182,7 +2351,7 @@ class PowerUpSystem {
           for (final line in List.of(ball.fanLines)) {
             // Rim anchors are unique, so the thread nearest a thread's own anchor is that thread.
             if (_crosses(from, end, line.startPoint, ball.position)) {
-              _cutLine(ball, line, move: skillName(p.kind));
+              _cutLine(ball, line, move: skillName(p.kind), attacker: p.owner);
             }
           }
         }
@@ -2389,7 +2558,9 @@ class PowerUpSystem {
         );
       var cut = 0;
       for (final line in nearest.take(threads)) {
-        if (_cutLine(target, line, move: skillName(kind))) cut++;
+        if (_cutLine(target, line, move: skillName(kind), attacker: from)) {
+          cut++;
+        }
       }
       if (from != null &&
           (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {
@@ -2461,7 +2632,12 @@ class PowerUpSystem {
                 target.position,
               ) <=
               reach * reach) {
-            _cutLine(target, line, move: skillName(PowerUpKind.sword));
+            _cutLine(
+              target,
+              line,
+              move: skillName(PowerUpKind.sword),
+              attacker: cutter,
+            );
           }
         }
       }
@@ -2512,8 +2688,20 @@ class PowerUpSystem {
 
   /// Cuts [line] of [ball] (rim anchors are unique, so the thread nearest its own anchor is that thread)
   /// with a spark leaving the rim, like a body cut. False if it was already gone.
-  bool _cutLine(SimulationBall ball, FanLine line, {String? move}) {
-    if (match.cutThreads(ball, 1, near: line.startPoint, move: move) == 0) {
+  bool _cutLine(
+    SimulationBall ball,
+    FanLine line, {
+    String? move,
+    SimulationBall? attacker,
+  }) {
+    if (match.cutThreads(
+          ball,
+          1,
+          near: line.startPoint,
+          move: move,
+          attacker: attacker,
+        ) ==
+        0) {
       return false;
     }
     match.state.particles.spawnRimArcs(

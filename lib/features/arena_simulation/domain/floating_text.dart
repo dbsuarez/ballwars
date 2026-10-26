@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 enum CalloutStyle { normal, rare, epic, special }
 
+enum CalloutBubble { shout, speech, thought, radio }
+
 class FloatingText {
   static const double lifespan = 1.2;
 
@@ -13,6 +15,7 @@ class FloatingText {
   final Color color;
   final bool callout;
   final CalloutStyle calloutStyle;
+  final CalloutBubble calloutBubble;
 
   FloatingText({
     required this.position,
@@ -20,6 +23,7 @@ class FloatingText {
     required this.color,
     this.callout = false,
     this.calloutStyle = CalloutStyle.normal,
+    this.calloutBubble = CalloutBubble.shout,
     this.age = 0.0,
   });
 
@@ -39,6 +43,7 @@ class FloatingTextManager {
     Color color, {
     bool callout = false,
     CalloutStyle calloutStyle = CalloutStyle.normal,
+    CalloutBubble calloutBubble = CalloutBubble.shout,
   }) {
     final item = FloatingText(
       position: position,
@@ -46,6 +51,7 @@ class FloatingTextManager {
       color: color,
       callout: callout,
       calloutStyle: calloutStyle,
+      calloutBubble: calloutBubble,
     );
     _items.add(item);
     return item;

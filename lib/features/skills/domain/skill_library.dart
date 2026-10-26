@@ -9,9 +9,24 @@ enum SkillTargeting { self, nearestOpponent, allOpponents }
 
 enum SkillDelivery { instant, projectile, area }
 
-enum SkillEffectType { damage, heal, freeze, speed, knockback }
+enum SkillEffectType {
+  damage,
+  damageOverTime,
+  heal,
+  shield,
+  freeze,
+  stun,
+  speed,
+  pull,
+  knockback,
+  teleport,
+  equipCarrier,
+  disarm,
+}
 
 enum SkillCalloutStyle { normal, rare, epic, special }
+
+enum SkillBubbleType { shout, speech, thought, radio }
 
 class SkillDefinition {
   static const List<String> soundCues = [
@@ -51,6 +66,7 @@ class SkillDefinition {
     this.repeatIntervalSeconds = 0.5,
     this.yell = '',
     this.calloutStyle = SkillCalloutStyle.normal,
+    this.bubbleType = SkillBubbleType.shout,
   });
 
   final String id;
@@ -78,6 +94,7 @@ class SkillDefinition {
   final double repeatIntervalSeconds;
   final String yell;
   final SkillCalloutStyle calloutStyle;
+  final SkillBubbleType bubbleType;
   bool get isComposed =>
       trigger != null &&
       targeting != null &&
@@ -109,6 +126,7 @@ class SkillDefinition {
     double? repeatIntervalSeconds,
     String? yell,
     SkillCalloutStyle? calloutStyle,
+    SkillBubbleType? bubbleType,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -137,6 +155,7 @@ class SkillDefinition {
     repeatIntervalSeconds: repeatIntervalSeconds ?? this.repeatIntervalSeconds,
     yell: yell ?? this.yell,
     calloutStyle: calloutStyle ?? this.calloutStyle,
+    bubbleType: bubbleType ?? this.bubbleType,
   );
 
   Map<String, Object?> toJson() => {
@@ -166,6 +185,7 @@ class SkillDefinition {
     'repeat_interval_seconds': repeatIntervalSeconds,
     if (yell.isNotEmpty) 'yell': yell,
     'callout_style': calloutStyle.name,
+    'bubble_type': bubbleType.name,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -229,6 +249,11 @@ class SkillDefinition {
         SkillCalloutStyle.values,
         SkillCalloutStyle.normal,
       ),
+      bubbleType: enumValue(
+        'bubble_type',
+        SkillBubbleType.values,
+        SkillBubbleType.shout,
+      ),
     ).validated();
   }
 
@@ -263,6 +288,10 @@ class SkillDefinition {
     if (delivery == SkillDelivery.projectile &&
         targeting == SkillTargeting.self) {
       issues.add('A projectile cannot target its owner.');
+    }
+    final effects = [effectType, secondaryEffectType];
+    if (effects.contains(SkillEffectType.equipCarrier) && !baseKind.isWeapon) {
+      issues.add('Equip carrier requires a weapon carrier.');
     }
     return List.unmodifiable(issues);
   }
@@ -470,7 +499,9 @@ class SkillLibrary {
       for (final entry in rawOverrides.entries) {
         final definition = SkillDefinition.fromJson(entry.value);
         if (entry.key is String && definition != null && !definition.custom) {
-          overrides[entry.key as String] = definition;
+          overrides[entry.key as String] = definition.yell.isEmpty
+              ? definition.copyWith(yell: _defaultYellFor(definition.baseKind))
+              : definition;
         }
       }
     }
@@ -479,7 +510,15 @@ class SkillLibrary {
     if (rawCustom is List) {
       for (final raw in rawCustom) {
         final definition = SkillDefinition.fromJson(raw);
-        if (definition != null && definition.custom) custom.add(definition);
+        if (definition != null && definition.custom) {
+          custom.add(
+            definition.yell.isEmpty && !definition.isComposed
+                ? definition.copyWith(
+                    yell: _defaultYellFor(definition.baseKind),
+                  )
+                : definition,
+          );
+        }
       }
     }
     return SkillLibrary(
@@ -537,8 +576,59 @@ class SkillLibrary {
           ? SkillVisualMode.vector
           : SkillVisualMode.sprite,
       soundCue: _defaultSoundFor(kind),
+      yell: _defaultYellFor(kind),
+      bubbleType: kind == PowerUpKind.apple
+          ? SkillBubbleType.speech
+          : SkillBubbleType.shout,
     );
   }
+
+  static String _defaultYellFor(PowerUpKind kind) => switch (kind) {
+    PowerUpKind.pistol => 'BANG!',
+    PowerUpKind.shotgun => 'BLAM!',
+    PowerUpKind.gatling => 'RATATAT!',
+    PowerUpKind.knife => 'SLASH!',
+    PowerUpKind.shield => 'SHIELD BASH!',
+    PowerUpKind.apple => 'YUM!',
+    PowerUpKind.speed => 'ZOOM!',
+    PowerUpKind.freeze => 'FREEZE!',
+    PowerUpKind.mine => 'MINE SET!',
+    PowerUpKind.magnet => 'MINE!',
+    PowerUpKind.ghost => 'BOO!',
+    PowerUpKind.grenade => 'FIRE IN THE HOLE!',
+    PowerUpKind.sword => 'HIYAA!',
+    PowerUpKind.hook => 'COME OVER HERE!',
+    PowerUpKind.ricochetDisc => 'BANK SHOT!',
+    PowerUpKind.orbitingFlail => 'WRECKING BALL!',
+    PowerUpKind.threadHarpoon => 'GIVE IT HERE!',
+    PowerUpKind.prismLaser => 'TASTE THE RAINBOW!',
+    PowerUpKind.swapCannon => 'SWAP INCOMING!',
+    PowerUpKind.phaseMine => 'NOW YOU SEE ME!',
+    PowerUpKind.repulsor => 'BACK OFF!',
+    PowerUpKind.timeBubble => 'TIME OUT!',
+    PowerUpKind.vampire => 'I WANT YOUR POWER!',
+    PowerUpKind.mirror => 'RETURN TO SENDER!',
+    PowerUpKind.overcharge => 'MAXIMUM POWER!',
+    PowerUpKind.gremlin => 'CHAOS MODE!',
+    PowerUpKind.magneticField => 'NOTHING GETS THROUGH!',
+    PowerUpKind.portal => 'WARP SPEED!',
+    PowerUpKind.spikeWall => 'OUCH! SPIKES!',
+    PowerUpKind.goldenArmor => 'GOLDEN GUARD!',
+    PowerUpKind.bow => 'ARROWS, FLY!',
+    PowerUpKind.stickyGoo => 'STUCK!',
+    PowerUpKind.molotov => 'LIGHT IT UP!',
+    PowerUpKind.rocketLauncher => 'TARGET LOCKED!',
+    PowerUpKind.omegaTendrils => 'NO ONE ESCAPES!',
+    PowerUpKind.boomerang => 'COMING BACK!',
+    PowerUpKind.fireWall => 'BURNING BARRIER!',
+    PowerUpKind.poisonSwamp => 'POISONED!',
+    PowerUpKind.waterGun => 'SPLASH!',
+    PowerUpKind.lightningStrikes => 'THUNDER, STRIKE!',
+    PowerUpKind.earthquake => 'SHAKE THE EARTH!',
+    PowerUpKind.tornado => 'TWIST AND SHOUT!',
+    PowerUpKind.energyWave => 'KA-ME-HA-ME-HAAA!',
+    PowerUpKind.flamethrower => 'BURN IT DOWN!',
+  };
 
   static String _defaultSoundFor(PowerUpKind kind) => switch (kind) {
     PowerUpKind.shotgun ||

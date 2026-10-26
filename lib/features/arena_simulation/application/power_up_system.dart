@@ -47,6 +47,7 @@ class PowerUpSystem {
   final List<Projectile> projectiles = [];
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
   final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
+  final List<_CustomDamageOverTime> _customDamageOverTime = [];
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -118,6 +119,7 @@ class PowerUpSystem {
       ball,
       custom.isEmpty ? fallback : custom,
       calloutStyle: CalloutStyle.values[skill.calloutStyle.index],
+      calloutBubble: CalloutBubble.values[skill.bubbleType.index],
     );
   }
 
@@ -146,6 +148,7 @@ class PowerUpSystem {
       ..heldSecondary = null
       ..speedLeft = 0
       ..frozenLeft = 0
+      ..stunnedLeft = 0
       ..ghostLeft = 0
       ..flailLeft = 0
       ..repulsorLeft = 0
@@ -167,6 +170,7 @@ class PowerUpSystem {
       ..burstLeft = 0;
     ball.magneticReflectedOwners.clear();
     _frozenVelocity.remove(ball);
+    _stunnedVelocity.remove(ball);
     _gooVelocity.remove(ball);
     _burstVolley.remove(ball);
     _firedWeaponHold.remove(ball);
@@ -175,6 +179,10 @@ class PowerUpSystem {
     _scheduledComposedEffects.removeWhere(
       (effect) =>
           identical(effect.owner, ball) || effect.targets.contains(ball),
+    );
+    _customDamageOverTime.removeWhere(
+      (effect) =>
+          identical(effect.owner, ball) || identical(effect.target, ball),
     );
     pulls.removeWhere(
       (pull) => identical(pull.owner, ball) || identical(pull.target, ball),
@@ -192,6 +200,7 @@ class PowerUpSystem {
 
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
   final Map<SimulationBall, Offset> _frozenVelocity = {};
+  final Map<SimulationBall, Offset> _stunnedVelocity = {};
   final Map<SimulationBall, Offset> _gooVelocity = {};
 
   // Volleys: shots fired as one attack share an id; a shield that breaks on one of them softens the
@@ -239,6 +248,7 @@ class PowerUpSystem {
   void step() {
     _updateFiredWeaponHold();
     _updateScheduledComposedEffects();
+    _updateCustomDamageOverTime();
     _updateOmegaTendrils();
     _updateLightningStrikes();
     _updateEarthquakesAndTornadoes();
@@ -261,6 +271,7 @@ class PowerUpSystem {
     _strikeWithOrbitingFlails();
     _sweep();
     _updateFrozen();
+    _updateStunned();
     _moveProjectiles();
     _reelIn();
     _aimAndFire();
@@ -803,8 +814,9 @@ class PowerUpSystem {
       kind = weapon;
       _skillSound(kind);
       slashes++;
-      _yell(
+      _skillYell(
         attacker,
+        weapon,
         weapon == PowerUpKind.sword
             ? 'HIYAA!'
             : weapon == PowerUpKind.orbitingFlail
@@ -814,7 +826,7 @@ class PowerUpSystem {
     } else if (weapon == PowerUpKind.shield && targetHeld.isEmpty) {
       kind = PowerUpKind.shield;
       _skillSound(kind);
-      _yell(attacker, 'SHIELD BASH!');
+      _skillYell(attacker, weapon, 'SHIELD BASH!');
     } else {
       return;
     }
@@ -1240,6 +1252,18 @@ class PowerUpSystem {
     }
   }
 
+  void _updateStunned() {
+    for (final ball in match.state.balls) {
+      if (ball.stunnedLeft <= 0) continue;
+      ball.stunnedLeft--;
+      if (ball.stunnedLeft == 0) {
+        ball.velocity = _stunnedVelocity.remove(ball) ?? ball.velocity;
+      } else {
+        ball.velocity = Offset.zero;
+      }
+    }
+  }
+
   /// The nearest opponent of [ball] a gun can aim at (still in the match, not a ghost), or null.
   SimulationBall? _nearestTarget(SimulationBall ball) {
     SimulationBall? best;
@@ -1350,6 +1374,27 @@ class PowerUpSystem {
     }
   }
 
+  void _updateCustomDamageOverTime() {
+    for (final effect in _customDamageOverTime.toList()) {
+      if (!_alive(effect.owner) || !_alive(effect.target)) {
+        _customDamageOverTime.remove(effect);
+        continue;
+      }
+      effect.stepsLeft--;
+      effect.stepsUntilTick--;
+      if (effect.stepsUntilTick <= 0) {
+        _applyComposedEffect(
+          effect.owner,
+          effect.target,
+          effect.skill,
+          SkillEffectType.damage,
+        );
+        effect.stepsUntilTick = 30;
+      }
+      if (effect.stepsLeft <= 0) _customDamageOverTime.remove(effect);
+    }
+  }
+
   void _applyComposedEffect(
     SimulationBall owner,
     SimulationBall target,
@@ -1375,6 +1420,15 @@ class PowerUpSystem {
           );
           _showDamage(target, target.position, cut, 0);
         }
+      case SkillEffectType.damageOverTime:
+        _customDamageOverTime.add(
+          _CustomDamageOverTime(
+            owner: owner,
+            target: target,
+            skill: skill,
+            stepsLeft: ((skill.durationSeconds ?? 2) * 60).round(),
+          ),
+        );
       case SkillEffectType.heal:
         if (match.mode == MatchMode.arsenal) {
           target.life = math.min(
@@ -1382,18 +1436,45 @@ class PowerUpSystem {
             target.life + (skill.arsenalDamage ?? 10),
           );
         }
+      case SkillEffectType.shield:
+        target.goldenArmorHits = math.max(
+          target.goldenArmorHits,
+          skill.projectileCount ?? 1,
+        );
       case SkillEffectType.freeze:
         if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
         target.frozenLeft = ((skill.durationSeconds ?? 2) * 60).round();
         target.velocity = Offset.zero;
+      case SkillEffectType.stun:
+        if (target.stunnedLeft == 0) {
+          _stunnedVelocity[target] = target.velocity;
+        }
+        target.stunnedLeft = ((skill.durationSeconds ?? 2) * 60).round();
+        target.velocity = Offset.zero;
       case SkillEffectType.speed:
         target.speedLeft = ((skill.durationSeconds ?? 2) * 60).round();
+      case SkillEffectType.pull:
+        final toward = owner.position - target.position;
+        if (toward.distance > 0) {
+          target.velocity =
+              toward / toward.distance * match.arenaRadius * skill.knockback;
+        }
       case SkillEffectType.knockback:
         final away = target.position - owner.position;
         if (away.distance > 0) {
           target.velocity =
               away / away.distance * match.arenaRadius * skill.knockback;
         }
+      case SkillEffectType.teleport:
+        _teleport(target, target.position);
+      case SkillEffectType.equipCarrier:
+        if (skill.baseKind.isWeapon) {
+          target.equipWeapon(skill.baseKind, dualWield: match.dualWield);
+        }
+      case SkillEffectType.disarm:
+        target
+          ..held = null
+          ..heldSecondary = null;
       case null:
     }
   }
@@ -1433,7 +1514,10 @@ class PowerUpSystem {
         continue;
       }
       // A frozen ball can't shoot; a ghost is purely defensive, so it holds its aim until it's solid.
-      if (ball.frozenLeft > 0 || ball.stickyGooLeft > 0 || ball.isGhost) {
+      if (ball.frozenLeft > 0 ||
+          ball.stunnedLeft > 0 ||
+          ball.stickyGooLeft > 0 ||
+          ball.isGhost) {
         continue;
       }
       final bursting = ball.burstLeft > 0;
@@ -2353,6 +2437,7 @@ class PowerUpSystem {
     SimulationBall ball,
     String text, {
     CalloutStyle calloutStyle = CalloutStyle.normal,
+    CalloutBubble calloutBubble = CalloutBubble.shout,
   }) {
     match.state.floatingTexts.spawn(
       ball.position - Offset(0, ball.radius * 1.4),
@@ -2360,6 +2445,7 @@ class PowerUpSystem {
       ball.config.primaryColor,
       callout: true,
       calloutStyle: calloutStyle,
+      calloutBubble: calloutBubble,
     );
   }
 
@@ -2417,4 +2503,19 @@ class _ScheduledComposedEffect {
   final SkillDefinition skill;
   int repeatsLeft;
   int stepsLeft;
+}
+
+class _CustomDamageOverTime {
+  _CustomDamageOverTime({
+    required this.owner,
+    required this.target,
+    required this.skill,
+    required this.stepsLeft,
+  });
+
+  final SimulationBall owner;
+  final SimulationBall target;
+  final SkillDefinition skill;
+  int stepsLeft;
+  int stepsUntilTick = 30;
 }

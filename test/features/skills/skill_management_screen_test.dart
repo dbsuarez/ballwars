@@ -163,6 +163,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
     expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
+    expect(find.byKey(const ValueKey('skill-bubble-type')), findsOneWidget);
   });
 
   testWidgets('invalid composed combinations are explained and cannot save', (
@@ -179,9 +180,8 @@ void main() {
     );
     await tester.tap(find.text('Build skill'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.ensureVisible(find.byKey(const ValueKey('skill-trigger')));
     await tester.pumpAndSettle();
-
     await tester.tap(find.byKey(const ValueKey('skill-trigger')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('pickup').last);

@@ -29,7 +29,7 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 - [x] Deliver an instant, projectile, or area effect.
 - [x] Apply damage, healing, freeze, speed, or knockback.
 - [x] Preview item/impact rendering and sound.
-- [x] Customize yells with Normal, Rare, Epic, or Special callouts.
+- [x] Customize yells with Shout, Speech, Thought, or Radio bubbles and Normal, Rare, Epic, or Special styling.
 - [x] Preview damaging finishers.
 - [x] Restore editor defaults and show a settings guide.
 - [x] Use stable IDs and deterministic seeded execution.
@@ -40,7 +40,7 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 - [ ] Add timer, damage-taken, and elimination triggers.
 - [ ] Add chosen-direction and arena-location targeting.
 - [ ] Add beam, aura, orbit, and boundary-hazard delivery.
-- [ ] Add DoT, shield, pull, teleport, stun, and equipment effects.
+- [x] Add DoT, shield, pull, teleport, stun, and equipment effects.
 - [x] Add repeat count and repeat interval.
 - [ ] Add start delay, DoT tick interval, and cooldown.
 - [ ] Add configurable colors and screen shake.

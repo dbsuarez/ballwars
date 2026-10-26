@@ -169,6 +169,83 @@ void main() {
     expect(target.life, _life - 21);
   });
 
+  test('advanced composed effects execute in live simulation', () {
+    SkillLibrary libraryFor(
+      SkillEffectType effect, {
+      PowerUpKind carrier = PowerUpKind.apple,
+      SkillTargeting targeting = SkillTargeting.allOpponents,
+    }) {
+      final draft = SkillLibrary.defaults
+          .create('Advanced Effect', carrier)
+          .copyWith(
+            enabled: true,
+            trigger: SkillTrigger.pickup,
+            targeting: targeting,
+            delivery: SkillDelivery.instant,
+            effectType: effect,
+            arsenalDamage: 6,
+            durationSeconds: 1,
+            projectileCount: 2,
+            knockback: 1,
+          );
+      return SkillLibrary.defaults.withDefinition(
+        draft,
+        PowerUpConfig.defaults,
+      );
+    }
+
+    final dot = _match(
+      skillLibrary: libraryFor(SkillEffectType.damageOverTime),
+    );
+    _give(dot, dot.state.balls.first, PowerUpKind.apple);
+    _run(dot, 30);
+    expect(dot.state.balls.last.life, _life - 6);
+
+    final shield = _match(
+      skillLibrary: libraryFor(
+        SkillEffectType.shield,
+        targeting: SkillTargeting.self,
+      ),
+    );
+    _give(shield, shield.state.balls.first, PowerUpKind.apple);
+    expect(shield.state.balls.first.goldenArmorHits, 2);
+
+    final pull = _match(skillLibrary: libraryFor(SkillEffectType.pull));
+    _give(pull, pull.state.balls.first, PowerUpKind.apple);
+    expect(pull.state.balls.last.velocity.dx, lessThan(0));
+
+    final teleport = _match(skillLibrary: libraryFor(SkillEffectType.teleport));
+    final teleportTarget = teleport.state.balls.last;
+    final beforeTeleport = teleportTarget.position;
+    _give(teleport, teleport.state.balls.first, PowerUpKind.apple);
+    expect(teleportTarget.position, isNot(beforeTeleport));
+
+    final stun = _match(skillLibrary: libraryFor(SkillEffectType.stun));
+    _give(stun, stun.state.balls.first, PowerUpKind.apple);
+    expect(stun.state.balls.last.stunnedLeft, 59);
+    expect(stun.state.balls.last.velocity, Offset.zero);
+
+    final equip = _match(
+      skillLibrary: libraryFor(
+        SkillEffectType.equipCarrier,
+        carrier: PowerUpKind.pistol,
+        targeting: SkillTargeting.self,
+      ),
+    );
+    _give(equip, equip.state.balls.first, PowerUpKind.pistol);
+    expect(equip.state.balls.first.held, PowerUpKind.pistol);
+
+    final disarm = _match(
+      skillLibrary: libraryFor(
+        SkillEffectType.disarm,
+        targeting: SkillTargeting.self,
+      ),
+    );
+    disarm.state.balls.first.held = PowerUpKind.shield;
+    _give(disarm, disarm.state.balls.first, PowerUpKind.apple);
+    expect(disarm.state.balls.first.equippedWeapons, isEmpty);
+  });
+
   test('frozen targets take configured extra damage and collision damage', () {
     final tuning = PowerUpConfig.defaults
         .withValue('frozenDamageMultiplier', 1.5)

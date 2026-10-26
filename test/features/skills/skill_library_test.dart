@@ -12,6 +12,25 @@ void main() {
       skills.map((skill) => skill.baseKind).toSet(),
       containsAll(PowerUpKind.values),
     );
+    expect(skills.every((skill) => skill.yell.isNotEmpty), isTrue);
+    expect(
+      SkillLibrary.defaults
+          .builtIn(PowerUpKind.rocketLauncher, PowerUpConfig.defaults)
+          .yell,
+      'TARGET LOCKED!',
+    );
+    expect(
+      SkillLibrary.defaults
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .bubbleType,
+      SkillBubbleType.shout,
+    );
+    expect(
+      SkillLibrary.defaults
+          .builtIn(PowerUpKind.apple, PowerUpConfig.defaults)
+          .bubbleType,
+      SkillBubbleType.speech,
+    );
   });
 
   test('built-in edits apply to live tuning and round-trip as JSON', () {
@@ -118,17 +137,36 @@ void main() {
     expect(skill.knockback, 10);
   });
 
+  test('older saved built-ins recover their real arena yell', () {
+    final pistol = SkillLibrary.defaults.builtIn(
+      PowerUpKind.pistol,
+      PowerUpConfig.defaults,
+    );
+    final json = pistol.toJson()..remove('yell');
+    final library = SkillLibrary.fromJson({
+      'version': 1,
+      'overrides': {'builtin.pistol': json},
+    });
+
+    expect(
+      library.builtIn(PowerUpKind.pistol, PowerUpConfig.defaults).yell,
+      'BANG!',
+    );
+  });
+
   test('composed chains and repeat timing round-trip and clamp', () {
     final skill = SkillLibrary.defaults
         .create('Stunning Shot', PowerUpKind.pistol)
         .copyWith(
           secondaryEffectType: SkillEffectType.freeze,
+          bubbleType: SkillBubbleType.speech,
           repeatCount: 99,
           repeatIntervalSeconds: 0,
         );
     final decoded = SkillDefinition.fromJson(skill.toJson())!;
 
     expect(decoded.secondaryEffectType, SkillEffectType.freeze);
+    expect(decoded.bubbleType, SkillBubbleType.speech);
     expect(decoded.repeatCount, 10);
     expect(decoded.repeatIntervalSeconds, 0.1);
     expect(decoded.compatibilityIssues, isEmpty);

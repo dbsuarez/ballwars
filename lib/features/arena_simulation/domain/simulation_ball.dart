@@ -67,6 +67,7 @@ class SimulationBall {
 
   int speedLeft = 0;
   int frozenLeft = 0;
+  int stunnedLeft = 0;
   int ghostLeft = 0;
   int flailLeft = 0;
   int repulsorLeft = 0;

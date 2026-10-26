@@ -412,7 +412,7 @@ class ArenaPainter extends CustomPainter {
     for (final text in state.floatingTexts.items) {
       final alpha = (text.opacity.clamp(0.0, 1.0) * 16).round() / 16;
       final key =
-          '${text.text}|${text.color.toARGB32()}|$alpha|${text.callout}|${text.calloutStyle.name}';
+          '${text.text}|${text.color.toARGB32()}|$alpha|${text.callout}|${text.calloutStyle.name}|${text.calloutBubble.name}';
       final calloutInk = switch (text.calloutStyle) {
         CalloutStyle.normal => const Color(0xFF111111),
         CalloutStyle.rare => const Color(0xFF0D47A1),
@@ -442,38 +442,99 @@ class ArenaPainter extends CustomPainter {
           CalloutStyle.epic => const Color(0xFFF1DEFF),
           CalloutStyle.special => const Color(0xFFFFE082),
         };
-        final bubble = RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            origin.dx - 8,
-            origin.dy - 5,
-            painter.width + 16,
-            painter.height + 10,
-          ),
-          Radius.circular(text.calloutStyle == CalloutStyle.epic ? 3 : 8),
+        final bubbleRect = Rect.fromLTWH(
+          origin.dx - 8,
+          origin.dy - 5,
+          painter.width + 16,
+          painter.height + 10,
         );
-        canvas.drawRRect(
-          bubble,
-          Paint()..color = bubbleColor.withValues(alpha: 0.96 * alpha),
-        );
-        canvas.drawRRect(
-          bubble,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = text.calloutStyle == CalloutStyle.special ? 4 : 2.5
-            ..color = calloutInk.withValues(alpha: alpha),
-        );
-        final tail = Path()
-          ..moveTo(text.position.dx - 7, bubble.bottom - 1)
-          ..lineTo(text.position.dx + 5, bubble.bottom - 1)
-          ..lineTo(text.position.dx - 2, bubble.bottom + 9)
-          ..close();
-        canvas.drawPath(
-          tail,
-          Paint()..color = calloutInk.withValues(alpha: alpha),
-        );
+        final fill = Paint()
+          ..color = bubbleColor.withValues(alpha: 0.96 * alpha);
+        final stroke = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = text.calloutStyle == CalloutStyle.special ? 4 : 2.5
+          ..color = calloutInk.withValues(alpha: alpha);
+        switch (text.calloutBubble) {
+          case CalloutBubble.shout:
+            final bubble = _shoutBubble(bubbleRect);
+            canvas
+              ..drawPath(bubble, fill)
+              ..drawPath(bubble, stroke);
+          case CalloutBubble.speech:
+            final bubble = RRect.fromRectAndRadius(
+              bubbleRect,
+              Radius.circular(text.calloutStyle == CalloutStyle.epic ? 3 : 8),
+            );
+            canvas
+              ..drawRRect(bubble, fill)
+              ..drawRRect(bubble, stroke);
+            final tail = Path()
+              ..moveTo(text.position.dx - 7, bubble.bottom - 1)
+              ..lineTo(text.position.dx + 5, bubble.bottom - 1)
+              ..lineTo(text.position.dx - 2, bubble.bottom + 9)
+              ..close();
+            canvas
+              ..drawPath(tail, fill)
+              ..drawPath(tail, stroke);
+          case CalloutBubble.thought:
+            canvas
+              ..drawOval(bubbleRect, fill)
+              ..drawOval(bubbleRect, stroke)
+              ..drawCircle(
+                Offset(bubbleRect.center.dx - 3, bubbleRect.bottom + 5),
+                3.5,
+                fill,
+              )
+              ..drawCircle(
+                Offset(bubbleRect.center.dx - 7, bubbleRect.bottom + 11),
+                2,
+                fill,
+              );
+          case CalloutBubble.radio:
+            final bubble = _radioBubble(bubbleRect);
+            canvas
+              ..drawPath(bubble, fill)
+              ..drawPath(bubble, stroke);
+        }
       }
       painter.paint(canvas, origin);
     }
+  }
+
+  Path _shoutBubble(Rect rect) {
+    final center = rect.center;
+    final path = Path();
+    const points = 24;
+    for (var i = 0; i < points; i++) {
+      final angle = -math.pi / 2 + i * math.pi * 2 / points;
+      final spike = i.isEven ? 1.16 : 1.0;
+      final point =
+          center +
+          Offset(
+            math.cos(angle) * rect.width / 2 * spike,
+            math.sin(angle) * rect.height / 2 * spike,
+          );
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    return path..close();
+  }
+
+  Path _radioBubble(Rect rect) {
+    const cut = 6.0;
+    return Path()
+      ..moveTo(rect.left + cut, rect.top)
+      ..lineTo(rect.right - cut, rect.top)
+      ..lineTo(rect.right, rect.top + cut)
+      ..lineTo(rect.right, rect.bottom - cut)
+      ..lineTo(rect.right - cut, rect.bottom)
+      ..lineTo(rect.left + cut, rect.bottom)
+      ..lineTo(rect.left, rect.bottom - cut)
+      ..lineTo(rect.left, rect.top + cut)
+      ..close();
   }
 
   @override

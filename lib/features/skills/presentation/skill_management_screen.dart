@@ -369,6 +369,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillEffectType? _effectType = widget.skill.effectType;
   late SkillEffectType? _secondaryEffectType = widget.skill.secondaryEffectType;
   late SkillCalloutStyle _calloutStyle = widget.skill.calloutStyle;
+  late SkillBubbleType _bubbleType = widget.skill.bubbleType;
   late final _yell = TextEditingController(text: widget.skill.yell);
   late final _sound = TextEditingController(text: widget.skill.soundCue);
 
@@ -423,6 +424,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _effectType = defaults.effectType;
       _secondaryEffectType = defaults.secondaryEffectType;
       _calloutStyle = defaults.calloutStyle;
+      _bubbleType = defaults.bubbleType;
       _sound.text = defaults.soundCue;
       _yell.text = defaults.yell;
       number('arsenal', defaults.arsenalDamage);
@@ -502,10 +504,10 @@ class _SkillEditorState extends State<_SkillEditor> {
           'TRIGGER decides when the behavior runs: on pickup, after aiming and firing, or when colliding with another ball.\n\n'
           'TARGETING chooses the owner, nearest opponent, or every opponent.\n\n'
           'DELIVERY chooses an immediate effect, a traveling projectile, or an area effect.\n\n'
-          'EFFECT decides what happens: damage, healing, freezing, speed, or knockback. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects.\n\n'
+          'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
           'SECONDARY EFFECT runs immediately after the primary effect. REPEAT COUNT includes the first activation; the interval controls the pause between later activations.\n\n'
           'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
-          'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball.',
+          'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball. BUBBLE SHAPE offers Shout for attacks, Speech for recovery, Thought for quiet or psychic skills, and Radio for tech or command skills.',
         ),
       ),
       actions: [
@@ -545,6 +547,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       repeatIntervalSeconds: _double('repeatInterval'),
       yell: _yell.text,
       calloutStyle: _calloutStyle,
+      bubbleType: _bubbleType,
     );
   }
 
@@ -608,6 +611,7 @@ class _SkillEditorState extends State<_SkillEditor> {
               _CalloutPreview(
                 text: _yell.text.trim().isEmpty ? 'BANG!' : _yell.text.trim(),
                 style: _calloutStyle,
+                bubbleType: _bubbleType,
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<SkillCalloutStyle>(
@@ -618,6 +622,31 @@ class _SkillEditorState extends State<_SkillEditor> {
                     DropdownMenuItem(value: style, child: Text(style.name)),
                 ],
                 onChanged: (value) => setState(() => _calloutStyle = value!),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<SkillBubbleType>(
+                key: const ValueKey('skill-bubble-type'),
+                initialValue: _bubbleType,
+                decoration: const InputDecoration(labelText: 'Bubble shape'),
+                items: const [
+                  DropdownMenuItem(
+                    value: SkillBubbleType.shout,
+                    child: Text('Shout - attacks'),
+                  ),
+                  DropdownMenuItem(
+                    value: SkillBubbleType.speech,
+                    child: Text('Speech - recovery'),
+                  ),
+                  DropdownMenuItem(
+                    value: SkillBubbleType.thought,
+                    child: Text('Thought - quiet or psychic'),
+                  ),
+                  DropdownMenuItem(
+                    value: SkillBubbleType.radio,
+                    child: Text('Radio - tech or command'),
+                  ),
+                ],
+                onChanged: (value) => setState(() => _bubbleType = value!),
               ),
               const SizedBox(height: 12),
               if (widget.skill.custom)
@@ -675,7 +704,15 @@ class _SkillEditorState extends State<_SkillEditor> {
                     for (final value in SkillEffectType.values)
                       DropdownMenuItem(value: value, child: Text(value.name)),
                   ],
-                  onChanged: (value) => setState(() => _effectType = value),
+                  onChanged: (value) => setState(() {
+                    final wasRecovery = _effectType == SkillEffectType.heal;
+                    _effectType = value;
+                    if (value == SkillEffectType.heal && !wasRecovery) {
+                      _bubbleType = SkillBubbleType.speech;
+                    } else if (value != SkillEffectType.heal && wasRecovery) {
+                      _bubbleType = SkillBubbleType.shout;
+                    }
+                  }),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -869,9 +906,14 @@ class _SkillEditorState extends State<_SkillEditor> {
 }
 
 class _CalloutPreview extends StatelessWidget {
-  const _CalloutPreview({required this.text, required this.style});
+  const _CalloutPreview({
+    required this.text,
+    required this.style,
+    required this.bubbleType,
+  });
   final String text;
   final SkillCalloutStyle style;
+  final SkillBubbleType bubbleType;
 
   @override
   Widget build(BuildContext context) {
@@ -901,7 +943,15 @@ class _CalloutPreview extends StatelessWidget {
             width: style == SkillCalloutStyle.special ? 4 : 2.5,
           ),
           borderRadius: BorderRadius.circular(
-            style == SkillCalloutStyle.epic ? 4 : 12,
+            bubbleType == SkillBubbleType.shout
+                ? 2
+                : bubbleType == SkillBubbleType.thought
+                ? 28
+                : bubbleType == SkillBubbleType.radio
+                ? 0
+                : style == SkillCalloutStyle.epic
+                ? 4
+                : 12,
           ),
           boxShadow: style == SkillCalloutStyle.special
               ? const [BoxShadow(color: Color(0x88FF6D00), blurRadius: 10)]

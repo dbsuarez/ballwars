@@ -261,43 +261,55 @@ class SupabaseAdminAuth implements AdminAuth {
 
   static const String _sessionKey = 'admin-session';
   static const String _rememberKey = 'admin-remember-me';
-  Future<void>? _restored;
+  late final Future<void> _restored;
   bool _rememberSession = false;
 
   SupabaseAdminAuth() {
+    _restored = _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // Read the durable choice before listening to auth events. A standalone
+    // Supabase client can emit an initial-session event immediately; the old
+    // ordering handled that while `_rememberSession` was still false and
+    // replaced a valid saved session with an empty value on hard refresh.
+    _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
+    final saved = _rememberSession ? await DevicePrefs.read(_sessionKey) : null;
+
+    if (!_rememberSession) {
+      await DevicePrefs.write(_sessionKey, '');
+    } else if (saved != null && saved.isNotEmpty) {
+      try {
+        await client.auth.recoverSession(saved);
+      } on AuthException catch (error) {
+        // Retryable network/server failures must not erase a remembered
+        // session. Only a definitively rejected token should clear it.
+        if (const {
+          '400',
+          '401',
+          '403',
+        }.contains(error.statusCode?.toString())) {
+          await DevicePrefs.write(_sessionKey, '');
+        }
+      } catch (_) {
+        // Offline: keep it for next time.
+      }
+    }
+
+    // Subscribe only after recovery. Otherwise the client's initial signed-out
+    // event can clear the stored token before recoverSession gets to read it.
     client.auth.onAuthStateChange.listen((state) {
       final session = state.session;
       if (state.event == AuthChangeEvent.signedOut) {
         DevicePrefs.write(_sessionKey, '');
-      } else if (session != null) {
-        DevicePrefs.write(
-          _sessionKey,
-          _rememberSession ? jsonEncode(session.toJson()) : '',
-        );
+      } else if (session != null && _rememberSession) {
+        DevicePrefs.write(_sessionKey, jsonEncode(session.toJson()));
       }
     }, onError: (Object _) {});
   }
 
   /// Brings back the saved admin session (once).
-  Future<void> _restore() => _restored ??= () async {
-    _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
-    if (!_rememberSession) {
-      await DevicePrefs.write(_sessionKey, '');
-      return;
-    }
-    final saved = await DevicePrefs.read(_sessionKey);
-    if (saved == null || saved.isEmpty) return;
-    try {
-      await client.auth.recoverSession(saved);
-    } on AuthException catch (error) {
-      // Retryable network/server failures must not erase a remembered session.
-      if (const {'400', '401', '403'}.contains(error.statusCode?.toString())) {
-        await DevicePrefs.write(_sessionKey, '');
-      }
-    } catch (_) {
-      // Offline: keep it for next time.
-    }
-  }();
+  Future<void> _restore() => _restored;
 
   @override
   String? get email => client.auth.currentUser?.email;

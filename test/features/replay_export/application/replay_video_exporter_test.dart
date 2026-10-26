@@ -9,8 +9,18 @@ import 'package:ballwars/features/replay_export/application/replay_video_exporte
 import 'package:ballwars/features/replay_export/data/video_encoder.dart';
 
 const _balls = [
-  CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.pink),
-  CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.cyan),
+  CustomBall(
+    id: 'a',
+    name: 'A',
+    primaryColor: Colors.red,
+    glowColor: Colors.pink,
+  ),
+  CustomBall(
+    id: 'b',
+    name: 'B',
+    primaryColor: Colors.blue,
+    glowColor: Colors.cyan,
+  ),
 ];
 
 class _FakeEncoder implements VideoEncoder {
@@ -20,7 +30,11 @@ class _FakeEncoder implements VideoEncoder {
   bool cancelled = false;
 
   @override
-  Future<void> start({required int width, required int height, required int fps}) async {
+  Future<void> start({
+    required int width,
+    required int height,
+    required int fps,
+  }) async {
     this.width = width;
     this.height = height;
     this.fps = fps;
@@ -42,9 +56,32 @@ class _FakeEncoder implements VideoEncoder {
   Future<void> cancel() async => cancelled = true;
 }
 
+class _FakeAudioEncoder extends _FakeEncoder implements AudioVideoEncoder {
+  Uint8List? audio;
+  int? audioRate;
+
+  @override
+  Future<void> startWithAudio({
+    required int width,
+    required int height,
+    required int fps,
+    required Uint8List pcm16le,
+    required int sampleRate,
+  }) async {
+    this.width = width;
+    this.height = height;
+    this.fps = fps;
+    audio = pcm16le;
+    audioRate = sampleRate;
+  }
+}
+
 // Skips GPU rasterization; the encoder only checks the byte count.
-Future<Uint8List> _fakeRasterize(ui.Picture picture, int width, int height) async =>
-    Uint8List(width * height * 4);
+Future<Uint8List> _fakeRasterize(
+  ui.Picture picture,
+  int width,
+  int height,
+) async => Uint8List(width * height * 4);
 
 /// Frames a live match takes at [fps], played to the end.
 int _matchFrames(int seed, int fps) {
@@ -58,41 +95,64 @@ int _matchFrames(int seed, int fps) {
 }
 
 void main() {
-  test('renders every match frame, the final hold and the winner card, then finishes', () async {
-    final encoder = _FakeEncoder();
-    final progress = <double>[];
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    final path = await ReplayVideoExporter(encoder: encoder, rasterize: _fakeRasterize).export(
-      contestants: _balls,
-      seed: 4,
-      arenaRadius: 260,
-      onProgress: progress.add,
-    );
+  test('mixes selected replay audio into an audio-capable encoder', () async {
+    final encoder = _FakeAudioEncoder();
+    await ReplayVideoExporter(
+      encoder: encoder,
+      rasterize: _fakeRasterize,
+    ).export(contestants: _balls, seed: 4, arenaRadius: 260, includeSfx: true);
 
-    const fps = ReplayVideoExporter.fps;
-    final expected = _matchFrames(4, fps) +
-        1 +
-        (ReplayVideoExporter.finalHoldSeconds * fps).round() +
-        (ReplayVideoExporter.finisherSeconds * fps).round() +
-        (ReplayVideoExporter.loserSeconds * fps).round() +
-        (ReplayVideoExporter.winnerCardSeconds * fps).round();
-    expect(path, '/tmp/replay.mp4');
-    expect(encoder.finished, isTrue);
-    expect((encoder.width, encoder.height, encoder.fps), (720, 1280, 30));
-    expect(encoder.frames, expected);
-    expect(progress.last, 1.0);
+    expect(encoder.audioRate, 22050);
+    expect(encoder.audio, isNotNull);
+    expect(encoder.audio!, isNot(everyElement(0)));
   });
+
+  test(
+    'renders every match frame, the final hold and the winner card, then finishes',
+    () async {
+      final encoder = _FakeEncoder();
+      final progress = <double>[];
+
+      final path =
+          await ReplayVideoExporter(
+            encoder: encoder,
+            rasterize: _fakeRasterize,
+          ).export(
+            contestants: _balls,
+            seed: 4,
+            arenaRadius: 260,
+            onProgress: progress.add,
+          );
+
+      const fps = ReplayVideoExporter.fps;
+      final expected =
+          _matchFrames(4, fps) +
+          1 +
+          (ReplayVideoExporter.finalHoldSeconds * fps).round() +
+          (ReplayVideoExporter.finisherSeconds * fps).round() +
+          (ReplayVideoExporter.loserSeconds * fps).round() +
+          (ReplayVideoExporter.winnerCardSeconds * fps).round();
+      expect(path, '/tmp/replay.mp4');
+      expect(encoder.finished, isTrue);
+      expect((encoder.width, encoder.height, encoder.fps), (720, 1280, 30));
+      expect(encoder.frames, expected);
+      expect(progress.last, 1.0);
+    },
+  );
 
   test('cancelling stops the export and discards the video', () async {
     final encoder = _FakeEncoder();
     var calls = 0;
 
-    final export = ReplayVideoExporter(encoder: encoder, rasterize: _fakeRasterize).export(
-      contestants: _balls,
-      seed: 4,
-      arenaRadius: 260,
-      isCancelled: () => ++calls > 10,
-    );
+    final export =
+        ReplayVideoExporter(encoder: encoder, rasterize: _fakeRasterize).export(
+          contestants: _balls,
+          seed: 4,
+          arenaRadius: 260,
+          isCancelled: () => ++calls > 10,
+        );
 
     await expectLater(export, throwsA(isA<ExportCancelled>()));
     expect(encoder.frames, 10);
@@ -100,22 +160,29 @@ void main() {
     expect(encoder.finished, isFalse);
   });
 
-  test('a replay ends exactly like the live match, whatever the frame rate', () {
-    for (final seed in [1, 2, 3, 4, 5]) {
-      MatchSimulationController play(double frameDelta) {
-        final c = MatchSimulationController(_balls, arenaRadius: 260, seed: seed);
-        while (c.state.status != MatchStatus.finished) {
-          c.tick(frameDelta);
+  test(
+    'a replay ends exactly like the live match, whatever the frame rate',
+    () {
+      for (final seed in [1, 2, 3, 4, 5]) {
+        MatchSimulationController play(double frameDelta) {
+          final c = MatchSimulationController(
+            _balls,
+            arenaRadius: 260,
+            seed: seed,
+          );
+          while (c.state.status != MatchStatus.finished) {
+            c.tick(frameDelta);
+          }
+          return c;
         }
-        return c;
-      }
 
-      final live = play(1 / 144); // a fast phone screen
-      final video = play(1 / ReplayVideoExporter.fps);
-      expect(video.state.winnerId, live.state.winnerId);
-      for (var i = 0; i < live.state.balls.length; i++) {
-        expect(video.state.balls[i].position, live.state.balls[i].position);
+        final live = play(1 / 144); // a fast phone screen
+        final video = play(1 / ReplayVideoExporter.fps);
+        expect(video.state.winnerId, live.state.winnerId);
+        for (var i = 0; i < live.state.balls.length; i++) {
+          expect(video.state.balls[i].position, live.state.balls[i].position);
+        }
       }
-    }
-  });
+    },
+  );
 }

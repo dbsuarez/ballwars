@@ -12,6 +12,7 @@ import '../data/video_encoder.dart';
 import 'replay_frame_painter.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../../core/widgets/screen_awake.dart';
+import '../../../core/audio/game_audio.dart';
 import '../../settings/domain/app_settings.dart';
 
 /// Exports a finished match as a video, saves it to the gallery and offers
@@ -148,10 +149,12 @@ class ExportVideoDialog extends StatefulWidget {
   State<ExportVideoDialog> createState() => _ExportVideoDialogState();
 }
 
-enum _Phase { exporting, saved, failed }
+enum _Phase { options, exporting, saved, failed }
 
 class _ExportVideoDialogState extends State<ExportVideoDialog> {
-  _Phase _phase = _Phase.exporting;
+  _Phase _phase = _Phase.options;
+  bool _includeBgm = true;
+  bool _includeSfx = true;
   double _progress = 0;
   bool _cancelled = false;
   String? _savedVideo;
@@ -162,6 +165,10 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
   @override
   void initState() {
     super.initState();
+  }
+
+  void _startExport() {
+    setState(() => _phase = _Phase.exporting);
     _elapsed.start();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && _phase == _Phase.exporting) setState(() {});
@@ -199,6 +206,11 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         shrinkingArena: widget.shrinkingArena,
         minimumArenaScale: widget.minimumArenaScale,
         finishersEnabled: widget.finishersEnabled,
+        includeBgm: _includeBgm,
+        includeSfx: _includeSfx,
+        bgmAsset: 'assets/${GameAudio.instance.track.asset}',
+        bgmLevel: GameAudio.instance.musicLevel,
+        sfxLevel: GameAudio.instance.effectsLevel,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {
@@ -232,6 +244,46 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
 
   Widget _buildDialog(BuildContext context) {
     switch (_phase) {
+      case _Phase.options:
+        return AlertDialog(
+          title: const Text('SAVE VIDEO'),
+          content: StatefulBuilder(
+            builder: (context, update) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Include audio in this replay?'),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Background music'),
+                  value: _includeBgm,
+                  onChanged: (value) => update(
+                    () => setState(() => _includeBgm = value ?? false),
+                  ),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Sound effects'),
+                  value: _includeSfx,
+                  onChanged: (value) => update(
+                    () => setState(() => _includeSfx = value ?? false),
+                  ),
+                ),
+                const Text(
+                  'Player controls are never shown in the saved replay.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(onPressed: _startExport, child: const Text('START')),
+          ],
+        );
       case _Phase.exporting:
         return AlertDialog(
           title: const Text('SAVING VIDEO'),

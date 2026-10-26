@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../../core/audio/game_audio.dart';
+import '../../../core/audio/audio_channel_button.dart';
 import '../../../core/offline/device_prefs.dart';
 import '../../arena_simulation/presentation/finisher_profile.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
@@ -75,7 +76,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   final List<PowerUpKind?> _secondaryWeapons = [null, PowerUpKind.shield];
   final List<PowerUpKind?> _powerUps = [null, null];
   final List<PowerUpKind?> _arenaTraps = [
-    ...PowerUpKind.values.where((kind) => kind.isTrap),
+    ...PowerUpKind.values.where((kind) => kind.isTrap).take(3),
   ];
   final _pickerTabs = [0, 0];
 
@@ -443,8 +444,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     }
   }
 
-  Future<void> _previewFinisher(int index) async {
-    final kind = _savedItems[index];
+  Future<void> _previewFinisher(int index, [PowerUpKind? selected]) async {
+    final kind = selected ?? _savedItems[index];
     if (kind == null) return;
     setState(() {
       _paused = true;
@@ -502,47 +503,67 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   Widget _itemPreview(int index) {
-    final item = _savedItems[index];
+    final items = <PowerUpKind?>[
+      _savedItems[index],
+      _secondaryWeapons[index],
+      _powerUps[index],
+    ];
+    final slots = ['Weapon 1', 'Weapon 2', 'Power-up'];
+    return Row(
+      key: ValueKey('item-preview-$index'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var slot = 0; slot < items.length; slot++)
+          _finisherPreviewSlot(index, slot, slots[slot], items[slot]),
+      ],
+    );
+  }
+
+  Widget _finisherPreviewSlot(
+    int ballIndex,
+    int slot,
+    String slotLabel,
+    PowerUpKind? item,
+  ) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final cellSize = compact ? 36.0 : 42.0;
+    final enabled = item != null && item.dealsDamage(_match!.tuning);
+    final ball = ballIndex == 0 ? 'A' : 'B';
     final label = item == null
-        ? 'Ball ${index == 0 ? "A" : "B"}: no item'
-        : 'Preview ${item.label} finisher for Ball ${index == 0 ? "A" : "B"}';
+        ? 'Ball $ball $slotLabel: empty'
+        : enabled
+        ? 'Preview ${item.label} finisher for Ball $ball'
+        : '${item.label} has no finisher';
     return Tooltip(
       message: label,
       child: Semantics(
         label: label,
         button: true,
-        enabled: item != null,
+        enabled: enabled,
         child: InkWell(
-          key: ValueKey('item-preview-$index'),
-          onTap: item == null ? null : () => _previewFinisher(index),
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox.square(
-            dimension: 64,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                // A fixed frame and crosshairs make centering and bleed visible.
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _balls[index].primaryColor.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                Container(width: 1, height: 64, color: Colors.white12),
-                Container(width: 64, height: 1, color: Colors.white12),
-                if (item != null)
-                  PowerUpIcon(item, size: 48)
-                else
-                  const Icon(Icons.remove, color: Colors.white38),
-              ],
+          key: ValueKey('finisher-preview-$ballIndex-$slot'),
+          onTap: enabled ? () => _previewFinisher(ballIndex, item) : null,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: cellSize,
+            height: cellSize,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.72),
+              border: Border.all(
+                color: enabled
+                    ? _balls[ballIndex].primaryColor.withValues(alpha: 0.75)
+                    : Colors.white24,
+              ),
+              borderRadius: BorderRadius.circular(6),
             ),
+            alignment: Alignment.center,
+            child: item == null
+                ? const Icon(Icons.remove, size: 16, color: Colors.white24)
+                : Opacity(
+                    opacity: enabled ? 1 : 0.35,
+                    child: PowerUpIcon(item, size: compact ? 27 : 32),
+                  ),
           ),
         ),
       ),
@@ -935,26 +956,32 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     required String label,
     required PowerUpKind? item,
     required VoidCallback onTap,
-  }) => OutlinedButton(
-    key: key,
-    onPressed: onTap,
-    style: OutlinedButton.styleFrom(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
-    ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (item == null)
-          const Icon(Icons.add_circle_outline, size: 20)
-        else
-          PowerUpIcon(item, size: 22),
-        Text(
-          item?.label ?? label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 11),
+  }) => Tooltip(
+    message: item?.label ?? label,
+    child: Semantics(
+      label: item == null ? 'Choose $label' : '$label: ${item.label}',
+      button: true,
+      child: OutlinedButton(
+        key: key,
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
         ),
-      ],
+        child: item != null
+            ? PowerUpIcon(item, size: 30)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_circle_outline, size: 20),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ],
+              ),
+      ),
     ),
   );
 
@@ -1045,106 +1072,16 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  Widget _audioToggle(String channel) {
-    final music = channel == 'BGM';
-    final effects = channel == 'SFX';
-    final on = music
-        ? _audio.musicOn
-        : effects
-        ? _audio.effectsOn
-        : _audio.uxOn;
-    return IconButton(
-      key: ValueKey('audio-$channel'),
-      constraints: const BoxConstraints.tightFor(width: 38, height: 48),
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      tooltip: '$channel: ${on ? "on" : "off"}. Long press for volume.',
-      onPressed: () async {
-        if (music) {
-          // Start during the tap gesture, before waiting on preference storage.
-          // An explicit BGM preview also works while the simulation is paused.
-          final saved = _audio.setMusicOn(!on);
-          if (!on) _audio.startMusic();
-          setState(() {});
-          await saved;
-        } else if (effects) {
-          final saved = _audio.setEffectsOn(!on);
-          if (!on) _audio.click();
-          setState(() {});
-          await saved;
-        } else {
-          final saved = _audio.setUxOn(!on);
-          setState(() {});
-          await saved;
-        }
-        if (mounted) setState(() {});
-      },
-      onLongPress: () => _showVolume(channel),
-      icon: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            music
-                ? (on ? Icons.music_note : Icons.music_off)
-                : effects
-                ? (on ? Icons.volume_up : Icons.volume_off)
-                : (on ? Icons.touch_app : Icons.do_not_touch),
-            size: 20,
-          ),
-          Text(channel, style: const TextStyle(fontSize: 9)),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showVolume(String channel) async {
-    var value = channel == 'BGM'
-        ? _audio.musicLevel
-        : channel == 'SFX'
-        ? _audio.effectsLevel
-        : _audio.uxLevel;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, refresh) => AlertDialog(
-          title: Text('$channel volume'),
-          content: Row(
-            children: [
-              const Icon(Icons.volume_down),
-              Expanded(
-                child: Slider(
-                  value: value,
-                  divisions: 10,
-                  label: '${(value * 100).round()}%',
-                  onChanged: (next) => refresh(() => value = next),
-                ),
-              ),
-              Text('${(value * 100).round()}%'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (channel == 'BGM') await _audio.setMusicLevel(value);
-                if (channel == 'SFX') await _audio.setEffectsLevel(value);
-                if (channel == 'UX') await _audio.setUxLevel(value);
-                if (dialogContext.mounted) Navigator.pop(dialogContext);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (mounted) setState(() {});
-  }
-
   Widget _playback() {
     final match = _match!;
     final finished = match.state.status == MatchStatus.finished;
+    const speeds = [0.5, 1.0, 2.0];
+    final nextSpeed = speeds[(speeds.indexOf(_speed) + 1) % speeds.length];
+    final playbackLabel = finished
+        ? 'Replay'
+        : _paused
+        ? 'Play'
+        : 'Pause';
     return SafeArea(
       top: false,
       child: Padding(
@@ -1153,71 +1090,47 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                IconButton.filled(
+                  key: const ValueKey('test-playback'),
+                  tooltip: playbackLabel,
+                  onPressed: _togglePlayback,
+                  icon: Icon(
+                    finished || _paused ? Icons.play_arrow : Icons.pause,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton.outlined(
+                  key: const ValueKey('test-reset'),
+                  tooltip: 'Reset Fight',
+                  onPressed: () => setState(_reset),
+                  icon: const Icon(Icons.restart_alt),
+                ),
+                const SizedBox(width: 10),
+                IconButton.outlined(
+                  key: const ValueKey('test-skip-frame'),
+                  tooltip: 'Skip Frame',
+                  onPressed: !_paused || finished
+                      ? null
+                      : () => setState(() {
+                          match.tick(
+                            MatchSimulationController.fixedTimestep /
+                                match.playbackSpeedUp,
+                          );
+                          _playTestSounds();
+                        }),
+                  icon: const Icon(Icons.skip_next),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                    ),
-                    onPressed: _togglePlayback,
-                    icon: Icon(
-                      finished || _paused ? Icons.play_arrow : Icons.pause,
-                    ),
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('test-speed'),
+                    onPressed: () => setState(() => _speed = nextSpeed),
+                    icon: const Icon(Icons.speed, size: 18),
                     label: Text(
-                      finished
-                          ? 'Replay'
-                          : _paused
-                          ? 'Play'
-                          : 'Pause',
+                      '${_speed == _speed.roundToDouble() ? _speed.toInt() : _speed}×',
                     ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                    ),
-                    onPressed: () => setState(_reset),
-                    icon: const Icon(Icons.restart_alt),
-                    label: const Text('Reset Fight'),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                    ),
-                    onPressed: !_paused || finished
-                        ? null
-                        : () => setState(() {
-                            match.tick(
-                              MatchSimulationController.fixedTimestep /
-                                  match.playbackSpeedUp,
-                            );
-                            _playTestSounds();
-                          }),
-                    icon: const Icon(Icons.skip_next),
-                    label: const Text('Skip Frame'),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: DropdownButtonFormField<double>(
-                    initialValue: _speed,
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.speed, size: 18),
-                      isDense: true,
-                    ),
-                    items: [
-                      for (final speed in [0.25, 0.5, 1.0, 2.0])
-                        DropdownMenuItem(
-                          value: speed,
-                          child: Text('${speed}x'),
-                        ),
-                    ],
-                    onChanged: (value) => setState(() => _speed = value!),
                   ),
                 ),
               ],
@@ -1250,9 +1163,18 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             overflow: TextOverflow.ellipsis,
           ),
           actions: [
-            _audioToggle('BGM'),
-            _audioToggle('SFX'),
-            _audioToggle('UX'),
+            const AudioChannelButton(
+              key: ValueKey('audio-BGM'),
+              channel: AudioChannel.bgm,
+            ),
+            const AudioChannelButton(
+              key: ValueKey('audio-SFX'),
+              channel: AudioChannel.sfx,
+            ),
+            const AudioChannelButton(
+              key: ValueKey('audio-UX'),
+              channel: AudioChannel.ux,
+            ),
             IconButton(
               tooltip: 'Fight setup',
               onPressed: _showSetup,
@@ -1279,16 +1201,21 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                   ],
                 );
               }
-              return Column(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
+              return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // The arena itself receives a full phone-width square;
+                    // status and motion controls get their own space below it.
+                    // The remaining loadout controls may scroll instead of
+                    // forcing the arena to shrink to the leftover height.
+                    SizedBox(
+                      height: bounds.maxWidth + 184,
+                      width: bounds.maxWidth,
                       child: _arena(),
                     ),
-                  ),
-                  _controls(),
-                ],
+                    _controls(),
+                  ],
+                ),
               );
             },
           ),

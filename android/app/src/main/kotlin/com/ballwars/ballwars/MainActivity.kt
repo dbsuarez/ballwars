@@ -46,6 +46,8 @@ class MainActivity : FlutterActivity() {
                     call.argument<Int>("width")!!,
                     call.argument<Int>("height")!!,
                     call.argument<Int>("fps")!!,
+                    call.argument<ByteArray>("audioPcm"),
+                    call.argument<Int>("audioSampleRate") ?: 0,
                 )
                 null
             }

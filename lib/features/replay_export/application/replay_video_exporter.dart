@@ -10,6 +10,7 @@ import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
 import '../data/video_encoder.dart';
 import '../presentation/replay_frame_painter.dart';
+import 'replay_audio_mixer.dart';
 
 /// Renders a picture into `width * height * 4` bytes of RGBA.
 typedef FrameRasterizer =
@@ -81,6 +82,11 @@ class ReplayVideoExporter {
     double minimumArenaScale = 0.60,
     ReplayStyle style = const ReplayStyle(),
     bool finishersEnabled = true,
+    bool includeBgm = false,
+    bool includeSfx = false,
+    String bgmAsset = 'assets/sounds/bgm_arena.wav',
+    double bgmLevel = 1,
+    double sfxLevel = 0.9,
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
   }) async {
@@ -110,11 +116,14 @@ class ReplayVideoExporter {
 
     // Dry run (no rendering) to know the total frame count for progress.
     final dryRun = newMatch();
+    final audioEvents = <ReplaySoundEvent>[];
+    final audioRecorder = _ReplaySoundRecorder(audioEvents);
     var matchFrames = 0;
     while (dryRun.state.status != MatchStatus.finished &&
         matchFrames < maxMatchFrames) {
       dryRun.tick(frameDelta);
       matchFrames++;
+      audioRecorder.capture(dryRun, matchFrames / fps);
     }
     final holdFrames = (finalHoldSeconds * fps).round();
     final cardFrames = (winnerCardSeconds * fps).round();
@@ -130,10 +139,48 @@ class ReplayVideoExporter {
         loserFrames +
         cardFrames;
 
+    if (mayhem) {
+      audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'whistle', 0.8));
+    } else {
+      audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'out', 0.7));
+      if (!finishersEnabled) {
+        audioEvents.add(
+          ReplaySoundEvent(
+            (matchFrames + holdFrames + loserFrames) / fps,
+            'win',
+            0.85,
+          ),
+        );
+      }
+    }
+
+    ReplayAudio? audio;
+    if ((includeBgm || includeSfx) && encoder is AudioVideoEncoder) {
+      audio = await ReplayAudioMixer.mix(
+        durationSeconds: totalFrames / fps,
+        includeBgm: includeBgm,
+        includeSfx: includeSfx,
+        bgmAsset: bgmAsset,
+        bgmLevel: bgmLevel,
+        sfxLevel: sfxLevel,
+        events: audioEvents,
+      );
+    }
+
     final match = newMatch();
     await match.preloadImages();
     if (mode != MatchMode.threads) await PowerUpSprites.load();
-    await encoder.start(width: width, height: height, fps: fps);
+    if (audio != null) {
+      await (encoder as AudioVideoEncoder).startWithAudio(
+        width: width,
+        height: height,
+        fps: fps,
+        pcm16le: audio.pcm16le,
+        sampleRate: audio.sampleRate,
+      );
+    } else {
+      await encoder.start(width: width, height: height, fps: fps);
+    }
 
     var written = 0;
     // Seconds into the video for the frame being drawn (moves the watermark).
@@ -250,6 +297,94 @@ class ReplayVideoExporter {
     } catch (_) {
       await encoder.cancel();
       rethrow;
+    }
+  }
+}
+
+class _ReplaySoundRecorder {
+  _ReplaySoundRecorder(this.events);
+
+  final List<ReplaySoundEvent> events;
+  int wallHits = 0;
+  int ballHits = 0;
+  int threadCuts = 0;
+  int knockouts = 0;
+  int shots = 0;
+  int gatling = 0;
+  int hits = 0;
+  int slashes = 0;
+  int blocks = 0;
+  int blasts = 0;
+  int pickups = 0;
+  final Map<String, int> interactions = {};
+  final Map<String, int> skillSounds = {};
+
+  void capture(MatchSimulationController match, double seconds) {
+    void changed(int current, int previous, String cue, [double gain = 1]) {
+      if (current > previous) events.add(ReplaySoundEvent(seconds, cue, gain));
+    }
+
+    changed(match.wallHits, wallHits, 'bounce', 0.45);
+    changed(match.ballHits, ballHits, 'collide', 0.6);
+    changed(match.threadCuts, threadCuts, 'slash', 0.55);
+    changed(match.knockouts, knockouts, 'out', 0.7);
+    wallHits = match.wallHits;
+    ballHits = match.ballHits;
+    threadCuts = match.threadCuts;
+    knockouts = match.knockouts;
+
+    final powerUps = match.powerUps;
+    if (powerUps == null) return;
+    changed(powerUps.gatlingShots, gatling, 'gatling', 0.5);
+    if (powerUps.gatlingShots == gatling) {
+      changed(
+        powerUps.shots,
+        shots,
+        powerUps.shots - shots >= 5 ? 'shotgun' : 'shot',
+        0.55,
+      );
+    }
+    changed(powerUps.hits, hits, 'hit', 0.5);
+    changed(powerUps.slashes, slashes, 'slash', 0.55);
+    changed(powerUps.blocks, blocks, 'shield', 0.5);
+    changed(powerUps.blasts, blasts, 'bomb', 0.75);
+    changed(powerUps.pickups, pickups, 'pickup', 0.5);
+    shots = powerUps.shots;
+    gatling = powerUps.gatlingShots;
+    hits = powerUps.hits;
+    slashes = powerUps.slashes;
+    blocks = powerUps.blocks;
+    blasts = powerUps.blasts;
+    pickups = powerUps.pickups;
+
+    for (final entry in powerUps.interactionSounds.entries) {
+      if (entry.value > (interactions[entry.key] ?? 0)) {
+        final cue = switch (entry.key) {
+          'warp' => 'pickup',
+          'freeze' || 'repel' => 'shield',
+          'cut' => 'slash',
+          'out' => 'out',
+          _ => 'hit',
+        };
+        events.add(ReplaySoundEvent(seconds, cue, 0.6));
+      }
+      interactions[entry.key] = entry.value;
+    }
+    for (final entry in powerUps.skillSounds.entries) {
+      if (entry.value > (skillSounds[entry.key] ?? 0) &&
+          const {
+            'shot',
+            'shotgun',
+            'gatling',
+            'slash',
+            'shield',
+            'bomb',
+            'pickup',
+            'hit',
+          }.contains(entry.key)) {
+        events.add(ReplaySoundEvent(seconds, entry.key, 0.6));
+      }
+      skillSounds[entry.key] = entry.value;
     }
   }
 }

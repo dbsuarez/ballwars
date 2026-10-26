@@ -29,6 +29,7 @@ import '../../replay_export/domain/replay_link.dart';
 import '../../replay_export/presentation/export_video_dialog.dart';
 import '../../replay_export/presentation/replay_frame_painter.dart';
 import '../../../core/audio/game_audio.dart';
+import '../../../core/audio/audio_channel_button.dart';
 import '../../settings/data/effects_prefs.dart';
 
 class ArenaBattleScreen extends StatefulWidget {
@@ -773,46 +774,24 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           ),
                         Positioned(
                           bottom: 0,
-                          right: 54,
-                          child: IconButton(
-                            tooltip: _audio.effectsOn ? 'SFX: on' : 'SFX: off',
-                            style: IconButton.styleFrom(
-                              backgroundColor: const Color(0xB3000000),
-                              side: const BorderSide(color: Colors.white54),
-                            ),
-                            icon: _ArenaAudioGlyph(
-                              key: const ValueKey('arena-sfx-icon'),
-                              music: false,
-                              on: _audio.effectsOn,
-                              color: Colors.white,
-                            ),
-                            onPressed: () {
-                              final on = !_audio.effectsOn;
-                              _audio.setEffectsOn(on);
-                              if (on) _audio.click();
-                              setState(() {});
-                            },
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
                           right: 0,
-                          child: IconButton(
-                            tooltip: _audio.musicOn ? 'BGM: on' : 'BGM: off',
-                            style: IconButton.styleFrom(
-                              backgroundColor: const Color(0xB3000000),
-                              side: const BorderSide(color: Colors.white54),
-                            ),
-                            icon: _ArenaAudioGlyph(
-                              key: const ValueKey('arena-bgm-icon'),
-                              music: true,
-                              on: _audio.musicOn,
-                              color: Colors.white,
-                            ),
-                            onPressed: () {
-                              _audio.setMusicOn(!_audio.musicOn);
-                              setState(() {});
-                            },
+                          child: const Row(
+                            children: [
+                              AudioChannelButton(
+                                key: ValueKey('arena-bgm-control'),
+                                channel: AudioChannel.bgm,
+                              ),
+                              SizedBox(width: 4),
+                              AudioChannelButton(
+                                key: ValueKey('arena-sfx-control'),
+                                channel: AudioChannel.sfx,
+                              ),
+                              SizedBox(width: 4),
+                              AudioChannelButton(
+                                key: ValueKey('arena-ux-control'),
+                                channel: AudioChannel.ux,
+                              ),
+                            ],
                           ),
                         ),
                         // Positioned like the arena: a non-positioned child would
@@ -1262,90 +1241,6 @@ class _SmileyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SmileyPainter old) => true;
-}
-
-/// Font-independent arena audio glyphs. Keeping these as canvas art prevents a
-/// missing Material icon font or stale web cache from producing empty buttons.
-class _ArenaAudioGlyph extends StatelessWidget {
-  const _ArenaAudioGlyph({
-    super.key,
-    required this.music,
-    required this.on,
-    this.color,
-  });
-
-  final bool music;
-  final bool on;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: const Size.square(22),
-    painter: _ArenaAudioGlyphPainter(
-      music: music,
-      on: on,
-      color: color ?? IconTheme.of(context).color ?? Colors.white,
-    ),
-  );
-}
-
-class _ArenaAudioGlyphPainter extends CustomPainter {
-  const _ArenaAudioGlyphPainter({
-    required this.music,
-    required this.on,
-    required this.color,
-  });
-
-  final bool music;
-  final bool on;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-    if (music) {
-      canvas.drawLine(const Offset(8, 5), const Offset(8, 16), paint);
-      canvas.drawLine(const Offset(8, 5), const Offset(17, 3), paint);
-      canvas.drawLine(const Offset(17, 3), const Offset(17, 14), paint);
-      canvas.drawOval(const Rect.fromLTWH(3, 14, 6, 4), paint);
-      canvas.drawOval(const Rect.fromLTWH(12, 12, 6, 4), paint);
-    } else {
-      final speaker = Path()
-        ..moveTo(3, 9)
-        ..lineTo(7, 9)
-        ..lineTo(12, 5)
-        ..lineTo(12, 17)
-        ..lineTo(7, 13)
-        ..lineTo(3, 13)
-        ..close();
-      canvas.drawPath(speaker, paint);
-      canvas.drawArc(
-        const Rect.fromLTWH(10, 7, 8, 8),
-        -math.pi / 3,
-        math.pi * 2 / 3,
-        false,
-        paint,
-      );
-    }
-    if (!on) {
-      final off = Paint()
-        ..color = color
-        ..strokeWidth = 2.8
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(const Offset(3, 3), const Offset(19, 19), off);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_ArenaAudioGlyphPainter oldDelegate) =>
-      oldDelegate.music != music ||
-      oldDelegate.on != on ||
-      oldDelegate.color != color;
 }
 
 /// The red X over the eliminated ball while it flashes (same as the video).

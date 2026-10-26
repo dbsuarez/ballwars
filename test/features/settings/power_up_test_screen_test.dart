@@ -46,7 +46,7 @@ void main() {
     await tester.pumpWidget(_app(false));
     await tester.pumpAndSettle();
     expect(find.text('Admin access required.'), findsOneWidget);
-    expect(find.text('Play'), findsNothing);
+    expect(find.byTooltip('Play'), findsNothing);
   });
 
   testWidgets('admin can equip an item and watch, pause and reset the fight', (
@@ -58,15 +58,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('power-test-item-apple')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Play'));
-    await tester.tap(find.text('Play'));
+    await tester.ensureVisible(find.byTooltip('Play'));
+    await tester.tap(find.byTooltip('Play'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Pause'), findsOneWidget);
-    await tester.tap(find.text('Pause'));
+    expect(find.byTooltip('Pause'), findsOneWidget);
+    await tester.tap(find.byTooltip('Pause'));
     await tester.pump();
-    expect(find.text('Play'), findsOneWidget);
-    await tester.tap(find.text('Reset Fight'));
+    expect(find.byTooltip('Play'), findsOneWidget);
+    await tester.tap(find.byTooltip('Reset Fight'));
     await tester.pump();
     expect(find.text('Paused - 0.0 s'), findsOneWidget);
     final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
@@ -90,7 +90,7 @@ void main() {
     expect(find.byKey(const ValueKey('clear-loadout-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('rearm-all-arena-traps')), findsOneWidget);
     expect(find.byKey(const ValueKey('clear-all-arena-traps')), findsOneWidget);
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 3; i++) {
       expect(find.byKey(ValueKey('choose-arena-trap-$i')), findsOneWidget);
       expect(find.byKey(ValueKey('rearm-arena-trap-$i')), findsOneWidget);
       expect(find.byKey(ValueKey('clear-arena-trap-$i')), findsOneWidget);
@@ -121,7 +121,7 @@ void main() {
   });
 
   testWidgets(
-    'phone keeps playback and freeze controls visible while selecting an item',
+    'phone gives the arena full width and keeps controls available by scrolling',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -133,7 +133,11 @@ void main() {
       final motionB = find.byKey(const ValueKey('motion-B'));
       expect(motionA.hitTestable(), findsOneWidget);
       expect(motionB.hitTestable(), findsOneWidget);
-      expect(find.text('Play').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(ArenaCanvas)).width,
+        greaterThanOrEqualTo(385),
+      );
       final movingVelocity = tester
           .widget<ArenaCanvas>(find.byType(ArenaCanvas))
           .state
@@ -156,15 +160,15 @@ void main() {
       );
       await tester.pump();
       expect(tester.takeException(), isNull);
-      expect(
-        find.byKey(const ValueKey('choose-item-0')).hitTestable(),
-        findsOneWidget,
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('choose-item-1')),
+        260,
+        scrollable: find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        ),
       );
-      expect(
-        find.byKey(const ValueKey('choose-item-1')).hitTestable(),
-        findsOneWidget,
-      );
-      expect(find.byType(Scrollable), findsNothing);
       await tester.tap(find.byKey(const ValueKey('choose-item-1')));
       await tester.pumpAndSettle();
       expect(find.text('Weapons'), findsOneWidget);
@@ -174,12 +178,11 @@ void main() {
       expect(find.text('Shotgun'), findsOneWidget);
       await tester.tap(find.text('Shotgun'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Reset Fight'));
+      await tester.tap(find.byTooltip('Reset Fight'));
       await tester.pump();
       final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
       expect(arena.state.balls[1].held, PowerUpKind.shotgun);
-      expect(motionA.hitTestable(), findsOneWidget);
-      expect(find.text('Play').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -191,7 +194,7 @@ void main() {
       final initial = tester
           .widget<ArenaCanvas>(find.byType(ArenaCanvas))
           .state;
-      final preview = find.byKey(const ValueKey('item-preview-0'));
+      final preview = find.byKey(const ValueKey('finisher-preview-0-0'));
       expect(preview.hitTestable(), findsOneWidget);
       expect(
         find.byKey(const ValueKey('item-preview-1')).hitTestable(),
@@ -211,9 +214,44 @@ void main() {
       final after = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
       expect(after.step, initial.step);
       expect(after.balls.first.held, PowerUpKind.pistol);
-      expect(find.text('Play'), findsOneWidget);
+      expect(find.byTooltip('Play'), findsOneWidget);
     },
   );
+
+  testWidgets('damaging power-ups expose a finisher control in the arena', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('choose-power-0')),
+      300,
+      scrollable: find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('choose-power-0')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'raging demon');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('power-test-item-ragingDemon')));
+    await tester.pumpAndSettle();
+
+    final preview = find.byKey(const ValueKey('finisher-preview-0-2'));
+    await tester.ensureVisible(preview);
+    await tester.pumpAndSettle();
+    expect(preview.hitTestable(), findsOneWidget);
+    expect(tester.widget<InkWell>(preview).onTap, isNotNull);
+    expect(
+      find.byTooltip('Preview Raging Demon finisher for Ball A'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('tests default to endless and expose BGM, SFX and UX controls', (
     tester,

@@ -5,6 +5,8 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.media.MediaCodecInfo.CodecProfileLevel.AACObjectLC
+import java.nio.ByteBuffer
 import java.io.File
 
 /**
@@ -16,11 +18,15 @@ class ReplayVideoEncoder(
     private val width: Int,
     private val height: Int,
     private val fps: Int,
+    audioPcm: ByteArray? = null,
+    audioSampleRate: Int = 0,
 ) {
     private val codec: MediaCodec = MediaCodec.createEncoderByType(MIME)
     private val muxer = MediaMuxer(output.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
     private val info = MediaCodec.BufferInfo()
     private var track = -1
+    private var audioTrack = -1
+    private var pendingAudio = mutableListOf<EncodedAudio>()
     private var muxerStarted = false
     private var frameIndex = 0L
 
@@ -34,6 +40,9 @@ class ReplayVideoEncoder(
         try {
             codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             codec.start()
+            if (audioPcm != null && audioPcm.isNotEmpty()) {
+                encodeAudio(audioPcm, audioSampleRate)
+            }
         } catch (e: Exception) {
             codec.release()
             muxer.release()
@@ -102,8 +111,17 @@ class ReplayVideoEncoder(
                 }
                 index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                     track = muxer.addTrack(codec.outputFormat)
+                    if (pendingAudio.isNotEmpty()) {
+                        audioTrack = muxer.addTrack(pendingAudio.first().format)
+                    }
                     muxer.start()
                     muxerStarted = true
+                    if (audioTrack >= 0) {
+                        for (sample in pendingAudio) {
+                            muxer.writeSampleData(audioTrack, ByteBuffer.wrap(sample.data), sample.info)
+                        }
+                        pendingAudio.clear()
+                    }
                 }
                 index >= 0 -> {
                     val buffer = codec.getOutputBuffer(index) ?: error("Encoder returned no output buffer")
@@ -118,6 +136,67 @@ class ReplayVideoEncoder(
                 }
             }
         }
+    }
+
+    private fun encodeAudio(pcm: ByteArray, sampleRate: Int) {
+        require(sampleRate > 0) { "Audio sample rate must be positive" }
+        val audioCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC)
+        val format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, 1).apply {
+            setInteger(MediaFormat.KEY_AAC_PROFILE, AACObjectLC)
+            setInteger(MediaFormat.KEY_BIT_RATE, 128_000)
+            setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16_384)
+        }
+        audioCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        audioCodec.start()
+        val audioInfo = MediaCodec.BufferInfo()
+        var offset = 0
+        var inputDone = false
+        var outputDone = false
+        var outputFormat: MediaFormat? = null
+        while (!outputDone) {
+            if (!inputDone) {
+                val inputIndex = audioCodec.dequeueInputBuffer(TIMEOUT_US)
+                if (inputIndex >= 0) {
+                    val buffer = audioCodec.getInputBuffer(inputIndex) ?: error("AAC encoder returned no input buffer")
+                    buffer.clear()
+                    val size = minOf(buffer.remaining(), pcm.size - offset)
+                    if (size > 0) buffer.put(pcm, offset, size)
+                    val samplesBefore = offset / 2
+                    val flags = if (offset + size >= pcm.size) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
+                    audioCodec.queueInputBuffer(
+                        inputIndex,
+                        0,
+                        size,
+                        samplesBefore * 1_000_000L / sampleRate,
+                        flags,
+                    )
+                    offset += size
+                    inputDone = flags != 0
+                }
+            }
+            val outputIndex = audioCodec.dequeueOutputBuffer(audioInfo, TIMEOUT_US)
+            when {
+                outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> outputFormat = audioCodec.outputFormat
+                outputIndex >= 0 -> {
+                    val config = audioInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
+                    if (!config && audioInfo.size > 0) {
+                        val buffer = audioCodec.getOutputBuffer(outputIndex) ?: error("AAC encoder returned no output buffer")
+                        buffer.position(audioInfo.offset)
+                        buffer.limit(audioInfo.offset + audioInfo.size)
+                        val bytes = ByteArray(audioInfo.size)
+                        buffer.get(bytes)
+                        val copy = MediaCodec.BufferInfo().apply {
+                            set(0, bytes.size, audioInfo.presentationTimeUs, audioInfo.flags)
+                        }
+                        pendingAudio.add(EncodedAudio(bytes, copy, outputFormat ?: audioCodec.outputFormat))
+                    }
+                    outputDone = audioInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
+                    audioCodec.releaseOutputBuffer(outputIndex, false)
+                }
+            }
+        }
+        audioCodec.stop()
+        audioCodec.release()
     }
 
     /** RGBA -> YUV 4:2:0 (BT.601, limited range) into the encoder's planes. */
@@ -156,4 +235,10 @@ class ReplayVideoEncoder(
         const val MIME = MediaFormat.MIMETYPE_VIDEO_AVC
         const val TIMEOUT_US = 10_000L
     }
+
+    private data class EncodedAudio(
+        val data: ByteArray,
+        val info: MediaCodec.BufferInfo,
+        val format: MediaFormat,
+    )
 }

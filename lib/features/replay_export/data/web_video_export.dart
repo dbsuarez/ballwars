@@ -8,7 +8,13 @@ external _BallwarsVideo? get _api;
 
 extension type _BallwarsVideo._(JSObject _) implements JSObject {
   external bool isSupported();
-  external JSPromise<JSAny?> start(int width, int height, int fps);
+  external JSPromise<JSAny?> start(
+    int width,
+    int height,
+    int fps,
+    JSUint8Array? pcm16le,
+    int sampleRate,
+  );
   external JSPromise<JSAny?> addFrame(JSUint8Array rgba);
   external JSPromise<JSString> finish();
   external void cancel();
@@ -24,15 +30,28 @@ VideoExportBackend? createWebVideoExport() {
 
 /// Encodes with the browser's WebCodecs H.264 encoder into an MP4, then
 /// downloads it (and can open the share sheet where the browser supports it).
-class WebVideoExport implements VideoExportBackend {
+class WebVideoExport implements VideoExportBackend, AudioVideoEncoder {
   final _BallwarsVideo _video;
-  final String _fileName = 'ballwars_replay_${DateTime.now().millisecondsSinceEpoch}.mp4';
+  final String _fileName =
+      'ballwars_replay_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
   WebVideoExport._(this._video);
 
   @override
-  Future<void> start({required int width, required int height, required int fps}) =>
-      _video.start(width, height, fps).toDart;
+  Future<void> start({
+    required int width,
+    required int height,
+    required int fps,
+  }) => _video.start(width, height, fps, null, 0).toDart;
+
+  @override
+  Future<void> startWithAudio({
+    required int width,
+    required int height,
+    required int fps,
+    required Uint8List pcm16le,
+    required int sampleRate,
+  }) => _video.start(width, height, fps, pcm16le.toJS, sampleRate).toDart;
 
   @override
   Future<void> addFrame(Uint8List rgba) => _video.addFrame(rgba.toJS).toDart;

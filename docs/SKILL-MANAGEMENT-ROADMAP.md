@@ -123,6 +123,8 @@ Replay and video remain last, by agreement.
 - [x] Put arena BGM and SFX controls side by side on the right and fix missing icons.
 - [x] Add a separate UX-sound channel alongside BGM and SFX.
 - [x] Make BGM, SFX, and UX sound tap-to-toggle and long-press-for-volume; default to 100/90/90.
+- [x] Surface all three audio channels in Match Setup, the live arena, and Power-up Test through one compact volume popup.
+- [x] Give Power-up Test a full-width mobile arena, three trap slots, compact icon-only playback, and responsive Weapon 1 / Weapon 2 / Power-up finisher previews.
 - [x] Allow My Groups balls without uploaded pictures by using generated initials.
 - [x] In Mayhem, hide groups with fewer than six balls.
 - [x] Add centered horizontal-and-vertical empty-state animation to every empty list.
@@ -169,7 +171,7 @@ Replay and video remain last, by agreement.
 
 ## Phase 9 - Replay links and video export
 
-**Status: In progress - audio muxing remains**
+**Status: Complete pending final real-device verification**
 
 - [x] Store immutable custom-skill definitions or version references in replay data.
 - [x] Preserve old replay behavior after a skill is edited.
@@ -178,11 +180,12 @@ Replay and video remain last, by agreement.
 - [x] Add backward-compatible decoding and payload-size limits.
 - [x] Verify deterministic live, replay, and video results.
 - [x] Show elapsed export time while saving video.
-- [ ] Ask whether BGM and/or SFX should be included in the export.
+- [x] Ask whether BGM and/or SFX should be included in the export and mux the selected channels into web and Android video output.
 - [x] Keep the screen awake for the entire video export.
 - [x] Reproduce the complete non-interactive battle UX and finishing cutscenes in replay/video.
 - [x] Let users save replays.
 - [x] Hide Replay Finisher whenever finishers are disabled.
+- [x] Keep interactive player controls out of exported replay video.
 
 ## Final completion checks
 

@@ -1330,6 +1330,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             if (mounted) _update(() {});
           },
         ),
+        _choice(
+          Icons.touch_app,
+          'UX sounds',
+          const [false, true],
+          GameAudio.instance.uxOn,
+          (v) => v ? 'On' : 'Off',
+          (v) async {
+            final saved = GameAudio.instance.setUxOn(v);
+            await saved;
+            if (mounted) _update(() {});
+          },
+        ),
       ]),
     ],
   );

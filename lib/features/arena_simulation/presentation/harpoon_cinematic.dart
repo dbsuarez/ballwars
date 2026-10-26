@@ -494,6 +494,65 @@ class _FinisherPainter extends CustomPainter {
             Paint()..color = profile.accent,
           );
         }
+      case PowerUpKind.sniperRifle:
+        if (hookProgress > 0 && hookProgress < 1) {
+          // Use the same bullet artwork as the arena instead of an initial.
+          _paintBullet(canvas, to, radius * 0.3);
+          final trail = Offset.lerp(from, to, 0.72)!;
+          canvas.drawLine(
+            from,
+            trail,
+            Paint()
+              ..color = profile.accent.withValues(alpha: 0.65)
+              ..strokeWidth = radius * 0.09
+              ..strokeCap = StrokeCap.round,
+          );
+        }
+        if (impactProgress > 0) {
+          _paintImpact(canvas, loserCenter, impactProgress);
+        }
+      case PowerUpKind.ragingDemon:
+        // A dedicated rapid cross-up sequence: the stage darkens, the attacker
+        // flashes around the victim, and every pass leaves a separate strike.
+        canvas.drawRect(
+          canvas.getLocalClipBounds(),
+          Paint()..color = const Color(0xFF090008).withValues(alpha: 0.72),
+        );
+        if (hookProgress > 0) {
+          for (var i = 0; i < 8; i++) {
+            final local = (hookProgress * 3.4 - i * 0.09).clamp(0.0, 1.0);
+            if (local <= 0 || local >= 1) continue;
+            final side = i.isEven ? -1.0 : 1.0;
+            final strikeCenter =
+                loserCenter +
+                Offset(
+                  side * radius * (1.45 - local),
+                  ((i % 3) - 1) * radius * 0.42,
+                );
+            canvas.drawLine(
+              strikeCenter - Offset(side * radius * 0.75, radius * 0.28),
+              strikeCenter + Offset(side * radius * 0.75, -radius * 0.28),
+              Paint()
+                ..color = (i.isEven ? profile.color : profile.accent)
+                    .withValues(alpha: 0.9)
+                ..strokeWidth = radius * 0.13
+                ..strokeCap = StrokeCap.round,
+            );
+          }
+          final pulse =
+              0.25 + 0.15 * math.sin(hookProgress * math.pi * 20).abs();
+          canvas.drawCircle(
+            loserCenter,
+            radius * (1.05 + pulse),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = radius * 0.12
+              ..color = profile.accent.withValues(alpha: 0.8),
+          );
+        }
+        if (impactProgress > 0) {
+          _paintImpact(canvas, loserCenter, impactProgress);
+        }
       case PowerUpKind.knife:
         if (uppercutProgress > 0) {
           final thrust = Offset.lerp(

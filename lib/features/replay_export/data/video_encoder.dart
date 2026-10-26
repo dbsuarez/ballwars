@@ -2,7 +2,11 @@ import 'package:flutter/foundation.dart';
 
 /// Turns raw RGBA frames into a video file.
 abstract class VideoEncoder {
-  Future<void> start({required int width, required int height, required int fps});
+  Future<void> start({
+    required int width,
+    required int height,
+    required int fps,
+  });
 
   /// One frame, `width * height * 4` bytes of RGBA.
   Future<void> addFrame(Uint8List rgba);
@@ -12,6 +16,18 @@ abstract class VideoEncoder {
 
   /// Abandons the video and discards any partial output.
   Future<void> cancel();
+}
+
+/// Optional capability for encoders that can mux mono signed 16-bit PCM into
+/// the same MP4 as the replay frames.
+abstract interface class AudioVideoEncoder {
+  Future<void> startWithAudio({
+    required int width,
+    required int height,
+    required int fps,
+    required Uint8List pcm16le,
+    required int sampleRate,
+  });
 }
 
 /// Where a finished video goes after encoding.

@@ -233,6 +233,8 @@ class Projectile {
     this.homing = true,
     this.returning = false,
     this.returnTo,
+    this.renderScale = 1,
+    this.spinDegreesPerSecond = 0,
   });
 
   /// A grenade's landing point (where its target was when thrown); null for bullets.
@@ -247,6 +249,8 @@ class Projectile {
   int wallBounces = 0;
   bool returning;
   final Offset? returnTo;
+  final double renderScale;
+  final double spinDegreesPerSecond;
   final Set<SimulationBall> hitTargets = {};
 
   /// Shots fired as one attack (a shotgun blast, a gatling burst) share a non-zero id, so a shield

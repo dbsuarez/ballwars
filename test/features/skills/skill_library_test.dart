@@ -49,11 +49,31 @@ void main() {
     final wave = SkillLibrary.defaults
         .builtIn(PowerUpKind.energyWave, tuning)
         .copyWith(knockback: 2.5);
+    final speed = SkillLibrary.defaults
+        .builtIn(PowerUpKind.speed, tuning)
+        .copyWith(arsenalDamage: 8, effectStrength: 2.75);
+    final maximum = SkillLibrary.defaults
+        .builtIn(PowerUpKind.overcharge, tuning)
+        .copyWith(durationSeconds: 4, effectStrength: 1.8);
+    final repulsor = SkillLibrary.defaults
+        .builtIn(PowerUpKind.repulsor, tuning)
+        .copyWith(durationSeconds: 5, effectStrength: 2.1);
+    final timeBubble = SkillLibrary.defaults
+        .builtIn(PowerUpKind.timeBubble, tuning)
+        .copyWith(durationSeconds: 6, range: 4.5);
+    final freeze = SkillLibrary.defaults
+        .builtIn(PowerUpKind.freeze, tuning)
+        .copyWith(frozenDamageMultiplier: 2, frozenCollisionDamage: 9);
     final library = SkillLibrary.defaults
         .withDefinition(pistol, tuning)
         .withDefinition(shotgun, tuning)
         .withDefinition(disc, tuning)
-        .withDefinition(wave, tuning);
+        .withDefinition(wave, tuning)
+        .withDefinition(speed, tuning)
+        .withDefinition(maximum, tuning)
+        .withDefinition(repulsor, tuning)
+        .withDefinition(timeBubble, tuning)
+        .withDefinition(freeze, tuning);
     final decoded = SkillLibrary.fromJson(library.toJson());
     final applied = decoded.applyTo(tuning);
 
@@ -67,6 +87,16 @@ void main() {
     );
     expect(applied.maxBounces(PowerUpKind.ricochetDisc), 4);
     expect(applied.knockback(PowerUpKind.energyWave), 2.5);
+    expect(applied.arenaDamage(PowerUpKind.speed), 8);
+    expect(applied.speedFactor, 2.75);
+    expect(applied.maximumPowerSteps, 240);
+    expect(applied.maximumPowerAmount, 1.8);
+    expect(applied.repulsorSteps, 300);
+    expect(applied.repulsorForce, 2.1);
+    expect(applied.timeBubbleSteps, 360);
+    expect(applied.timeBubbleRange, 4.5);
+    expect(applied.frozenDamageMultiplier, 2);
+    expect(applied.frozenCollisionDamage, 9);
   });
 
   test('duplicates get unique stable IDs and start disabled', () {
@@ -164,6 +194,15 @@ void main() {
           allOutDamage: 0,
           dotArsenalDamage: 6.5,
           dotAllOutDamage: 3,
+          range: 0.8,
+          projectileSize: 1.7,
+          projectileSpin: 540,
+          homing: true,
+          returnsToOrigin: true,
+          weaponDisplayScale: 1.4,
+          effectStrength: 2.2,
+          healing: 23,
+          shieldHits: 4,
           secondaryEffectType: SkillEffectType.freeze,
           bubbleType: SkillBubbleType.speech,
           repeatCount: 99,
@@ -180,6 +219,15 @@ void main() {
     expect(decoded.allOutDamage, 0);
     expect(decoded.dotArsenalDamage, 6.5);
     expect(decoded.dotAllOutDamage, 3);
+    expect(decoded.range, 0.8);
+    expect(decoded.projectileSize, 1.7);
+    expect(decoded.projectileSpin, 540);
+    expect(decoded.homing, isTrue);
+    expect(decoded.returnsToOrigin, isTrue);
+    expect(decoded.weaponDisplayScale, 1.4);
+    expect(decoded.effectStrength, 2.2);
+    expect(decoded.healing, 23);
+    expect(decoded.shieldHits, 4);
     expect(decoded.bubbleType, SkillBubbleType.speech);
     expect(decoded.repeatCount, 10);
     expect(decoded.repeatIntervalSeconds, 0.1);

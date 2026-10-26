@@ -84,6 +84,7 @@ class SimulationBall {
   }
 
   int speedLeft = 0;
+  double speedFactor = PowerUpTuning.speedFactor;
   int frozenLeft = 0;
   int stunnedLeft = 0;
   int ghostLeft = 0;

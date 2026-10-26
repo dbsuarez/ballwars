@@ -496,6 +496,27 @@ class _SkillEditorState extends State<_SkillEditor> {
       'spread': TextEditingController(text: '${widget.skill.spreadDegrees}'),
     if (widget.skill.maxBounces != null)
       'bounces': TextEditingController(text: '${widget.skill.maxBounces}'),
+    'range': TextEditingController(text: '${widget.skill.range}'),
+    'projectileSize': TextEditingController(
+      text: '${widget.skill.projectileSize}',
+    ),
+    'projectileSpin': TextEditingController(
+      text: '${widget.skill.projectileSpin}',
+    ),
+    'weaponDisplayScale': TextEditingController(
+      text: '${widget.skill.weaponDisplayScale}',
+    ),
+    'effectStrength': TextEditingController(
+      text: '${widget.skill.effectStrength}',
+    ),
+    'healing': TextEditingController(text: '${widget.skill.healing}'),
+    'shieldHits': TextEditingController(text: '${widget.skill.shieldHits}'),
+    'frozenDamageMultiplier': TextEditingController(
+      text: '${widget.skill.frozenDamageMultiplier}',
+    ),
+    'frozenCollisionDamage': TextEditingController(
+      text: '${widget.skill.frozenCollisionDamage}',
+    ),
     if (widget.skill.isComposed)
       'repeatCount': TextEditingController(text: '${widget.skill.repeatCount}'),
     if (widget.skill.isComposed)
@@ -525,6 +546,8 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
   late bool _enabled = widget.skill.enabled;
+  late bool _homing = widget.skill.homing;
+  late bool _returnsToOrigin = widget.skill.returnsToOrigin;
   late SkillTrigger? _trigger = widget.skill.trigger;
   late SkillTargeting? _targeting = widget.skill.targeting;
   late SkillDelivery? _delivery = widget.skill.delivery;
@@ -592,6 +615,8 @@ class _SkillEditorState extends State<_SkillEditor> {
     setState(() {
       _name.text = defaults.name;
       _enabled = defaults.enabled;
+      _homing = defaults.homing;
+      _returnsToOrigin = defaults.returnsToOrigin;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
       _trigger = defaults.trigger;
@@ -617,6 +642,15 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('speed', defaults.projectileSpeed);
       number('spread', defaults.spreadDegrees);
       number('bounces', defaults.maxBounces);
+      number('range', defaults.range);
+      number('projectileSize', defaults.projectileSize);
+      number('projectileSpin', defaults.projectileSpin);
+      number('weaponDisplayScale', defaults.weaponDisplayScale);
+      number('effectStrength', defaults.effectStrength);
+      number('healing', defaults.healing);
+      number('shieldHits', defaults.shieldHits);
+      number('frozenDamageMultiplier', defaults.frozenDamageMultiplier);
+      number('frozenCollisionDamage', defaults.frozenCollisionDamage);
       number('knockback', defaults.knockback);
       number('repeatCount', defaults.repeatCount);
       number('repeatInterval', defaults.repeatIntervalSeconds);
@@ -743,6 +777,17 @@ class _SkillEditorState extends State<_SkillEditor> {
       projectileSpeed: _double('speed'),
       spreadDegrees: _double('spread'),
       maxBounces: _int('bounces'),
+      range: _double('range'),
+      projectileSize: _double('projectileSize'),
+      projectileSpin: _double('projectileSpin'),
+      homing: _homing,
+      returnsToOrigin: _returnsToOrigin,
+      weaponDisplayScale: _double('weaponDisplayScale'),
+      effectStrength: _double('effectStrength'),
+      healing: _double('healing'),
+      shieldHits: _int('shieldHits'),
+      frozenDamageMultiplier: _double('frozenDamageMultiplier'),
+      frozenCollisionDamage: _double('frozenCollisionDamage'),
       knockback: _double('knockback'),
       spriteMode: _sprite,
       effectMode: _effect,
@@ -1127,6 +1172,39 @@ class _SkillEditorState extends State<_SkillEditor> {
                 _number('spread', 'Spread', suffix: 'degrees'),
               if (_numbers.containsKey('bounces'))
                 _number('bounces', 'Maximum bounces'),
+              _number('range', 'Range', suffix: 'arena ratio'),
+              _number('projectileSize', 'Projectile size', suffix: 'x'),
+              _number('projectileSpin', 'Projectile spin', suffix: 'deg/s'),
+              _number(
+                'weaponDisplayScale',
+                'Equipped display scale',
+                suffix: 'x',
+              ),
+              _number('effectStrength', 'Effect strength', suffix: 'x'),
+              _number('healing', 'Healing', suffix: 'life'),
+              _number('shieldHits', 'Shield hits'),
+              _number(
+                'frozenDamageMultiplier',
+                'Frozen-target damage multiplier',
+                suffix: 'x',
+              ),
+              _number(
+                'frozenCollisionDamage',
+                'Frozen collision damage',
+                suffix: 'life',
+              ),
+              SwitchListTile.adaptive(
+                key: const ValueKey('skill-homing'),
+                value: _homing,
+                onChanged: (value) => setState(() => _homing = value),
+                title: const Text('Homing projectile'),
+              ),
+              SwitchListTile.adaptive(
+                key: const ValueKey('skill-return'),
+                value: _returnsToOrigin,
+                onChanged: (value) => setState(() => _returnsToOrigin = value),
+                title: const Text('Return to launch point'),
+              ),
               _number('knockback', 'Knockback strength', suffix: 'x'),
               const SizedBox(height: 12),
               Row(

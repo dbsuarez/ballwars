@@ -80,6 +80,17 @@ class SkillDefinition {
     this.projectileSpeed,
     this.spreadDegrees,
     this.maxBounces,
+    this.range = 0.55,
+    this.projectileSize = 1,
+    this.projectileSpin = 0,
+    this.homing = false,
+    this.returnsToOrigin = false,
+    this.weaponDisplayScale = 1,
+    this.effectStrength = 1,
+    this.healing = 10,
+    this.shieldHits = 1,
+    this.frozenDamageMultiplier = 1.5,
+    this.frozenCollisionDamage = 5,
     this.knockback = 0,
     this.spriteMode = SkillVisualMode.sprite,
     this.effectMode = SkillVisualMode.sprite,
@@ -117,6 +128,17 @@ class SkillDefinition {
   final double? projectileSpeed;
   final double? spreadDegrees;
   final int? maxBounces;
+  final double range;
+  final double projectileSize;
+  final double projectileSpin;
+  final bool homing;
+  final bool returnsToOrigin;
+  final double weaponDisplayScale;
+  final double effectStrength;
+  final double healing;
+  final int shieldHits;
+  final double frozenDamageMultiplier;
+  final double frozenCollisionDamage;
   final double knockback;
   final SkillVisualMode spriteMode;
   final SkillVisualMode effectMode;
@@ -185,6 +207,17 @@ class SkillDefinition {
     double? projectileSpeed,
     double? spreadDegrees,
     int? maxBounces,
+    double? range,
+    double? projectileSize,
+    double? projectileSpin,
+    bool? homing,
+    bool? returnsToOrigin,
+    double? weaponDisplayScale,
+    double? effectStrength,
+    double? healing,
+    int? shieldHits,
+    double? frozenDamageMultiplier,
+    double? frozenCollisionDamage,
     double? knockback,
     SkillVisualMode? spriteMode,
     SkillVisualMode? effectMode,
@@ -221,6 +254,18 @@ class SkillDefinition {
     projectileSpeed: projectileSpeed ?? this.projectileSpeed,
     spreadDegrees: spreadDegrees ?? this.spreadDegrees,
     maxBounces: maxBounces ?? this.maxBounces,
+    range: range ?? this.range,
+    projectileSize: projectileSize ?? this.projectileSize,
+    projectileSpin: projectileSpin ?? this.projectileSpin,
+    homing: homing ?? this.homing,
+    returnsToOrigin: returnsToOrigin ?? this.returnsToOrigin,
+    weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
+    effectStrength: effectStrength ?? this.effectStrength,
+    healing: healing ?? this.healing,
+    shieldHits: shieldHits ?? this.shieldHits,
+    frozenDamageMultiplier:
+        frozenDamageMultiplier ?? this.frozenDamageMultiplier,
+    frozenCollisionDamage: frozenCollisionDamage ?? this.frozenCollisionDamage,
     knockback: knockback ?? this.knockback,
     spriteMode: spriteMode ?? this.spriteMode,
     effectMode: effectMode ?? this.effectMode,
@@ -262,6 +307,17 @@ class SkillDefinition {
     if (projectileSpeed != null) 'projectile_speed': projectileSpeed,
     if (spreadDegrees != null) 'spread_degrees': spreadDegrees,
     if (maxBounces != null) 'max_bounces': maxBounces,
+    'range': range,
+    'projectile_size': projectileSize,
+    'projectile_spin': projectileSpin,
+    'homing': homing,
+    'returns_to_origin': returnsToOrigin,
+    'weapon_display_scale': weaponDisplayScale,
+    'effect_strength': effectStrength,
+    'healing': healing,
+    'shield_hits': shieldHits,
+    'frozen_damage_multiplier': frozenDamageMultiplier,
+    'frozen_collision_damage': frozenCollisionDamage,
     'knockback': knockback,
     'sprite_mode': spriteMode.name,
     'effect_mode': effectMode.name,
@@ -321,6 +377,17 @@ class SkillDefinition {
       projectileSpeed: decimal('projectile_speed'),
       spreadDegrees: decimal('spread_degrees'),
       maxBounces: integer('max_bounces'),
+      range: decimal('range') ?? 0.55,
+      projectileSize: decimal('projectile_size') ?? 1,
+      projectileSpin: decimal('projectile_spin') ?? 0,
+      homing: value['homing'] as bool? ?? false,
+      returnsToOrigin: value['returns_to_origin'] as bool? ?? false,
+      weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
+      effectStrength: decimal('effect_strength') ?? 1,
+      healing: decimal('healing') ?? 10,
+      shieldHits: integer('shield_hits') ?? 1,
+      frozenDamageMultiplier: decimal('frozen_damage_multiplier') ?? 1.5,
+      frozenCollisionDamage: decimal('frozen_collision_damage') ?? 5,
       knockback: decimal('knockback') ?? 0,
       spriteMode: enumValue(
         'sprite_mode',
@@ -379,6 +446,15 @@ class SkillDefinition {
     projectileSpeed: projectileSpeed?.clamp(0.1, 10),
     spreadDegrees: spreadDegrees?.clamp(0, 360),
     maxBounces: maxBounces?.clamp(0, 20),
+    range: range.clamp(0.05, 12),
+    projectileSize: projectileSize.clamp(0.1, 5),
+    projectileSpin: projectileSpin.clamp(-2160, 2160),
+    weaponDisplayScale: weaponDisplayScale.clamp(0.25, 3),
+    effectStrength: effectStrength.clamp(0, 10),
+    healing: healing.clamp(0, 500),
+    shieldHits: shieldHits.clamp(0, 20),
+    frozenDamageMultiplier: frozenDamageMultiplier.clamp(1, 5),
+    frozenCollisionDamage: frozenCollisionDamage.clamp(0, 200),
     knockback: knockback.clamp(0, 10),
     repeatCount: repeatCount.clamp(1, 10),
     repeatIntervalSeconds: repeatIntervalSeconds.clamp(0.1, 10),
@@ -540,6 +616,11 @@ class SkillLibrary {
       durationSeconds: 2,
       projectileCount: 1,
       projectileSpeed: 1.4,
+      range: 0.55,
+      projectileSize: 1,
+      effectStrength: 1,
+      healing: 10,
+      shieldHits: 1,
       knockback: 1,
       trigger: carrier.isWeapon ? SkillTrigger.aimedFire : SkillTrigger.pickup,
       targeting: carrier.isWeapon
@@ -560,11 +641,13 @@ class SkillLibrary {
       final explicitlyConfigured =
           skill.custom || overrides.containsKey(skill.id);
       if (skill.arsenalDamage != null &&
-          PowerUpConfig.damageKinds.contains(kind)) {
+          (PowerUpConfig.damageKinds.contains(kind) ||
+              kind == PowerUpKind.speed)) {
         result = result.withValue('dmg.${kind.name}', skill.arsenalDamage!);
       }
       if (skill.allOutDamage != null &&
-          PowerUpConfig.damageKinds.contains(kind)) {
+          (PowerUpConfig.damageKinds.contains(kind) ||
+              kind == PowerUpKind.speed)) {
         result = result.withValue('lines.${kind.name}', skill.allOutDamage!);
       }
       if (skill.projectileCount != null) {
@@ -588,6 +671,38 @@ class SkillLibrary {
         if (kind == PowerUpKind.ghost) {
           result = result.withValue('ghost', skill.durationSeconds!);
         }
+        if (kind == PowerUpKind.overcharge) {
+          result = result.withValue(
+            'maximumPowerDuration',
+            skill.durationSeconds!,
+          );
+        }
+        if (kind == PowerUpKind.repulsor) {
+          result = result.withValue('repulsorDuration', skill.durationSeconds!);
+        }
+        if (kind == PowerUpKind.timeBubble) {
+          result = result.withValue(
+            'timeBubbleDuration',
+            skill.durationSeconds!,
+          );
+        }
+      }
+      if (explicitlyConfigured && kind == PowerUpKind.speed) {
+        result = result.withValue('speedFactor', skill.effectStrength);
+      }
+      if (explicitlyConfigured && kind == PowerUpKind.overcharge) {
+        result = result.withValue('maximumPowerAmount', skill.effectStrength);
+      }
+      if (explicitlyConfigured && kind == PowerUpKind.repulsor) {
+        result = result.withValue('repulsorForce', skill.effectStrength);
+      }
+      if (explicitlyConfigured && kind == PowerUpKind.timeBubble) {
+        result = result.withValue('timeBubbleRange', skill.range);
+      }
+      if (explicitlyConfigured && kind == PowerUpKind.freeze) {
+        result = result
+            .withValue('frozenDamageMultiplier', skill.frozenDamageMultiplier)
+            .withValue('frozenCollisionDamage', skill.frozenCollisionDamage);
       }
       if (explicitlyConfigured && skill.projectileSpeed != null && kind.isGun) {
         result = result.withValue(
@@ -725,16 +840,16 @@ class SkillLibrary {
   }
 
   static SkillDefinition _defaultFor(PowerUpKind kind, PowerUpConfig tuning) {
-    final damaging = PowerUpConfig.damageKinds.contains(kind);
+    final damaging =
+        PowerUpConfig.damageKinds.contains(kind) || kind == PowerUpKind.speed;
     final duration = switch (kind) {
       PowerUpKind.speed => tuning.speedSteps / 60,
       PowerUpKind.freeze => tuning.freezeSteps / 60,
       PowerUpKind.ghost => tuning.ghostSteps / 60,
-      PowerUpKind.repulsor ||
-      PowerUpKind.timeBubble ||
-      PowerUpKind.vampire ||
-      PowerUpKind.overcharge ||
-      PowerUpKind.magneticField => 3.0,
+      PowerUpKind.repulsor => tuning.repulsorSteps / 60,
+      PowerUpKind.timeBubble => tuning.timeBubbleSteps / 60,
+      PowerUpKind.overcharge => tuning.maximumPowerSteps / 60,
+      PowerUpKind.vampire || PowerUpKind.magneticField => 3.0,
       _ => null,
     };
     final count = switch (kind) {
@@ -763,6 +878,25 @@ class SkillLibrary {
           ? 42
           : null,
       maxBounces: bounces,
+      range: kind == PowerUpKind.timeBubble ? tuning.timeBubbleRange : 0.55,
+      projectileSize: kind == PowerUpKind.boomerang ? 2 : 1,
+      projectileSpin:
+          kind == PowerUpKind.boomerang || kind == PowerUpKind.ricochetDisc
+          ? 420
+          : 0,
+      homing: kind == PowerUpKind.rocketLauncher,
+      returnsToOrigin: kind == PowerUpKind.boomerang,
+      weaponDisplayScale: 1,
+      effectStrength: switch (kind) {
+        PowerUpKind.speed => tuning.speedFactor,
+        PowerUpKind.overcharge => tuning.maximumPowerAmount,
+        PowerUpKind.repulsor => tuning.repulsorForce,
+        _ => 1,
+      },
+      healing: kind == PowerUpKind.apple ? tuning.arenaAppleHeal : 10,
+      shieldHits: kind == PowerUpKind.goldenArmor ? 2 : 1,
+      frozenDamageMultiplier: tuning.frozenDamageMultiplier,
+      frozenCollisionDamage: tuning.frozenCollisionDamage,
       knockback:
           kind == PowerUpKind.energyWave || kind == PowerUpKind.omegaTendrils
           ? 1

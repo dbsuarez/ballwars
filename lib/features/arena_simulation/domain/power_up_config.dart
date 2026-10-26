@@ -231,7 +231,7 @@ class PowerUpConfig {
         'dmg.${kind.name}',
         '${kind.label}${_each(kind)}',
         _arsenal,
-        PowerUpTuning.arenaDamage[kind]!,
+        PowerUpTuning.arenaDamage[kind] ?? 0,
         min: 0,
         max: 200,
       ),
@@ -273,11 +273,21 @@ class PowerUpConfig {
         'lines.${kind.name}',
         '${kind.label}${_each(kind)}',
         _allOut,
-        PowerUpTuning.allOutThreads[kind]!,
+        PowerUpTuning.allOutThreads[kind] ?? 0,
         min: 0,
         max: 180,
         integer: true,
       ),
+    TuningField('dmg.speed', 'Speed collision', _skills, 0, min: 0, max: 200),
+    TuningField(
+      'lines.speed',
+      'Speed collision',
+      _skills,
+      0,
+      min: 0,
+      max: 180,
+      integer: true,
+    ),
     TuningField(
       'lines.bash',
       'Shield bash',
@@ -339,6 +349,69 @@ class PowerUpConfig {
       PowerUpTuning.blastRadiusRatio,
       min: 0.05,
       max: 1,
+      unit: TuningUnit.ratio,
+    ),
+    TuningField(
+      'speedFactor',
+      'Speed multiplier',
+      _skills,
+      PowerUpTuning.speedFactor,
+      min: 1,
+      max: 5,
+      unit: TuningUnit.ratio,
+    ),
+    TuningField(
+      'maximumPowerDuration',
+      'Maximum Power duration',
+      _skills,
+      3,
+      min: 0.1,
+      max: 30,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'maximumPowerAmount',
+      'Maximum Power multiplier',
+      _skills,
+      1.5,
+      min: 1,
+      max: 5,
+      unit: TuningUnit.ratio,
+    ),
+    TuningField(
+      'repulsorDuration',
+      'Repulsor duration',
+      _skills,
+      3,
+      min: 0.1,
+      max: 30,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'repulsorForce',
+      'Repulsor force',
+      _skills,
+      1.4,
+      min: 0,
+      max: 5,
+      unit: TuningUnit.ratio,
+    ),
+    TuningField(
+      'timeBubbleDuration',
+      'Time Bubble duration',
+      _skills,
+      3,
+      min: 0.1,
+      max: 30,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'timeBubbleRange',
+      'Time Bubble range (x ball)',
+      _skills,
+      3,
+      min: 1,
+      max: 12,
       unit: TuningUnit.ratio,
     ),
     for (final kind in PowerUpKind.values.where((kind) => kind.isGun))
@@ -467,6 +540,13 @@ class PowerUpConfig {
   int get freezeSteps => _steps('freeze');
   int get ghostSteps => _steps('ghost');
   double get blastRadiusRatio => value('blast').toDouble();
+  double get speedFactor => value('speedFactor').toDouble();
+  int get maximumPowerSteps => _steps('maximumPowerDuration');
+  double get maximumPowerAmount => value('maximumPowerAmount').toDouble();
+  int get repulsorSteps => _steps('repulsorDuration');
+  double get repulsorForce => value('repulsorForce').toDouble();
+  int get timeBubbleSteps => _steps('timeBubbleDuration');
+  double get timeBubbleRange => value('timeBubbleRange').toDouble();
   double projectileSpeedRatio(PowerUpKind kind) =>
       _byId.containsKey('skillSpeed.${kind.name}')
       ? value('skillSpeed.${kind.name}').toDouble()

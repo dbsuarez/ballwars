@@ -175,7 +175,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Duplicate'));
     await tester.pumpAndSettle();
     expect(find.text('Edit Heavy Pistol'), findsOneWidget);
-    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1400));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('visual-preview-item')), findsOneWidget);
     expect(find.byKey(const ValueKey('visual-preview-impact')), findsOneWidget);

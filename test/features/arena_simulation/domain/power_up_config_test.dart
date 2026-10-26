@@ -39,12 +39,12 @@ void main() {
     for (final kind in PowerUpConfig.damageKinds) {
       expect(
         d.arenaDamage(kind),
-        PowerUpTuning.arenaDamage[kind],
+        PowerUpTuning.arenaDamage[kind] ?? 0,
         reason: kind.name,
       );
       expect(
         d.allOutThreads(kind),
-        PowerUpTuning.allOutThreads[kind],
+        PowerUpTuning.allOutThreads[kind] ?? 0,
         reason: kind.name,
       );
     }

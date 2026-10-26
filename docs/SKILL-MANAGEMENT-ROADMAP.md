@@ -67,7 +67,7 @@ Replay and video remain last, by agreement.
 
 ## Phase 4 - Gameplay correctness and battle feedback
 
-**Status: In progress**
+**Status: Complete**
 
 - [x] Eliminate Arsenal balls as soon as life is below 1; never show a living 0 HP ball.
 - [x] Make Energy Wave stable at fast speed, keep the caster fixed during the cutscene, react every struck ball, and apply configurable knockback.
@@ -85,20 +85,20 @@ Replay and video remain last, by agreement.
 
 ## Phase 5 - Complete Skill Management parameter model
 
-**Status: In progress**
+**Status: Complete**
 
 - [x] Expose initial damage independently from DoT damage, including zero-initial-damage skills.
-- [ ] Expose per-skill damage, DoT, duration, tick interval, range, speed, knockback, stun, freeze, pull, healing, and shield parameters.
-- [ ] Expose projectile count, size, sprite/vector rendering, speed, spin, spread/scatter, homing, bounce count, and return behavior.
-- [ ] Expose equipped weapon display scale globally or per item.
-- [ ] Expose Maximum Power's empowerment amount and duration.
-- [ ] Expose Repulsor values in Skill Management while retaining legacy Power-up Numbers.
-- [ ] Allow Speed to deal configurable damage.
-- [ ] Expose Time Bubble range.
-- [ ] Expose frozen-target damage multiplier and collision damage.
-- [ ] Ensure every parameter is consumed by the shared live runtime, Power-up Test, and all balls.
-- [ ] Retain duplicate-and-edit support for creating related skills.
-- [ ] Keep Power-up Numbers as clearly labeled legacy settings until Skill Management fully replaces it.
+- [x] Expose per-skill damage, DoT, duration, tick interval, range, speed, knockback, stun, freeze, pull, healing, and shield parameters.
+- [x] Expose projectile count, size, sprite/vector rendering, speed, spin, spread/scatter, homing, bounce count, and return behavior.
+- [x] Expose equipped weapon display scale globally or per item.
+- [x] Expose Maximum Power's empowerment amount and duration.
+- [x] Expose Repulsor values in Skill Management while retaining legacy Power-up Numbers.
+- [x] Allow Speed to deal configurable damage.
+- [x] Expose Time Bubble range.
+- [x] Expose frozen-target damage multiplier and collision damage.
+- [x] Ensure every parameter is consumed by the shared live runtime, Power-up Test, and all balls.
+- [x] Retain duplicate-and-edit support for creating related skills.
+- [x] Keep Power-up Numbers as clearly labeled legacy settings until Skill Management fully replaces it.
 
 ## Phase 6 - Admin, match setup, and Power-up Test UX
 
@@ -184,5 +184,5 @@ Replay and video remain last, by agreement.
 ## Current position
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [ ] Phase 5 -> [~] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [~] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
 ```

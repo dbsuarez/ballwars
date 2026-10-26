@@ -756,7 +756,7 @@ class PowerUpPainter {
               canvas,
               missile,
               shot.position - dir * r * 0.45,
-              r * 1.05 * thrust,
+              r * 1.05 * thrust * shot.renderScale,
               math.atan2(dir.dy, dir.dx),
             );
           } else {
@@ -773,8 +773,11 @@ class PowerUpPainter {
               canvas,
               sprite,
               shot.position,
-              r * 1.6,
-              state.step * 0.35,
+              r * 1.6 * shot.renderScale,
+              state.step *
+                  (shot.spinDegreesPerSecond == 0
+                      ? 0.35
+                      : shot.spinDegreesPerSecond * math.pi / 10800),
             );
           } else {
             drawGlyph(canvas, shot.kind, shot.position, r * 0.65);
@@ -817,8 +820,11 @@ class PowerUpPainter {
             canvas,
             projectile,
             shot.position,
-            r * (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62),
-            math.atan2(dir.dy, dir.dx),
+            r *
+                (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62) *
+                shot.renderScale,
+            math.atan2(dir.dy, dir.dx) +
+                state.step * shot.spinDegreesPerSecond * math.pi / 10800,
           );
           continue;
         }
@@ -1559,6 +1565,8 @@ class PowerUpPainter {
     int step = 0,
     double? incomingAttackAngle,
     int Function(PowerUpKind kind)? firedWeaponHoldLeft,
+    double Function(PowerUpKind kind)? weaponDisplayScale,
+    double Function(PowerUpKind kind)? skillRange,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       final angle = flailOrbitAngle(step);
@@ -1643,20 +1651,21 @@ class PowerUpPainter {
       }
     }
     if (ball.timeBubbleLeft > 0) {
+      final range = skillRange?.call(PowerUpKind.timeBubble) ?? 3;
       final sprite = PowerUpSprites.effect(EffectSprite.timeBubble);
       if (sprite != null) {
         _drawEffect(
           canvas,
           sprite,
           ball.position,
-          ball.radius * 3,
+          ball.radius * range,
           step * 0.012,
           opacity: 0.72,
         );
       }
       canvas.drawCircle(
         ball.position,
-        ball.radius * 3,
+        ball.radius * range,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
@@ -1859,6 +1868,7 @@ class PowerUpPainter {
           weapon,
           slot,
           firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
+          displayScale: weaponDisplayScale?.call(weapon) ?? 1,
         );
       }
     }
@@ -1910,6 +1920,7 @@ class PowerUpPainter {
     PowerUpKind held,
     int slot, {
     int firedHoldLeft = 0,
+    double displayScale = 1,
   }) {
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
@@ -1933,7 +1944,7 @@ class PowerUpPainter {
           canvas,
           sprite,
           heldCenter(ball, weapon: held, slot: slot),
-          ball.radius * 0.7,
+          ball.radius * 0.7 * displayScale,
           angle + math.pi / 2,
         );
       }
@@ -1941,7 +1952,10 @@ class PowerUpPainter {
     }
     if (sprite == null) {
       final badge = heldCenter(ball, weapon: held, slot: slot);
-      final r = math.max(6.0, ball.radius * (held.isBlade ? 0.72 : 0.36));
+      final r = math.max(
+        6.0,
+        ball.radius * (held.isBlade ? 0.72 : 0.36) * displayScale,
+      );
       canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
       drawGlyph(canvas, held, badge, r * 0.62);
       return;
@@ -1961,7 +1975,7 @@ class PowerUpPainter {
       canvas,
       sprite,
       center,
-      ball.radius * (held.isBlade ? 1.8 : 0.9),
+      ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
       angle,
       iconAngle: _iconAngle[held] ?? 0,
       flip: dir.dx < 0,

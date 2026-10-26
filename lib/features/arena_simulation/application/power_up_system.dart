@@ -130,6 +130,12 @@ class PowerUpSystem {
   String skillName(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).name;
 
+  double weaponDisplayScale(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).weaponDisplayScale;
+
+  double skillRange(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).range;
+
   void _skillYell(SimulationBall ball, PowerUpKind kind, String fallback) {
     final skill = match.skillLibrary.activeFor(kind, _t);
     final custom = skill.yell.trim();
@@ -167,6 +173,7 @@ class PowerUpSystem {
       ..heldTwoHanded = false
       ..heldSecondaryTwoHanded = false
       ..speedLeft = 0
+      ..speedFactor = _t.speedFactor
       ..frozenLeft = 0
       ..stunnedLeft = 0
       ..ghostLeft = 0
@@ -533,7 +540,9 @@ class PowerUpSystem {
         _eatApple(ball);
         _skillYell(ball, p.kind, 'YUM!');
       case PowerUpKind.speed:
-        ball.speedLeft = _t.speedSteps;
+        ball
+          ..speedLeft = _t.speedSteps
+          ..speedFactor = _t.speedFactor;
         _skillYell(ball, p.kind, 'ZOOM!');
       case PowerUpKind.ghost:
         ball.ghostLeft = _t.ghostSteps;
@@ -542,10 +551,10 @@ class PowerUpSystem {
         _pullNearest(ball);
         _skillYell(ball, p.kind, 'MINE!');
       case PowerUpKind.repulsor:
-        ball.repulsorLeft = PowerUpTuning.specialEffectSteps;
+        ball.repulsorLeft = _t.repulsorSteps;
         _skillYell(ball, p.kind, 'BACK OFF!');
       case PowerUpKind.timeBubble:
-        ball.timeBubbleLeft = PowerUpTuning.specialEffectSteps;
+        ball.timeBubbleLeft = _t.timeBubbleSteps;
         _skillYell(ball, p.kind, 'TIME OUT!');
       case PowerUpKind.vampire:
         ball.vampireLeft = PowerUpTuning.specialEffectSteps;
@@ -554,7 +563,7 @@ class PowerUpSystem {
         ball.mirrorCharges++;
         _skillYell(ball, p.kind, 'RETURN TO SENDER!');
       case PowerUpKind.overcharge:
-        ball.overchargeLeft = PowerUpTuning.specialEffectSteps;
+        ball.overchargeLeft = _t.maximumPowerSteps;
         _skillYell(ball, p.kind, 'MAXIMUM POWER!');
       case PowerUpKind.gremlin:
         final target = _nearestTarget(ball);
@@ -972,10 +981,16 @@ class PowerUpSystem {
       final direction = delta.distance == 0
           ? const Offset(1, 0)
           : delta / delta.distance;
-      final push = match.arenaRadius * 1.4;
+      final push = match.arenaRadius * _t.repulsorForce;
       if (a.repulsorLeft > 0) b.velocity = direction * push;
       if (b.repulsorLeft > 0) a.velocity = -direction * push;
       _yell(a.repulsorLeft > 0 ? a : b, 'BOOM, MOVE!');
+    }
+    if (a.speedLeft > 0) {
+      _hit(b, PowerUpKind.speed, at: b.position, from: a, scaleForCrowd: false);
+    }
+    if (b.speedLeft > 0) {
+      _hit(a, PowerUpKind.speed, at: a.position, from: b, scaleForCrowd: false);
     }
     final heldA = [...a.equippedWeapons];
     final heldB = [...b.equippedWeapons];
@@ -1533,7 +1548,7 @@ class PowerUpSystem {
   ) {
     switch (skill.delivery) {
       case SkillDelivery.aura:
-        final radius = match.arenaRadius * 0.55;
+        final radius = match.arenaRadius * skill.range;
         return targets
             .where(
               (target) =>
@@ -1542,7 +1557,7 @@ class PowerUpSystem {
             )
             .toList();
       case SkillDelivery.orbit:
-        final radius = match.arenaRadius * 0.75;
+        final radius = match.arenaRadius * skill.range;
         return targets
             .where(
               (target) =>
@@ -1551,13 +1566,13 @@ class PowerUpSystem {
             )
             .toList();
       case SkillDelivery.boundaryHazard:
-        final edge = match.arenaRadius * 0.7;
+        final edge = match.arenaRadius * (1 - skill.range).clamp(0, 1);
         return targets
             .where((target) => target.position.distance >= edge)
             .toList();
       case SkillDelivery.beam:
         final direction = _chosenDirection(owner, targets.firstOrNull);
-        final width = owner.radius * 1.75;
+        final width = match.arenaRadius * skill.range;
         return targets.where((target) {
           if (identical(target, owner)) return false;
           final delta = target.position - owner.position;
@@ -1580,23 +1595,37 @@ class PowerUpSystem {
     SkillDefinition skill,
   ) {
     if (skill.delivery == SkillDelivery.projectile) {
-      if (_composedProjectiles.length >= maxComposedProjectiles) return;
       final delta = target.position - owner.position;
-      final direction = delta.distance == 0
+      final baseDirection = delta.distance == 0
           ? const Offset(1, 0)
           : delta / delta.distance;
-      final shot = Projectile(
-        owner: owner,
-        kind: skill.baseKind,
-        position: owner.position + direction * owner.radius,
-        velocity:
-            direction *
-            match.arenaRadius *
-            (skill.projectileSpeed ?? _t.bulletSpeedRatio),
-      );
-      projectiles.add(shot);
-      _composedProjectiles[shot] = skill;
-      shots++;
+      final count = (skill.projectileCount ?? 1).clamp(1, 100);
+      final spread = skill.spreadDegrees ?? 0;
+      for (var index = 0; index < count; index++) {
+        if (_composedProjectiles.length >= maxComposedProjectiles) break;
+        final offset = count == 1 ? 0.0 : (index / (count - 1) - 0.5) * spread;
+        final radians =
+            math.atan2(baseDirection.dy, baseDirection.dx) +
+            offset * math.pi / 180;
+        final direction = Offset(math.cos(radians), math.sin(radians));
+        final shot = Projectile(
+          owner: owner,
+          kind: skill.baseKind,
+          position: owner.position + direction * owner.radius,
+          velocity:
+              direction *
+              match.arenaRadius *
+              (skill.projectileSpeed ?? _t.bulletSpeedRatio),
+          target: skill.homing ? target : null,
+          homing: skill.homing,
+          returnTo: skill.returnsToOrigin ? owner.position : null,
+          renderScale: skill.projectileSize,
+          spinDegreesPerSecond: skill.projectileSpin,
+        );
+        projectiles.add(shot);
+        _composedProjectiles[shot] = skill;
+        shots++;
+      }
       _skillSound(skill.baseKind);
       if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
       return;
@@ -1793,15 +1822,12 @@ class PowerUpSystem {
         );
       case SkillEffectType.heal:
         if (match.mode == MatchMode.arsenal) {
-          target.life = math.min(
-            _t.arenaMaxLife,
-            target.life + (skill.arsenalDamage ?? 10),
-          );
+          target.life = math.min(_t.arenaMaxLife, target.life + skill.healing);
         }
       case SkillEffectType.shield:
         target.goldenArmorHits = math.max(
           target.goldenArmorHits,
-          skill.projectileCount ?? 1,
+          skill.shieldHits,
         );
       case SkillEffectType.freeze:
         if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
@@ -1814,18 +1840,28 @@ class PowerUpSystem {
         target.stunnedLeft = ((skill.durationSeconds ?? 2) * 60).round();
         target.velocity = Offset.zero;
       case SkillEffectType.speed:
-        target.speedLeft = ((skill.durationSeconds ?? 2) * 60).round();
+        target
+          ..speedLeft = ((skill.durationSeconds ?? 2) * 60).round()
+          ..speedFactor = skill.effectStrength;
       case SkillEffectType.pull:
         final toward = owner.position - target.position;
         if (toward.distance > 0) {
           target.velocity =
-              toward / toward.distance * match.arenaRadius * skill.knockback;
+              toward /
+              toward.distance *
+              match.arenaRadius *
+              skill.knockback *
+              skill.effectStrength;
         }
       case SkillEffectType.knockback:
         final away = target.position - owner.position;
         if (away.distance > 0) {
           target.velocity =
-              away / away.distance * match.arenaRadius * skill.knockback;
+              away /
+              away.distance *
+              match.arenaRadius *
+              skill.knockback *
+              skill.effectStrength;
         }
       case SkillEffectType.teleport:
         _teleport(target, target.position);
@@ -2393,7 +2429,9 @@ class PowerUpSystem {
     for (final p in projectiles) {
       if (p.spent) continue;
       final from = p.position;
-      if (p.kind == PowerUpKind.rocketLauncher && p.homing) {
+      final composedSkill = _composedProjectiles[p];
+      if (p.homing &&
+          (p.kind == PowerUpKind.rocketLauncher || composedSkill != null)) {
         var target = p.target;
         if (target == null || !_alive(target)) {
           target = _nearestTarget(p.owner);
@@ -2409,7 +2447,9 @@ class PowerUpSystem {
           }
         }
       }
-      if (p.kind == PowerUpKind.boomerang && p.returning) {
+      if ((p.kind == PowerUpKind.boomerang ||
+              composedSkill?.returnsToOrigin == true) &&
+          p.returning) {
         final returnSpot = p.returnTo ?? p.owner.position;
         final home = returnSpot - from;
         if (home.distance <= p.owner.radius * 1.15) {
@@ -2423,7 +2463,8 @@ class PowerUpSystem {
       for (final ball in balls) {
         if (ball.timeBubbleLeft > 0 &&
             !identical(ball, p.owner) &&
-            (from - ball.position).distance < ball.radius * 3) {
+            (from - ball.position).distance <
+                ball.radius * _t.timeBubbleRange) {
           projectileScale = 0.35;
         }
       }
@@ -2439,7 +2480,9 @@ class PowerUpSystem {
         if (identical(ball, p.owner) ||
             ball.isEliminated ||
             ball.isGhost ||
-            (p.kind == PowerUpKind.boomerang && p.hitTargets.contains(ball))) {
+            ((p.kind == PowerUpKind.boomerang ||
+                    _composedProjectiles[p]?.returnsToOrigin == true) &&
+                p.hitTargets.contains(ball))) {
           continue;
         }
         final t = _entry(
@@ -2449,7 +2492,7 @@ class PowerUpSystem {
           ball.magneticFieldLeft > 0 &&
                   !ball.magneticReflectedOwners.contains(p.owner)
               ? ball.radius * 2
-              : ball.radius,
+              : ball.radius + p.owner.radius * 0.15 * p.renderScale,
         );
         if (t != null && t < strikeAt) {
           struck = ball;
@@ -2524,9 +2567,16 @@ class PowerUpSystem {
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
         } else {
-          final composed = _composedProjectiles.remove(p);
+          final composed = _composedProjectiles[p];
           if (composed != null) {
             _executeComposed(p.owner, composed, primary: struck);
+            p.hitTargets.add(struck);
+            if (composed.returnsToOrigin) {
+              p.returning = true;
+              p.spent = false;
+            } else {
+              _composedProjectiles.remove(p);
+            }
           } else {
             _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
           }
@@ -2546,13 +2596,16 @@ class PowerUpSystem {
         }
       } else if (end.distance >= match.arenaRadius &&
           p.kind != PowerUpKind.rocketLauncher) {
-        if (p.kind == PowerUpKind.boomerang) {
+        final composed = _composedProjectiles[p];
+        if (p.kind == PowerUpKind.boomerang ||
+            composed?.returnsToOrigin == true) {
           p
             ..position = end / end.distance * (match.arenaRadius - 2)
             ..returning = true;
         } else if ((p.kind == PowerUpKind.ricochetDisc ||
-                p.kind == PowerUpKind.prismLaser) &&
-            p.wallBounces < _t.maxBounces(p.kind)) {
+                p.kind == PowerUpKind.prismLaser ||
+                composed != null) &&
+            p.wallBounces < (composed?.maxBounces ?? _t.maxBounces(p.kind))) {
           final normal = end.distance == 0
               ? const Offset(1, 0)
               : end / end.distance;
@@ -2669,7 +2722,9 @@ class PowerUpSystem {
     }
     final bash = kind == PowerUpKind.shield;
     if (match.mode == MatchMode.arsenal) {
-      final power = (from?.overchargeLeft ?? 0) > 0 ? 1.5 : 1.0;
+      final power = (from?.overchargeLeft ?? 0) > 0
+          ? _t.maximumPowerAmount
+          : 1.0;
       final lost = match.damage(
         target,
         (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,

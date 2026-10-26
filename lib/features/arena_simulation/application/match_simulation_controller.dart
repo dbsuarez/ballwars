@@ -202,7 +202,7 @@ class MatchSimulationController {
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
     this.powerUpKinds,
-    this.tuning = PowerUpConfig.defaults,
+    PowerUpConfig tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
@@ -213,7 +213,8 @@ class MatchSimulationController {
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.automaticSpeedUp = true,
-  }) : initialArenaRadius = arenaRadius,
+  }) : tuning = skillLibrary.applyTo(tuning),
+       initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (!endlessBattle &&
         lookAhead &&
@@ -664,13 +665,12 @@ class MatchSimulationController {
         (other) =>
             !identical(other, ball) &&
             other.timeBubbleLeft > 0 &&
-            (ball.position - other.position).distance < other.radius * 3,
+            (ball.position - other.position).distance <
+                other.radius * tuning.timeBubbleRange,
       );
       final move = ball.velocity * dt * (slowedByBubble ? 0.35 : 1.0);
       // A speed boost moves the ball faster without changing its stored velocity, so it ends cleanly.
-      ball.position += ball.speedLeft > 0
-          ? move * PowerUpTuning.speedFactor
-          : move;
+      ball.position += ball.speedLeft > 0 ? move * ball.speedFactor : move;
       final collision = _physics.resolveWallCollision(
         ball,
         previousPosition: previousPosition,

@@ -539,6 +539,9 @@ class ArenaPainter extends CustomPainter {
       incomingAttackAngle: PowerUpPainter.incomingAttackAngle(state, ball),
       firedWeaponHoldLeft: (kind) =>
           state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
+      weaponDisplayScale: (kind) =>
+          state.powerUps?.weaponDisplayScale(kind) ?? 1,
+      skillRange: (kind) => state.powerUps?.skillRange(kind) ?? 1,
     );
     if (look == BallLook.faces) {
       paintHands(canvas, ball);

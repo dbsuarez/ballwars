@@ -142,6 +142,61 @@ void main() {
     expect(c.powerUps!.skillSounds, isNotEmpty);
   });
 
+  test('Speed deals its configured collision damage', () {
+    final speed = SkillLibrary.defaults
+        .builtIn(PowerUpKind.speed, PowerUpConfig.defaults)
+        .copyWith(arsenalDamage: 9);
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        speed,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final [owner, target] = c.state.balls;
+    owner.speedLeft = 60;
+
+    c.powerUps!.onContact(owner, target);
+
+    expect(target.life, _life - 9);
+  });
+
+  test('composed projectile parameters launch the configured volley', () {
+    final volley = SkillLibrary.defaults
+        .create('Seeking Volley', PowerUpKind.pistol)
+        .copyWith(
+          enabled: true,
+          projectileCount: 3,
+          projectileSize: 1.8,
+          projectileSpin: 360,
+          spreadDegrees: 24,
+          homing: true,
+          returnsToOrigin: true,
+          maxBounces: 2,
+        );
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        volley,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.pistol);
+    owner.aimLeft = 1;
+
+    _run(c, 1);
+
+    expect(c.powerUps!.projectiles, hasLength(3));
+    expect(c.powerUps!.projectiles.every((shot) => shot.homing), isTrue);
+    expect(
+      c.powerUps!.projectiles.every((shot) => shot.renderScale == 1.8),
+      isTrue,
+    );
+    expect(
+      c.powerUps!.projectiles.every((shot) => shot.spinDegreesPerSecond == 360),
+      isTrue,
+    );
+  });
+
   test('a composed skill chains effects and repeats deterministically', () {
     final draft = SkillLibrary.defaults
         .create('Stunning Pulse', PowerUpKind.apple)
@@ -377,6 +432,7 @@ void main() {
             dotArsenalDamage: 6,
             durationSeconds: 1,
             projectileCount: 2,
+            shieldHits: 2,
             knockback: 1,
           );
       return SkillLibrary.defaults.withDefinition(
@@ -914,7 +970,7 @@ void main() {
           delivery: SkillDelivery.instant,
           effectType: SkillEffectType.heal,
           cooldownSeconds: 1,
-          arsenalDamage: 6,
+          healing: 6,
         );
     final damageMatch = _match(
       skillLibrary: SkillLibrary.defaults.withDefinition(
@@ -939,7 +995,7 @@ void main() {
           delivery: SkillDelivery.instant,
           effectType: SkillEffectType.heal,
           cooldownSeconds: 1,
-          arsenalDamage: 10,
+          healing: 10,
         );
     final c = _match(
       count: 3,

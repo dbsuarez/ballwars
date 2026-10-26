@@ -707,7 +707,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                       ButtonSegment(
                         value: _TestMotion.randomStart,
                         icon: Icon(Icons.shuffle, size: 17),
-                        label: Text('Random start'),
+                        label: Text('Random'),
                       ),
                     ],
                     selected: {_motion[i]},

@@ -18,27 +18,103 @@ class ThemePreset {
 class AppPalettes {
   AppPalettes._();
 
-  static const ThemePreset midnight = ThemePreset('midnight', 'Midnight', Color(0xFF0A0A0B), Color(0xFFF2F2F0));
+  static const ThemePreset midnight = ThemePreset(
+    'midnight',
+    'Midnight',
+    Color(0xFF0A0A0B),
+    Color(0xFFF2F2F0),
+  );
 
   static const List<ThemePreset> all = [
     midnight,
-    ThemePreset('shadow-clay', 'Shadow Grey & Sandy Clay', Color(0xFF272727), Color(0xFFD4AA7D)),
-    ThemePreset('clay-shadow', 'Sandy Clay & Shadow Grey', Color(0xFFD4AA7D), Color(0xFF272727)),
-    ThemePreset('twilight-blossom', 'Deep Twilight & Cherry Blossom', Color(0xFF1A1265), Color(0xFFF9A8BB)),
-    ThemePreset('blossom-twilight', 'Cherry Blossom & Deep Twilight', Color(0xFFF9A8BB), Color(0xFF1A1265)),
-    ThemePreset('grape-lime', 'Vintage Grape & Lime Cream', Color(0xFF433455), Color(0xFFDDEA78)),
-    ThemePreset('lime-grape', 'Lime Cream & Vintage Grape', Color(0xFFDDEA78), Color(0xFF433455)),
-    ThemePreset('gunmetal-icy', 'Gunmetal & Icy Blue', Color(0xFF35393C), Color(0xFFA4D8FF)),
-    ThemePreset('icy-gunmetal', 'Icy Blue & Gunmetal', Color(0xFFA4D8FF), Color(0xFF35393C)),
-    ThemePreset('rose-chartreuse', 'Electric Rose & Chartreuse', Color(0xFFFE00AE), Color(0xFFC1FE1A)),
-    ThemePreset('chartreuse-rose', 'Chartreuse & Electric Rose', Color(0xFFC1FE1A), Color(0xFFFE00AE)),
-    ThemePreset('space-raspberry', 'Deep Space Blue & Raspberry', Color(0xFF012641), Color(0xFFEE005A)),
-    ThemePreset('raspberry-space', 'Raspberry & Deep Space Blue', Color(0xFFEE005A), Color(0xFF012641)),
-    ThemePreset('plum-celadon', 'Chocolate Plum & Celadon', Color(0xFF553832), Color(0xFFA8D3A8)),
-    ThemePreset('celadon-plum', 'Celadon & Chocolate Plum', Color(0xFFA8D3A8), Color(0xFF553832)),
+    ThemePreset(
+      'shadow-clay',
+      'Shadow Grey & Sandy Clay',
+      Color(0xFF272727),
+      Color(0xFFD4AA7D),
+    ),
+    ThemePreset(
+      'clay-shadow',
+      'Sandy Clay & Shadow Grey',
+      Color(0xFFD4AA7D),
+      Color(0xFF272727),
+    ),
+    ThemePreset(
+      'twilight-blossom',
+      'Deep Twilight & Cherry Blossom',
+      Color(0xFF1A1265),
+      Color(0xFFF9A8BB),
+    ),
+    ThemePreset(
+      'blossom-twilight',
+      'Cherry Blossom & Deep Twilight',
+      Color(0xFFF9A8BB),
+      Color(0xFF1A1265),
+    ),
+    ThemePreset(
+      'grape-lime',
+      'Vintage Grape & Lime Cream',
+      Color(0xFF433455),
+      Color(0xFFDDEA78),
+    ),
+    ThemePreset(
+      'lime-grape',
+      'Lime Cream & Vintage Grape',
+      Color(0xFFDDEA78),
+      Color(0xFF433455),
+    ),
+    ThemePreset(
+      'gunmetal-icy',
+      'Gunmetal & Icy Blue',
+      Color(0xFF35393C),
+      Color(0xFFA4D8FF),
+    ),
+    ThemePreset(
+      'icy-gunmetal',
+      'Icy Blue & Gunmetal',
+      Color(0xFFA4D8FF),
+      Color(0xFF35393C),
+    ),
+    ThemePreset(
+      'rose-chartreuse',
+      'Electric Rose & Chartreuse',
+      Color(0xFFFE00AE),
+      Color(0xFFC1FE1A),
+    ),
+    ThemePreset(
+      'chartreuse-rose',
+      'Chartreuse & Electric Rose',
+      Color(0xFFC1FE1A),
+      Color(0xFFFE00AE),
+    ),
+    ThemePreset(
+      'space-raspberry',
+      'Deep Space Blue & Raspberry',
+      Color(0xFF012641),
+      Color(0xFFEE005A),
+    ),
+    ThemePreset(
+      'raspberry-space',
+      'Raspberry & Deep Space Blue',
+      Color(0xFFEE005A),
+      Color(0xFF012641),
+    ),
+    ThemePreset(
+      'plum-celadon',
+      'Chocolate Plum & Celadon',
+      Color(0xFF553832),
+      Color(0xFFA8D3A8),
+    ),
+    ThemePreset(
+      'celadon-plum',
+      'Celadon & Chocolate Plum',
+      Color(0xFFA8D3A8),
+      Color(0xFF553832),
+    ),
   ];
 
-  static ThemePreset byId(String? id) => all.firstWhere((p) => p.id == id, orElse: () => midnight);
+  static ThemePreset byId(String? id) =>
+      all.firstWhere((p) => p.id == id, orElse: () => midnight);
 }
 
 /// The design tokens screens and painters draw with (Theme extension).
@@ -76,7 +152,8 @@ class BallWarsColors extends ThemeExtension<BallWarsColors> {
   }
 
   static BallWarsColors of(BuildContext context) =>
-      Theme.of(context).extension<BallWarsColors>() ?? BallWarsColors.fromPreset(AppPalettes.midnight);
+      Theme.of(context).extension<BallWarsColors>() ??
+      BallWarsColors.fromPreset(AppPalettes.midnight);
 
   @override
   BallWarsColors copyWith({
@@ -87,16 +164,15 @@ class BallWarsColors extends ThemeExtension<BallWarsColors> {
     Color? text,
     Color? muted,
     bool? isDark,
-  }) =>
-      BallWarsColors(
-        background: background ?? this.background,
-        surface: surface ?? this.surface,
-        surfaceHigh: surfaceHigh ?? this.surfaceHigh,
-        border: border ?? this.border,
-        text: text ?? this.text,
-        muted: muted ?? this.muted,
-        isDark: isDark ?? this.isDark,
-      );
+  }) => BallWarsColors(
+    background: background ?? this.background,
+    surface: surface ?? this.surface,
+    surfaceHigh: surfaceHigh ?? this.surfaceHigh,
+    border: border ?? this.border,
+    text: text ?? this.text,
+    muted: muted ?? this.muted,
+    isDark: isDark ?? this.isDark,
+  );
 
   @override
   BallWarsColors lerp(BallWarsColors? other, double t) {
@@ -118,18 +194,24 @@ class BallWarsColors extends ThemeExtension<BallWarsColors> {
 class AppText {
   AppText._();
 
-  static TextStyle ui(double size, FontWeight weight, {Color? color, double? letterSpacing, double? height}) =>
-      TextStyle(
-        fontFamily: 'Manrope',
-        fontSize: size,
-        fontWeight: weight,
-        fontVariations: [FontVariation('wght', weight.value.toDouble())],
-        color: color,
-        letterSpacing: letterSpacing,
-        height: height,
-      );
+  static TextStyle ui(
+    double size,
+    FontWeight weight, {
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) => TextStyle(
+    fontFamily: 'Manrope',
+    fontSize: size,
+    fontWeight: weight,
+    fontVariations: [FontVariation('wght', weight.value.toDouble())],
+    color: color,
+    letterSpacing: letterSpacing,
+    height: height,
+  );
 
-  static TextStyle mono(double size, {Color? color, double? letterSpacing}) => TextStyle(
+  static TextStyle mono(double size, {Color? color, double? letterSpacing}) =>
+      TextStyle(
         fontFamily: 'JetBrains Mono',
         fontSize: size,
         fontWeight: FontWeight.w500,
@@ -145,8 +227,11 @@ class AppTheme {
   static ThemeData build(ThemePreset preset) {
     final c = BallWarsColors.fromPreset(preset);
     final brightness = c.isDark ? Brightness.dark : Brightness.light;
-    TextStyle t(double size, FontWeight w, [Color? color]) => AppText.ui(size, w, color: color ?? c.text);
-    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
+    TextStyle t(double size, FontWeight w, [Color? color]) =>
+        AppText.ui(size, w, color: color ?? c.text);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -212,22 +297,40 @@ class AppTheme {
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18),
           side: BorderSide(color: c.border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           textStyle: t(14, FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: c.text, textStyle: t(14, FontWeight.w600)),
+        style: TextButton.styleFrom(
+          foregroundColor: c.text,
+          textStyle: t(14, FontWeight.w600),
+        ),
       ),
-      iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(foregroundColor: c.text)),
+      // Let each Material icon-button variant resolve its own contrasting
+      // foreground. A global foreground override makes filled buttons use the
+      // page text colour on top of the same-coloured fill (white-on-white in
+      // the midnight palette), which looks like a missing/broken icon.
+      iconButtonTheme: const IconButtonThemeData(),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: c.surface,
         hintStyle: t(15, FontWeight.w500, c.muted),
         labelStyle: t(14, FontWeight.w600, c.muted),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.border)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: c.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: c.border),
+        ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: c.text, width: 1.5),
@@ -236,15 +339,25 @@ class AppTheme {
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           side: WidgetStatePropertyAll(BorderSide(color: c.border)),
-          backgroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.text : c.surface),
-          foregroundColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.background : c.muted),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? c.text : c.surface,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? c.background : c.muted,
+          ),
           textStyle: WidgetStatePropertyAll(t(13, FontWeight.w700)),
-          shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.background : c.muted),
-        trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? c.text : c.surfaceHigh),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.background : c.muted,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.text : c.surfaceHigh,
+        ),
         trackOutlineColor: WidgetStatePropertyAll(c.border),
       ),
       sliderTheme: SliderThemeData(
@@ -254,13 +367,19 @@ class AppTheme {
         overlayColor: c.text.withValues(alpha: 0.08),
         trackHeight: 3,
       ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(color: c.text, linearTrackColor: c.border),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: c.text,
+        linearTrackColor: c.border,
+      ),
       dividerTheme: DividerThemeData(color: c.border, thickness: 1, space: 1),
       cardTheme: CardThemeData(
         color: c.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: c.border)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: c.border),
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: c.surface,
@@ -274,7 +393,9 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
         dragHandleColor: c.border,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: c.text,

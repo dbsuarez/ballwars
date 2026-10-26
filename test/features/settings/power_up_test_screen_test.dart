@@ -145,7 +145,7 @@ void main() {
           .first
           .velocity;
       await tester.tap(
-        find.descendant(of: motionA, matching: find.text('Random start')),
+        find.descendant(of: motionA, matching: find.text('Random')),
       );
       await tester.pump();
       final randomVelocity = tester

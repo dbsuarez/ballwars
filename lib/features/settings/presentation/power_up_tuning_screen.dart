@@ -19,8 +19,12 @@ class PowerUpTuningScreen extends StatefulWidget {
 }
 
 class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
+  static Iterable<TuningField> get _legacyFields => PowerUpConfig.fields.where(
+    (field) => !field.id.startsWith('tier.') && !field.id.startsWith('skill'),
+  );
+
   late final Map<String, TextEditingController> _text = {
-    for (final f in PowerUpConfig.fields)
+    for (final f in _legacyFields)
       f.id: TextEditingController(text: _format(f, widget.initial.value(f.id))),
   };
 
@@ -83,7 +87,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
   /// The config the fields describe; null while one isn't a number.
   PowerUpConfig? get _config {
     var config = PowerUpConfig.defaults;
-    for (final f in PowerUpConfig.fields) {
+    for (final f in _legacyFields) {
       final v = num.tryParse(_text[f.id]!.text.trim());
       if (v == null || !v.isFinite) return null;
       config = config.withValue(f.id, v);
@@ -98,9 +102,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
 
   void _restoreDefaults() {
     setState(() {
-      for (final f in PowerUpConfig.fields.where(
-        (field) => !field.id.startsWith('tier.'),
-      )) {
+      for (final f in _legacyFields) {
         _text[f.id]!.text = _format(f, f.defaultValue);
       }
     });
@@ -203,9 +205,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
     final c = BallWarsColors.of(context);
     final config = _config;
     final groups = <String, List<TuningField>>{};
-    for (final f in PowerUpConfig.fields.where(
-      (field) => !field.id.startsWith('tier.'),
-    )) {
+    for (final f in _legacyFields) {
       groups.putIfAbsent(f.group, () => []).add(f);
     }
     // As wide as Home's and Settings' column on big screens, so switching between them feels even.

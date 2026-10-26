@@ -302,6 +302,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       builder: (_) => _ItemPicker(
         tuning: _match!.tuning,
         initialTab: _pickerTabs[index],
+        selected: _savedItems[index],
         onTabChanged: (tab) {
           _pickerTabs[index] = tab;
           DevicePrefs.write('power-test-item-tab-$index', tab);
@@ -906,10 +907,12 @@ class _ItemPicker extends StatefulWidget {
   const _ItemPicker({
     required this.tuning,
     required this.initialTab,
+    required this.selected,
     required this.onTabChanged,
   });
   final PowerUpConfig tuning;
   final int initialTab;
+  final PowerUpKind? selected;
   final ValueChanged<int> onTabChanged;
 
   @override
@@ -937,9 +940,11 @@ class _ItemPickerState extends State<_ItemPicker> {
                   kind.label.toLowerCase().contains(query),
             )
             .toList()
-          ..sort(
-            (a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()),
-          );
+          ..sort((a, b) {
+            if (a == widget.selected) return -1;
+            if (b == widget.selected) return 1;
+            return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+          });
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
@@ -996,8 +1001,14 @@ class _ItemPickerState extends State<_ItemPicker> {
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
+                          final selected = item == widget.selected;
                           return ListTile(
+                            key: ValueKey('power-test-item-${item.name}'),
                             minVerticalPadding: 12,
+                            selected: selected,
+                            selectedTileColor: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.12),
                             leading: PowerUpIcon(item, size: 32),
                             title: PowerUpName(item, tuning: widget.tuning),
                             subtitle: Text(
@@ -1007,7 +1018,9 @@ class _ItemPickerState extends State<_ItemPicker> {
                                   ? " weapon"
                                   : " power-up"}',
                             ),
-                            trailing: const Icon(Icons.add_circle_outline),
+                            trailing: selected
+                                ? const Icon(Icons.check_circle)
+                                : const Icon(Icons.add_circle_outline),
                             onTap: () => Navigator.pop(context, item),
                           );
                         },

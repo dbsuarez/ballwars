@@ -55,6 +55,7 @@ class PowerUpConfig {
   static const String _arsenal = 'Damage - Arsenal (life)';
   static const String _allOut = 'Damage - All-Out (lines)';
   static const String _effects = 'Effects';
+  static const String _skills = 'Skill Management';
 
   /// The kinds that do damage, with their own damage fields.
   static const List<PowerUpKind> damageKinds = [
@@ -340,6 +341,48 @@ class PowerUpConfig {
       max: 1,
       unit: TuningUnit.ratio,
     ),
+    for (final kind in PowerUpKind.values.where((kind) => kind.isGun))
+      TuningField(
+        'skillSpeed.${kind.name}',
+        '${kind.label} projectile speed',
+        _skills,
+        PowerUpTuning.bulletSpeedRatio,
+        min: 0.1,
+        max: 10,
+        unit: TuningUnit.ratio,
+      ),
+    TuningField(
+      'skillSpread.shotgun',
+      'Shotgun spread',
+      _skills,
+      PowerUpTuning.shotgunSpread,
+      min: 0,
+      max: 3.141592653589793,
+      unit: TuningUnit.ratio,
+    ),
+    for (final kind in const [PowerUpKind.ricochetDisc, PowerUpKind.prismLaser])
+      TuningField(
+        'skillBounces.${kind.name}',
+        '${kind.label} bounces',
+        _skills,
+        1,
+        min: 0,
+        max: 20,
+        integer: true,
+      ),
+    for (final kind in const [
+      PowerUpKind.energyWave,
+      PowerUpKind.omegaTendrils,
+    ])
+      TuningField(
+        'skillKnockback.${kind.name}',
+        '${kind.label} knockback',
+        _skills,
+        1,
+        min: 0,
+        max: 10,
+        unit: TuningUnit.ratio,
+      ),
   ];
 
   static String _each(PowerUpKind kind) => kind == PowerUpKind.shotgun
@@ -351,7 +394,7 @@ class PowerUpConfig {
             kind == PowerUpKind.poisonSwamp ||
             kind == PowerUpKind.tornado ||
             kind == PowerUpKind.flamethrower
-      ? ' (per DoT tick)'
+      ? ' (DoT)'
       : '';
 
   static final Map<String, TuningField> _byId = {
@@ -424,6 +467,19 @@ class PowerUpConfig {
   int get freezeSteps => _steps('freeze');
   int get ghostSteps => _steps('ghost');
   double get blastRadiusRatio => value('blast').toDouble();
+  double projectileSpeedRatio(PowerUpKind kind) =>
+      _byId.containsKey('skillSpeed.${kind.name}')
+      ? value('skillSpeed.${kind.name}').toDouble()
+      : bulletSpeedRatio;
+  double get shotgunSpreadRadians => value('skillSpread.shotgun').toDouble();
+  int maxBounces(PowerUpKind kind) =>
+      _byId.containsKey('skillBounces.${kind.name}')
+      ? value('skillBounces.${kind.name}').toInt()
+      : 0;
+  double knockback(PowerUpKind kind) =>
+      _byId.containsKey('skillKnockback.${kind.name}')
+      ? value('skillKnockback.${kind.name}').toDouble()
+      : 1;
 
   // --- Storage ---
 

@@ -21,16 +21,31 @@ void main() {
         .copyWith(arsenalDamage: 27, allOutDamage: 11);
     final shotgun = SkillLibrary.defaults
         .builtIn(PowerUpKind.shotgun, tuning)
-        .copyWith(projectileCount: 9);
+        .copyWith(projectileCount: 9, projectileSpeed: 2.4, spreadDegrees: 70);
+    final disc = SkillLibrary.defaults
+        .builtIn(PowerUpKind.ricochetDisc, tuning)
+        .copyWith(maxBounces: 4);
+    final wave = SkillLibrary.defaults
+        .builtIn(PowerUpKind.energyWave, tuning)
+        .copyWith(knockback: 2.5);
     final library = SkillLibrary.defaults
         .withDefinition(pistol, tuning)
-        .withDefinition(shotgun, tuning);
+        .withDefinition(shotgun, tuning)
+        .withDefinition(disc, tuning)
+        .withDefinition(wave, tuning);
     final decoded = SkillLibrary.fromJson(library.toJson());
     final applied = decoded.applyTo(tuning);
 
     expect(applied.arenaDamage(PowerUpKind.pistol), 27);
     expect(applied.allOutThreads(PowerUpKind.pistol), 11);
     expect(applied.shotgunPellets, 9);
+    expect(applied.projectileSpeedRatio(PowerUpKind.shotgun), 2.4);
+    expect(
+      applied.shotgunSpreadRadians,
+      closeTo(70 * 3.141592653589793 / 180, 0.0001),
+    );
+    expect(applied.maxBounces(PowerUpKind.ricochetDisc), 4);
+    expect(applied.knockback(PowerUpKind.energyWave), 2.5);
   });
 
   test('duplicates get unique stable IDs and start disabled', () {

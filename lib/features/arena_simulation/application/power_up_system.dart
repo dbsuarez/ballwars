@@ -472,7 +472,8 @@ class PowerUpSystem {
       target.position += direction * target.radius * 0.55;
       target.velocity =
           direction *
-          math.max(tendril.savedVelocity.distance, match.arenaRadius * 0.45);
+          math.max(tendril.savedVelocity.distance, match.arenaRadius * 0.45) *
+          _t.knockback(PowerUpKind.omegaTendrils);
       final lost = match.damage(
         target,
         _t.arenaDamage(PowerUpKind.omegaTendrils),
@@ -1426,7 +1427,7 @@ class PowerUpSystem {
   /// pellets get a seeded jitter of up to [_pelletJitter]; the two outer ones mark the fan's edges.
   void _fireShotgun(SimulationBall ball, SimulationBall target) {
     final count = _t.shotgunPellets;
-    const spread = PowerUpTuning.shotgunSpread;
+    final spread = _t.shotgunSpreadRadians;
     final volley = ++_lastVolley;
     final sabotaged = _consumeGremlin(ball);
     for (var i = 0; i < count; i++) {
@@ -1647,7 +1648,8 @@ class PowerUpSystem {
           ? saved
           : away /
                 away.distance *
-                math.max(saved.distance, match.arenaRadius * 0.42);
+                math.max(saved.distance, match.arenaRadius * 0.42) *
+                _t.knockback(PowerUpKind.energyWave);
     }
     energyWaveAttacks.remove(attack);
   }
@@ -1718,7 +1720,7 @@ class PowerUpSystem {
         position: ball.position + direction * ball.radius,
         velocity:
             direction *
-            (match.arenaRadius * (speedRatio ?? _t.bulletSpeedRatio)),
+            (match.arenaRadius * (speedRatio ?? _t.projectileSpeedRatio(kind))),
         volley: volley,
         returnTo: kind == PowerUpKind.boomerang ? ball.position : null,
       ),
@@ -1889,7 +1891,7 @@ class PowerUpSystem {
             ..returning = true;
         } else if ((p.kind == PowerUpKind.ricochetDisc ||
                 p.kind == PowerUpKind.prismLaser) &&
-            p.wallBounces == 0) {
+            p.wallBounces < _t.maxBounces(p.kind)) {
           final normal = end.distance == 0
               ? const Offset(1, 0)
               : end / end.distance;

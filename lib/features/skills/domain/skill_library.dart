@@ -232,6 +232,7 @@ class SkillLibrary {
     var result = tuning;
     for (final kind in PowerUpKind.values) {
       final skill = builtIn(kind, tuning);
+      final explicitlyConfigured = overrides.containsKey(skill.id);
       if (skill.arsenalDamage != null &&
           PowerUpConfig.damageKinds.contains(kind)) {
         result = result.withValue('dmg.${kind.name}', skill.arsenalDamage!);
@@ -261,6 +262,32 @@ class SkillLibrary {
         if (kind == PowerUpKind.ghost) {
           result = result.withValue('ghost', skill.durationSeconds!);
         }
+      }
+      if (explicitlyConfigured && skill.projectileSpeed != null && kind.isGun) {
+        result = result.withValue(
+          'skillSpeed.${kind.name}',
+          skill.projectileSpeed!,
+        );
+      }
+      if (explicitlyConfigured &&
+          skill.spreadDegrees != null &&
+          kind == PowerUpKind.shotgun) {
+        result = result.withValue(
+          'skillSpread.shotgun',
+          skill.spreadDegrees! * 3.141592653589793 / 180,
+        );
+      }
+      if (explicitlyConfigured && skill.maxBounces != null) {
+        result = result.withValue(
+          'skillBounces.${kind.name}',
+          skill.maxBounces!,
+        );
+      }
+      if (explicitlyConfigured) {
+        result = result.withValue(
+          'skillKnockback.${kind.name}',
+          skill.knockback,
+        );
       }
     }
     return result;

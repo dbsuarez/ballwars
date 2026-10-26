@@ -188,6 +188,14 @@ void main() {
       contains('33 damage'),
     );
   });
+
+  test('damage-over-time fields use the concise DoT label', () {
+    final molotov = PowerUpConfig.fields.singleWhere(
+      (field) => field.id == 'dmg.molotov',
+    );
+    expect(molotov.label, 'Molotov (DoT)');
+    expect(molotov.label, isNot(contains('tick')));
+  });
   test('unarmed collision tuning follows the attacking ball equipment', () {
     MatchSimulationController collide({
       required double damage,

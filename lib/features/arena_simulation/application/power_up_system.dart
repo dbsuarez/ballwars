@@ -328,7 +328,7 @@ class PowerUpSystem {
         (number - _t.firstSpawnSteps) % _t.spawnInterval(_ballCount) == 0) {
       _spawn(number);
     }
-    _turnShields();
+    _turnTrackedItems();
   }
 
   void _spawnArenaThemeHazard(int number) {
@@ -1424,13 +1424,22 @@ class PowerUpSystem {
 
   /// Turns every held shield toward its biggest threat: the nearest enemy projectile coming at it, else
   /// the nearest opponent. Only shows where it braces; a shield blocks from every side.
-  void _turnShields() {
+  void _turnTrackedItems() {
     for (final ball in match.state.balls) {
-      if (!ball.equippedWeapons.contains(PowerUpKind.shield) || !_alive(ball)) {
+      ball.trackingItems
+        ..clear()
+        ..addAll(
+          ball.equippedWeapons.where(
+            (kind) =>
+                match.skillLibrary.activeFor(kind, _t).trackNearestOpponent,
+          ),
+        );
+      if (ball.trackingItems.isEmpty || !_alive(ball)) {
         continue;
       }
-      final threat =
-          _incoming(ball)?.position ?? _nearestTarget(ball)?.position;
+      final threat = ball.trackingItems.contains(PowerUpKind.shield)
+          ? _incoming(ball)?.position ?? _nearestTarget(ball)?.position
+          : _nearestTarget(ball)?.position;
       if (threat == null) continue;
       final toThreat = threat - ball.position;
       final want = math.atan2(toThreat.dy, toThreat.dx);

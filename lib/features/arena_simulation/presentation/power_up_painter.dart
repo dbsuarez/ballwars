@@ -1723,7 +1723,9 @@ class PowerUpPainter {
     final spread = ball.heldSecondary == null
         ? 0.0
         : (slot == 0 ? -0.32 : 0.32);
-    if (held == PowerUpKind.shield) return ball.shieldAngle + spread;
+    if (held != null && ball.trackingItems.contains(held)) {
+      return ball.shieldAngle + spread;
+    }
     final target = ball.aimTarget;
     final Offset toward;
     if ((held?.isGun ?? false) && target != null) {

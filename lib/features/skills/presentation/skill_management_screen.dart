@@ -722,6 +722,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late bool _enabled = widget.skill.enabled;
   late bool _homing = widget.skill.homing;
   late bool _returnsToOrigin = widget.skill.returnsToOrigin;
+  late bool _trackNearestOpponent = widget.skill.trackNearestOpponent;
   late SkillTrigger? _trigger = widget.skill.trigger;
   late SkillTargeting? _targeting = widget.skill.targeting;
   late SkillDelivery? _delivery = widget.skill.delivery;
@@ -753,6 +754,30 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   double? _double(String key) => double.tryParse(_numbers[key]?.text ?? '');
   int? _int(String key) => int.tryParse(_numbers[key]?.text ?? '');
+
+  bool _usesEffect(SkillEffectType effect) =>
+      _effectType == effect || _secondaryEffectType == effect;
+
+  bool get _showsHealing =>
+      _usesEffect(SkillEffectType.heal) ||
+      (!widget.skill.isComposed && widget.skill.baseKind == PowerUpKind.apple);
+
+  bool get _showsShieldHits =>
+      _usesEffect(SkillEffectType.shield) ||
+      (!widget.skill.isComposed &&
+          (widget.skill.baseKind == PowerUpKind.shield ||
+              widget.skill.baseKind == PowerUpKind.goldenArmor));
+
+  bool get _showsFreezeSettings =>
+      _usesEffect(SkillEffectType.freeze) ||
+      (!widget.skill.isComposed &&
+          widget.skill.baseKind == PowerUpKind.freeze);
+
+  bool get _usesProjectileDelivery =>
+      _delivery == SkillDelivery.projectile ||
+      (!widget.skill.isComposed &&
+          widget.skill.baseKind.isWeapon &&
+          widget.skill.projectileCount != null);
 
   int? get _colorValue {
     final value = _effectColor.text.trim().replaceFirst('#', '');
@@ -791,6 +816,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _enabled = defaults.enabled;
       _homing = defaults.homing;
       _returnsToOrigin = defaults.returnsToOrigin;
+      _trackNearestOpponent = defaults.trackNearestOpponent;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
       _trigger = defaults.trigger;
@@ -917,9 +943,9 @@ class _SkillEditorState extends State<_SkillEditor> {
           'TRIGGER decides when the behavior runs: on pickup, after aiming and firing, on collision, on a repeating match timer, after its owner takes damage, or after its owner eliminates an opponent. Timer and reactive triggers are innate while the custom skill is active; they do not require collecting the carrier.\n\n'
           'TARGETING chooses the owner, nearest opponent, every opponent, the opponent in the ball\'s travel direction, or the opponent nearest a projected arena location.\n\n'
           'DELIVERY supports immediate, projectile, area, beam, aura, orbit, and boundary-hazard behavior.\n\n'
-          'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
+          'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. The editor only shows parameters used by the selected effect and delivery. Weapons hide healing unless Healing effect is intentionally enabled. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
           'SECONDARY EFFECT runs immediately after the primary effect. START DELAY postpones the first activation. REPEAT COUNT includes the first activation; the interval controls the pause between later activations. DoT uses its own TICK INTERVAL. COOLDOWN prevents the same ball from activating the skill again too soon.\n\n'
-          'EFFECT COLOR tints generated impact particles. SCREEN SHAKE controls impact camera movement from none (0) to maximum (1). HANDEDNESS can preserve the carrier default or explicitly make a weapon one-handed or two-handed.\n\n'
+          'EFFECT COLOR tints generated impact particles. SCREEN SHAKE controls impact camera movement from none (0) to maximum (1). HANDEDNESS can preserve the carrier default or explicitly make a weapon one-handed or two-handed. TRACK NEAREST OPPONENT turns an equipped weapon artwork toward its nearest target.\n\n'
           'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
           'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball. BUBBLE SHAPE offers Shout for attacks, Speech for recovery, Thought for quiet or psychic skills, and Radio for tech or command skills.',
         ),
@@ -956,6 +982,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       projectileSpin: _double('projectileSpin'),
       homing: _homing,
       returnsToOrigin: _returnsToOrigin,
+      trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
       effectStrength: _double('effectStrength'),
       healing: _double('healing'),
@@ -1171,6 +1198,29 @@ class _SkillEditorState extends State<_SkillEditor> {
                     }
                   }),
                 ),
+                if (widget.skill.baseKind.isWeapon) ...[
+                  const SizedBox(height: 4),
+                  SwitchListTile.adaptive(
+                    key: const ValueKey('skill-weapon-healing'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _usesEffect(SkillEffectType.heal),
+                    onChanged: (value) => setState(() {
+                      if (value) {
+                        if (_effectType != SkillEffectType.heal) {
+                          _secondaryEffectType = SkillEffectType.heal;
+                        }
+                      } else if (_secondaryEffectType == SkillEffectType.heal) {
+                        _secondaryEffectType = null;
+                      } else if (_effectType == SkillEffectType.heal) {
+                        _effectType = SkillEffectType.damage;
+                      }
+                    }),
+                    title: const Text('Healing effect'),
+                    subtitle: const Text(
+                      'Off by default for weapons. Turn on only for a weapon that should also heal.',
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   key: const ValueKey('skill-secondary-effect-type'),
@@ -1347,38 +1397,56 @@ class _SkillEditorState extends State<_SkillEditor> {
               if (_numbers.containsKey('bounces'))
                 _number('bounces', 'Maximum bounces'),
               _number('range', 'Range', suffix: 'arena ratio'),
-              _number('projectileSize', 'Projectile size', suffix: 'x'),
-              _number('projectileSpin', 'Projectile spin', suffix: 'deg/s'),
+              if (_usesProjectileDelivery)
+                _number('projectileSize', 'Projectile size', suffix: 'x'),
+              if (_usesProjectileDelivery)
+                _number('projectileSpin', 'Projectile spin', suffix: 'deg/s'),
               _number(
                 'weaponDisplayScale',
                 'Equipped display scale',
                 suffix: 'x',
               ),
               _number('effectStrength', 'Effect strength', suffix: 'x'),
-              _number('healing', 'Healing', suffix: 'life'),
-              _number('shieldHits', 'Shield hits'),
-              _number(
-                'frozenDamageMultiplier',
-                'Frozen-target damage multiplier',
-                suffix: 'x',
-              ),
-              _number(
-                'frozenCollisionDamage',
-                'Frozen collision damage',
-                suffix: 'life',
-              ),
-              SwitchListTile.adaptive(
-                key: const ValueKey('skill-homing'),
-                value: _homing,
-                onChanged: (value) => setState(() => _homing = value),
-                title: const Text('Homing projectile'),
-              ),
-              SwitchListTile.adaptive(
-                key: const ValueKey('skill-return'),
-                value: _returnsToOrigin,
-                onChanged: (value) => setState(() => _returnsToOrigin = value),
-                title: const Text('Return to launch point'),
-              ),
+              if (_showsHealing) _number('healing', 'Healing', suffix: 'life'),
+              if (_showsShieldHits) _number('shieldHits', 'Shield hits'),
+              if (_showsFreezeSettings)
+                _number(
+                  'frozenDamageMultiplier',
+                  'Frozen-target damage multiplier',
+                  suffix: 'x',
+                ),
+              if (_showsFreezeSettings)
+                _number(
+                  'frozenCollisionDamage',
+                  'Frozen collision damage',
+                  suffix: 'life',
+                ),
+              if (_usesProjectileDelivery)
+                SwitchListTile.adaptive(
+                  key: const ValueKey('skill-homing'),
+                  value: _homing,
+                  onChanged: (value) => setState(() => _homing = value),
+                  title: const Text('Homing projectile'),
+                ),
+              if (_usesProjectileDelivery)
+                SwitchListTile.adaptive(
+                  key: const ValueKey('skill-return'),
+                  value: _returnsToOrigin,
+                  onChanged: (value) =>
+                      setState(() => _returnsToOrigin = value),
+                  title: const Text('Return to launch point'),
+                ),
+              if (widget.skill.baseKind.isWeapon)
+                SwitchListTile.adaptive(
+                  key: const ValueKey('skill-track-opponent'),
+                  value: _trackNearestOpponent,
+                  onChanged: (value) =>
+                      setState(() => _trackNearestOpponent = value),
+                  title: const Text('Track nearest opponent while equipped'),
+                  subtitle: const Text(
+                    'Continuously turns the held artwork toward the nearest opponent.',
+                  ),
+                ),
               _number('knockback', 'Knockback strength', suffix: 'x'),
               const SizedBox(height: 12),
               Row(

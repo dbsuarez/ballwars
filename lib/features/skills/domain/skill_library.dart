@@ -85,6 +85,7 @@ class SkillDefinition {
     this.projectileSpin = 0,
     this.homing = false,
     this.returnsToOrigin = false,
+    this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
     this.effectStrength = 1,
     this.healing = 10,
@@ -133,6 +134,7 @@ class SkillDefinition {
   final double projectileSpin;
   final bool homing;
   final bool returnsToOrigin;
+  final bool trackNearestOpponent;
   final double weaponDisplayScale;
   final double effectStrength;
   final double healing;
@@ -212,6 +214,7 @@ class SkillDefinition {
     double? projectileSpin,
     bool? homing,
     bool? returnsToOrigin,
+    bool? trackNearestOpponent,
     double? weaponDisplayScale,
     double? effectStrength,
     double? healing,
@@ -259,6 +262,7 @@ class SkillDefinition {
     projectileSpin: projectileSpin ?? this.projectileSpin,
     homing: homing ?? this.homing,
     returnsToOrigin: returnsToOrigin ?? this.returnsToOrigin,
+    trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     effectStrength: effectStrength ?? this.effectStrength,
     healing: healing ?? this.healing,
@@ -312,6 +316,7 @@ class SkillDefinition {
     'projectile_spin': projectileSpin,
     'homing': homing,
     'returns_to_origin': returnsToOrigin,
+    'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
     'effect_strength': effectStrength,
     'healing': healing,
@@ -382,6 +387,7 @@ class SkillDefinition {
       projectileSpin: decimal('projectile_spin') ?? 0,
       homing: value['homing'] as bool? ?? false,
       returnsToOrigin: value['returns_to_origin'] as bool? ?? false,
+      trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       effectStrength: decimal('effect_strength') ?? 1,
       healing: decimal('healing') ?? 10,
@@ -913,6 +919,7 @@ class SkillLibrary {
           : 0,
       homing: kind == PowerUpKind.rocketLauncher,
       returnsToOrigin: kind == PowerUpKind.boomerang,
+      trackNearestOpponent: kind == PowerUpKind.shield,
       weaponDisplayScale: 1,
       effectStrength: switch (kind) {
         PowerUpKind.speed => tuning.speedFactor,

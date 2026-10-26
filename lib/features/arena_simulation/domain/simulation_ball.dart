@@ -115,6 +115,7 @@ class SimulationBall {
   /// Direction a held shield faces, in radians: it turns toward the biggest threat (see
   /// `PowerUpSystem`). Blocking works from every side; this only shows where it braces.
   double shieldAngle = 0;
+  final Set<PowerUpKind> trackingItems = {};
 
   /// Steps left of aiming before a gun fires at [aimTarget].
   int aimLeft = 0;

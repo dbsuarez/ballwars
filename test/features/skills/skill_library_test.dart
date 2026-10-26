@@ -33,6 +33,12 @@ void main() {
           .bubbleType,
       SkillBubbleType.speech,
     );
+    expect(
+      SkillLibrary.defaults
+          .builtIn(PowerUpKind.shield, PowerUpConfig.defaults)
+          .trackNearestOpponent,
+      isTrue,
+    );
   });
 
   test('built-in edits apply to live tuning and round-trip as JSON', () {
@@ -64,8 +70,9 @@ void main() {
     final freeze = SkillLibrary.defaults
         .builtIn(PowerUpKind.freeze, tuning)
         .copyWith(frozenDamageMultiplier: 2, frozenCollisionDamage: 9);
+    final trackedPistol = pistol.copyWith(trackNearestOpponent: true);
     final library = SkillLibrary.defaults
-        .withDefinition(pistol, tuning)
+        .withDefinition(trackedPistol, tuning)
         .withDefinition(shotgun, tuning)
         .withDefinition(disc, tuning)
         .withDefinition(wave, tuning)
@@ -97,6 +104,10 @@ void main() {
     expect(applied.timeBubbleRange, 4.5);
     expect(applied.frozenDamageMultiplier, 2);
     expect(applied.frozenCollisionDamage, 9);
+    expect(
+      decoded.builtIn(PowerUpKind.pistol, tuning).trackNearestOpponent,
+      isTrue,
+    );
   });
 
   test('duplicates get unique stable IDs and start disabled', () {

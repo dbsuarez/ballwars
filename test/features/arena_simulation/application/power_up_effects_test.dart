@@ -835,6 +835,25 @@ void main() {
     },
   );
 
+  test('any equipped skill can opt into opponent tracking', () {
+    const tuning = PowerUpConfig.defaults;
+    final knife = SkillLibrary.defaults
+        .builtIn(PowerUpKind.knife, tuning)
+        .copyWith(trackNearestOpponent: true);
+    final library = SkillLibrary.defaults.withDefinition(knife, tuning);
+    final c = _match(skillLibrary: library);
+    final [a, b] = c.state.balls;
+    a
+      ..position = Offset.zero
+      ..held = PowerUpKind.knife;
+    b.position = const Offset(0, 160);
+
+    _run(c, 10);
+
+    expect(a.trackingItems, contains(PowerUpKind.knife));
+    expect(a.shieldAngle, closeTo(math.pi / 2, 1e-6));
+  });
+
   test('power-ups preserve equipment; weapons replace it', () {
     for (final kind in [
       PowerUpKind.apple,

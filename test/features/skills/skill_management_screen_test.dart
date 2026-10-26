@@ -340,6 +340,20 @@ void main() {
       const Offset(0, -300),
     );
     expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
+    expect(find.byKey(const ValueKey('skill-weapon-healing')), findsOneWidget);
+    expect(find.byKey(const ValueKey('skill-field-healing')), findsNothing);
+    tester
+        .widget<SwitchListTile>(
+          find.byKey(const ValueKey('skill-weapon-healing')),
+        )
+        .onChanged!(true);
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-field-healing')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
+    expect(find.byKey(const ValueKey('skill-field-healing')), findsOneWidget);
     await tester.dragUntilVisible(
       find.byKey(const ValueKey('preview-skill')),
       find.byType(ListView).last,

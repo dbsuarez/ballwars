@@ -96,6 +96,8 @@ Replay and video remain last, by agreement.
 - [x] Allow Speed to deal configurable damage.
 - [x] Expose Time Bubble range.
 - [x] Expose frozen-target damage multiplier and collision damage.
+- [x] Expose equipped-artwork opponent tracking as a per-skill weapon option instead of a Shield-only behavior.
+- [x] Show effect- and delivery-dependent editor parameters only when relevant, with an explicit Healing effect toggle for intentional healing weapons.
 - [x] Ensure every parameter is consumed by the shared live runtime, Power-up Test, and all balls.
 - [x] Retain duplicate-and-edit support for creating related skills.
 - [x] Keep Power-up Numbers as clearly labeled legacy settings until Skill Management fully replaces it.

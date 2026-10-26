@@ -1469,6 +1469,111 @@ class PowerUpSystem {
     return best;
   }
 
+  Offset _chosenDirection(SimulationBall owner, [SimulationBall? primary]) {
+    if (owner.velocity.distance > 0.001) {
+      return owner.velocity / owner.velocity.distance;
+    }
+    if (primary != null) {
+      final delta = primary.position - owner.position;
+      if (delta.distance > 0.001) return delta / delta.distance;
+    }
+    return const Offset(1, 0);
+  }
+
+  SimulationBall? _targetInChosenDirection(
+    SimulationBall owner,
+    SimulationBall? primary,
+  ) {
+    final direction = _chosenDirection(owner, primary);
+    SimulationBall? best;
+    var bestScore = -double.infinity;
+    for (final target in match.state.balls) {
+      if (identical(target, owner) || !_alive(target) || target.isGhost) {
+        continue;
+      }
+      final delta = target.position - owner.position;
+      if (delta.distance <= 0.001) continue;
+      final unit = delta / delta.distance;
+      final alignment = unit.dx * direction.dx + unit.dy * direction.dy;
+      if (alignment < 0.5) continue;
+      final score = alignment * 100000 - delta.distanceSquared;
+      if (score > bestScore) {
+        best = target;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  SimulationBall? _targetNearArenaLocation(
+    SimulationBall owner,
+    SimulationBall? primary,
+  ) {
+    final direction = _chosenDirection(owner, primary);
+    final location = direction * match.arenaRadius * 0.72;
+    SimulationBall? best;
+    var bestDistance = double.infinity;
+    for (final target in match.state.balls) {
+      if (identical(target, owner) || !_alive(target) || target.isGhost) {
+        continue;
+      }
+      final distance = (target.position - location).distanceSquared;
+      if (distance < bestDistance) {
+        best = target;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  List<SimulationBall> _filterDeliveryTargets(
+    SimulationBall owner,
+    List<SimulationBall> targets,
+    SkillDefinition skill,
+  ) {
+    switch (skill.delivery) {
+      case SkillDelivery.aura:
+        final radius = match.arenaRadius * 0.55;
+        return targets
+            .where(
+              (target) =>
+                  identical(target, owner) ||
+                  (target.position - owner.position).distance <= radius,
+            )
+            .toList();
+      case SkillDelivery.orbit:
+        final radius = match.arenaRadius * 0.75;
+        return targets
+            .where(
+              (target) =>
+                  identical(target, owner) ||
+                  (target.position - owner.position).distance <= radius,
+            )
+            .toList();
+      case SkillDelivery.boundaryHazard:
+        final edge = match.arenaRadius * 0.7;
+        return targets
+            .where((target) => target.position.distance >= edge)
+            .toList();
+      case SkillDelivery.beam:
+        final direction = _chosenDirection(owner, targets.firstOrNull);
+        final width = owner.radius * 1.75;
+        return targets.where((target) {
+          if (identical(target, owner)) return false;
+          final delta = target.position - owner.position;
+          final along = delta.dx * direction.dx + delta.dy * direction.dy;
+          final across = (delta.dx * direction.dy - delta.dy * direction.dx)
+              .abs();
+          return along > 0 && across <= width;
+        }).toList();
+      case SkillDelivery.instant:
+      case SkillDelivery.projectile:
+      case SkillDelivery.area:
+      case null:
+        return targets;
+    }
+  }
+
   void _launchComposed(
     SimulationBall owner,
     SimulationBall target,
@@ -1506,7 +1611,7 @@ class PowerUpSystem {
   }) {
     final cooldownKey = (owner, skill.id);
     if ((_composedCooldownUntil[cooldownKey] ?? 0) > match.stepCount) return;
-    final targets = switch (skill.targeting) {
+    var targets = switch (skill.targeting) {
       SkillTargeting.self => [owner],
       SkillTargeting.nearestOpponent => [
         ?primary != null && _alive(primary) ? primary : _nearestTarget(owner),
@@ -1515,8 +1620,15 @@ class PowerUpSystem {
         for (final target in match.state.balls)
           if (!identical(target, owner) && _alive(target)) target,
       ],
+      SkillTargeting.chosenDirection => [
+        ?_targetInChosenDirection(owner, primary),
+      ],
+      SkillTargeting.arenaLocation => [
+        ?_targetNearArenaLocation(owner, primary),
+      ],
       null => const <SimulationBall>[],
     };
+    targets = _filterDeliveryTargets(owner, targets, skill);
     if (targets.isEmpty) return;
     if (skill.cooldownSeconds > 0) {
       _composedCooldownUntil[cooldownKey] =
@@ -2703,6 +2815,7 @@ class PowerUpSystem {
       callout: true,
       calloutStyle: calloutStyle,
       calloutBubble: calloutBubble,
+      attachedTo: ball,
     );
   }
 

@@ -177,6 +177,30 @@ void main() {
     expect(find.text('2×'), findsOneWidget);
   });
 
+  testWidgets('automatic speed-up is passed to matches and remembered', (
+    tester,
+  ) async {
+    await pumpSetup(tester);
+    await openSettings(tester);
+    final automatic = find.byKey(const ValueKey('setting-Automatic speed-up'));
+    await tester.ensureVisible(automatic);
+    await tester.tap(automatic);
+    await tester.pump();
+    await closeSettings(tester);
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.automaticSpeedUp, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester);
+    await openSettings(tester);
+    expect(
+      find.descendant(of: automatic, matching: find.text('Off')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Clear removes every picked ball', (tester) async {
     await pumpSetup(tester);
     expect(find.text('Clear'), findsNothing);
@@ -348,8 +372,12 @@ void main() {
       expect(find.text('Pickups: 1 of $selectableCount'), findsOneWidget);
       // DevicePrefs queues writes across async storage calls. Read outside the
       // widget test's fake clock so awaiting persistence cannot stall the test.
-      final arsenal = await tester.runAsync(() => DevicePrefs.read('power-ups-arsenal'));
-      final allOut = await tester.runAsync(() => DevicePrefs.read('power-ups-allout'));
+      final arsenal = await tester.runAsync(
+        () => DevicePrefs.read('power-ups-arsenal'),
+      );
+      final allOut = await tester.runAsync(
+        () => DevicePrefs.read('power-ups-allout'),
+      );
       expect(arsenal, contains('pistol'));
       expect(allOut, isNull);
 
@@ -369,33 +397,38 @@ void main() {
       expect(started!.powerUps, isNull);
     },
   );
-  testWidgets('settings start collapsed and power-up lists are independent by mode', (tester) async {
-    await tester.runAsync(() async {
-      await DevicePrefs.write('power-ups-arsenal', 'pistol');
-      await DevicePrefs.write('power-ups-allout', 'shotgun');
-    });
-    await pumpSetup(tester);
-    expect(find.text('Edit match settings'), findsOneWidget);
-    expect(find.text('Shrinking arena'), findsNothing);
-    await tester.tap(find.text('Arsenal'));
-    await tester.pump();
-    await tester.tap(find.byIcon(Icons.shuffle));
-    await tester.pump();
-    await tester.tap(find.text('Start'));
-    expect(started!.powerUps, contains(PowerUpKind.pistol));
-    expect(started!.powerUps, isNot(contains(PowerUpKind.shotgun)));
-    await tester.tap(find.text('All-Out'));
-    await tester.pump();
-    await tester.tap(find.text('Start'));
-    expect(started!.powerUps, contains(PowerUpKind.shotgun));
-    expect(started!.powerUps, isNot(contains(PowerUpKind.pistol)));
-    await tester.tap(find.text('Arsenal'));
-    await tester.pump();
-    await tester.tap(find.text('Start'));
-    expect(started!.powerUps, contains(PowerUpKind.pistol));
-  });
+  testWidgets(
+    'settings start collapsed and power-up lists are independent by mode',
+    (tester) async {
+      await tester.runAsync(() async {
+        await DevicePrefs.write('power-ups-arsenal', 'pistol');
+        await DevicePrefs.write('power-ups-allout', 'shotgun');
+      });
+      await pumpSetup(tester);
+      expect(find.text('Edit match settings'), findsOneWidget);
+      expect(find.text('Shrinking arena'), findsNothing);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, contains(PowerUpKind.pistol));
+      expect(started!.powerUps, isNot(contains(PowerUpKind.shotgun)));
+      await tester.tap(find.text('All-Out'));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, contains(PowerUpKind.shotgun));
+      expect(started!.powerUps, isNot(contains(PowerUpKind.pistol)));
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, contains(PowerUpKind.pistol));
+    },
+  );
 
-  testWidgets('phone keeps ball picking visible until settings are opened', (tester) async {
+  testWidgets('phone keeps ball picking visible until settings are opened', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -417,25 +450,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('settings rows fill the drawer width and All set stays outside the scroll', (tester) async {
-    await pumpSetup(tester);
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    await tester.pumpAndSettle();
-    await openSettings(tester);
-    final rounds = find.byKey(const ValueKey('setting-Rounds'));
-    expect(tester.getSize(rounds).width, greaterThan(300));
-    final rect = tester.getRect(rounds);
-    await tester.tapAt(Offset(rect.left + 5, rect.center.dy));
-    await tester.pumpAndSettle();
-    expect(find.text('First to 2'), findsOneWidget);
-    expect(find.byKey(const ValueKey('match-settings-all-set')).hitTestable(), findsOneWidget);
-    await tester.tap(find.byTooltip('Match settings info'));
-    await tester.pumpAndSettle();
-    expect(find.text('Match settings guide'), findsOneWidget);
-  });
+  testWidgets(
+    'settings rows fill the drawer width and All set stays outside the scroll',
+    (tester) async {
+      await pumpSetup(tester);
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpAndSettle();
+      await openSettings(tester);
+      final rounds = find.byKey(const ValueKey('setting-Rounds'));
+      expect(tester.getSize(rounds).width, greaterThan(300));
+      final rect = tester.getRect(rounds);
+      await tester.tapAt(Offset(rect.left + 5, rect.center.dy));
+      await tester.pumpAndSettle();
+      expect(find.text('First to 2'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('match-settings-all-set')).hitTestable(),
+        findsOneWidget,
+      );
+      await tester.tap(find.byTooltip('Match settings info'));
+      await tester.pumpAndSettle();
+      expect(find.text('Match settings guide'), findsOneWidget);
+    },
+  );
 
-  testWidgets('finisher choice is remembered and pickup categories have tabs', (tester) async {
+  testWidgets('finisher choice is remembered and pickup categories have tabs', (
+    tester,
+  ) async {
     await pumpSetup(tester);
     await openSettings(tester);
     final finishers = find.byKey(const ValueKey('setting-Finishers'));
@@ -446,8 +487,13 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
     await openSettings(tester);
-    expect(find.descendant(of: find.byKey(const ValueKey('setting-Finishers')),
-        matching: find.text('Off')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('setting-Finishers')),
+        matching: find.text('Off'),
+      ),
+      findsOneWidget,
+    );
     await closeSettings(tester);
     await tester.tap(find.text('Arsenal'));
     await tester.pumpAndSettle();
@@ -457,7 +503,9 @@ void main() {
     expect(find.byType(TabBar), findsOneWidget);
     await tester.tap(find.text('Power-ups'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('selection-card-apple')).hitTestable(), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('selection-card-apple')).hitTestable(),
+      findsOneWidget,
+    );
   });
-
 }

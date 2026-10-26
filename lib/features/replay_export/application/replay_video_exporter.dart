@@ -62,6 +62,7 @@ class ReplayVideoExporter {
     required int seed,
     required double arenaRadius,
     double speedMultiplier = 1.0,
+    bool automaticSpeedUp = true,
     bool showEffects = true,
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
@@ -97,6 +98,7 @@ class ReplayVideoExporter {
       shrinkingArena: shrinkingArena,
       minimumArenaScale: minimumArenaScale,
       bloodColor: style.bloodColor,
+      automaticSpeedUp: automaticSpeedUp,
     );
     final frameDelta = speedMultiplier / fps;
 

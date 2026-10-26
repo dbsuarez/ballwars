@@ -73,6 +73,7 @@ enum WallSparkSize {
 class MatchConfig {
   final List<CustomBall> contestants;
   final double speedMultiplier;
+  final bool automaticSpeedUp;
 
   /// Show sparks and particles (cosmetic; the match is the same either way).
   final bool showEffects;
@@ -120,6 +121,7 @@ class MatchConfig {
   const MatchConfig({
     required this.contestants,
     this.speedMultiplier = 1.0,
+    this.automaticSpeedUp = true,
     this.showEffects = true,
     this.wallSparkSize = WallSparkSize.normal,
     this.winsNeeded = 1,

@@ -22,7 +22,7 @@ Replay and video remain last, by agreement.
 
 ## Phase 2 - True Custom Skill Builder
 
-**Status: In progress**
+**Status: Complete and deployed**
 
 ### Shipped
 
@@ -41,8 +41,8 @@ Replay and video remain last, by agreement.
 ### Remaining
 
 - [x] Add timer, damage-taken, and elimination triggers.
-- [ ] Add chosen-direction and arena-location targeting.
-- [ ] Add beam, aura, orbit, and boundary-hazard delivery.
+- [x] Add chosen-direction and arena-location targeting.
+- [x] Add beam, aura, orbit, and boundary-hazard delivery.
 - [x] Add DoT, shield, pull, teleport, stun, and equipment effects.
 - [x] Add repeat count and repeat interval.
 - [x] Add start delay, DoT tick interval, and cooldown.
@@ -70,17 +70,17 @@ Replay and video remain last, by agreement.
 **Status: In progress**
 
 - [x] Eliminate Arsenal balls as soon as life is below 1; never show a living 0 HP ball.
-- [ ] Make Energy Wave stable at fast speed, keep the caster fixed during the cutscene, react every struck ball, and apply configurable knockback.
-- [ ] Make DoT-only skills deal no initial damage when configured that way.
-- [ ] Fix Gremlin in Power-up Test so the opponent visibly fires backward.
-- [ ] Trigger Magnetic Force Field once per attacking opponent and make returned attacks damage their attacker.
-- [ ] Make Mirror-reflected attacks damage their original attacker.
-- [ ] Slam Omega Tendrils victims away from the caster.
-- [ ] Make equipped knife and sword sit in the hands; apply slash effect and SFX on collision.
-- [ ] Attach callouts to their ball so they follow movement.
-- [ ] Verify no duplicate unclaimed pickup of the same kind can exist.
-- [ ] Make frozen targets take configurable 1.5x damage and 5 collision damage.
-- [ ] Fix battle-start slowdown or mask initialization with a deterministic Round Start countdown.
+- [x] Make Energy Wave stable at fast speed, keep the caster fixed during the cutscene, react every struck ball, and apply configurable knockback.
+- [x] Make DoT-only skills deal no initial damage when configured that way.
+- [x] Make Gremlin reverse the affected opponent's next complete volley everywhere; Power-up Test uses the same shared behavior.
+- [x] Trigger Magnetic Force Field once per attacking opponent and make returned attacks damage their attacker.
+- [x] Make Mirror-reflected attacks damage their original attacker.
+- [x] Slam Omega Tendrils victims away from the caster.
+- [x] Make equipped knife and sword sit in the hands; apply slash effect and SFX on collision.
+- [x] Attach callouts to their ball so they follow movement.
+- [x] Verify no duplicate unclaimed pickup of the same kind can exist.
+- [x] Make frozen targets take configurable 1.5x damage and 5 collision damage.
+- [x] Mask battle initialization with a deterministic Round Start countdown.
 - [x] Show the active match mode in the match menu and use mode-specific labels such as Threads Match.
 
 ## Phase 5 - Complete Skill Management parameter model
@@ -106,6 +106,7 @@ Replay and video remain last, by agreement.
 
 - [x] Lock mobile gameplay to portrait orientation.
 - [x] Remember match settings, including rounds, speed, mode, size, look, effects, finishers, Mayhem, and per-mode pickups.
+- [x] Let users enable or disable automatic per-minute battle acceleration and preserve the choice in replays and videos.
 - [ ] Organize Admin Settings into clear category tabs without long scrolling.
 - [ ] Rework legacy Power-up Numbers into Common, Arsenal, and All-Out tabs with fixed side-by-side Restore and Save actions.
 - [ ] Include arrow count and every missing legacy power-up value.
@@ -183,5 +184,5 @@ Replay and video remain last, by agreement.
 ## Current position
 
 ```text
-[x] Phase 1 -> [~] Phase 2 -> [x] Phase 3 -> [~] Phase 4 -> [ ] Phase 5 -> [ ] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [ ] Phase 5 -> [~] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
 ```

@@ -68,6 +68,21 @@ void _settle(MatchSimulationController c) {
 }
 
 void main() {
+  test('skill callouts stay attached to a moving ball', () {
+    final c = _match();
+    final ball = c.state.balls.first;
+    _give(c, ball, PowerUpKind.apple);
+    final callout = c.state.floatingTexts.items.singleWhere(
+      (item) => item.callout,
+    );
+    ball
+      ..position = const Offset(37, 52)
+      ..velocity = Offset.zero;
+    _run(c, 1);
+    expect(callout.position.dx, closeTo(ball.position.dx, 0.001));
+    expect(callout.position.dy, lessThan(ball.position.dy - ball.radius));
+  });
+
   test(
     'playback speeds up for each full minute of game time, up to the max',
     () {
@@ -96,6 +111,23 @@ void main() {
       expect(c.stepCount - before, inInclusiveRange(49, 50));
     },
   );
+
+  test('automatic playback speed-up can be disabled', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: _arenaRadius,
+      seed: 4,
+      lookAhead: false,
+      automaticSpeedUp: false,
+    );
+    for (var i = 0; i < 4000; i++) {
+      for (final ball in c.state.balls) {
+        ball.velocity = Offset.zero;
+      }
+      c.tick(MatchSimulationController.fixedTimestep);
+    }
+    expect(c.playbackSpeedUp, 1);
+  });
 
   test(
     'playback speed never changes the match: any frame rate plays the same steps',

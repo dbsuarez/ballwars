@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'simulation_ball.dart';
+
 enum CalloutStyle { normal, rare, epic, special }
 
 enum CalloutBubble { shout, speech, thought, radio }
@@ -16,6 +18,7 @@ class FloatingText {
   final bool callout;
   final CalloutStyle calloutStyle;
   final CalloutBubble calloutBubble;
+  final SimulationBall? attachedTo;
 
   FloatingText({
     required this.position,
@@ -24,6 +27,7 @@ class FloatingText {
     this.callout = false,
     this.calloutStyle = CalloutStyle.normal,
     this.calloutBubble = CalloutBubble.shout,
+    this.attachedTo,
     this.age = 0.0,
   });
 
@@ -44,6 +48,7 @@ class FloatingTextManager {
     bool callout = false,
     CalloutStyle calloutStyle = CalloutStyle.normal,
     CalloutBubble calloutBubble = CalloutBubble.shout,
+    SimulationBall? attachedTo,
   }) {
     final item = FloatingText(
       position: position,
@@ -52,6 +57,7 @@ class FloatingTextManager {
       callout: callout,
       calloutStyle: calloutStyle,
       calloutBubble: calloutBubble,
+      attachedTo: attachedTo,
     );
     _items.add(item);
     return item;
@@ -60,7 +66,10 @@ class FloatingTextManager {
   void update(double dt) {
     for (final item in _items) {
       item.age += dt;
-      item.position = item.position.translate(0, -20 * dt);
+      final attached = item.attachedTo;
+      item.position = attached == null
+          ? item.position.translate(0, -20 * dt)
+          : attached.position - Offset(0, attached.radius + 18 + item.age * 20);
     }
     _items.removeWhere((item) => item.isExpired);
   }

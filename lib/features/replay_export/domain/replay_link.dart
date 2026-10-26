@@ -25,6 +25,7 @@ const String kWebAppUrl = 'https://dbsuarez.github.io/ballwars/';
 class ReplayLink {
   final int seed;
   final double speedMultiplier;
+  final bool automaticSpeedUp;
   final bool showEffects;
   final List<CustomBall> contestants;
 
@@ -54,6 +55,7 @@ class ReplayLink {
   const ReplayLink({
     required this.seed,
     required this.speedMultiplier,
+    this.automaticSpeedUp = true,
     required this.contestants,
     this.showEffects = true,
     this.ballSize = BallSize.medium,
@@ -131,8 +133,9 @@ class ReplayLink {
     final minimumArena = shrinkingArena && minimumArenaScale != 0.60
         ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
         : '';
+    final automaticSpeed = automaticSpeedUp ? '' : '&autospeed=0';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -226,6 +229,10 @@ class ReplayLink {
         (!shrinkingArena && params.containsKey('minarena'))) {
       return null;
     }
+    final automaticSpeedUp = params['autospeed'] != '0';
+    if (params.containsKey('autospeed') && params['autospeed'] != '0') {
+      return null;
+    }
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
@@ -246,6 +253,7 @@ class ReplayLink {
     return ReplayLink(
       seed: seed,
       speedMultiplier: speed,
+      automaticSpeedUp: automaticSpeedUp,
       contestants: contestants,
       showEffects: params['fx'] != '0',
       ballSize: ballSize,

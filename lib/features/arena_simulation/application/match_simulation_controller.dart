@@ -74,6 +74,7 @@ class MatchSimulationController {
   final double minimumArenaScale;
   final Color bloodColor;
   final ArenaDecoration arenaDecoration;
+  final bool automaticSpeedUp;
 
   static const int shrinkGraceSteps = 10 * 60;
   static const int shrinkDurationSteps = 120 * 60;
@@ -211,6 +212,7 @@ class MatchSimulationController {
     this.minimumArenaScale = 0.60,
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.automaticSpeedUp = true,
   }) : initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     if (!endlessBattle &&
@@ -240,6 +242,7 @@ class MatchSimulationController {
         minimumArenaScale: minimumArenaScale,
         bloodColor: bloodColor,
         arenaDecoration: arenaDecoration,
+        automaticSpeedUp: automaticSpeedUp,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished &&
@@ -522,10 +525,12 @@ class MatchSimulationController {
   static const double maxSpeedUp = 2.0;
 
   /// The current playback speed-up (1 in the first minute).
-  double get playbackSpeedUp => math.min(
-    maxSpeedUp,
-    1 + speedUpPerMinute * (_stepCount * fixedTimestep / 60).floor(),
-  );
+  double get playbackSpeedUp => automaticSpeedUp
+      ? math.min(
+          maxSpeedUp,
+          1 + speedUpPerMinute * (_stepCount * fixedTimestep / 60).floor(),
+        )
+      : 1;
 
   SimulationState get state => SimulationState(
     balls: _balls,

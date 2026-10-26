@@ -16,6 +16,7 @@ class ExportVideoDialog extends StatefulWidget {
   final int seed;
   final double arenaRadius;
   final double speedMultiplier;
+  final bool automaticSpeedUp;
   final bool showEffects;
   final ReplayStyle style;
   final VideoEncoder encoder;
@@ -41,6 +42,7 @@ class ExportVideoDialog extends StatefulWidget {
     required this.seed,
     required this.arenaRadius,
     required this.speedMultiplier,
+    this.automaticSpeedUp = true,
     this.showEffects = true,
     this.slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     this.slowMotionBeforeWinSeconds,
@@ -65,6 +67,7 @@ class ExportVideoDialog extends StatefulWidget {
     required int seed,
     required double arenaRadius,
     required double speedMultiplier,
+    bool automaticSpeedUp = true,
     bool showEffects = true,
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
@@ -95,6 +98,7 @@ class ExportVideoDialog extends StatefulWidget {
         seed: seed,
         arenaRadius: arenaRadius,
         speedMultiplier: speedMultiplier,
+        automaticSpeedUp: automaticSpeedUp,
         showEffects: showEffects,
         slowMotionLines: slowMotionLines,
         slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
@@ -151,6 +155,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         seed: widget.seed,
         arenaRadius: widget.arenaRadius,
         speedMultiplier: widget.speedMultiplier,
+        automaticSpeedUp: widget.automaticSpeedUp,
         showEffects: widget.showEffects,
         slowMotionLines: widget.slowMotionLines,
         slowMotionBeforeWinSeconds: widget.slowMotionBeforeWinSeconds,

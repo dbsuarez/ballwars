@@ -14,9 +14,23 @@ enum SkillTrigger {
   elimination,
 }
 
-enum SkillTargeting { self, nearestOpponent, allOpponents }
+enum SkillTargeting {
+  self,
+  nearestOpponent,
+  allOpponents,
+  chosenDirection,
+  arenaLocation,
+}
 
-enum SkillDelivery { instant, projectile, area }
+enum SkillDelivery {
+  instant,
+  projectile,
+  area,
+  beam,
+  aura,
+  orbit,
+  boundaryHazard,
+}
 
 enum SkillEffectType {
   damage,
@@ -384,6 +398,13 @@ class SkillDefinition {
     if (delivery == SkillDelivery.projectile &&
         targeting == SkillTargeting.self) {
       issues.add('A projectile cannot target its owner.');
+    }
+    if (delivery == SkillDelivery.beam && targeting == SkillTargeting.self) {
+      issues.add('A beam cannot target its owner.');
+    }
+    if (delivery == SkillDelivery.boundaryHazard &&
+        targeting == SkillTargeting.self) {
+      issues.add('A boundary hazard cannot target its owner.');
     }
     final effects = [effectType, secondaryEffectType];
     if (effects.contains(SkillEffectType.equipCarrier) && !baseKind.isWeapon) {

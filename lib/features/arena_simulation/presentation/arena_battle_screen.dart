@@ -137,6 +137,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       _roundWins.values.any((w) => w >= widget.config.winsNeeded);
 
   bool _started = false;
+  double _startCountdown = 3;
 
   @override
   void didChangeDependencies() {
@@ -179,8 +180,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       minimumArenaScale: widget.config.minimumArenaScale,
       bloodColor: AppSettingsScope.of(context).bloodColor,
       arenaDecoration: AppSettingsScope.of(context).arenaDecoration,
+      automaticSpeedUp: widget.config.automaticSpeedUp,
     );
     _roundCounted = replaySeed != null;
+    _startCountdown = 3;
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
@@ -218,9 +221,18 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       return;
     }
 
-    final dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
+    var dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
     _lastElapsed = elapsed;
     if (dt <= 0 || _isPaused || !_foreground) return;
+
+    if (_startCountdown > 0) {
+      final before = _startCountdown;
+      _startCountdown = math.max(0, _startCountdown - dt);
+      _frame.value++;
+      if (_startCountdown > 0) return;
+      dt = math.max(0, dt - before);
+      if (dt == 0) return;
+    }
 
     _controller.tick(dt * widget.config.speedMultiplier);
 
@@ -410,6 +422,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     Uri link = ReplayLink(
       seed: _controller.seed,
       speedMultiplier: widget.config.speedMultiplier,
+      automaticSpeedUp: widget.config.automaticSpeedUp,
       showEffects: _showEffects,
       contestants: widget.config.contestants,
       ballSize: widget.config.ballSize,
@@ -681,6 +694,49 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                             ),
                           ),
                         ),
+                        if (_startCountdown > 0)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: Center(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.72),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(color: c.text, width: 2),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 26,
+                                      vertical: 16,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'ROUND START',
+                                          style: AppText.ui(
+                                            15,
+                                            FontWeight.w900,
+                                            color: c.text,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${_startCountdown.ceil()}',
+                                          key: const ValueKey(
+                                            'round-start-countdown',
+                                          ),
+                                          style: AppText.mono(
+                                            44,
+                                            color: c.text,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         Positioned(
                           bottom: 0,
                           right: 54,
@@ -819,6 +875,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 seed: _controller.seed,
                                 arenaRadius: _arenaRadius,
                                 speedMultiplier: widget.config.speedMultiplier,
+                                automaticSpeedUp:
+                                    widget.config.automaticSpeedUp,
                                 showEffects: _showEffects,
                                 slowMotionLines: AppSettingsScope.of(
                                   context,

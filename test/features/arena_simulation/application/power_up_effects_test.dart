@@ -173,6 +173,32 @@ void main() {
     expect(target.life, _life - 21);
   });
 
+  test('a DoT-only composed skill has no initial damage', () {
+    final dot = SkillLibrary.defaults
+        .create('Slow Burn', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.nearestOpponent,
+          delivery: SkillDelivery.instant,
+          effectType: SkillEffectType.damageOverTime,
+          arsenalDamage: 4,
+          durationSeconds: 1,
+          tickIntervalSeconds: 0.5,
+        );
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        dot,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final [owner, target] = c.state.balls;
+    _give(c, owner, PowerUpKind.apple);
+    expect(target.life, _life);
+    _run(c, 30);
+    expect(target.life, lessThan(_life));
+  });
+
   test('composed start delay and cooldown use deterministic match steps', () {
     final draft = SkillLibrary.defaults
         .create('Delayed Pulse', PowerUpKind.apple)
@@ -238,6 +264,98 @@ void main() {
       c.powerUps!.activeCustomEffectCount,
       PowerUpSystem.maxScheduledCustomEffects,
     );
+  });
+
+  test('chosen-direction beam only strikes a ball in front of its owner', () {
+    final beam = SkillLibrary.defaults
+        .create('Directional Beam', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.chosenDirection,
+          delivery: SkillDelivery.beam,
+          effectType: SkillEffectType.damage,
+          arsenalDamage: 9,
+        );
+    final c = _match(
+      count: 3,
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        beam,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final [owner, ahead, above] = c.state.balls;
+    owner
+      ..position = Offset.zero
+      ..velocity = const Offset(100, 0);
+    ahead.position = const Offset(120, 0);
+    above.position = const Offset(0, 150);
+
+    _give(c, owner, PowerUpKind.apple);
+
+    expect(ahead.life, _life - 9 * 2.25);
+    expect(above.life, _life);
+  });
+
+  test('arena-location boundary hazard selects an opponent at the rim', () {
+    final hazard = SkillLibrary.defaults
+        .create('Rim Burst', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.arenaLocation,
+          delivery: SkillDelivery.boundaryHazard,
+          effectType: SkillEffectType.damage,
+          arsenalDamage: 11,
+        );
+    final c = _match(
+      count: 3,
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        hazard,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final [owner, atRim, center] = c.state.balls;
+    owner
+      ..position = Offset.zero
+      ..velocity = const Offset(100, 0);
+    atRim.position = const Offset(210, 0);
+    center.position = const Offset(0, 40);
+
+    _give(c, owner, PowerUpKind.apple);
+
+    expect(atRim.life, _life - 11 * 2.25);
+    expect(center.life, _life);
+  });
+
+  test('aura and orbit deliveries respect their ranges', () {
+    SkillLibrary libraryFor(SkillDelivery delivery) {
+      final skill = SkillLibrary.defaults
+          .create('${delivery.name} pulse', PowerUpKind.apple)
+          .copyWith(
+            enabled: true,
+            trigger: SkillTrigger.pickup,
+            targeting: SkillTargeting.allOpponents,
+            delivery: delivery,
+            effectType: SkillEffectType.damage,
+            arsenalDamage: 6,
+          );
+      return SkillLibrary.defaults.withDefinition(
+        skill,
+        PowerUpConfig.defaults,
+      );
+    }
+
+    for (final delivery in [SkillDelivery.aura, SkillDelivery.orbit]) {
+      final c = _match(count: 3, skillLibrary: libraryFor(delivery));
+      final [owner, close, far] = c.state.balls;
+      owner.position = Offset.zero;
+      close.position = const Offset(130, 0);
+      far.position = const Offset(230, 0);
+      _give(c, owner, PowerUpKind.apple);
+      expect(close.life, _life - 6 * 2.25, reason: delivery.name);
+      expect(far.life, _life, reason: delivery.name);
+    }
   });
 
   test('advanced composed effects execute in live simulation', () {

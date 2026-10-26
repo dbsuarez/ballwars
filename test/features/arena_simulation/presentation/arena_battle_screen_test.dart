@@ -49,6 +49,11 @@ void main() {
       expect(find.text('90 lines'), findsNWidgets(2));
       expect(find.text('0:00.0'), findsOneWidget);
       expect(find.text('Threads match'), findsOneWidget);
+      expect(find.text('ROUND START'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('round-start-countdown')),
+        findsOneWidget,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
     },
@@ -86,6 +91,7 @@ void main() {
         tester.widget<Text>(find.byKey(const Key('match-timer'))).data,
         before,
       );
+      await tester.pump(const Duration(seconds: 3));
       await tester.pump(const Duration(milliseconds: 100));
       expect(
         tester.widget<Text>(find.byKey(const Key('match-timer'))).data,
@@ -129,7 +135,7 @@ void main() {
       _app(const MatchConfig(contestants: _balls), seed: 3),
     );
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 4));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('0:00.0'), findsNothing);
 

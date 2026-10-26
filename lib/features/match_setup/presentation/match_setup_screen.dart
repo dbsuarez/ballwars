@@ -59,6 +59,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   final TextEditingController _categoryText = TextEditingController();
   final math.Random _random = math.Random();
   double _speedMultiplier = 1.0;
+  bool _automaticSpeedUp = true;
   bool _showEffects = true;
   WallSparkSize _wallSparkSize = WallSparkSize.normal;
   BallSize _ballSize = BallSize.medium;
@@ -74,6 +75,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     setState(update);
     _refreshDrawer?.call();
   }
+
   bool _dualWield = false;
   bool _endlessBattle = false;
   bool _mayhem = false;
@@ -105,30 +107,38 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   Future<void> _loadPrefs() async {
     final effects = await EffectsPrefs.effectsOn();
     final finishers = await EffectsPrefs.finishersOn();
-    final settingCards = await DevicePrefs.read('match-settings-layout') != 'list';
+    final settingCards =
+        await DevicePrefs.read('match-settings-layout') != 'list';
     final wallSparkSize = WallSparkSize.byId(
       await DevicePrefs.read('wall-spark-size'),
     );
     final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
     final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
+    final automaticSpeedUp = await DevicePrefs.read('automatic-speed-up');
     final size = BallSize.byId(await DevicePrefs.read('size'));
     final mode = MatchMode.byId(await DevicePrefs.read('mode'));
     final look = BallLook.byName(await DevicePrefs.read('look'));
     final dualWield = await DevicePrefs.read('dual-wield');
     final endlessBattle = await DevicePrefs.read('endless-battle');
     final mayhem = await DevicePrefs.read('mayhem');
-    final duration = int.tryParse(await DevicePrefs.read('mayhem-seconds') ?? '120') ?? 120;
+    final duration =
+        int.tryParse(await DevicePrefs.read('mayhem-seconds') ?? '120') ?? 120;
     final shrinkingArena = await DevicePrefs.read('shrinking-arena');
     final legacy = await DevicePrefs.read('power-ups');
     for (final gameMode in MatchMode.values) {
-      final saved = await DevicePrefs.read('power-ups-${gameMode.id}') ?? legacy;
+      final saved =
+          await DevicePrefs.read('power-ups-${gameMode.id}') ?? legacy;
       final kinds = {
         for (final name in (saved ?? '').split(','))
           ...PowerUpKind.values.where((kind) => kind.name == name),
       };
-      _modePowerUps[gameMode] = kinds.isEmpty || kinds.length == PowerUpKind.values.length
-          ? null : {...kinds.where((kind) => !kind.isTrap),
-              ...PowerUpKind.values.where((kind) => kind.isTrap)};
+      _modePowerUps[gameMode] =
+          kinds.isEmpty || kinds.length == PowerUpKind.values.length
+          ? null
+          : {
+              ...kinds.where((kind) => !kind.isTrap),
+              ...PowerUpKind.values.where((kind) => kind.isTrap),
+            };
     }
     final filter = _CategoryFilter.byName(
       await DevicePrefs.read('category-filter'),
@@ -144,8 +154,12 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       if (look != null) _look = look;
       _dualWield = dualWield == '1';
       _endlessBattle = endlessBattle == '1';
-      _mayhem = (widget.initialMode != null ? widget.initialMayhem : mayhem == '1') && _mode == MatchMode.arsenal;
-      _mayhemSeconds = const [30, 60, 120, 180, 300, 600].contains(duration) ? duration : 120;
+      _mayhem =
+          (widget.initialMode != null ? widget.initialMayhem : mayhem == '1') &&
+          _mode == MatchMode.arsenal;
+      _mayhemSeconds = const [30, 60, 120, 180, 300, 600].contains(duration)
+          ? duration
+          : 120;
       _shrinkingArena = shrinkingArena == '1';
       _powerUps = _modePowerUps[_mode];
       _showEffects = effects;
@@ -156,6 +170,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         _winsNeeded = rounds;
       }
       if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
+      _automaticSpeedUp = automaticSpeedUp != '0';
     });
   }
 
@@ -324,7 +339,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final all = chosen.length == PowerUpKind.values.length;
     _update(() => _powerUps = all ? null : chosen);
     _modePowerUps[_mode] = _powerUps;
-    DevicePrefs.write('power-ups-${_mode.id}', [for (final k in chosen) k.name].join(','));
+    DevicePrefs.write(
+      'power-ups-${_mode.id}',
+      [for (final k in chosen) k.name].join(','),
+    );
   }
 
   void _clearPicks() {
@@ -355,6 +373,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       MatchConfig(
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
+        automaticSpeedUp: _automaticSpeedUp,
         showEffects: _showEffects,
         wallSparkSize: _wallSparkSize,
         winsNeeded: _winsNeeded,
@@ -626,126 +645,194 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Match settings guide'),
-      content: const SingleChildScrollView(child: Text(
-        'Choose List or Cards above the settings. Your layout is remembered on this device. Tap anywhere on a row or card to cycle its choices.\n\n'
-        'ROUNDS: One round or first to two/three wins.\n'
-        'SPEED: Playback at 0.5x, 1x or 2x.\n'
-        'PICKUPS: Choose enabled weapons and power-ups; traps stay on.\n'
-        'DUAL WIELD: Carry two compatible weapons. Two-handed weapons occupy both slots.\n'
-        'MAYHEM: Six balls, your chosen match time, respawns. Most KOs wins; remaining life breaks ties.\n'
-        'ENDLESS BATTLE: Respawn eliminated balls and count KOs.\n'
-        'SHRINKING ARENA: Boundary contracts after ten seconds.\n'
-        'EFFECTS: Show particles and visual feedback.\n'
-        'SIZE: Changes every ball equally.\n'
-        'WALL SPARKS: Choose the strength of rim-hit sparks.\n'
-        'BALL LOOK: Pictures or expressive faces.\n'
-        'FINISHERS: Automatically show or skip the finishing cinematic. You can also skip any cinematic with its Skip button.\n'
-        'MUSIC / SOUND EFFECTS: Device audio choices. Tap SFX on to hear a confirmation sound.')),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      content: const SingleChildScrollView(
+        child: Text(
+          'Choose List or Cards above the settings. Your layout is remembered on this device. Tap anywhere on a row or card to cycle its choices.\n\n'
+          'ROUNDS: One round or first to two/three wins.\n'
+          'SPEED: Playback at 0.5x, 1x or 2x.\n'
+          'PICKUPS: Choose enabled weapons and power-ups; traps stay on.\n'
+          'DUAL WIELD: Carry two compatible weapons. Two-handed weapons occupy both slots.\n'
+          'MAYHEM: Six balls, your chosen match time, respawns. Most KOs wins; remaining life breaks ties.\n'
+          'ENDLESS BATTLE: Respawn eliminated balls and count KOs.\n'
+          'SHRINKING ARENA: Boundary contracts after ten seconds.\n'
+          'EFFECTS: Show particles and visual feedback.\n'
+          'SIZE: Changes every ball equally.\n'
+          'WALL SPARKS: Choose the strength of rim-hit sparks.\n'
+          'BALL LOOK: Pictures or expressive faces.\n'
+          'FINISHERS: Automatically show or skip the finishing cinematic. You can also skip any cinematic with its Skip button.\n'
+          'MUSIC / SOUND EFFECTS: Device audio choices. Tap SFX on to hear a confirmation sound.',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
     ),
   );
 
   Future<void> _openSettings() async {
     try {
       await showModalBottomSheet<void>(
-        context: context, isScrollControlled: true, useSafeArea: true,
-        builder: (sheetContext) => StatefulBuilder(builder: (context, refresh) {
-          _refreshDrawer = () => refresh(() {});
-          return ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              ListTile(
-                title: const Text('Match settings'),
-                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(tooltip: 'Match settings info', icon: const Icon(Icons.info_outline),
-                      onPressed: _settingsInfo),
-                  IconButton(tooltip: 'Close match settings', icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(sheetContext)),
-                ]),
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (context, refresh) {
+            _refreshDrawer = () => refresh(() {});
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.9,
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Align(alignment: Alignment.centerRight,
-                  child: SizedBox(width: 220, child: SegmentedButton<bool>(
-                  key: const ValueKey('match-settings-layout'),
-                  segments: const [
-                    ButtonSegment(value: false, icon: Icon(Icons.view_list), label: Text('List')),
-                    ButtonSegment(value: true, icon: Icon(Icons.grid_view), label: Text('Cards')),
-                  ],
-                  selected: {_settingCards},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (selected) {
-                    final cards = selected.first;
-                    _update(() => _settingCards = cards);
-                    DevicePrefs.write('match-settings-layout', cards ? 'cards' : 'list');
-                  },
-                ))),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    title: const Text('Match settings'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Match settings info',
+                          icon: const Icon(Icons.info_outline),
+                          onPressed: _settingsInfo,
+                        ),
+                        IconButton(
+                          tooltip: 'Close match settings',
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(sheetContext),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: SizedBox(
+                        width: 220,
+                        child: SegmentedButton<bool>(
+                          key: const ValueKey('match-settings-layout'),
+                          segments: const [
+                            ButtonSegment(
+                              value: false,
+                              icon: Icon(Icons.view_list),
+                              label: Text('List'),
+                            ),
+                            ButtonSegment(
+                              value: true,
+                              icon: Icon(Icons.grid_view),
+                              label: Text('Cards'),
+                            ),
+                          ],
+                          selected: {_settingCards},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (selected) {
+                            final cards = selected.first;
+                            _update(() => _settingCards = cards);
+                            DevicePrefs.write(
+                              'match-settings-layout',
+                              cards ? 'cards' : 'list',
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: _settingsPanel(BallWarsColors.of(context)),
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          key: const ValueKey('match-settings-all-set'),
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: const Text('All set'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Flexible(child: SingleChildScrollView(child: _settingsPanel(BallWarsColors.of(context)))),
-              SafeArea(top: false, child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: SizedBox(width: double.infinity, child: FilledButton(
-                  key: const ValueKey('match-settings-all-set'),
-                  onPressed: () => Navigator.pop(sheetContext),
-                  child: const Text('All set'),
-                )),
-              )),
-            ]),
-          );
-        }),
+            );
+          },
+        ),
       );
-    } finally { _refreshDrawer = null; }
+    } finally {
+      _refreshDrawer = null;
+    }
   }
 
   Widget _footer(BallWarsColors c) {
-    final pickups = _powerUps == null ? 'all pickups' :
-        '${_powerUps!.where((kind) => !kind.isTrap).length} pickups';
+    final pickups = _powerUps == null
+        ? 'all pickups'
+        : '${_powerUps!.where((kind) => !kind.isTrap).length} pickups';
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      decoration: BoxDecoration(color: c.surface,
-          border: Border(top: BorderSide(color: c.border))),
-      child: Column(mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           // The kind of match: the thread game, weapons only, or both.
-          if (widget.initialMode == null) SegmentedButton<MatchMode>(
-            segments: [
-              for (final m in MatchMode.values)
-                ButtonSegment(value: m, label: Text(m.label)),
-            ],
-            selected: {_mode},
-            showSelectedIcon: false,
-            style: const ButtonStyle(visualDensity: VisualDensity.compact),
-            onSelectionChanged: (v) {
-              GameAudio.instance.click();
-              _update(() {
-                _modePowerUps[_mode] = _powerUps;
-                _mode = v.first;
-                _powerUps = _modePowerUps[_mode];
-                if (_mode != MatchMode.arsenal) _mayhem = false;
-                if (_selected.length > _maxBalls) {
-                  final keep = _selected.entries.take(_maxBalls).toList();
-                  _selected..clear()..addEntries(keep);
-                }
-              });
-              DevicePrefs.write('mode', v.first.id);
-            },
-          ),
+          if (widget.initialMode == null)
+            SegmentedButton<MatchMode>(
+              segments: [
+                for (final m in MatchMode.values)
+                  ButtonSegment(value: m, label: Text(m.label)),
+              ],
+              selected: {_mode},
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              onSelectionChanged: (v) {
+                GameAudio.instance.click();
+                _update(() {
+                  _modePowerUps[_mode] = _powerUps;
+                  _mode = v.first;
+                  _powerUps = _modePowerUps[_mode];
+                  if (_mode != MatchMode.arsenal) _mayhem = false;
+                  if (_selected.length > _maxBalls) {
+                    final keep = _selected.entries.take(_maxBalls).toList();
+                    _selected
+                      ..clear()
+                      ..addEntries(keep);
+                  }
+                });
+                DevicePrefs.write('mode', v.first.id);
+              },
+            ),
           Card(
             margin: const EdgeInsets.symmetric(vertical: 6),
             child: ListTile(
               dense: true,
               title: const Text('Edit match settings'),
-              subtitle: Text([
-                _winsNeeded == 1 ? '1 round' : 'First to $_winsNeeded',
-                '${_speedMultiplier}x', _ballSize.label,
-                'Effects ${_showEffects ? "on" : "off"}',
-                'Finishers ${_finishersOn ? "on" : "off"}',
-                if (_mode != MatchMode.threads) pickups,
-                if (_dualWield && _mode != MatchMode.threads) 'Dual wield',
-                if (_mayhem) 'Mayhem',
-                if (_endlessBattle && !_mayhem && _mode == MatchMode.arsenal) 'Endless',
-                if (_shrinkingArena) 'Shrinking arena',
-              ].join(' / '), maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text(
+                [
+                  _winsNeeded == 1 ? '1 round' : 'First to $_winsNeeded',
+                  '${_speedMultiplier}x',
+                  _ballSize.label,
+                  'Effects ${_showEffects ? "on" : "off"}',
+                  'Finishers ${_finishersOn ? "on" : "off"}',
+                  if (_mode != MatchMode.threads) pickups,
+                  if (_dualWield && _mode != MatchMode.threads) 'Dual wield',
+                  if (_mayhem) 'Mayhem',
+                  if (_endlessBattle && !_mayhem && _mode == MatchMode.arsenal)
+                    'Endless',
+                  if (_shrinkingArena) 'Shrinking arena',
+                ].join(' / '),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               trailing: const Icon(Icons.tune),
               onTap: _openSettings,
             ),
@@ -813,55 +900,101 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          Row(children: [
-            OutlinedButton.icon(
-              onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
-              icon: const Icon(Icons.shuffle), label: const Text('Random'),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: FilledButton(
-              onPressed: _canStart ? _start : null, child: const Text('Start'),
-            )),
-          ]),
-        ]),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
+                icon: const Icon(Icons.shuffle),
+                label: const Text('Random'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _canStart ? _start : null,
+                  child: const Text('Start'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   bool get _useSettingCards => _settingCards;
 
-  Widget _choice<T>(IconData icon, String title, List<T> values, T value,
-      String Function(T) label, void Function(T) change, {String? tooltip}) {
+  Widget _choice<T>(
+    IconData icon,
+    String title,
+    List<T> values,
+    T value,
+    String Function(T) label,
+    void Function(T) change, {
+    String? tooltip,
+  }) {
     final next = values[(values.indexOf(value) + 1) % values.length];
     final tile = InkWell(
       key: ValueKey('setting-$title'),
-      onTap: () { GameAudio.instance.click(); change(next); },
+      onTap: () {
+        GameAudio.instance.click();
+        change(next);
+      },
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: _useSettingCards ? Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(children: [
-                Icon(icon, size: 20), const SizedBox(width: 8),
-                Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12))),
-              ]),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: Text(label(value), maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700))),
-                const Icon(Icons.unfold_more, size: 18),
-              ]),
-            ],
-          ) : Row(children: [
-            Icon(icon, size: 22), const SizedBox(width: 12),
-            Expanded(child: Text(title)),
-            const SizedBox(width: 8),
-            Flexible(child: Text(label(value), textAlign: TextAlign.right,
-                style: const TextStyle(fontWeight: FontWeight.w700))),
-            const SizedBox(width: 6), const Icon(Icons.unfold_more, size: 18),
-          ]),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: _useSettingCards
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(icon, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label(value),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        const Icon(Icons.unfold_more, size: 18),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Icon(icon, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(title)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        label(value),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.unfold_more, size: 18),
+                  ],
+                ),
         ),
       ),
     );
@@ -873,34 +1006,65 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       // Preserve the existing grouped list layout.
       return Card(
         margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Padding(padding: const EdgeInsets.fromLTRB(12, 12, 12, 4), child: Text(title,
-              style: const TextStyle(fontWeight: FontWeight.w700))),
-          ...rows,
-        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            ...rows,
+          ],
+        ),
       );
     }
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.w700))),
-        LayoutBuilder(builder: (context, bounds) {
-          final columns = bounds.maxWidth >= 600 ? 3 : bounds.maxWidth >= 280 ? 2 : 1;
-          final width = (bounds.maxWidth - 8 * (columns - 1)) / columns;
-          final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
-          return Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final row in rows) SizedBox(width: width, height: 112 * scale,
-              child: Card(
-                key: const ValueKey('individual-setting-card'),
-                margin: EdgeInsets.zero,
-                clipBehavior: Clip.antiAlias,
-                child: row,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-          ]);
-        }),
-      ]),
+          ),
+          LayoutBuilder(
+            builder: (context, bounds) {
+              final columns = bounds.maxWidth >= 600
+                  ? 3
+                  : bounds.maxWidth >= 280
+                  ? 2
+                  : 1;
+              final width = (bounds.maxWidth - 8 * (columns - 1)) / columns;
+              final scale = MediaQuery.textScalerOf(
+                context,
+              ).scale(1).clamp(1.0, 2.0);
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final row in rows)
+                    SizedBox(
+                      width: width,
+                      height: 112 * scale,
+                      child: Card(
+                        key: const ValueKey('individual-setting-card'),
+                        margin: EdgeInsets.zero,
+                        clipBehavior: Clip.antiAlias,
+                        child: row,
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -909,88 +1073,207 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       _settingsGroup('Gameplay', [
-        _choice(Icons.emoji_events_outlined, 'Rounds', const [1, 2, 3], _winsNeeded,
-          (v) => v == 1 ? '1 round' : 'First to $v', (v) {
-            _update(() => _winsNeeded = v); DevicePrefs.write('rounds', v);
-          }),
-        _choice(Icons.speed, 'Speed', _speeds, _speedMultiplier,
-          (v) => '${v == v.roundToDouble() ? v.toInt() : v}×', (v) {
-            _update(() => _speedMultiplier = v); DevicePrefs.write('speed', v);
-          }),
+        _choice(
+          Icons.emoji_events_outlined,
+          'Rounds',
+          const [1, 2, 3],
+          _winsNeeded,
+          (v) => v == 1 ? '1 round' : 'First to $v',
+          (v) {
+            _update(() => _winsNeeded = v);
+            DevicePrefs.write('rounds', v);
+          },
+        ),
+        _choice(
+          Icons.speed,
+          'Speed',
+          _speeds,
+          _speedMultiplier,
+          (v) => '${v == v.roundToDouble() ? v.toInt() : v}×',
+          (v) {
+            _update(() => _speedMultiplier = v);
+            DevicePrefs.write('speed', v);
+          },
+        ),
+        _choice(
+          Icons.trending_up,
+          'Automatic speed-up',
+          const [true, false],
+          _automaticSpeedUp,
+          (v) => v ? 'On' : 'Off',
+          (v) {
+            _update(() => _automaticSpeedUp = v);
+            DevicePrefs.write('automatic-speed-up', v ? '1' : '0');
+          },
+        ),
         if (_mode != MatchMode.threads) ...[
-          ListTile(leading: const Icon(Icons.auto_awesome),
-            title: Text(_powerUps == null ? 'Pickups: All' :
-                'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of ${PowerUpKind.values.where((kind) => !kind.isTrap).length}'),
-            trailing: const Icon(Icons.chevron_right), onTap: _chooseWeapons),
-          _choice(Icons.pan_tool_alt, 'Dual wield', const [false, true], _dualWield,
-            (v) => v ? 'On' : 'Off', (v) {
-              _update(() => _dualWield = v); DevicePrefs.write('dual-wield', v ? '1' : '0');
-            }),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome),
+            title: Text(
+              _powerUps == null
+                  ? 'Pickups: All'
+                  : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of ${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _chooseWeapons,
+          ),
+          _choice(
+            Icons.pan_tool_alt,
+            'Dual wield',
+            const [false, true],
+            _dualWield,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _dualWield = v);
+              DevicePrefs.write('dual-wield', v ? '1' : '0');
+            },
+          ),
           if (_mode == MatchMode.arsenal) ...[
-            if (widget.initialMode == null) _choice(Icons.whatshot, 'Mayhem', const [false, true], _mayhem,
-              (v) => v ? 'On' : 'Off', (v) {
-                _update(() {
-                  _mayhem = v;
-                  if (!v && _selected.length > 4) {
-                    final keep = _selected.entries.take(4).toList();
-                    _selected..clear()..addEntries(keep);
-                  }
-                });
-                DevicePrefs.write('mayhem', v ? '1' : '0');
-              }),
-            if (_mayhem) _choice(Icons.timer, 'Match time', const [30, 60, 120, 180, 300, 600], _mayhemSeconds,
-              (v) => v < 60 ? '${v}s' : '${v ~/ 60} min', (v) {
-                _update(() => _mayhemSeconds = v);
-                DevicePrefs.write('mayhem-seconds', v);
-              }),
-            if (!_mayhem) _choice(Icons.all_inclusive, 'Endless Battle', const [false, true], _endlessBattle,
-              (v) => v ? 'On' : 'Off', (v) {
-                _update(() => _endlessBattle = v); DevicePrefs.write('endless-battle', v ? '1' : '0');
-              }),
+            if (widget.initialMode == null)
+              _choice(
+                Icons.whatshot,
+                'Mayhem',
+                const [false, true],
+                _mayhem,
+                (v) => v ? 'On' : 'Off',
+                (v) {
+                  _update(() {
+                    _mayhem = v;
+                    if (!v && _selected.length > 4) {
+                      final keep = _selected.entries.take(4).toList();
+                      _selected
+                        ..clear()
+                        ..addEntries(keep);
+                    }
+                  });
+                  DevicePrefs.write('mayhem', v ? '1' : '0');
+                },
+              ),
+            if (_mayhem)
+              _choice(
+                Icons.timer,
+                'Match time',
+                const [30, 60, 120, 180, 300, 600],
+                _mayhemSeconds,
+                (v) => v < 60 ? '${v}s' : '${v ~/ 60} min',
+                (v) {
+                  _update(() => _mayhemSeconds = v);
+                  DevicePrefs.write('mayhem-seconds', v);
+                },
+              ),
+            if (!_mayhem)
+              _choice(
+                Icons.all_inclusive,
+                'Endless Battle',
+                const [false, true],
+                _endlessBattle,
+                (v) => v ? 'On' : 'Off',
+                (v) {
+                  _update(() => _endlessBattle = v);
+                  DevicePrefs.write('endless-battle', v ? '1' : '0');
+                },
+              ),
           ],
         ],
-        _choice(Icons.zoom_in_map, 'Shrinking arena', const [false, true], _shrinkingArena,
-          (v) => v ? 'On' : 'Off', (v) {
-            _update(() => _shrinkingArena = v); DevicePrefs.write('shrinking-arena', v ? '1' : '0');
-          }),
+        _choice(
+          Icons.zoom_in_map,
+          'Shrinking arena',
+          const [false, true],
+          _shrinkingArena,
+          (v) => v ? 'On' : 'Off',
+          (v) {
+            _update(() => _shrinkingArena = v);
+            DevicePrefs.write('shrinking-arena', v ? '1' : '0');
+          },
+        ),
       ]),
       _settingsGroup('Appearance', [
-        _choice(Icons.auto_fix_high, 'Effects', const [true, false], _showEffects,
-          (v) => v ? 'On' : 'Off', (v) {
-            _update(() => _showEffects = v); EffectsPrefs.setEffectsOn(v);
-          }),
-        _choice(Icons.circle_outlined, 'Size', BallSize.values, _ballSize, (v) => v.label, (v) {
-          _update(() => _ballSize = v); DevicePrefs.write('size', v.id);
-        }),
-        _choice(Icons.flare, 'Wall sparks', WallSparkSize.values, _wallSparkSize, (v) => v.label, (v) {
-          _update(() => _wallSparkSize = v); DevicePrefs.write('wall-spark-size', v.id);
-        }),
-        _choice(Icons.face, 'Ball look', BallLook.values, _look, (v) => v.name, (v) {
-          _update(() => _look = v); DevicePrefs.write('look', v.name);
-        }, tooltip: 'Ball look: ${_look.name}'),
-        _choice(Icons.movie_outlined, 'Finishers', const [true, false], _finishersOn,
-          (v) => v ? 'On' : 'Off', (v) {
-            _update(() => _finishersOn = v); EffectsPrefs.setFinishersOn(v);
-          }),
+        _choice(
+          Icons.auto_fix_high,
+          'Effects',
+          const [true, false],
+          _showEffects,
+          (v) => v ? 'On' : 'Off',
+          (v) {
+            _update(() => _showEffects = v);
+            EffectsPrefs.setEffectsOn(v);
+          },
+        ),
+        _choice(
+          Icons.circle_outlined,
+          'Size',
+          BallSize.values,
+          _ballSize,
+          (v) => v.label,
+          (v) {
+            _update(() => _ballSize = v);
+            DevicePrefs.write('size', v.id);
+          },
+        ),
+        _choice(
+          Icons.flare,
+          'Wall sparks',
+          WallSparkSize.values,
+          _wallSparkSize,
+          (v) => v.label,
+          (v) {
+            _update(() => _wallSparkSize = v);
+            DevicePrefs.write('wall-spark-size', v.id);
+          },
+        ),
+        _choice(
+          Icons.face,
+          'Ball look',
+          BallLook.values,
+          _look,
+          (v) => v.name,
+          (v) {
+            _update(() => _look = v);
+            DevicePrefs.write('look', v.name);
+          },
+          tooltip: 'Ball look: ${_look.name}',
+        ),
+        _choice(
+          Icons.movie_outlined,
+          'Finishers',
+          const [true, false],
+          _finishersOn,
+          (v) => v ? 'On' : 'Off',
+          (v) {
+            _update(() => _finishersOn = v);
+            EffectsPrefs.setFinishersOn(v);
+          },
+        ),
       ]),
       _settingsGroup('Audio', [
-        _choice(Icons.music_note, 'Music', const [false, true], GameAudio.instance.musicOn,
-          (v) => v ? 'On' : 'Off', (v) async {
+        _choice(
+          Icons.music_note,
+          'Music',
+          const [false, true],
+          GameAudio.instance.musicOn,
+          (v) => v ? 'On' : 'Off',
+          (v) async {
             final saved = GameAudio.instance.setMusicOn(v);
             await saved;
             if (mounted) _update(() {});
-          }),
-        _choice(Icons.volume_up, 'Sound effects', const [false, true], GameAudio.instance.effectsOn,
-          (v) => v ? 'On' : 'Off', (v) async {
+          },
+        ),
+        _choice(
+          Icons.volume_up,
+          'Sound effects',
+          const [false, true],
+          GameAudio.instance.effectsOn,
+          (v) => v ? 'On' : 'Off',
+          (v) async {
             final saved = GameAudio.instance.setEffectsOn(v);
             if (v) GameAudio.instance.click();
             await saved;
             if (mounted) _update(() {});
-          }),
+          },
+        ),
       ]),
     ],
   );
-
 }
 
 /// "Mine" / "Shared" next to a user group in the category list.
@@ -1070,23 +1353,63 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
       constraints: const BoxConstraints(maxWidth: 760),
       title: const Text('Weapons, power-ups & traps'),
       contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-      content: SizedBox(width: 720,
+      content: SizedBox(
+        width: 720,
         height: MediaQuery.sizeOf(context).height * 0.62,
-        child: DefaultTabController(length: 3, child: Column(children: [
-          if (widget.arsenal) Padding(padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(crowdNote, style: Theme.of(context).textTheme.bodySmall)),
-          Row(children: [
-            Expanded(child: Text(selectedCount == 0 ? 'Pick at least one.' : '$selectedCount selected')),
-            TextButton(onPressed: () => setState(() => _on.addAll(selectable)), child: const Text('Select all')),
-            TextButton(onPressed: () => setState(() => _on.removeAll(selectable)), child: const Text('Clear')),
-          ]),
-          const TabBar(tabs: [Tab(text: 'Weapons'), Tab(text: 'Power-ups'), Tab(text: 'Traps')]),
-          Expanded(child: TabBarView(children: [
-            SingleChildScrollView(child: _cardGrid(sorted(weapons), selectable: true)),
-            SingleChildScrollView(child: _cardGrid(sorted(powerUps), selectable: true)),
-            SingleChildScrollView(child: _trapSection(sorted(traps))),
-          ])),
-        ])),
+        child: DefaultTabController(
+          length: 3,
+          child: Column(
+            children: [
+              if (widget.arsenal)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    crowdNote,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      selectedCount == 0
+                          ? 'Pick at least one.'
+                          : '$selectedCount selected',
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _on.addAll(selectable)),
+                    child: const Text('Select all'),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _on.removeAll(selectable)),
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+              const TabBar(
+                tabs: [
+                  Tab(text: 'Weapons'),
+                  Tab(text: 'Power-ups'),
+                  Tab(text: 'Traps'),
+                ],
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    SingleChildScrollView(
+                      child: _cardGrid(sorted(weapons), selectable: true),
+                    ),
+                    SingleChildScrollView(
+                      child: _cardGrid(sorted(powerUps), selectable: true),
+                    ),
+                    SingleChildScrollView(child: _trapSection(sorted(traps))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       actions: [
         TextButton(
@@ -1173,10 +1496,16 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    PowerUpName(kind, tuning: widget.config,
-                      style: Theme.of(context).textTheme.titleSmall),
-                    if (widget.config.rarityOf(kind) != null) Text(widget.config.rarityOf(kind)!.label,
-                      style: TextStyle(fontSize: 10, color: appColors.muted)),
+                    PowerUpName(
+                      kind,
+                      tuning: widget.config,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    if (widget.config.rarityOf(kind) != null)
+                      Text(
+                        widget.config.rarityOf(kind)!.label,
+                        style: TextStyle(fontSize: 10, color: appColors.muted),
+                      ),
                     const SizedBox(height: 4),
                     Text(
                       powerUpDescription(

@@ -259,4 +259,24 @@ void main() {
       expect(skill.calloutStyle, expected, reason: kind.label);
     }
   });
+
+  test('advanced targeting and delivery choices round-trip', () {
+    final skill = SkillLibrary.defaults
+        .create('Directional Beam', PowerUpKind.energyWave)
+        .copyWith(
+          targeting: SkillTargeting.chosenDirection,
+          delivery: SkillDelivery.beam,
+        );
+    final decoded = SkillDefinition.fromJson(skill.toJson())!;
+    expect(decoded.targeting, SkillTargeting.chosenDirection);
+    expect(decoded.delivery, SkillDelivery.beam);
+
+    final boundary = skill.copyWith(
+      targeting: SkillTargeting.arenaLocation,
+      delivery: SkillDelivery.boundaryHazard,
+    );
+    final decodedBoundary = SkillDefinition.fromJson(boundary.toJson())!;
+    expect(decodedBoundary.targeting, SkillTargeting.arenaLocation);
+    expect(decodedBoundary.delivery, SkillDelivery.boundaryHazard);
+  });
 }

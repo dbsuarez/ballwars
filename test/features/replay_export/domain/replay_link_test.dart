@@ -58,6 +58,19 @@ void main() {
     expect(parsed.contestants[1], same(_presets[1]));
   });
 
+  test('round-trips disabled automatic speed-up', () {
+    final uri = ReplayLink(
+      seed: 7,
+      speedMultiplier: 1,
+      automaticSpeedUp: false,
+      contestants: [_presets[0], _presets[1]],
+    ).toUri(presetIds: _presetIds, appUrl: kWebAppUrl);
+
+    expect(uri.queryParameters['autospeed'], '0');
+    final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
+    expect(parsed.automaticSpeedUp, isFalse);
+  });
+
   test('a linked match plays out exactly like the original', () {
     final original = [_custom, _presets[2]];
     final uri = ReplayLink(
@@ -498,9 +511,15 @@ void main() {
     expect(restored.mayhem, isTrue);
     expect(restored.mayhemSeconds, 300);
     for (final bad in ['0', '-30', 'oops', '1801']) {
-      expect(ReplayLink.fromUri(uri.replace(queryParameters: {
-        ...uri.queryParameters, 'duration': bad,
-      }), presets: six), isNull);
+      expect(
+        ReplayLink.fromUri(
+          uri.replace(
+            queryParameters: {...uri.queryParameters, 'duration': bad},
+          ),
+          presets: six,
+        ),
+        isNull,
+      );
     }
     expect(restored.contestants, hasLength(ReplayLink.mayhemBalls));
 

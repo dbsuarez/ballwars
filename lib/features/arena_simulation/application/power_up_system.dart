@@ -45,6 +45,7 @@ class PowerUpSystem {
 
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
+  final Map<Projectile, SkillDefinition> _composedProjectiles = {};
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -108,6 +109,16 @@ class PowerUpSystem {
 
   String skillName(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).name;
+
+  void _skillYell(SimulationBall ball, PowerUpKind kind, String fallback) {
+    final skill = match.skillLibrary.activeFor(kind, _t);
+    final custom = skill.yell.trim();
+    _yell(
+      ball,
+      custom.isEmpty ? fallback : custom,
+      calloutStyle: CalloutStyle.values[skill.calloutStyle.index],
+    );
+  }
 
   /// Bullets, pellets and freeze shots fired so far (the screen plays a sound when it goes up).
   int shots = 0;
@@ -306,6 +317,11 @@ class PowerUpSystem {
       return;
     }
     pickups++;
+    final activeSkill = match.skillLibrary.activeFor(p.kind, _t);
+    if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
+      _executeComposed(ball, activeSkill);
+      return;
+    }
     if (p.kind.isWeapon) {
       ball.magnetPending = false;
       // A new power-up starts its own aim (a gatling burst already firing finishes first).
@@ -318,61 +334,61 @@ class PowerUpSystem {
     switch (p.kind) {
       case PowerUpKind.apple:
         _eatApple(ball);
-        _yell(ball, 'YUM!');
+        _skillYell(ball, p.kind, 'YUM!');
       case PowerUpKind.speed:
         ball.speedLeft = _t.speedSteps;
-        _yell(ball, 'ZOOM!');
+        _skillYell(ball, p.kind, 'ZOOM!');
       case PowerUpKind.ghost:
         ball.ghostLeft = _t.ghostSteps;
-        _yell(ball, 'BOO!');
+        _skillYell(ball, p.kind, 'BOO!');
       case PowerUpKind.magnet:
         _pullNearest(ball);
-        _yell(ball, 'MINE!');
+        _skillYell(ball, p.kind, 'MINE!');
       case PowerUpKind.repulsor:
         ball.repulsorLeft = PowerUpTuning.specialEffectSteps;
-        _yell(ball, 'BACK OFF!');
+        _skillYell(ball, p.kind, 'BACK OFF!');
       case PowerUpKind.timeBubble:
         ball.timeBubbleLeft = PowerUpTuning.specialEffectSteps;
-        _yell(ball, 'TIME OUT!');
+        _skillYell(ball, p.kind, 'TIME OUT!');
       case PowerUpKind.vampire:
         ball.vampireLeft = PowerUpTuning.specialEffectSteps;
-        _yell(ball, 'I WANT YOUR POWER!');
+        _skillYell(ball, p.kind, 'I WANT YOUR POWER!');
       case PowerUpKind.mirror:
         ball.mirrorCharges++;
-        _yell(ball, 'RETURN TO SENDER!');
+        _skillYell(ball, p.kind, 'RETURN TO SENDER!');
       case PowerUpKind.overcharge:
         ball.overchargeLeft = PowerUpTuning.specialEffectSteps;
-        _yell(ball, 'MAXIMUM POWER!');
+        _skillYell(ball, p.kind, 'MAXIMUM POWER!');
       case PowerUpKind.gremlin:
         final target = _nearestTarget(ball);
         if (target != null) target.gremlinShots++;
-        _yell(ball, 'CHAOS MODE!');
+        _skillYell(ball, p.kind, 'CHAOS MODE!');
       case PowerUpKind.magneticField:
         ball.magneticFieldLeft = PowerUpTuning.specialEffectSteps;
         ball.magneticReflectedOwners.clear();
-        _yell(ball, 'NOTHING GETS THROUGH!');
+        _skillYell(ball, p.kind, 'NOTHING GETS THROUGH!');
       case PowerUpKind.goldenArmor:
         ball.goldenArmorHits = 2;
-        _yell(ball, 'GOLDEN GUARD!');
+        _skillYell(ball, p.kind, 'GOLDEN GUARD!');
       case PowerUpKind.omegaTendrils:
         _launchOmegaTendrils(ball);
-        _yell(ball, 'NO ONE ESCAPES!');
+        _skillYell(ball, p.kind, 'NO ONE ESCAPES!');
       case PowerUpKind.lightningStrikes:
         final target = _nearestTarget(ball);
         if (target != null) {
           lightningStrikes.add(LightningStrike(owner: ball, target: target));
-          _yell(ball, 'THUNDER, STRIKE!');
+          _skillYell(ball, p.kind, 'THUNDER, STRIKE!');
         }
       case PowerUpKind.earthquake:
         earthquakes.add(EarthquakePulse(owner: ball));
-        _yell(ball, 'SHAKE THE EARTH!');
+        _skillYell(ball, p.kind, 'SHAKE THE EARTH!');
       case PowerUpKind.tornado:
         final target = _nearestTarget(ball);
         if (target != null) {
           tornadoes.add(
             Tornado(owner: ball, target: target, position: target.position),
           );
-          _yell(ball, 'TWIST AND SHOUT!');
+          _skillYell(ball, p.kind, 'TWIST AND SHOUT!');
         }
       default:
         ball.equipWeapon(p.kind, dualWield: match.dualWield);
@@ -770,6 +786,12 @@ class PowerUpSystem {
     SimulationBall target,
     List<PowerUpKind> targetHeld,
   ) {
+    final composed = match.skillLibrary.activeFor(weapon, _t);
+    if (composed.isComposed && composed.trigger == SkillTrigger.collision) {
+      _executeComposed(attacker, composed, primary: target);
+      attacker.removeWeapon(weapon);
+      return;
+    }
     final PowerUpKind kind;
     if (weapon.isBlade || weapon == PowerUpKind.orbitingFlail) {
       kind = weapon;
@@ -1227,6 +1249,95 @@ class PowerUpSystem {
     return best;
   }
 
+  void _launchComposed(
+    SimulationBall owner,
+    SimulationBall target,
+    SkillDefinition skill,
+  ) {
+    if (skill.delivery == SkillDelivery.projectile) {
+      final delta = target.position - owner.position;
+      final direction = delta.distance == 0
+          ? const Offset(1, 0)
+          : delta / delta.distance;
+      final shot = Projectile(
+        owner: owner,
+        kind: skill.baseKind,
+        position: owner.position + direction * owner.radius,
+        velocity:
+            direction *
+            match.arenaRadius *
+            (skill.projectileSpeed ?? _t.bulletSpeedRatio),
+      );
+      projectiles.add(shot);
+      _composedProjectiles[shot] = skill;
+      shots++;
+      _skillSound(skill.baseKind);
+      if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
+      return;
+    }
+    _executeComposed(owner, skill, primary: target);
+  }
+
+  void _executeComposed(
+    SimulationBall owner,
+    SkillDefinition skill, {
+    SimulationBall? primary,
+  }) {
+    final targets = switch (skill.targeting) {
+      SkillTargeting.self => [owner],
+      SkillTargeting.nearestOpponent => [?primary ?? _nearestTarget(owner)],
+      SkillTargeting.allOpponents => [
+        for (final target in match.state.balls)
+          if (!identical(target, owner) && _alive(target)) target,
+      ],
+      null => const <SimulationBall>[],
+    };
+    for (final target in targets) {
+      switch (skill.effectType) {
+        case SkillEffectType.damage:
+          if (match.mode == MatchMode.arsenal) {
+            final dealt = match.damage(
+              target,
+              skill.arsenalDamage ?? 0,
+              move: skill.name,
+              attacker: owner,
+            );
+            _showDamage(target, target.position, dealt, 0);
+          } else {
+            final cut = match.cutThreads(
+              target,
+              skill.allOutDamage ?? 0,
+              near: target.position,
+              move: skill.name,
+            );
+            _showDamage(target, target.position, cut, 0);
+          }
+        case SkillEffectType.heal:
+          if (match.mode == MatchMode.arsenal) {
+            target.life = math.min(
+              _t.arenaMaxLife,
+              target.life + (skill.arsenalDamage ?? 10),
+            );
+          }
+        case SkillEffectType.freeze:
+          if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
+          target.frozenLeft = ((skill.durationSeconds ?? 2) * 60).round();
+          target.velocity = Offset.zero;
+        case SkillEffectType.speed:
+          target.speedLeft = ((skill.durationSeconds ?? 2) * 60).round();
+        case SkillEffectType.knockback:
+          final away = target.position - owner.position;
+          if (away.distance > 0) {
+            target.velocity =
+                away / away.distance * match.arenaRadius * skill.knockback;
+          }
+        case null:
+      }
+    }
+    _skillSound(skill.baseKind);
+    if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
+  }
+
   /// Guns aim at the nearest opponent for [_t.aimSteps] steps, then fire. A gatling then
   /// fires its other rounds one every [PowerUpTuning.gatlingIntervalSteps] steps. Balls that are out
   /// (or lost their last life or thread earlier this step) or frozen neither aim nor fire (bullets
@@ -1266,15 +1377,15 @@ class PowerUpSystem {
         continue;
       }
       final bursting = ball.burstLeft > 0;
-      final guns = ball.equippedWeapons
-          .where(
-            (weapon) =>
-                weapon.isGun &&
-                (weapon != PowerUpKind.energyWave ||
-                    energyWaveAttacks.isEmpty) &&
-                !(_firedWeaponHold[ball]?.containsKey(weapon) ?? false),
-          )
-          .toList();
+      final guns = ball.equippedWeapons.where((weapon) {
+        final skill = match.skillLibrary.activeFor(weapon, _t);
+        final canAim = skill.isComposed
+            ? skill.trigger == SkillTrigger.aimedFire
+            : weapon.isGun;
+        return canAim &&
+            (weapon != PowerUpKind.energyWave || energyWaveAttacks.isEmpty) &&
+            !(_firedWeaponHold[ball]?.containsKey(weapon) ?? false);
+      }).toList();
       if (!bursting && guns.isEmpty) continue;
       final target = _nearestTarget(ball);
       ball.aimTarget = target;
@@ -1301,25 +1412,31 @@ class PowerUpSystem {
       } else {
         for (final kind in guns) {
           _holdFiredWeapon(ball, kind);
+          final composed = match.skillLibrary.activeFor(kind, _t);
+          if (composed.isComposed &&
+              composed.trigger == SkillTrigger.aimedFire) {
+            _launchComposed(ball, target, composed);
+            continue;
+          }
           switch (kind) {
             case PowerUpKind.shotgun:
               _fireShotgun(ball, target);
-              _yell(ball, 'BLAM!');
+              _skillYell(ball, kind, 'BLAM!');
             case PowerUpKind.gatling:
               _burstVolley[ball] = ++_lastVolley;
               _fire(ball, target, kind, 0, volley: _lastVolley);
               gatlingShots++;
               ball.burstLeft = _t.gatlingRounds - 1;
-              _yell(ball, 'RATATAT!');
+              _skillYell(ball, kind, 'RATATAT!');
             case PowerUpKind.freeze:
               _fire(ball, target, kind, 0);
-              _yell(ball, 'FREEZE!');
+              _skillYell(ball, kind, 'FREEZE!');
             case PowerUpKind.grenade:
               _throwGrenade(ball, target);
-              _yell(ball, 'FIRE IN THE HOLE!');
+              _skillYell(ball, kind, 'FIRE IN THE HOLE!');
             case PowerUpKind.molotov:
               _throwMolotov(ball, target);
-              _yell(ball, 'LIGHT IT UP!');
+              _skillYell(ball, kind, 'LIGHT IT UP!');
             case PowerUpKind.hook:
               _fire(
                 ball,
@@ -1328,43 +1445,43 @@ class PowerUpSystem {
                 0,
                 speedRatio: PowerUpTuning.hookSpeedRatio,
               );
-              _yell(ball, 'COME OVER HERE!');
+              _skillYell(ball, kind, 'COME OVER HERE!');
             case PowerUpKind.ricochetDisc:
               _fire(ball, target, kind, 0);
-              _yell(ball, 'BANK SHOT!');
+              _skillYell(ball, kind, 'BANK SHOT!');
             case PowerUpKind.threadHarpoon:
               _fire(ball, target, kind, 0);
-              _yell(ball, 'GIVE IT HERE!');
+              _skillYell(ball, kind, 'GIVE IT HERE!');
             case PowerUpKind.prismLaser:
               _fire(ball, target, kind, 0);
-              _yell(ball, 'TASTE THE RAINBOW!');
+              _skillYell(ball, kind, 'TASTE THE RAINBOW!');
             case PowerUpKind.swapCannon:
               _fire(ball, target, kind, 0);
-              _yell(ball, 'SWAP INCOMING!');
+              _skillYell(ball, kind, 'SWAP INCOMING!');
             case PowerUpKind.bow:
               _fireBow(ball, target);
-              _yell(ball, 'ARROWS, FLY!');
+              _skillYell(ball, kind, 'ARROWS, FLY!');
             case PowerUpKind.rocketLauncher:
               _fireRocket(ball, target);
-              _yell(ball, 'TARGET LOCKED!');
+              _skillYell(ball, kind, 'TARGET LOCKED!');
             case PowerUpKind.boomerang:
               _fire(ball, target, kind, 0, speedRatio: 0.72);
-              _yell(ball, 'COMING BACK!');
+              _skillYell(ball, kind, 'COMING BACK!');
             case PowerUpKind.fireWall:
               _raiseFireWall(ball, target);
-              _yell(ball, 'BURNING BARRIER!');
+              _skillYell(ball, kind, 'BURNING BARRIER!');
             case PowerUpKind.waterGun:
               _fire(ball, target, kind, 0, speedRatio: 1.55);
-              _yell(ball, 'SPLASH!');
+              _skillYell(ball, kind, 'SPLASH!');
             case PowerUpKind.energyWave:
               _fireEnergyWave(ball, target);
-              _yell(ball, 'KA-ME-HA-ME-HAAA!');
+              _skillYell(ball, kind, 'KA-ME-HA-ME-HAAA!');
             case PowerUpKind.flamethrower:
               _startFlamethrower(ball, target);
-              _yell(ball, 'BURN IT DOWN!');
+              _skillYell(ball, kind, 'BURN IT DOWN!');
             default:
               _fire(ball, target, kind, 0);
-              _yell(ball, 'BANG!');
+              _skillYell(ball, kind, 'BANG!');
           }
         }
       }
@@ -1850,7 +1967,9 @@ class PowerUpSystem {
       }
 
       // A hook's chain doesn't cut threads.
-      if (allOut && p.kind != PowerUpKind.hook) {
+      if (allOut &&
+          p.kind != PowerUpKind.hook &&
+          !_composedProjectiles.containsKey(p)) {
         for (final ball in balls) {
           if (identical(ball, p.owner) || ball.isEliminated || ball.isGhost) {
             continue;
@@ -1893,7 +2012,12 @@ class PowerUpSystem {
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
         } else {
-          _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+          final composed = _composedProjectiles.remove(p);
+          if (composed != null) {
+            _executeComposed(p.owner, composed, primary: struck);
+          } else {
+            _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+          }
           if (p.kind == PowerUpKind.boomerang) {
             p.hitTargets.add(struck);
             p.position += p.velocity / p.velocity.distance * 2;
@@ -1947,6 +2071,7 @@ class PowerUpSystem {
       }
     }
     projectiles.addAll(spawned);
+    _composedProjectiles.removeWhere((projectile, _) => projectile.spent);
     projectiles.removeWhere((p) => p.spent);
   }
 
@@ -2164,12 +2289,17 @@ class PowerUpSystem {
   }
 
   /// [ball] yells [text] (a floating label just above it, in its color).
-  void _yell(SimulationBall ball, String text) {
+  void _yell(
+    SimulationBall ball,
+    String text, {
+    CalloutStyle calloutStyle = CalloutStyle.normal,
+  }) {
     match.state.floatingTexts.spawn(
       ball.position - Offset(0, ball.radius * 1.4),
       text,
       ball.config.primaryColor,
       callout: true,
+      calloutStyle: calloutStyle,
     );
   }
 

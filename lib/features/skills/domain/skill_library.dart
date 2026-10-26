@@ -3,6 +3,16 @@ import '../../arena_simulation/domain/power_up_config.dart';
 
 enum SkillVisualMode { sprite, vector }
 
+enum SkillTrigger { pickup, aimedFire, collision }
+
+enum SkillTargeting { self, nearestOpponent, allOpponents }
+
+enum SkillDelivery { instant, projectile, area }
+
+enum SkillEffectType { damage, heal, freeze, speed, knockback }
+
+enum SkillCalloutStyle { normal, rare, epic, special }
+
 class SkillDefinition {
   static const List<String> soundCues = [
     'shot',
@@ -32,6 +42,12 @@ class SkillDefinition {
     this.spriteMode = SkillVisualMode.sprite,
     this.effectMode = SkillVisualMode.sprite,
     this.soundCue = 'default',
+    this.trigger,
+    this.targeting,
+    this.delivery,
+    this.effectType,
+    this.yell = '',
+    this.calloutStyle = SkillCalloutStyle.normal,
   });
 
   final String id;
@@ -50,6 +66,17 @@ class SkillDefinition {
   final SkillVisualMode spriteMode;
   final SkillVisualMode effectMode;
   final String soundCue;
+  final SkillTrigger? trigger;
+  final SkillTargeting? targeting;
+  final SkillDelivery? delivery;
+  final SkillEffectType? effectType;
+  final String yell;
+  final SkillCalloutStyle calloutStyle;
+  bool get isComposed =>
+      trigger != null &&
+      targeting != null &&
+      delivery != null &&
+      effectType != null;
 
   SkillDefinition copyWith({
     String? id,
@@ -67,6 +94,12 @@ class SkillDefinition {
     SkillVisualMode? spriteMode,
     SkillVisualMode? effectMode,
     String? soundCue,
+    SkillTrigger? trigger,
+    SkillTargeting? targeting,
+    SkillDelivery? delivery,
+    SkillEffectType? effectType,
+    String? yell,
+    SkillCalloutStyle? calloutStyle,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -84,6 +117,12 @@ class SkillDefinition {
     spriteMode: spriteMode ?? this.spriteMode,
     effectMode: effectMode ?? this.effectMode,
     soundCue: soundCue ?? this.soundCue,
+    trigger: trigger ?? this.trigger,
+    targeting: targeting ?? this.targeting,
+    delivery: delivery ?? this.delivery,
+    effectType: effectType ?? this.effectType,
+    yell: yell ?? this.yell,
+    calloutStyle: calloutStyle ?? this.calloutStyle,
   );
 
   Map<String, Object?> toJson() => {
@@ -103,6 +142,12 @@ class SkillDefinition {
     'sprite_mode': spriteMode.name,
     'effect_mode': effectMode.name,
     'sound_cue': soundCue,
+    if (trigger != null) 'trigger': trigger!.name,
+    if (targeting != null) 'targeting': targeting!.name,
+    if (delivery != null) 'delivery': delivery!.name,
+    if (effectType != null) 'effect_type': effectType!.name,
+    if (yell.isNotEmpty) 'yell': yell,
+    'callout_style': calloutStyle.name,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -116,6 +161,11 @@ class SkillDefinition {
     T enumValue<T extends Enum>(String key, List<T> values, T fallback) {
       final raw = value[key];
       return values.where((item) => item.name == raw).firstOrNull ?? fallback;
+    }
+
+    T? nullableEnum<T extends Enum>(String key, List<T> values) {
+      final raw = value[key];
+      return values.where((item) => item.name == raw).firstOrNull;
     }
 
     double? decimal(String key) => (value[key] as num?)?.toDouble();
@@ -145,6 +195,16 @@ class SkillDefinition {
         SkillVisualMode.sprite,
       ),
       soundCue: value['sound_cue'] as String? ?? 'default',
+      trigger: nullableEnum('trigger', SkillTrigger.values),
+      targeting: nullableEnum('targeting', SkillTargeting.values),
+      delivery: nullableEnum('delivery', SkillDelivery.values),
+      effectType: nullableEnum('effect_type', SkillEffectType.values),
+      yell: value['yell'] as String? ?? '',
+      calloutStyle: enumValue(
+        'callout_style',
+        SkillCalloutStyle.values,
+        SkillCalloutStyle.normal,
+      ),
     ).validated();
   }
 
@@ -159,6 +219,7 @@ class SkillDefinition {
     maxBounces: maxBounces?.clamp(0, 20),
     knockback: knockback.clamp(0, 10),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
+    yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
   );
 }
 
@@ -254,6 +315,30 @@ class SkillLibrary {
       suffix++;
     }
     return source.copyWith(id: id, name: name, custom: true, enabled: false);
+  }
+
+  /// Creates a behavior-composed skill that uses [carrier] only for its
+  /// pickup slot, icon, and equipment rules.
+  SkillDefinition create(String name, PowerUpKind carrier) {
+    final seed = builtIn(carrier, PowerUpConfig.defaults);
+    final draft = duplicate(seed, name);
+    return draft.copyWith(
+      arsenalDamage: 10,
+      allOutDamage: 5,
+      durationSeconds: 2,
+      projectileCount: 1,
+      projectileSpeed: 1.4,
+      knockback: 1,
+      trigger: carrier.isWeapon ? SkillTrigger.aimedFire : SkillTrigger.pickup,
+      targeting: carrier.isWeapon
+          ? SkillTargeting.nearestOpponent
+          : SkillTargeting.self,
+      delivery: carrier.isWeapon
+          ? SkillDelivery.projectile
+          : SkillDelivery.instant,
+      effectType: SkillEffectType.damage,
+      yell: name.toUpperCase(),
+    );
   }
 
   PowerUpConfig applyTo(PowerUpConfig tuning) {

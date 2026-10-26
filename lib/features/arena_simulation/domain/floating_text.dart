@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum CalloutStyle { normal, rare, epic, special }
+
 class FloatingText {
   static const double lifespan = 1.2;
 
@@ -10,12 +12,14 @@ class FloatingText {
   String text;
   final Color color;
   final bool callout;
+  final CalloutStyle calloutStyle;
 
   FloatingText({
     required this.position,
     required this.text,
     required this.color,
     this.callout = false,
+    this.calloutStyle = CalloutStyle.normal,
     this.age = 0.0,
   });
 
@@ -34,12 +38,14 @@ class FloatingTextManager {
     String text,
     Color color, {
     bool callout = false,
+    CalloutStyle calloutStyle = CalloutStyle.normal,
   }) {
     final item = FloatingText(
       position: position,
       text: text,
       color: color,
       callout: callout,
+      calloutStyle: calloutStyle,
     );
     _items.add(item);
     return item;

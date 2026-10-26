@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../domain/simulation_state.dart';
+import '../domain/floating_text.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/particle_system.dart';
 import 'ball_face_painter.dart';
@@ -56,10 +57,10 @@ class ArenaPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     // Leave room for the rim's stroke and glow so they aren't clipped at the edges.
-    final scale =
-        rimInset == null
+    final scale = rimInset == null
         ? size.shortestSide / (2 * ((worldRadius ?? arenaRadius) + _rimMargin))
-        : (size.shortestSide - 2 * rimInset!) / (2 * (worldRadius ?? arenaRadius));
+        : (size.shortestSide - 2 * rimInset!) /
+              (2 * (worldRadius ?? arenaRadius));
 
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -411,14 +412,21 @@ class ArenaPainter extends CustomPainter {
     for (final text in state.floatingTexts.items) {
       final alpha = (text.opacity.clamp(0.0, 1.0) * 16).round() / 16;
       final key =
-          '${text.text}|${text.color.toARGB32()}|$alpha|${text.callout}';
+          '${text.text}|${text.color.toARGB32()}|$alpha|${text.callout}|${text.calloutStyle.name}';
+      final calloutInk = switch (text.calloutStyle) {
+        CalloutStyle.normal => const Color(0xFF111111),
+        CalloutStyle.rare => const Color(0xFF0D47A1),
+        CalloutStyle.epic => const Color(0xFF6A1B9A),
+        CalloutStyle.special => const Color(0xFF8B0000),
+      };
       final painter = _textCache[key] ??= TextPainter(
         text: TextSpan(
           text: text.text,
           style: TextStyle(
-            color: (text.callout ? const Color(0xFF111111) : text.color)
-                .withValues(alpha: alpha),
-            fontSize: 16,
+            color: (text.callout ? calloutInk : text.color).withValues(
+              alpha: alpha,
+            ),
+            fontSize: text.calloutStyle == CalloutStyle.special ? 19 : 16,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -428,6 +436,12 @@ class ArenaPainter extends CustomPainter {
       final origin =
           text.position - Offset(painter.width / 2, painter.height / 2);
       if (text.callout) {
+        final bubbleColor = switch (text.calloutStyle) {
+          CalloutStyle.normal => Colors.white,
+          CalloutStyle.rare => const Color(0xFFDDF3FF),
+          CalloutStyle.epic => const Color(0xFFF1DEFF),
+          CalloutStyle.special => const Color(0xFFFFE082),
+        };
         final bubble = RRect.fromRectAndRadius(
           Rect.fromLTWH(
             origin.dx - 8,
@@ -435,18 +449,18 @@ class ArenaPainter extends CustomPainter {
             painter.width + 16,
             painter.height + 10,
           ),
-          const Radius.circular(8),
+          Radius.circular(text.calloutStyle == CalloutStyle.epic ? 3 : 8),
         );
         canvas.drawRRect(
           bubble,
-          Paint()..color = Colors.white.withValues(alpha: 0.96 * alpha),
+          Paint()..color = bubbleColor.withValues(alpha: 0.96 * alpha),
         );
         canvas.drawRRect(
           bubble,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5
-            ..color = text.color.withValues(alpha: alpha),
+            ..strokeWidth = text.calloutStyle == CalloutStyle.special ? 4 : 2.5
+            ..color = calloutInk.withValues(alpha: alpha),
         );
         final tail = Path()
           ..moveTo(text.position.dx - 7, bubble.bottom - 1)
@@ -455,7 +469,7 @@ class ArenaPainter extends CustomPainter {
           ..close();
         canvas.drawPath(
           tail,
-          Paint()..color = text.color.withValues(alpha: alpha),
+          Paint()..color = calloutInk.withValues(alpha: alpha),
         );
       }
       painter.paint(canvas, origin);

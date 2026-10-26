@@ -10,6 +10,7 @@ import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
 
 const _arenaRadius = 260.0;
 const _life = PowerUpTuning.arenaLife;
@@ -44,6 +45,7 @@ MatchSimulationController _match({
   int seed = 1,
   bool dualWield = false,
   PowerUpConfig tuning = PowerUpConfig.defaults,
+  SkillLibrary skillLibrary = SkillLibrary.defaults,
 }) {
   final c = MatchSimulationController(
     _balls.take(count).toList(),
@@ -54,6 +56,7 @@ MatchSimulationController _match({
     lookAhead: false,
     dualWield: dualWield,
     tuning: tuning,
+    skillLibrary: skillLibrary,
   );
   final balls = c.state.balls;
   for (final b in balls) {
@@ -109,6 +112,32 @@ Projectile _bulletAt(
 );
 
 void main() {
+  test('a composed pickup skill executes its new behavior', () {
+    final draft = SkillLibrary.defaults
+        .create('Apple Shockwave', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.allOpponents,
+          delivery: SkillDelivery.area,
+          effectType: SkillEffectType.damage,
+          arsenalDamage: 17,
+          yell: 'SHOCKWAVE!',
+        );
+    final library = SkillLibrary.defaults.withDefinition(
+      draft,
+      PowerUpConfig.defaults,
+    );
+    final c = _match(skillLibrary: library);
+    final owner = c.state.balls.first;
+    final target = c.state.balls.last;
+
+    _give(c, owner, PowerUpKind.apple);
+
+    expect(target.life, _life - 17);
+    expect(c.powerUps!.skillSounds, isNotEmpty);
+  });
+
   test('frozen targets take configured extra damage and collision damage', () {
     final tuning = PowerUpConfig.defaults
         .withValue('frozenDamageMultiplier', 1.5)

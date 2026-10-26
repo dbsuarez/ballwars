@@ -104,6 +104,23 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Duplicate'));
     await tester.pumpAndSettle();
     expect(find.text('Edit Heavy Pistol'), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('visual-preview-item')), findsOneWidget);
+    expect(find.byKey(const ValueKey('visual-preview-impact')), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('preview-skill-sound')).hitTestable(),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('skill-settings-info')));
+    await tester.pumpAndSettle();
+    expect(find.text('Skill settings guide'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, 1400));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('skill-field-arsenal')),
       '42',
@@ -126,5 +143,25 @@ void main() {
       result!.applyTo(PowerUpConfig.defaults).arenaDamage(PowerUpKind.pistol),
       42,
     );
+  });
+
+  testWidgets('admin can create a composed skill from scratch', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('create-new-skill')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Skill name'),
+      'Gravity Burst',
+    );
+    await tester.tap(find.text('Build skill'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Gravity Burst'), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -220));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
+    expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
   });
 }

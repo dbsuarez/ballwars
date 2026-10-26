@@ -73,6 +73,8 @@ class SkillDefinition {
     this.custom = false,
     this.arsenalDamage,
     this.allOutDamage,
+    this.dotArsenalDamage,
+    this.dotAllOutDamage,
     this.durationSeconds,
     this.projectileCount,
     this.projectileSpeed,
@@ -108,6 +110,8 @@ class SkillDefinition {
   final bool custom;
   final double? arsenalDamage;
   final int? allOutDamage;
+  final double? dotArsenalDamage;
+  final int? dotAllOutDamage;
   final double? durationSeconds;
   final int? projectileCount;
   final double? projectileSpeed;
@@ -174,6 +178,8 @@ class SkillDefinition {
     bool? custom,
     double? arsenalDamage,
     int? allOutDamage,
+    double? dotArsenalDamage,
+    int? dotAllOutDamage,
     double? durationSeconds,
     int? projectileCount,
     double? projectileSpeed,
@@ -208,6 +214,8 @@ class SkillDefinition {
     custom: custom ?? this.custom,
     arsenalDamage: arsenalDamage ?? this.arsenalDamage,
     allOutDamage: allOutDamage ?? this.allOutDamage,
+    dotArsenalDamage: dotArsenalDamage ?? this.dotArsenalDamage,
+    dotAllOutDamage: dotAllOutDamage ?? this.dotAllOutDamage,
     durationSeconds: durationSeconds ?? this.durationSeconds,
     projectileCount: projectileCount ?? this.projectileCount,
     projectileSpeed: projectileSpeed ?? this.projectileSpeed,
@@ -247,6 +255,8 @@ class SkillDefinition {
     'custom': custom,
     if (arsenalDamage != null) 'arsenal_damage': arsenalDamage,
     if (allOutDamage != null) 'all_out_damage': allOutDamage,
+    if (dotArsenalDamage != null) 'dot_arsenal_damage': dotArsenalDamage,
+    if (dotAllOutDamage != null) 'dot_all_out_damage': dotAllOutDamage,
     if (durationSeconds != null) 'duration_seconds': durationSeconds,
     if (projectileCount != null) 'projectile_count': projectileCount,
     if (projectileSpeed != null) 'projectile_speed': projectileSpeed,
@@ -304,6 +314,8 @@ class SkillDefinition {
       custom: value['custom'] as bool? ?? id.startsWith('custom.'),
       arsenalDamage: decimal('arsenal_damage'),
       allOutDamage: integer('all_out_damage'),
+      dotArsenalDamage: decimal('dot_arsenal_damage'),
+      dotAllOutDamage: integer('dot_all_out_damage'),
       durationSeconds: decimal('duration_seconds'),
       projectileCount: integer('projectile_count'),
       projectileSpeed: decimal('projectile_speed'),
@@ -360,6 +372,8 @@ class SkillDefinition {
     name: name.trim().substring(0, name.trim().length.clamp(1, 40)),
     arsenalDamage: arsenalDamage?.clamp(0, 500),
     allOutDamage: allOutDamage?.clamp(0, 360),
+    dotArsenalDamage: dotArsenalDamage?.clamp(0, 500),
+    dotAllOutDamage: dotAllOutDamage?.clamp(0, 360),
     durationSeconds: durationSeconds?.clamp(0.1, 60),
     projectileCount: projectileCount?.clamp(1, 100),
     projectileSpeed: projectileSpeed?.clamp(0.1, 10),
@@ -521,6 +535,8 @@ class SkillLibrary {
     return draft.copyWith(
       arsenalDamage: 10,
       allOutDamage: 5,
+      dotArsenalDamage: 2,
+      dotAllOutDamage: 1,
       durationSeconds: 2,
       projectileCount: 1,
       projectileSpeed: 1.4,

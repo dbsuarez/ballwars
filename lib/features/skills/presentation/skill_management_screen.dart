@@ -474,6 +474,16 @@ class _SkillEditorState extends State<_SkillEditor> {
       'arsenal': TextEditingController(text: '${widget.skill.arsenalDamage}'),
     if (widget.skill.allOutDamage != null)
       'allOut': TextEditingController(text: '${widget.skill.allOutDamage}'),
+    if (widget.skill.isComposed)
+      'dotArsenal': TextEditingController(
+        text:
+            '${widget.skill.dotArsenalDamage ?? widget.skill.arsenalDamage ?? 0}',
+      ),
+    if (widget.skill.isComposed)
+      'dotAllOut': TextEditingController(
+        text:
+            '${widget.skill.dotAllOutDamage ?? widget.skill.allOutDamage ?? 0}',
+      ),
     if (widget.skill.durationSeconds != null)
       'duration': TextEditingController(
         text: '${widget.skill.durationSeconds}',
@@ -600,6 +610,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       _yell.text = defaults.yell;
       number('arsenal', defaults.arsenalDamage);
       number('allOut', defaults.allOutDamage);
+      number('dotArsenal', defaults.dotArsenalDamage);
+      number('dotAllOut', defaults.dotAllOutDamage);
       number('duration', defaults.durationSeconds);
       number('count', defaults.projectileCount);
       number('speed', defaults.projectileSpeed);
@@ -724,6 +736,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       enabled: _enabled,
       arsenalDamage: _double('arsenal'),
       allOutDamage: _int('allOut'),
+      dotArsenalDamage: _double('dotArsenal'),
+      dotAllOutDamage: _int('dotAllOut'),
       durationSeconds: _double('duration'),
       projectileCount: _int('count'),
       projectileSpeed: _double('speed'),
@@ -1099,6 +1113,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                 _number('arsenal', 'Initial / hit damage', suffix: 'life'),
               if (_numbers.containsKey('allOut'))
                 _number('allOut', 'All-Out damage', suffix: 'lines'),
+              if (_numbers.containsKey('dotArsenal'))
+                _number('dotArsenal', 'DoT', suffix: 'life/tick'),
+              if (_numbers.containsKey('dotAllOut'))
+                _number('dotAllOut', 'All-Out DoT', suffix: 'lines/tick'),
               if (_numbers.containsKey('duration'))
                 _number('duration', 'Duration', suffix: 's'),
               if (_numbers.containsKey('count'))

@@ -85,9 +85,9 @@ Replay and video remain last, by agreement.
 
 ## Phase 5 - Complete Skill Management parameter model
 
-**Status: Not started**
+**Status: In progress**
 
-- [ ] Expose initial damage independently from DoT damage, including zero-initial-damage skills.
+- [x] Expose initial damage independently from DoT damage, including zero-initial-damage skills.
 - [ ] Expose per-skill damage, DoT, duration, tick interval, range, speed, knockback, stun, freeze, pull, healing, and shield parameters.
 - [ ] Expose projectile count, size, sprite/vector rendering, speed, spin, spread/scatter, homing, bounce count, and return behavior.
 - [ ] Expose equipped weapon display scale globally or per item.

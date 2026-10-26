@@ -182,7 +182,8 @@ void main() {
           targeting: SkillTargeting.nearestOpponent,
           delivery: SkillDelivery.instant,
           effectType: SkillEffectType.damageOverTime,
-          arsenalDamage: 4,
+          arsenalDamage: 0,
+          dotArsenalDamage: 4,
           durationSeconds: 1,
           tickIntervalSeconds: 0.5,
         );
@@ -196,7 +197,7 @@ void main() {
     _give(c, owner, PowerUpKind.apple);
     expect(target.life, _life);
     _run(c, 30);
-    expect(target.life, lessThan(_life));
+    expect(target.life, _life - 4);
   });
 
   test('composed start delay and cooldown use deterministic match steps', () {
@@ -373,6 +374,7 @@ void main() {
             delivery: SkillDelivery.instant,
             effectType: effect,
             arsenalDamage: 6,
+            dotArsenalDamage: 6,
             durationSeconds: 1,
             projectileCount: 2,
             knockback: 1,

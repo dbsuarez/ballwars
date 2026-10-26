@@ -160,6 +160,10 @@ void main() {
     final skill = SkillLibrary.defaults
         .create('Stunning Shot', PowerUpKind.pistol)
         .copyWith(
+          arsenalDamage: 0,
+          allOutDamage: 0,
+          dotArsenalDamage: 6.5,
+          dotAllOutDamage: 3,
           secondaryEffectType: SkillEffectType.freeze,
           bubbleType: SkillBubbleType.speech,
           repeatCount: 99,
@@ -172,6 +176,10 @@ void main() {
     final decoded = SkillDefinition.fromJson(skill.toJson())!;
 
     expect(decoded.secondaryEffectType, SkillEffectType.freeze);
+    expect(decoded.arsenalDamage, 0);
+    expect(decoded.allOutDamage, 0);
+    expect(decoded.dotArsenalDamage, 6.5);
+    expect(decoded.dotAllOutDamage, 3);
     expect(decoded.bubbleType, SkillBubbleType.speech);
     expect(decoded.repeatCount, 10);
     expect(decoded.repeatIntervalSeconds, 0.1);

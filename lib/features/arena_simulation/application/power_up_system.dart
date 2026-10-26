@@ -1739,6 +1739,7 @@ class PowerUpSystem {
           effect.target,
           effect.skill,
           SkillEffectType.damage,
+          dotTick: true,
         );
         effect.stepsUntilTick = (effect.skill.tickIntervalSeconds * 60).round();
       }
@@ -1750,14 +1751,17 @@ class PowerUpSystem {
     SimulationBall owner,
     SimulationBall target,
     SkillDefinition skill,
-    SkillEffectType? effect,
-  ) {
+    SkillEffectType? effect, {
+    bool dotTick = false,
+  }) {
     switch (effect) {
       case SkillEffectType.damage:
         if (match.mode == MatchMode.arsenal) {
           final dealt = match.damage(
             target,
-            skill.arsenalDamage ?? 0,
+            dotTick
+                ? (skill.dotArsenalDamage ?? skill.arsenalDamage ?? 0)
+                : (skill.arsenalDamage ?? 0),
             move: skill.name,
             attacker: owner,
           );
@@ -1765,7 +1769,9 @@ class PowerUpSystem {
         } else {
           final cut = match.cutThreads(
             target,
-            skill.allOutDamage ?? 0,
+            dotTick
+                ? (skill.dotAllOutDamage ?? skill.allOutDamage ?? 0)
+                : (skill.allOutDamage ?? 0),
             near: target.position,
             move: skill.name,
             attacker: owner,

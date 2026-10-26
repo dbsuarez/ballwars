@@ -413,6 +413,7 @@ class MatchSimulationController {
     SimulationBall? attacker,
     String? move,
     bool scaleForCrowd = true,
+    bool applyFrozenMultiplier = true,
   }) {
     if (mode != MatchMode.arsenal) return 0;
     if (amount > 0 && _absorbWithGoldenArmor(ball)) return 0;
@@ -423,8 +424,14 @@ class MatchSimulationController {
         : _balls.length > 2
         ? math.pow(_balls.length / 2, 2).toDouble()
         : 1.0;
+    final frozenMultiplier = applyFrozenMultiplier && ball.frozenLeft > 0
+        ? tuning.frozenDamageMultiplier
+        : 1.0;
     final before = ball.life;
-    ball.life = math.max(0, ball.life - amount * crowd);
+    ball.life = math.max(0, ball.life - amount * crowd * frozenMultiplier);
+    if (ball.life < before) {
+      ball.hurtFlashLeft = hurtFlashSteps;
+    }
     if (ball.life < before && attacker != null && !identical(ball, attacker)) {
       _lastDamageBy[ball] = attacker;
     }
@@ -733,6 +740,24 @@ class MatchSimulationController {
           // In Arsenal, every genuine ball-to-ball bounce hurts both balls.
           damage(a, _bodyCollisionDamage(b), attacker: b, move: 'Collision');
           damage(b, _bodyCollisionDamage(a), attacker: a, move: 'Collision');
+          if (a.frozenLeft > 0) {
+            damage(
+              a,
+              tuning.frozenCollisionDamage,
+              attacker: b,
+              move: 'Frozen collision',
+              applyFrozenMultiplier: false,
+            );
+          }
+          if (b.frozenLeft > 0) {
+            damage(
+              b,
+              tuning.frozenCollisionDamage,
+              attacker: a,
+              move: 'Frozen collision',
+              applyFrozenMultiplier: false,
+            );
+          }
 
           // Melee power-ups (knife, shield bash) strike on contact.
           _powerUps?.onContact(a, b);

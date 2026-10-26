@@ -88,16 +88,114 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
       if (v == null || !v.isFinite) return null;
       config = config.withValue(f.id, v);
     }
-    if (PowerUpRarity.values.every((rarity) => config.rarityWeight(rarity) == 0)) return null;
+    if (PowerUpRarity.values.every(
+      (rarity) => config.rarityWeight(rarity) == 0,
+    )) {
+      return null;
+    }
     return config;
   }
 
   void _restoreDefaults() {
     setState(() {
-      for (final f in PowerUpConfig.fields.where((field) => !field.id.startsWith('tier.'))) {
+      for (final f in PowerUpConfig.fields.where(
+        (field) => !field.id.startsWith('tier.'),
+      )) {
         _text[f.id]!.text = _format(f, f.defaultValue);
       }
     });
+  }
+
+  Widget _fieldsForGroups(
+    BuildContext context,
+    Map<String, List<TuningField>> groups,
+    Set<String> visibleGroups,
+    PowerUpConfig? config,
+  ) {
+    final c = BallWarsColors.of(context);
+    return SingleChildScrollView(
+      key: PageStorageKey(visibleGroups.join('-')),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final entry in groups.entries)
+            if (visibleGroups.contains(entry.key)) ...[
+              Text(
+                entry.key.toUpperCase(),
+                style: AppText.mono(12, color: c.muted),
+              ),
+              const SizedBox(height: 8),
+              for (final f in entry.value)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      SizedBox.square(
+                        dimension: 34,
+                        child: _fieldIcon(f, c.muted),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              f.label,
+                              style: AppText.ui(
+                                14,
+                                FontWeight.w700,
+                                color: _kind(f) == null
+                                    ? c.text
+                                    : (config ?? widget.initial)
+                                              .rarityOf(_kind(f)!)
+                                              ?.color ??
+                                          c.text,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Default ${_format(f, f.defaultValue)}${_unit(f)} - '
+                              '${_format(f, f.min)} to ${_format(f, f.max)}',
+                              style: AppText.ui(
+                                10,
+                                FontWeight.w500,
+                                color: c.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 88,
+                        child: TextField(
+                          key: ValueKey('tuning-${f.id}'),
+                          controller: _text[f.id],
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9.]'),
+                            ),
+                          ],
+                          textAlign: TextAlign.end,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            suffixText: _unit(f),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 10),
+            ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -105,7 +203,9 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
     final c = BallWarsColors.of(context);
     final config = _config;
     final groups = <String, List<TuningField>>{};
-    for (final f in PowerUpConfig.fields.where((field) => !field.id.startsWith('tier.'))) {
+    for (final f in PowerUpConfig.fields.where(
+      (field) => !field.id.startsWith('tier.'),
+    )) {
       groups.putIfAbsent(f.group, () => []).add(f);
     }
     // As wide as Home's and Settings' column on big screens, so switching between them feels even.
@@ -114,105 +214,78 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
-          child: Scaffold(
-            appBar: AppBar(title: const Text('Power-up numbers')),
-            body: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-              children: [
-                Text(
-                  'For everyone\'s Arsenal and All-Out matches. Shared replays keep the numbers they were played '
-                  'with. Values outside the allowed range are clamped. Rarity weights default to 50/30/20. '
-                  'Weights are normalized across enabled tiers; traps stay separate. At least one weight must be above zero.',
-                  style: AppText.ui(
-                    13,
-                    FontWeight.w500,
-                    color: c.muted,
-                    height: 1.4,
-                  ),
+          child: DefaultTabController(
+            length: 3,
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text('Legacy power-up numbers'),
+                bottom: const TabBar(
+                  tabs: [
+                    Tab(text: 'Common'),
+                    Tab(text: 'Arsenal'),
+                    Tab(text: 'All-Out'),
+                  ],
                 ),
-                for (final entry in groups.entries) ...[
-                  const SizedBox(height: 22),
-                  Text(
-                    entry.key.toUpperCase(),
-                    style: AppText.mono(12, color: c.muted),
-                  ),
-                  const SizedBox(height: 8),
-                  for (final f in entry.value)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox.square(
-                            dimension: 34,
-                            child: _fieldIcon(f, c.muted),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  f.label,
-                                  style: AppText.ui(
-                                    14,
-                                    FontWeight.w700,
-                                    color: _kind(f) == null ? c.text : (config ?? widget.initial).rarityOf(_kind(f)!)?.color ?? c.text,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Default ${_format(f, f.defaultValue)}${_unit(f)} - '
-                                  '${_format(f, f.min)} to ${_format(f, f.max)}',
-                                  style: AppText.ui(
-                                    10,
-                                    FontWeight.w500,
-                                    color: c.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          SizedBox(
-                            width: 88,
-                            child: TextField(
-                              key: ValueKey('tuning-${f.id}'),
-                              controller: _text[f.id],
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'[0-9.]'),
-                                ),
-                              ],
-                              textAlign: TextAlign.end,
-                              onChanged: (_) => setState(() {}),
-                              decoration: InputDecoration(
-                                suffixText: _unit(f),
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                        ],
+              ),
+              body: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                    child: Text(
+                      'Legacy settings remain active while Skill Management is built. Changes are saved for everyone and included in replays.',
+                      style: AppText.ui(
+                        13,
+                        FontWeight.w500,
+                        color: c.muted,
+                        height: 1.4,
                       ),
                     ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _fieldsForGroups(context, groups, const {
+                          'Rarity spawn weights',
+                          'Spawning',
+                          'Guns',
+                          'Effects',
+                        }, config),
+                        _fieldsForGroups(context, groups, const {
+                          'Damage - Arsenal (life)',
+                        }, config),
+                        _fieldsForGroups(context, groups, const {
+                          'Damage - All-Out (lines)',
+                        }, config),
+                      ],
+                    ),
+                  ),
                 ],
-                const SizedBox(height: 18),
-                OutlinedButton(
-                  onPressed: _restoreDefaults,
-                  child: const Text('Restore defaults'),
+              ),
+              bottomNavigationBar: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _restoreDefaults,
+                          child: const Text('Restore defaults'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: config == null
+                              ? null
+                              : () => Navigator.of(context).pop(config),
+                          child: const Text('Save for everyone'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-                FilledButton(
-                  onPressed: config == null
-                      ? null
-                      : () => Navigator.of(context).pop(config),
-                  child: const Text('Save for everyone'),
-                ),
-              ],
+              ),
             ),
           ),
         ),

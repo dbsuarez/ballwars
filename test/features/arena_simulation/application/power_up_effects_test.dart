@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/particle_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
@@ -42,6 +43,7 @@ MatchSimulationController _match({
   int count = 2,
   int seed = 1,
   bool dualWield = false,
+  PowerUpConfig tuning = PowerUpConfig.defaults,
 }) {
   final c = MatchSimulationController(
     _balls.take(count).toList(),
@@ -51,6 +53,7 @@ MatchSimulationController _match({
     mode: mode,
     lookAhead: false,
     dualWield: dualWield,
+    tuning: tuning,
   );
   final balls = c.state.balls;
   for (final b in balls) {
@@ -106,6 +109,66 @@ Projectile _bulletAt(
 );
 
 void main() {
+  test('frozen targets take configured extra damage and collision damage', () {
+    final tuning = PowerUpConfig.defaults
+        .withValue('frozenDamageMultiplier', 1.5)
+        .withValue('frozenCollisionDamage', 5);
+    final c = _match(tuning: tuning);
+    final [a, b] = c.state.balls;
+    b.frozenLeft = 60;
+
+    expect(c.damage(b, 10, attacker: a), 15);
+    expect(b.hurtFlashLeft, MatchSimulationController.hurtFlashSteps);
+
+    final before = b.life;
+    _bump(c, a, b);
+    expect(before - b.life, greaterThanOrEqualTo(5));
+  });
+
+  test('Gremlin reverses an entire shotgun volley', () {
+    final c = _match();
+    c.powerUps!.automaticSpawning = false;
+    final [a, b] = c.state.balls;
+    _give(c, a, PowerUpKind.gremlin);
+    expect(b.gremlinShots, 1);
+    b.held = PowerUpKind.shotgun;
+
+    _run(c, c.tuning.aimSteps + 1);
+
+    final pellets = c.powerUps!.projectiles
+        .where((p) => p.kind == PowerUpKind.shotgun)
+        .toList();
+    expect(pellets, hasLength(c.tuning.shotgunPellets));
+    expect(pellets.every((p) => p.velocity.dx > 0), isTrue);
+    expect(b.gremlinShots, 0);
+  });
+
+  test('automatic spawning does not duplicate an unclaimed pickup', () {
+    final c = MatchSimulationController(
+      _balls.take(2).toList(),
+      arenaRadius: _arenaRadius,
+      seed: 7,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+      powerUpKinds: const {PowerUpKind.pistol},
+      tuning: PowerUpConfig.defaults
+          .withValue('firstSpawn', 0)
+          .withValue('spawnEvery', 0.5),
+    );
+    for (final ball in c.state.balls) {
+      ball
+        ..position = Offset.zero
+        ..velocity = Offset.zero;
+    }
+
+    _run(c, 180);
+
+    expect(
+      c.powerUps!.field.where((p) => p.kind == PowerUpKind.pistol),
+      hasLength(1),
+    );
+  });
+
   test('Omega Tendrils unavoidably grabs every opponent and slams lightly', () {
     final c = _match(count: 3);
     final [owner, shieldedGhost, armored] = c.state.balls;

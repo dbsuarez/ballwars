@@ -1026,9 +1026,13 @@ class PowerUpSystem {
             for (final k in PowerUpKind.values)
               if (chosen.contains(k) || k.isTrap) k,
           ];
-    final eligibleKinds = number < _t.trapStartSteps
+    final timedKinds = number < _t.trapStartSteps
         ? kinds.where((kind) => !kind.isTrap).toList()
         : kinds;
+    final claimedKinds = {for (final pickup in field) pickup.kind};
+    final eligibleKinds = timedKinds
+        .where((kind) => kind.isTrap || !claimedKinds.contains(kind))
+        .toList();
     if (eligibleKinds.isEmpty && forcedKind == null) return;
     final kind =
         forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
@@ -1424,6 +1428,7 @@ class PowerUpSystem {
     final count = _t.shotgunPellets;
     const spread = PowerUpTuning.shotgunSpread;
     final volley = ++_lastVolley;
+    final sabotaged = _consumeGremlin(ball);
     for (var i = 0; i < count; i++) {
       final edge = i == 0 || i == count - 1;
       final jitter = edge
@@ -1435,6 +1440,7 @@ class PowerUpSystem {
         PowerUpKind.shotgun,
         -spread / 2 + spread * i / (count - 1) + jitter,
         volley: volley,
+        sabotaged: sabotaged,
       );
     }
   }
@@ -1446,6 +1452,7 @@ class PowerUpSystem {
       match.arenaRadius,
     );
     final volley = ++_lastVolley;
+    final sabotaged = _consumeGremlin(ball);
     for (var i = 0; i < count; i++) {
       _fire(
         ball,
@@ -1453,6 +1460,7 @@ class PowerUpSystem {
         PowerUpKind.bow,
         -spread / 2 + spread * i / (count - 1),
         volley: volley,
+        sabotaged: sabotaged,
       );
     }
   }
@@ -1462,14 +1470,15 @@ class PowerUpSystem {
   void _throwGrenade(SimulationBall ball, SimulationBall target) {
     final toTarget = target.position - ball.position;
     final distance = toTarget.distance;
-    final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    var direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    if (_consumeGremlin(ball)) direction = -direction;
     projectiles.add(
       Projectile(
         owner: ball,
         kind: PowerUpKind.grenade,
         position: ball.position + direction * ball.radius,
         velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
-        landAt: target.position,
+        landAt: ball.position + direction * distance,
       ),
     );
     shots++;
@@ -1478,14 +1487,15 @@ class PowerUpSystem {
   void _throwMolotov(SimulationBall ball, SimulationBall target) {
     final toTarget = target.position - ball.position;
     final distance = toTarget.distance;
-    final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    var direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    if (_consumeGremlin(ball)) direction = -direction;
     projectiles.add(
       Projectile(
         owner: ball,
         kind: PowerUpKind.molotov,
         position: ball.position + direction * ball.radius,
         velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
-        landAt: target.position,
+        landAt: ball.position + direction * distance,
       ),
     );
     shots++;
@@ -1494,7 +1504,9 @@ class PowerUpSystem {
   void _fireRocket(SimulationBall ball, SimulationBall target) {
     final toTarget = target.position - ball.position;
     final distance = toTarget.distance;
-    final direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    var direction = distance == 0 ? const Offset(1, 0) : toTarget / distance;
+    final sabotaged = _consumeGremlin(ball);
+    if (sabotaged) direction = -direction;
     projectiles.add(
       Projectile(
         owner: ball,
@@ -1502,6 +1514,7 @@ class PowerUpSystem {
         position: ball.position + direction * ball.radius,
         velocity: direction * (match.arenaRadius * _t.bulletSpeedRatio * 0.72),
         target: target,
+        homing: !sabotaged,
       ),
     );
     shots++;
@@ -1689,12 +1702,14 @@ class PowerUpSystem {
     double turn, {
     int volley = 0,
     double? speedRatio,
+    bool? sabotaged,
   }) {
     final toTarget = target.position - ball.position;
-    final sabotaged = ball.gremlinShots > 0;
-    if (sabotaged) ball.gremlinShots--;
+    final firesBackward = sabotaged ?? _consumeGremlin(ball);
     final angle =
-        math.atan2(toTarget.dy, toTarget.dx) + turn + (sabotaged ? math.pi : 0);
+        math.atan2(toTarget.dy, toTarget.dx) +
+        turn +
+        (firesBackward ? math.pi : 0);
     final direction = Offset(math.cos(angle), math.sin(angle));
     projectiles.add(
       Projectile(
@@ -1722,7 +1737,7 @@ class PowerUpSystem {
     for (final p in projectiles) {
       if (p.spent) continue;
       final from = p.position;
-      if (p.kind == PowerUpKind.rocketLauncher) {
+      if (p.kind == PowerUpKind.rocketLauncher && p.homing) {
         var target = p.target;
         if (target == null || !_alive(target)) {
           target = _nearestTarget(p.owner);
@@ -1906,6 +1921,12 @@ class PowerUpSystem {
     }
     projectiles.addAll(spawned);
     projectiles.removeWhere((p) => p.spent);
+  }
+
+  bool _consumeGremlin(SimulationBall ball) {
+    if (ball.gremlinShots <= 0) return false;
+    ball.gremlinShots--;
+    return true;
   }
 
   /// Every weapon hit lands here (bullets, pellets, freeze shots, knife, shield bash, bomb). A ghost can't

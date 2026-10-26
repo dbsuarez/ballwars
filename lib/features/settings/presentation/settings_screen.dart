@@ -27,6 +27,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  int _settingsTab = 0;
   final TextEditingController _headline = TextEditingController();
   final TextEditingController _watermark = TextEditingController();
   final TextEditingController _arenaTitle = TextEditingController();
@@ -165,708 +166,801 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Settings'),
-              bottom: _busy
-                  ? const PreferredSize(
-                      preferredSize: Size.fromHeight(2),
-                      child: LinearProgressIndicator(),
-                    )
-                  : null,
-            ),
-            body: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                  children: [
-                    if (_message != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          _message!,
-                          style: AppText.ui(
-                            13,
-                            FontWeight.w600,
-                            color: c.muted,
+          child: DefaultTabController(
+            length: 4,
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text('Settings'),
+                bottom: _isAdmin == true
+                    ? PreferredSize(
+                        preferredSize: const Size.fromHeight(50),
+                        child: Column(
+                          children: [
+                            if (_busy)
+                              const LinearProgressIndicator(minHeight: 2),
+                            TabBar(
+                              onTap: (index) =>
+                                  setState(() => _settingsTab = index),
+                              tabs: const [
+                                Tab(text: 'General'),
+                                Tab(text: 'Gameplay'),
+                                Tab(text: 'Appearance'),
+                                Tab(text: 'Audio'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      )
+                    : _busy
+                    ? const PreferredSize(
+                        preferredSize: Size.fromHeight(2),
+                        child: LinearProgressIndicator(),
+                      )
+                    : null,
+              ),
+              body: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                    children: [
+                      if (_message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            _message!,
+                            style: AppText.ui(
+                              13,
+                              FontWeight.w600,
+                              color: c.muted,
+                            ),
                           ),
                         ),
-                      ),
-                    if (!hasBackend)
-                      Text(
-                        'Settings need a connection to the Ball Wars server.',
-                        style: AppText.ui(14, FontWeight.w500, color: c.muted),
-                      )
-                    else if (_isAdmin == null)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
-                    else if (_isAdmin == false)
-                      _Section(
-                        title: 'ADMIN',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'The headline, theme and match music are set by the admin for everyone.',
-                              style: AppText.ui(
-                                14,
-                                FontWeight.w500,
-                                color: c.muted,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton(
-                              onPressed: _busy ? null : _signIn,
-                              child: const Text('Admin sign-in'),
-                            ),
-                          ],
-                        ),
-                      )
-                    else ...[
-                      _Section(
-                        title: 'HEADLINE',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TextField(
-                              controller: _headline,
-                              maxLength: 30,
-                              textCapitalization: TextCapitalization.characters,
-                              decoration: const InputDecoration(
-                                hintText: AppSettings.defaultHeadline,
-                              ),
-                            ),
-                            FilledButton(
-                              onPressed: _busy || _headline.text.trim().isEmpty
-                                  ? null
-                                  : () => _save(
-                                      settings.copyWith(
-                                        headline: _headline.text.trim(),
-                                      ),
-                                      done: 'Headline saved for everyone.',
-                                    ),
-                              child: const Text('Save headline'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'THEME',
-                        child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            for (final preset in AppPalettes.all)
-                              _ThemeSwatch(
-                                preset: preset,
-                                selected: preset.id == settings.themeId,
-                                onTap: _busy
-                                    ? null
-                                    : () => _save(
-                                        settings.copyWith(themeId: preset.id),
-                                        done: 'Theme set for everyone.',
-                                      ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'MUSIC',
-                        child: DefaultTabController(
-                          length: 2,
+                      if (!hasBackend)
+                        Text(
+                          'Settings need a connection to the Ball Wars server.',
+                          style: AppText.ui(
+                            14,
+                            FontWeight.w500,
+                            color: c.muted,
+                          ),
+                        )
+                      else if (_isAdmin == null)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_isAdmin == false)
+                        _Section(
+                          title: 'ADMIN',
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const TabBar(
-                                tabs: [
-                                  Tab(text: 'Match music'),
-                                  Tab(text: 'Home music'),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                height: 350,
-                                child: TabBarView(
-                                  children: [
-                                    ListView(
-                                      key: const PageStorageKey(
-                                        'match-music-tab',
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      children: [
-                                        for (final track in MusicTrack.all)
-                                          _TrackRow(
-                                            track: track,
-                                            selected:
-                                                track.id == settings.musicId,
-                                            playing: GameAudio.instance
-                                                .isPreviewing(track),
-                                            onPlay: () => _togglePreview(track),
-                                            onSelect:
-                                                _busy ||
-                                                    track.id == settings.musicId
-                                                ? null
-                                                : () => _save(
-                                                    settings.copyWith(
-                                                      musicId: track.id,
-                                                    ),
-                                                    done:
-                                                        '"${track.name}" is now the match music for everyone.',
-                                                  ),
-                                          ),
-                                      ],
-                                    ),
-                                    ListView(
-                                      key: const PageStorageKey(
-                                        'home-music-tab',
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      children: [
-                                        for (final track in MusicTrack.menu)
-                                          _TrackRow(
-                                            track: track,
-                                            selected:
-                                                track.id ==
-                                                settings.menuMusicId,
-                                            playing: GameAudio.instance
-                                                .isPreviewing(track),
-                                            onPlay: () => _togglePreview(track),
-                                            onSelect:
-                                                _busy ||
-                                                    track.id ==
-                                                        settings.menuMusicId
-                                                ? null
-                                                : () => _save(
-                                                    settings.copyWith(
-                                                      menuMusicId: track.id,
-                                                    ),
-                                                    done:
-                                                        '"${track.name}" is now the Home music for everyone.',
-                                                  ),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
+                              Text(
+                                'The headline, theme and match music are set by the admin for everyone.',
+                                style: AppText.ui(
+                                  14,
+                                  FontWeight.w500,
+                                  color: c.muted,
+                                  height: 1.5,
                                 ),
+                              ),
+                              const SizedBox(height: 16),
+                              OutlinedButton(
+                                onPressed: _busy ? null : _signIn,
+                                child: const Text('Admin sign-in'),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      _Section(
-                        title: 'ARENA',
-                        child: Builder(
-                          builder: (context) {
-                            final scale =
-                                _minimumArenaScale ??
-                                settings.minimumArenaScale;
-                            final percent = (scale * 100).round();
-                            return Column(
+                        )
+                      else ...[
+                        if (_settingsTab == 0)
+                          _Section(
+                            title: 'HEADLINE',
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'Minimum shrinking-arena size: $percent%',
-                                  key: const ValueKey(
-                                    'minimum-arena-scale-label',
-                                  ),
-                                  style: AppText.ui(
-                                    14,
-                                    FontWeight.w600,
-                                    color: c.text,
+                                TextField(
+                                  controller: _headline,
+                                  maxLength: 30,
+                                  textCapitalization:
+                                      TextCapitalization.characters,
+                                  decoration: const InputDecoration(
+                                    hintText: AppSettings.defaultHeadline,
                                   ),
                                 ),
-                                Slider(
-                                  key: const ValueKey(
-                                    'minimum-arena-scale-slider',
-                                  ),
-                                  value: scale,
-                                  min: 0.40,
-                                  max: 0.90,
-                                  divisions: 10,
-                                  label: '$percent%',
-                                  onChanged: _busy
-                                      ? null
-                                      : (value) => setState(
-                                          () => _minimumArenaScale = value,
-                                        ),
-                                ),
-                                Text(
-                                  'The arena starts at 100% and stops shrinking here. Default 60%.',
-                                  style: AppText.ui(
-                                    12,
-                                    FontWeight.w500,
-                                    color: c.muted,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                OutlinedButton(
+                                FilledButton(
                                   onPressed:
-                                      _busy ||
-                                          scale == settings.minimumArenaScale
+                                      _busy || _headline.text.trim().isEmpty
                                       ? null
                                       : () => _save(
                                           settings.copyWith(
-                                            minimumArenaScale: scale,
+                                            headline: _headline.text.trim(),
                                           ),
-                                          done:
-                                              'Minimum arena size saved for everyone.',
+                                          done: 'Headline saved for everyone.',
                                         ),
-                                  child: const Text('Save arena size'),
+                                  child: const Text('Save headline'),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                      ),
-                      _Section(
-                        title: 'SLOW MOTION',
-                        child: Builder(
-                          builder: (context) {
-                            final beforeWin =
-                                _slowBeforeWin ??
-                                settings.slowMotionBeforeWinSeconds != null;
-                            final lines =
-                                _slowMotionLines ?? settings.slowMotionLines;
-                            final seconds =
-                                _slowSeconds ??
-                                settings.slowMotionBeforeWinSeconds ??
-                                AppSettings.defaultSlowMotionBeforeWinSeconds;
-                            final changed = beforeWin
-                                ? settings.slowMotionBeforeWinSeconds != seconds
-                                : settings.slowMotionBeforeWinSeconds != null ||
-                                      settings.slowMotionLines != lines;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                            ),
+                          ),
+                        if (_settingsTab == 2)
+                          _Section(
+                            title: 'THEME',
+                            child: Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
                               children: [
-                                SegmentedButton<bool>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: false,
-                                      label: Text('By lines'),
+                                for (final preset in AppPalettes.all)
+                                  _ThemeSwatch(
+                                    preset: preset,
+                                    selected: preset.id == settings.themeId,
+                                    onTap: _busy
+                                        ? null
+                                        : () => _save(
+                                            settings.copyWith(
+                                              themeId: preset.id,
+                                            ),
+                                            done: 'Theme set for everyone.',
+                                          ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        if (_settingsTab == 3)
+                          _Section(
+                            title: 'MUSIC',
+                            child: DefaultTabController(
+                              length: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const TabBar(
+                                    tabs: [
+                                      Tab(text: 'Match music'),
+                                      Tab(text: 'Home music'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    height: 350,
+                                    child: TabBarView(
+                                      children: [
+                                        ListView(
+                                          key: const PageStorageKey(
+                                            'match-music-tab',
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          children: [
+                                            for (final track in MusicTrack.all)
+                                              _TrackRow(
+                                                track: track,
+                                                selected:
+                                                    track.id ==
+                                                    settings.musicId,
+                                                playing: GameAudio.instance
+                                                    .isPreviewing(track),
+                                                onPlay: () =>
+                                                    _togglePreview(track),
+                                                onSelect:
+                                                    _busy ||
+                                                        track.id ==
+                                                            settings.musicId
+                                                    ? null
+                                                    : () => _save(
+                                                        settings.copyWith(
+                                                          musicId: track.id,
+                                                        ),
+                                                        done:
+                                                            '"${track.name}" is now the match music for everyone.',
+                                                      ),
+                                              ),
+                                          ],
+                                        ),
+                                        ListView(
+                                          key: const PageStorageKey(
+                                            'home-music-tab',
+                                          ),
+                                          padding: EdgeInsets.zero,
+                                          children: [
+                                            for (final track in MusicTrack.menu)
+                                              _TrackRow(
+                                                track: track,
+                                                selected:
+                                                    track.id ==
+                                                    settings.menuMusicId,
+                                                playing: GameAudio.instance
+                                                    .isPreviewing(track),
+                                                onPlay: () =>
+                                                    _togglePreview(track),
+                                                onSelect:
+                                                    _busy ||
+                                                        track.id ==
+                                                            settings.menuMusicId
+                                                    ? null
+                                                    : () => _save(
+                                                        settings.copyWith(
+                                                          menuMusicId: track.id,
+                                                        ),
+                                                        done:
+                                                            '"${track.name}" is now the Home music for everyone.',
+                                                      ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                    ButtonSegment(
-                                      value: true,
-                                      label: Text('Before the win'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        if (_settingsTab == 0)
+                          _Section(
+                            title: 'ARENA',
+                            child: Builder(
+                              builder: (context) {
+                                final scale =
+                                    _minimumArenaScale ??
+                                    settings.minimumArenaScale;
+                                final percent = (scale * 100).round();
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text(
+                                      'Minimum shrinking-arena size: $percent%',
+                                      key: const ValueKey(
+                                        'minimum-arena-scale-label',
+                                      ),
+                                      style: AppText.ui(
+                                        14,
+                                        FontWeight.w600,
+                                        color: c.text,
+                                      ),
+                                    ),
+                                    Slider(
+                                      key: const ValueKey(
+                                        'minimum-arena-scale-slider',
+                                      ),
+                                      value: scale,
+                                      min: 0.40,
+                                      max: 0.90,
+                                      divisions: 10,
+                                      label: '$percent%',
+                                      onChanged: _busy
+                                          ? null
+                                          : (value) => setState(
+                                              () => _minimumArenaScale = value,
+                                            ),
+                                    ),
+                                    Text(
+                                      'The arena starts at 100% and stops shrinking here. Default 60%.',
+                                      style: AppText.ui(
+                                        12,
+                                        FontWeight.w500,
+                                        color: c.muted,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton(
+                                      onPressed:
+                                          _busy ||
+                                              scale ==
+                                                  settings.minimumArenaScale
+                                          ? null
+                                          : () => _save(
+                                              settings.copyWith(
+                                                minimumArenaScale: scale,
+                                              ),
+                                              done:
+                                                  'Minimum arena size saved for everyone.',
+                                            ),
+                                      child: const Text('Save arena size'),
                                     ),
                                   ],
-                                  selected: {beforeWin},
-                                  onSelectionChanged: _busy
+                                );
+                              },
+                            ),
+                          ),
+                        if (_settingsTab == 0)
+                          _Section(
+                            title: 'SLOW MOTION',
+                            child: Builder(
+                              builder: (context) {
+                                final beforeWin =
+                                    _slowBeforeWin ??
+                                    settings.slowMotionBeforeWinSeconds != null;
+                                final lines =
+                                    _slowMotionLines ??
+                                    settings.slowMotionLines;
+                                final seconds =
+                                    _slowSeconds ??
+                                    settings.slowMotionBeforeWinSeconds ??
+                                    AppSettings
+                                        .defaultSlowMotionBeforeWinSeconds;
+                                final changed = beforeWin
+                                    ? settings.slowMotionBeforeWinSeconds !=
+                                          seconds
+                                    : settings.slowMotionBeforeWinSeconds !=
+                                              null ||
+                                          settings.slowMotionLines != lines;
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    SegmentedButton<bool>(
+                                      segments: const [
+                                        ButtonSegment(
+                                          value: false,
+                                          label: Text('By lines'),
+                                        ),
+                                        ButtonSegment(
+                                          value: true,
+                                          label: Text('Before the win'),
+                                        ),
+                                      ],
+                                      selected: {beforeWin},
+                                      onSelectionChanged: _busy
+                                          ? null
+                                          : (v) => setState(
+                                              () => _slowBeforeWin = v.first,
+                                            ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      beforeWin
+                                          ? 'Starts ${seconds.toStringAsFixed(1)} s before the winning cut.'
+                                          : lines == 0
+                                          ? 'Off: matches never slow down.'
+                                          : 'Starts when one of the last two balls is down to $lines lines or fewer for good.',
+                                      style: AppText.ui(
+                                        14,
+                                        FontWeight.w600,
+                                        color: c.text,
+                                      ),
+                                    ),
+                                    if (beforeWin)
+                                      Slider(
+                                        key: const ValueKey(
+                                          'slow-motion-slider',
+                                        ),
+                                        value: seconds,
+                                        min: 0.5,
+                                        max: 5,
+                                        divisions: 9,
+                                        label:
+                                            '${seconds.toStringAsFixed(1)} s',
+                                        onChanged: _busy
+                                            ? null
+                                            : (v) => setState(
+                                                () => _slowSeconds = v,
+                                              ),
+                                      )
+                                    else
+                                      Slider(
+                                        key: const ValueKey(
+                                          'slow-motion-slider',
+                                        ),
+                                        value: lines.toDouble(),
+                                        min: 0,
+                                        max: 60,
+                                        divisions: 60,
+                                        label: lines == 0 ? 'Off' : '$lines',
+                                        onChanged: _busy
+                                            ? null
+                                            : (v) => setState(
+                                                () => _slowMotionLines = v
+                                                    .round(),
+                                              ),
+                                      ),
+                                    Text(
+                                      beforeWin
+                                          ? 'Game time; slow motion plays it 4x slower. The app plays each match ahead to know the moment.'
+                                          : 'Default ${AppSettings.defaultSlowMotionLines}. Each ball starts with about 90 lines. '
+                                                "A ball that will recover doesn't trigger it.",
+                                      style: AppText.ui(
+                                        12,
+                                        FontWeight.w500,
+                                        color: c.muted,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton(
+                                      onPressed: _busy || !changed
+                                          ? null
+                                          : () => _save(
+                                              beforeWin
+                                                  ? settings.copyWith(
+                                                      slowMotionBeforeWinSeconds:
+                                                          () => seconds,
+                                                    )
+                                                  : settings.copyWith(
+                                                      slowMotionLines: lines,
+                                                      slowMotionBeforeWinSeconds:
+                                                          () => null,
+                                                    ),
+                                              done:
+                                                  'Slow motion saved for everyone.',
+                                            ),
+                                      child: const Text('Save slow motion'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        if (_settingsTab == 1)
+                          _Section(
+                            title: 'POWER-UPS',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  settings.powerUps.isDefault
+                                      ? 'Damage, times and spawning for Arsenal and All-Out: all at their defaults.'
+                                      : 'Damage, times and spawning for Arsenal and All-Out: '
+                                            '${settings.powerUps.overrides.length} changed from the defaults.',
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w500,
+                                    color: c.muted,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton(
+                                  onPressed: _busy
                                       ? null
-                                      : (v) => setState(
-                                          () => _slowBeforeWin = v.first,
+                                      : () async {
+                                          final config =
+                                              await Navigator.of(
+                                                context,
+                                              ).push<PowerUpConfig>(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      PowerUpTuningScreen(
+                                                        initial:
+                                                            settings.powerUps,
+                                                      ),
+                                                ),
+                                              );
+                                          if (config == null ||
+                                              !mounted ||
+                                              config == settings.powerUps) {
+                                            return;
+                                          }
+                                          await _save(
+                                            AppSettingsScope.of(
+                                              this.context,
+                                            ).copyWith(powerUps: config),
+                                            done:
+                                                'Power-up numbers saved for everyone.',
+                                          );
+                                        },
+                                  child: const Text(
+                                    'Edit legacy power-up numbers',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton(
+                                  key: const ValueKey('edit-item-rarities'),
+                                  onPressed: _busy
+                                      ? null
+                                      : () async {
+                                          final config =
+                                              await Navigator.of(
+                                                context,
+                                              ).push<PowerUpConfig>(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      PowerUpRarityScreen(
+                                                        initial:
+                                                            settings.powerUps,
+                                                      ),
+                                                ),
+                                              );
+                                          if (!mounted ||
+                                              config == null ||
+                                              config == settings.powerUps) {
+                                            return;
+                                          }
+                                          await _save(
+                                            AppSettingsScope.of(
+                                              this.context,
+                                            ).copyWith(powerUps: config),
+                                            done:
+                                                'Item rarities saved for everyone.',
+                                          );
+                                        },
+                                  child: const Text('Edit item rarities'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (_settingsTab == 1)
+                          _Section(
+                            title: 'POWER-UP TESTS',
+                            child: OutlinedButton.icon(
+                              key: const ValueKey('open-power-up-tests'),
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const PowerUpTestScreen(),
+                                ),
+                              ),
+                              icon: const Icon(Icons.science_outlined),
+                              label: const Text('Open power-up tests'),
+                            ),
+                          ),
+                        if (_settingsTab == 1)
+                          _Section(
+                            title: 'FINISHERS',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Preview every weapon, power-up, trap and core finishing move.',
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w500,
+                                    color: c.muted,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  key: const ValueKey('open-finisher-gallery'),
+                                  onPressed: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const FinisherGalleryScreen(),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.movie_filter_rounded),
+                                  label: const Text('Open finisher gallery'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (_settingsTab == 2)
+                          _Section(
+                            title: 'BALLS',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    'Outer glow in the arena',
+                                    style: AppText.ui(
+                                      14,
+                                      FontWeight.w600,
+                                      color: c.text,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    'Shown around every ball during matches and replays.',
+                                    style: AppText.ui(
+                                      13,
+                                      FontWeight.w500,
+                                      color: c.muted,
+                                    ),
+                                  ),
+                                  value: settings.ballGlowEnabled,
+                                  onChanged: _busy
+                                      ? null
+                                      : (v) => _save(
+                                          settings.copyWith(ballGlowEnabled: v),
+                                          done: v
+                                              ? 'Ball glow on.'
+                                              : 'Ball glow off.',
                                         ),
                                 ),
-                                const SizedBox(height: 14),
                                 Text(
-                                  beforeWin
-                                      ? 'Starts ${seconds.toStringAsFixed(1)} s before the winning cut.'
-                                      : lines == 0
-                                      ? 'Off: matches never slow down.'
-                                      : 'Starts when one of the last two balls is down to $lines lines or fewer for good.',
+                                  'Blood color',
                                   style: AppText.ui(
                                     14,
                                     FontWeight.w600,
                                     color: c.text,
                                   ),
                                 ),
-                                if (beforeWin)
-                                  Slider(
-                                    key: const ValueKey('slow-motion-slider'),
-                                    value: seconds,
-                                    min: 0.5,
-                                    max: 5,
-                                    divisions: 9,
-                                    label: '${seconds.toStringAsFixed(1)} s',
-                                    onChanged: _busy
-                                        ? null
-                                        : (v) =>
-                                              setState(() => _slowSeconds = v),
-                                  )
-                                else
-                                  Slider(
-                                    key: const ValueKey('slow-motion-slider'),
-                                    value: lines.toDouble(),
-                                    min: 0,
-                                    max: 60,
-                                    divisions: 60,
-                                    label: lines == 0 ? 'Off' : '$lines',
-                                    onChanged: _busy
-                                        ? null
-                                        : (v) => setState(
-                                            () => _slowMotionLines = v.round(),
-                                          ),
-                                  ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    for (final color in const [
+                                      Color(0xFFD9152B),
+                                      Color(0xFFFF3B30),
+                                      Color(0xFF8B0000),
+                                      Color(0xFFFF6B35),
+                                      Color(0xFF8E44AD),
+                                      Color(0xFF111111),
+                                    ])
+                                      ChoiceChip(
+                                        key: ValueKey(
+                                          'blood-${color.toARGB32()}',
+                                        ),
+                                        label: const SizedBox.square(
+                                          dimension: 20,
+                                        ),
+                                        avatar: CircleAvatar(
+                                          backgroundColor: color,
+                                        ),
+                                        selected:
+                                            settings.bloodColor.toARGB32() ==
+                                            color.toARGB32(),
+                                        onSelected: _busy
+                                            ? null
+                                            : (_) => _save(
+                                                settings.copyWith(
+                                                  bloodColor: color,
+                                                ),
+                                                done: 'Blood color saved.',
+                                              ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (_settingsTab == 2)
+                          _Section(
+                            title: 'BRANDING',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                                 Text(
-                                  beforeWin
-                                      ? 'Game time; slow motion plays it 4x slower. The app plays each match ahead to know the moment.'
-                                      : 'Default ${AppSettings.defaultSlowMotionLines}. Each ball starts with about 90 lines. '
-                                            "A ball that will recover doesn't trigger it.",
+                                  'Arena text',
                                   style: AppText.ui(
-                                    12,
-                                    FontWeight.w500,
-                                    color: c.muted,
-                                    height: 1.4,
+                                    14,
+                                    FontWeight.w600,
+                                    color: c.text,
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _arenaTitle,
+                                  maxLength: 30,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Large line',
+                                    hintText: AppSettings.defaultArenaTitle,
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                                TextField(
+                                  controller: _arenaSubtitle,
+                                  maxLength: 50,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Small line',
+                                    hintText: AppSettings.defaultArenaSubtitle,
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
                                 OutlinedButton(
-                                  onPressed: _busy || !changed
+                                  onPressed:
+                                      _busy ||
+                                          _arenaTitle.text.trim().isEmpty ||
+                                          _arenaSubtitle.text.trim().isEmpty
                                       ? null
                                       : () => _save(
-                                          beforeWin
-                                              ? settings.copyWith(
-                                                  slowMotionBeforeWinSeconds:
-                                                      () => seconds,
-                                                )
-                                              : settings.copyWith(
-                                                  slowMotionLines: lines,
-                                                  slowMotionBeforeWinSeconds:
-                                                      () => null,
-                                                ),
-                                          done:
-                                              'Slow motion saved for everyone.',
-                                        ),
-                                  child: const Text('Save slow motion'),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                      _Section(
-                        title: 'POWER-UPS',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              settings.powerUps.isDefault
-                                  ? 'Damage, times and spawning for Arsenal and All-Out: all at their defaults.'
-                                  : 'Damage, times and spawning for Arsenal and All-Out: '
-                                        '${settings.powerUps.overrides.length} changed from the defaults.',
-                              style: AppText.ui(
-                                14,
-                                FontWeight.w500,
-                                color: c.muted,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton(
-                              onPressed: _busy
-                                  ? null
-                                  : () async {
-                                      final config = await Navigator.of(context)
-                                          .push<PowerUpConfig>(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  PowerUpTuningScreen(
-                                                    initial: settings.powerUps,
-                                                  ),
-                                            ),
-                                          );
-                                      if (config == null ||
-                                          !mounted ||
-                                          config == settings.powerUps) {
-                                        return;
-                                      }
-                                      await _save(
-                                        AppSettingsScope.of(
-                                          this.context,
-                                        ).copyWith(powerUps: config),
-                                        done:
-                                            'Power-up numbers saved for everyone.',
-                                      );
-                                    },
-                              child: const Text('Edit power-up numbers'),
-                            ),
-                            const SizedBox(height: 8),
-                            OutlinedButton(
-                              key: const ValueKey('edit-item-rarities'),
-                              onPressed: _busy ? null : () async {
-                                final config = await Navigator.of(context).push<PowerUpConfig>(
-                                  MaterialPageRoute(builder: (_) => PowerUpRarityScreen(initial: settings.powerUps)),
-                                );
-                                if (!mounted || config == null || config == settings.powerUps) return;
-                                await _save(AppSettingsScope.of(this.context).copyWith(powerUps: config),
-                                    done: 'Item rarities saved for everyone.');
-                              },
-                              child: const Text('Edit item rarities'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'POWER-UP TESTS',
-                        child: OutlinedButton.icon(
-                          key: const ValueKey('open-power-up-tests'),
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const PowerUpTestScreen(),
-                            ),
-                          ),
-                          icon: const Icon(Icons.science_outlined),
-                          label: const Text('Open power-up tests'),
-                        ),
-                      ),
-                      _Section(
-                        title: 'FINISHERS',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Preview every weapon, power-up, trap and core finishing move.',
-                              style: AppText.ui(
-                                14,
-                                FontWeight.w500,
-                                color: c.muted,
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            OutlinedButton.icon(
-                              key: const ValueKey('open-finisher-gallery'),
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const FinisherGalleryScreen(),
-                                ),
-                              ),
-                              icon: const Icon(Icons.movie_filter_rounded),
-                              label: const Text('Open finisher gallery'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'BALLS',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                'Outer glow in the arena',
-                                style: AppText.ui(
-                                  14,
-                                  FontWeight.w600,
-                                  color: c.text,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'Shown around every ball during matches and replays.',
-                                style: AppText.ui(
-                                  13,
-                                  FontWeight.w500,
-                                  color: c.muted,
-                                ),
-                              ),
-                              value: settings.ballGlowEnabled,
-                              onChanged: _busy
-                                  ? null
-                                  : (v) => _save(
-                                      settings.copyWith(ballGlowEnabled: v),
-                                      done: v
-                                          ? 'Ball glow on.'
-                                          : 'Ball glow off.',
-                                    ),
-                            ),
-                            Text(
-                              'Blood color',
-                              style: AppText.ui(
-                                14,
-                                FontWeight.w600,
-                                color: c.text,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: [
-                                for (final color in const [
-                                  Color(0xFFD9152B),
-                                  Color(0xFFFF3B30),
-                                  Color(0xFF8B0000),
-                                  Color(0xFFFF6B35),
-                                  Color(0xFF8E44AD),
-                                  Color(0xFF111111),
-                                ])
-                                  ChoiceChip(
-                                    key: ValueKey('blood-${color.toARGB32()}'),
-                                    label: const SizedBox.square(dimension: 20),
-                                    avatar: CircleAvatar(
-                                      backgroundColor: color,
-                                    ),
-                                    selected:
-                                        settings.bloodColor.toARGB32() ==
-                                        color.toARGB32(),
-                                    onSelected: _busy
-                                        ? null
-                                        : (_) => _save(
-                                            settings.copyWith(
-                                              bloodColor: color,
-                                            ),
-                                            done: 'Blood color saved.',
+                                          settings.copyWith(
+                                            arenaTitle: _arenaTitle.text.trim(),
+                                            arenaSubtitle: _arenaSubtitle.text
+                                                .trim(),
                                           ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      _Section(
-                        title: 'BRANDING',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Arena text',
-                              style: AppText.ui(
-                                14,
-                                FontWeight.w600,
-                                color: c.text,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: _arenaTitle,
-                              maxLength: 30,
-                              decoration: const InputDecoration(
-                                labelText: 'Large line',
-                                hintText: AppSettings.defaultArenaTitle,
-                              ),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                            TextField(
-                              controller: _arenaSubtitle,
-                              maxLength: 50,
-                              decoration: const InputDecoration(
-                                labelText: 'Small line',
-                                hintText: AppSettings.defaultArenaSubtitle,
-                              ),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                            OutlinedButton(
-                              onPressed:
-                                  _busy ||
-                                      _arenaTitle.text.trim().isEmpty ||
-                                      _arenaSubtitle.text.trim().isEmpty
-                                  ? null
-                                  : () => _save(
-                                      settings.copyWith(
-                                        arenaTitle: _arenaTitle.text.trim(),
-                                        arenaSubtitle: _arenaSubtitle.text
-                                            .trim(),
-                                      ),
-                                      done: 'Arena text saved.',
-                                    ),
-                              child: const Text('Save arena text'),
-                            ),
-                            const Divider(height: 32),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                'Tiled watermark on the winner card',
-                                style: AppText.ui(
-                                  14,
-                                  FontWeight.w600,
-                                  color: c.text,
+                                          done: 'Arena text saved.',
+                                        ),
+                                  child: const Text('Save arena text'),
                                 ),
-                              ),
-                              value: settings.watermarkEnabled,
-                              onChanged: _busy
-                                  ? null
-                                  : (v) => _save(
-                                      settings.copyWith(watermarkEnabled: v),
-                                      done: v
-                                          ? 'Watermark on.'
-                                          : 'Watermark off.',
-                                    ),
-                            ),
-                            TextField(
-                              controller: _watermark,
-                              maxLength: 30,
-                              enabled: settings.watermarkEnabled,
-                              decoration: const InputDecoration(
-                                hintText: AppSettings.defaultWatermark,
-                              ),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                            OutlinedButton(
-                              onPressed:
-                                  _busy ||
-                                      !settings.watermarkEnabled ||
-                                      _watermark.text.trim().isEmpty
-                                  ? null
-                                  : () => _save(
-                                      settings.copyWith(
-                                        watermarkText: _watermark.text.trim(),
-                                      ),
-                                      done: 'Watermark saved.',
-                                    ),
-                              child: const Text('Save watermark text'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (widget.customGroups != null)
-                        _Section(
-                          title: 'GROUPS',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              OutlinedButton(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => MyGroupsScreen(
-                                      repository: widget.customGroups!,
-                                      editRepository: widget.adminGroups,
-                                      allGroups: true,
+                                const Divider(height: 32),
+                                SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    'Tiled watermark on the winner card',
+                                    style: AppText.ui(
+                                      14,
+                                      FontWeight.w600,
+                                      color: c.text,
                                     ),
                                   ),
+                                  value: settings.watermarkEnabled,
+                                  onChanged: _busy
+                                      ? null
+                                      : (v) => _save(
+                                          settings.copyWith(
+                                            watermarkEnabled: v,
+                                          ),
+                                          done: v
+                                              ? 'Watermark on.'
+                                              : 'Watermark off.',
+                                        ),
                                 ),
-                                child: const Text("Everyone's groups"),
-                              ),
-                              if (widget.adminGroups != null) ...[
-                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: _watermark,
+                                  maxLength: 30,
+                                  enabled: settings.watermarkEnabled,
+                                  decoration: const InputDecoration(
+                                    hintText: AppSettings.defaultWatermark,
+                                  ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
                                 OutlinedButton(
-                                  onPressed: _busy ? null : _cleanUpImages,
-                                  child: const Text('Clean up unused images'),
+                                  onPressed:
+                                      _busy ||
+                                          !settings.watermarkEnabled ||
+                                          _watermark.text.trim().isEmpty
+                                      ? null
+                                      : () => _save(
+                                          settings.copyWith(
+                                            watermarkText: _watermark.text
+                                                .trim(),
+                                          ),
+                                          done: 'Watermark saved.',
+                                        ),
+                                  child: const Text('Save watermark text'),
                                 ),
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      _Section(
-                        title: 'ACCOUNT',
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _scope?.adminAuth?.email ?? 'Admin',
-                                style: AppText.ui(
-                                  14,
-                                  FontWeight.w600,
-                                  color: c.text,
+                        if (_settingsTab == 3 && widget.customGroups != null)
+                          _Section(
+                            title: 'GROUPS',
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                OutlinedButton(
+                                  onPressed: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => MyGroupsScreen(
+                                        repository: widget.customGroups!,
+                                        editRepository: widget.adminGroups,
+                                        allGroups: true,
+                                      ),
+                                    ),
+                                  ),
+                                  child: const Text("Everyone's groups"),
                                 ),
-                              ),
+                                if (widget.adminGroups != null) ...[
+                                  const SizedBox(height: 10),
+                                  OutlinedButton(
+                                    onPressed: _busy ? null : _cleanUpImages,
+                                    child: const Text('Clean up unused images'),
+                                  ),
+                                ],
+                              ],
                             ),
-                            TextButton(
-                              onPressed: _busy ? null : _signOut,
-                              child: const Text('Sign out'),
+                          ),
+                        if (_settingsTab == 3)
+                          _Section(
+                            title: 'ACCOUNT',
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _scope?.adminAuth?.email ?? 'Admin',
+                                    style: AppText.ui(
+                                      14,
+                                      FontWeight.w600,
+                                      color: c.text,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _busy ? null : _signOut,
+                                  child: const Text('Sign out'),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -963,18 +1057,18 @@ class _Section extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: AppText.mono(11, color: c.muted, letterSpacing: 1.6),
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: AppText.mono(11, color: c.muted, letterSpacing: 1.6),
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
       ),
     );
   }

@@ -36,22 +36,29 @@ void main() {
   }
 
   Future<Finder> field(WidgetTester tester, String id) async {
+    final tab =
+        id.startsWith('dmg.') ||
+            id == 'unarmedCollision' ||
+            id == 'frozenDamageMultiplier' ||
+            id == 'frozenCollisionDamage' ||
+            id == 'bash' ||
+            id == 'block' ||
+            id == 'heal' ||
+            id == 'maxLife'
+        ? 'Arsenal'
+        : id.startsWith('lines.') || id == 'keep' || id == 'appleLines'
+        ? 'All-Out'
+        : 'Common';
+    await tester.tap(find.text(tab));
+    await tester.pumpAndSettle();
     final f = find.byKey(ValueKey('tuning-$id'));
-    await tester.scrollUntilVisible(
-      f,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.ensureVisible(f);
+    await tester.pumpAndSettle();
     return f;
   }
 
   Future<void> save(WidgetTester tester) async {
     final button = find.text('Save for everyone');
-    await tester.scrollUntilVisible(
-      button,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
     await tester.ensureVisible(button);
     await tester.pumpAndSettle();
     await tester.tap(button);
@@ -110,11 +117,6 @@ void main() {
       await field(tester, 'dmg.pistol');
       expect(find.text('22'), findsOneWidget);
       final restore = find.text('Restore defaults');
-      await tester.scrollUntilVisible(
-        restore,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
       await tester.tap(restore);
       await tester.pump();
       await save(tester);
@@ -127,11 +129,6 @@ void main() {
       await tester.enterText(await field(tester, 'dmg.pistol'), '');
       await tester.pump();
       final button = find.widgetWithText(FilledButton, 'Save for everyone');
-      await tester.scrollUntilVisible(
-        button,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
     });
   });

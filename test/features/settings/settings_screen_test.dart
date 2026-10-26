@@ -111,6 +111,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('Audio'));
+      await tester.pumpAndSettle();
+
       expect(find.text('MUSIC'), findsOneWidget);
       expect(find.text('Match music'), findsOneWidget);
       expect(find.text('Home music'), findsOneWidget);
@@ -222,6 +225,9 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Appearance'));
     await tester.pumpAndSettle();
 
     expect(settings.value.ballGlowEnabled, isTrue);

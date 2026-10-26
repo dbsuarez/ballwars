@@ -212,6 +212,7 @@ class Projectile {
     this.volley = 0,
     this.landAt,
     this.target,
+    this.homing = true,
     this.returning = false,
     this.returnTo,
   });
@@ -219,6 +220,7 @@ class Projectile {
   /// A grenade's landing point (where its target was when thrown); null for bullets.
   final Offset? landAt;
   SimulationBall? target;
+  final bool homing;
 
   SimulationBall owner;
   final PowerUpKind kind;

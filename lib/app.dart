@@ -437,6 +437,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             question: link.question,
             powerUps: link.powerUps,
             tuning: link.tuning,
+            skillLibrary: AppSettingsScope.of(context).skillLibrary,
             dualWield: link.dualWield,
             endlessBattle: link.endlessBattle,
             mayhem: link.mayhem,

@@ -4,6 +4,17 @@ import '../../arena_simulation/domain/power_up_config.dart';
 enum SkillVisualMode { sprite, vector }
 
 class SkillDefinition {
+  static const List<String> soundCues = [
+    'shot',
+    'shotgun',
+    'gatling',
+    'slash',
+    'shield',
+    'bomb',
+    'pickup',
+    'hit',
+  ];
+
   const SkillDefinition({
     required this.id,
     required this.name,
@@ -147,6 +158,7 @@ class SkillDefinition {
     spreadDegrees: spreadDegrees?.clamp(0, 360),
     maxBounces: maxBounces?.clamp(0, 20),
     knockback: knockback.clamp(0, 10),
+    soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
   );
 }
 
@@ -168,6 +180,14 @@ class SkillLibrary {
   SkillDefinition builtIn(PowerUpKind kind, PowerUpConfig tuning) =>
       overrides['builtin.${kind.name}'] ?? _defaultFor(kind, tuning);
 
+  /// The enabled custom variant for [kind], or its built-in definition.
+  /// Only one custom variant of a base skill may be active at a time.
+  SkillDefinition activeFor(PowerUpKind kind, PowerUpConfig tuning) =>
+      custom
+          .where((skill) => skill.enabled && skill.baseKind == kind)
+          .firstOrNull ??
+      builtIn(kind, tuning);
+
   List<SkillDefinition> all(PowerUpConfig tuning) => [
     for (final kind in PowerUpKind.values) builtIn(kind, tuning),
     ...custom,
@@ -179,7 +199,15 @@ class SkillLibrary {
   ) {
     final valid = definition.validated();
     if (valid.custom) {
-      final next = [...custom];
+      final next = [
+        for (final item in custom)
+          if (valid.enabled &&
+              item.id != valid.id &&
+              item.baseKind == valid.baseKind)
+            item.copyWith(enabled: false)
+          else
+            item,
+      ];
       final index = next.indexWhere((item) => item.id == valid.id);
       if (index < 0) {
         next.add(valid);
@@ -231,8 +259,9 @@ class SkillLibrary {
   PowerUpConfig applyTo(PowerUpConfig tuning) {
     var result = tuning;
     for (final kind in PowerUpKind.values) {
-      final skill = builtIn(kind, tuning);
-      final explicitlyConfigured = overrides.containsKey(skill.id);
+      final skill = activeFor(kind, tuning);
+      final explicitlyConfigured =
+          skill.custom || overrides.containsKey(skill.id);
       if (skill.arsenalDamage != null &&
           PowerUpConfig.damageKinds.contains(kind)) {
         result = result.withValue('dmg.${kind.name}', skill.arsenalDamage!);
@@ -371,9 +400,48 @@ class SkillLibrary {
           kind == PowerUpKind.energyWave || kind == PowerUpKind.omegaTendrils
           ? 1
           : 0,
-      soundCue: kind.name,
+      effectMode:
+          kind == PowerUpKind.rocketLauncher || kind == PowerUpKind.grenade
+          ? SkillVisualMode.vector
+          : SkillVisualMode.sprite,
+      soundCue: _defaultSoundFor(kind),
     );
   }
+
+  static String _defaultSoundFor(PowerUpKind kind) => switch (kind) {
+    PowerUpKind.shotgun ||
+    PowerUpKind.bow ||
+    PowerUpKind.threadHarpoon => 'shotgun',
+    PowerUpKind.gatling => 'gatling',
+    PowerUpKind.knife ||
+    PowerUpKind.sword ||
+    PowerUpKind.orbitingFlail => 'slash',
+    PowerUpKind.shield ||
+    PowerUpKind.freeze ||
+    PowerUpKind.repulsor ||
+    PowerUpKind.magneticField ||
+    PowerUpKind.goldenArmor => 'shield',
+    PowerUpKind.grenade ||
+    PowerUpKind.mine ||
+    PowerUpKind.phaseMine ||
+    PowerUpKind.molotov ||
+    PowerUpKind.fireWall ||
+    PowerUpKind.rocketLauncher ||
+    PowerUpKind.lightningStrikes ||
+    PowerUpKind.earthquake ||
+    PowerUpKind.energyWave ||
+    PowerUpKind.omegaTendrils => 'bomb',
+    PowerUpKind.apple ||
+    PowerUpKind.speed ||
+    PowerUpKind.magnet ||
+    PowerUpKind.ghost ||
+    PowerUpKind.timeBubble ||
+    PowerUpKind.vampire ||
+    PowerUpKind.mirror ||
+    PowerUpKind.overcharge ||
+    PowerUpKind.gremlin => 'pickup',
+    _ => 'shot',
+  };
 
   static bool _same(SkillDefinition a, SkillDefinition b) =>
       a.toJson().toString() == b.toJson().toString();

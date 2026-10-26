@@ -418,11 +418,13 @@ class PowerUpPainter {
     for (final e in p.explosions) {
       final t = e.age / PowerUpTuning.explosionShowSteps;
       final fade = (1 - t).clamp(0.0, 1.0);
-      if (e.kind == PowerUpKind.rocketLauncher) {
+      if (e.kind == PowerUpKind.rocketLauncher &&
+          !p.usesEffectSprite(PowerUpKind.rocketLauncher)) {
         _paintRocketExplosion(canvas, e.position, e.radius, t, fade);
         continue;
       }
-      if (e.kind == PowerUpKind.grenade) {
+      if (e.kind == PowerUpKind.grenade &&
+          !p.usesEffectSprite(PowerUpKind.grenade)) {
         canvas.drawCircle(e.position, e.radius * (0.35 + 0.65 * t), Paint()
           ..shader = ui.Gradient.radial(e.position, e.radius, [
             const Color(0xFFFFF1A0).withValues(alpha: fade),
@@ -430,7 +432,7 @@ class PowerUpPainter {
             const Color(0x00FF6B23),
           ], const [0.0, 0.55, 1.0]));
       }
-      if (showEffects && e.kind != PowerUpKind.grenade) {
+      if (showEffects && (e.kind == null || p.usesEffectSprite(e.kind!))) {
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.explosion,
           (t * 4).floor().clamp(0, 3),
@@ -493,7 +495,13 @@ class PowerUpPainter {
           0.5 +
           0.5 * math.sin((state.step - item.spawnStep) * 2 * math.pi / 60);
       if (item.kind.isTrap) {
-        _paintTrap(canvas, item.kind, item.position, r * (0.96 + 0.08 * pulse));
+        _paintTrap(
+          canvas,
+          item.kind,
+          item.position,
+          r * (0.96 + 0.08 * pulse),
+          useSprite: p.usesSprite(item.kind),
+        );
       } else {
         _paintToken(
           canvas,
@@ -502,6 +510,7 @@ class PowerUpPainter {
           r * (0.90 + 0.20 * pulse),
           0.35 + 0.65 * pulse,
           ring: p.match.tuning.rarityOf(item.kind)?.color,
+          useSprite: p.usesSprite(item.kind),
         );
       }
     }
@@ -585,7 +594,8 @@ class PowerUpPainter {
       // Armed traps sit directly on the arena instead of looking like pickup
       // balls. The short owner-colored footing preserves ownership feedback.
       final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
-      _paintTrap(canvas, bomb.kind, bomb.position, r);
+      _paintTrap(canvas, bomb.kind, bomb.position, r,
+          useSprite: p.usesSprite(bomb.kind));
       canvas.drawLine(
         bomb.position + Offset(-r * 0.65, r * 0.78),
         bomb.position + Offset(r * 0.65, r * 0.78),
@@ -648,7 +658,9 @@ class PowerUpPainter {
         if (shot.kind == PowerUpKind.hook) {
           // The hook flying out on its chain.
           _paintChain(canvas, shot.owner.position, shot.position);
-          final sprite = PowerUpSprites.projectile(ProjectileSprite.harpoon);
+          final sprite = p.usesSprite(shot.kind)
+              ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
+              : null;
           final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
           if (sprite == null) {
             drawGlyph(canvas, PowerUpKind.hook, shot.position, r * 0.6);
@@ -666,7 +678,9 @@ class PowerUpPainter {
         }
         if (shot.landAt != null) {
           // A thrown explosive in flight: its own icon, tumbling.
-          final sprite = PowerUpSprites.of(shot.kind);
+          final sprite = p.usesSprite(shot.kind)
+              ? PowerUpSprites.of(shot.kind)
+              : null;
           if (sprite == null) {
             drawGlyph(canvas, shot.kind, shot.position, r * 0.5);
           } else {
@@ -685,14 +699,16 @@ class PowerUpPainter {
           continue;
         }
         if (shot.kind == PowerUpKind.bow) {
-          _paintArrow(canvas, shot, r);
+          _paintArrow(canvas, shot, r, useSprite: p.usesSprite(shot.kind));
           continue;
         }
         final speed = shot.velocity.distance;
         if (speed == 0) continue;
         final dir = shot.velocity / speed;
         if (shot.kind == PowerUpKind.rocketLauncher) {
-          final missile = PowerUpSprites.rocketMissile;
+          final missile = p.usesSprite(shot.kind)
+              ? PowerUpSprites.rocketMissile
+              : null;
           if (missile != null) {
             final thrust = 0.88 + 0.12 * math.sin(state.step * 0.7).abs();
             _drawSprite(
@@ -708,7 +724,9 @@ class PowerUpPainter {
           continue;
         }
         if (shot.kind == PowerUpKind.boomerang) {
-          final sprite = PowerUpSprites.boomerangProjectile;
+          final sprite = p.usesSprite(shot.kind)
+              ? PowerUpSprites.boomerangProjectile
+              : null;
           if (sprite != null) {
             _drawSprite(
               canvas,
@@ -750,7 +768,7 @@ class PowerUpPainter {
           continue;
         }
         final projectileKind = _projectileSpriteFor(shot.kind);
-        final projectile = projectileKind == null
+        final projectile = projectileKind == null || !p.usesSprite(shot.kind)
             ? null
             : PowerUpSprites.projectile(projectileKind);
         if (projectile != null) {
@@ -1008,11 +1026,18 @@ class PowerUpPainter {
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
 
-  static void _paintArrow(Canvas canvas, Projectile shot, double r) {
+  static void _paintArrow(
+    Canvas canvas,
+    Projectile shot,
+    double r, {
+    bool useSprite = true,
+  }) {
     final speed = shot.velocity.distance;
     if (speed == 0) return;
     final direction = shot.velocity / speed;
-    final sprite = PowerUpSprites.projectile(ProjectileSprite.bow);
+    final sprite = useSprite
+        ? PowerUpSprites.projectile(ProjectileSprite.bow)
+        : null;
     if (sprite != null) {
       _drawSprite(
         canvas,
@@ -1162,6 +1187,7 @@ class PowerUpPainter {
     double r,
     double ringAlpha, {
     Color? ring,
+    bool useSprite = true,
   }) {
     final color = ring ?? colorOf(kind);
     canvas.drawCircle(
@@ -1191,7 +1217,7 @@ class PowerUpPainter {
           0.4 + 0.6 * ringAlpha,
         )!,
     );
-    final sprite = PowerUpSprites.of(kind);
+    final sprite = useSprite ? PowerUpSprites.of(kind) : null;
     if (sprite == null) {
       drawGlyph(canvas, kind, c, r * 0.62);
     } else {
@@ -1205,9 +1231,10 @@ class PowerUpPainter {
     Canvas canvas,
     PowerUpKind kind,
     Offset center,
-    double radius,
-  ) {
-    final sprite = PowerUpSprites.of(kind);
+    double radius, {
+    bool useSprite = true,
+  }) {
+    final sprite = useSprite ? PowerUpSprites.of(kind) : null;
     if (sprite == null) {
       drawGlyph(canvas, kind, center, radius * 0.9);
     } else {

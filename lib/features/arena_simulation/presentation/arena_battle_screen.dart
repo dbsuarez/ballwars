@@ -170,6 +170,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       mode: widget.config.mode,
       powerUpKinds: widget.config.powerUps,
       tuning: widget.config.tuning,
+      skillLibrary: widget.config.skillLibrary,
       dualWield: widget.config.dualWield,
       endlessBattle: widget.config.endlessBattle,
       mayhem: widget.config.mayhem,
@@ -295,6 +296,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Plays a sound for each kind of power-up event that happened since the last frame. Ten new shots at
   /// once is a shotgun blast.
   final Map<String, int> _heardInteractions = {};
+  final Map<String, int> _heardSkillSounds = {};
   int _heardCuts = 0;
   int _heardKnockouts = 0;
 
@@ -315,6 +317,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         _audio.interaction(event.key);
       }
       _heardInteractions[event.key] = event.value;
+    }
+    for (final event
+        in soundController.powerUps?.skillSounds.entries ??
+            const <MapEntry<String, int>>[]) {
+      if (event.value > (_heardSkillSounds[event.key] ?? 0)) {
+        _audio.skillCue(event.key);
+      }
+      _heardSkillSounds[event.key] = event.value;
     }
 
     final p = _controller.powerUps;

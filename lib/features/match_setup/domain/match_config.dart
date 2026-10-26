@@ -1,6 +1,7 @@
 import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
+import '../../skills/domain/skill_library.dart';
 
 enum WinCondition { domination, timeAttack }
 
@@ -110,6 +111,9 @@ class MatchConfig {
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
 
+  /// Active skill variants and their cosmetic/audio choices.
+  final SkillLibrary skillLibrary;
+
   /// Yes or No: the question the match answers (shown instead of the headline), or null.
   final String? question;
 
@@ -131,6 +135,7 @@ class MatchConfig {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.tuning = PowerUpConfig.defaults,
+    this.skillLibrary = SkillLibrary.defaults,
     this.mode = MatchMode.threads,
   });
 }

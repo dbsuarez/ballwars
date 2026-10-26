@@ -15,6 +15,7 @@ import '../../custom_groups/domain/custom_group.dart';
 import '../../../core/audio/game_audio.dart';
 import '../../../core/offline/device_prefs.dart';
 import '../../settings/data/effects_prefs.dart';
+import '../../skills/domain/skill_library.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../domain/match_config.dart';
 
@@ -372,6 +373,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         tuning: _mode == MatchMode.threads
             ? PowerUpConfig.defaults
             : AppSettingsScope.of(context).powerUps,
+        skillLibrary: _mode == MatchMode.threads
+            ? SkillLibrary.defaults
+            : AppSettingsScope.of(context).skillLibrary,
         // Only for matches with Yes or No balls.
         question:
             _selected.keys.any((id) => id.startsWith('pack:$_decisionPack/'))

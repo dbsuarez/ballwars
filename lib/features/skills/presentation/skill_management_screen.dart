@@ -67,12 +67,18 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     await _edit(copy);
   }
 
-  Widget _list(bool custom) {
+  Widget _list(bool custom, {String? category}) {
     final query = _query.trim().toLowerCase();
     final skills =
         _library
             .all(widget.tuning)
             .where((skill) => skill.custom == custom)
+            .where(
+              (skill) =>
+                  query.isNotEmpty ||
+                  category == null ||
+                  _categoryOf(skill) == category,
+            )
             .where(
               (skill) =>
                   query.isEmpty ||
@@ -99,6 +105,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       itemBuilder: (context, index) {
         final skill = skills[index];
         final details = <String>[
+          if (skill.custom) skill.enabled ? 'Active' : 'Inactive',
           if (skill.arsenalDamage != null) '${skill.arsenalDamage} life',
           if (skill.allOutDamage != null) '${skill.allOutDamage} lines',
           if (skill.durationSeconds != null) '${skill.durationSeconds}s',
@@ -118,9 +125,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   ? "Trap"
                   : "Power-up"}'
               '${details.isEmpty ? "" : " • ${details.join(" • ")}"}'
-              '${skill.custom && !skill.enabled ? "\nDisabled until activated in a later runtime pass" : ""}',
+              '${skill.custom && skill.enabled ? "\nReplaces ${skill.baseKind.label} in matches" : ""}',
             ),
-            isThreeLine: skill.custom && !skill.enabled,
+            isThreeLine: skill.custom && skill.enabled,
             trailing: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') _edit(skill);
@@ -145,6 +152,37 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       },
     );
   }
+
+  static String _categoryOf(SkillDefinition skill) => skill.baseKind.isWeapon
+      ? 'Weapons'
+      : skill.baseKind.isTrap
+      ? 'Traps'
+      : 'Power-ups';
+
+  Widget _builtInSkills() => DefaultTabController(
+    length: 3,
+    child: Column(
+      children: [
+        const TabBar(
+          key: ValueKey('built-in-skill-tabs'),
+          tabs: [
+            Tab(text: 'Weapons'),
+            Tab(text: 'Power-ups'),
+            Tab(text: 'Traps'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            children: [
+              _list(false, category: 'Weapons'),
+              _list(false, category: 'Power-ups'),
+              _list(false, category: 'Traps'),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -176,8 +214,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
               child: Text(
-                'Built-in damage, thread damage, supported durations and projectile counts affect gameplay now. '
-                'Advanced motion and custom-skill activation are stored safely for the next runtime migration.',
+                'Built-in edits affect gameplay immediately. Activate a custom variant to replace its base skill; '
+                'only one variant per base skill can be active at a time.',
                 style: AppText.ui(
                   12,
                   FontWeight.w500,
@@ -186,7 +224,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 ),
               ),
             ),
-            Expanded(child: TabBarView(children: [_list(false), _list(true)])),
+            Expanded(
+              child: TabBarView(children: [_builtInSkills(), _list(true)]),
+            ),
           ],
         ),
         bottomNavigationBar: SafeArea(
@@ -249,6 +289,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
+  late bool _enabled = widget.skill.enabled;
   late final _sound = TextEditingController(text: widget.skill.soundCue);
 
   @override
@@ -271,6 +312,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
     return widget.skill.copyWith(
       name: _name.text.trim(),
+      enabled: _enabled,
       arsenalDamage: _double('arsenal'),
       allOutDamage: _int('allOut'),
       durationSeconds: _double('duration'),
@@ -325,6 +367,19 @@ class _SkillEditorState extends State<_SkillEditor> {
                 decoration: const InputDecoration(labelText: 'Skill name'),
                 onChanged: (_) => setState(() {}),
               ),
+              if (widget.skill.custom)
+                SwitchListTile(
+                  key: const ValueKey('skill-enabled'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Active in matches'),
+                  subtitle: Text(
+                    _enabled
+                        ? 'Replaces the built-in ${widget.skill.baseKind.label} skill.'
+                        : 'Saved as an inactive variant.',
+                  ),
+                  value: _enabled,
+                  onChanged: (value) => setState(() => _enabled = value),
+                ),
               if (_numbers.containsKey('arsenal'))
                 _number('arsenal', 'Initial / hit damage', suffix: 'life'),
               if (_numbers.containsKey('allOut'))
@@ -365,10 +420,16 @@ class _SkillEditorState extends State<_SkillEditor> {
                 onChanged: (value) => setState(() => _effect = value!),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _sound,
-                maxLength: 60,
-                decoration: const InputDecoration(labelText: 'Sound cue ID'),
+              DropdownButtonFormField<String>(
+                initialValue: SkillDefinition.soundCues.contains(_sound.text)
+                    ? _sound.text
+                    : 'shot',
+                decoration: const InputDecoration(labelText: 'Sound cue'),
+                items: [
+                  for (final cue in SkillDefinition.soundCues)
+                    DropdownMenuItem(value: cue, child: Text(cue)),
+                ],
+                onChanged: (value) => _sound.text = value!,
               ),
             ],
           ),

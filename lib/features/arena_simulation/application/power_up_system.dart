@@ -5,6 +5,7 @@ import 'dart:ui';
 import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../skills/domain/skill_library.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
 import '../domain/power_up.dart';
@@ -88,6 +89,25 @@ class PowerUpSystem {
   final Map<String, int> interactionSounds = {};
   void _sound(String event) =>
       interactionSounds.update(event, (value) => value + 1, ifAbsent: () => 1);
+
+  /// Configured skill cues, counted separately so the UI can play the exact
+  /// selected sound without changing deterministic simulation state.
+  final Map<String, int> skillSounds = {};
+  void _skillSound(PowerUpKind kind) {
+    final cue = match.skillLibrary.activeFor(kind, _t).soundCue;
+    skillSounds.update(cue, (value) => value + 1, ifAbsent: () => 1);
+  }
+
+  bool usesSprite(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).spriteMode ==
+      SkillVisualMode.sprite;
+
+  bool usesEffectSprite(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).effectMode ==
+      SkillVisualMode.sprite;
+
+  String skillName(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).name;
 
   /// Bullets, pellets and freeze shots fired so far (the screen plays a sound when it goes up).
   int shots = 0;
@@ -268,6 +288,7 @@ class PowerUpSystem {
   /// without replacing equipment; a weapon replaces the one equipped weapon.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
+    if (!p.kind.isWeapon) _skillSound(p.kind);
     if (p.kind == PowerUpKind.mine || p.kind == PowerUpKind.phaseMine) {
       _sound('trap');
       mines.add(
@@ -478,7 +499,7 @@ class PowerUpSystem {
         target,
         _t.arenaDamage(PowerUpKind.omegaTendrils),
         attacker: tendril.owner,
-        move: PowerUpKind.omegaTendrils.label,
+        move: skillName(PowerUpKind.omegaTendrils),
       );
       _showDamage(target, target.position, lost, 0);
       target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
@@ -683,7 +704,7 @@ class PowerUpSystem {
       final damage = match.damage(
         ball,
         _t.arenaDamage(PowerUpKind.spikeWall),
-        move: PowerUpKind.spikeWall.label,
+        move: skillName(PowerUpKind.spikeWall),
       );
       _showDamage(ball, at, damage, 0);
     } else {
@@ -691,7 +712,7 @@ class PowerUpSystem {
         ball,
         _t.allOutThreads(PowerUpKind.spikeWall),
         near: at,
-        move: PowerUpKind.spikeWall.label,
+        move: skillName(PowerUpKind.spikeWall),
       );
       _showDamage(ball, at, cut, 0);
     }
@@ -752,6 +773,7 @@ class PowerUpSystem {
     final PowerUpKind kind;
     if (weapon.isBlade || weapon == PowerUpKind.orbitingFlail) {
       kind = weapon;
+      _skillSound(kind);
       slashes++;
       _yell(
         attacker,
@@ -763,6 +785,7 @@ class PowerUpSystem {
       );
     } else if (weapon == PowerUpKind.shield && targetHeld.isEmpty) {
       kind = PowerUpKind.shield;
+      _skillSound(kind);
       _yell(attacker, 'SHIELD BASH!');
     } else {
       return;
@@ -943,7 +966,7 @@ class PowerUpSystem {
                 ball.position,
               ) <=
               radius * radius) {
-            _cutLine(ball, line, move: kind.label);
+            _cutLine(ball, line, move: skillName(kind));
           }
         }
       }
@@ -1482,6 +1505,7 @@ class PowerUpSystem {
         landAt: ball.position + direction * distance,
       ),
     );
+    _skillSound(PowerUpKind.grenade);
     shots++;
   }
 
@@ -1725,6 +1749,7 @@ class PowerUpSystem {
         returnTo: kind == PowerUpKind.boomerang ? ball.position : null,
       ),
     );
+    _skillSound(kind);
     shots++;
   }
 
@@ -1833,7 +1858,7 @@ class PowerUpSystem {
           for (final line in List.of(ball.fanLines)) {
             // Rim anchors are unique, so the thread nearest a thread's own anchor is that thread.
             if (_crosses(from, end, line.startPoint, ball.position)) {
-              _cutLine(ball, line, move: p.kind.label);
+              _cutLine(ball, line, move: skillName(p.kind));
             }
           }
         }
@@ -2012,7 +2037,7 @@ class PowerUpSystem {
         target,
         (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,
         attacker: from,
-        move: kind.label,
+        move: skillName(kind),
         scaleForCrowd: scaleForCrowd,
       );
       if (from != null &&
@@ -2034,7 +2059,7 @@ class PowerUpSystem {
         );
       var cut = 0;
       for (final line in nearest.take(threads)) {
-        if (_cutLine(target, line, move: kind.label)) cut++;
+        if (_cutLine(target, line, move: skillName(kind))) cut++;
       }
       if (from != null &&
           (from.vampireLeft > 0 || kind == PowerUpKind.threadHarpoon)) {
@@ -2106,7 +2131,7 @@ class PowerUpSystem {
                 target.position,
               ) <=
               reach * reach) {
-            _cutLine(target, line, move: PowerUpKind.sword.label);
+            _cutLine(target, line, move: skillName(PowerUpKind.sword));
           }
         }
       }

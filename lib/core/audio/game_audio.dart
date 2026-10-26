@@ -254,6 +254,22 @@ class GameAudio with WidgetsBindingObserver {
 
   void hit() => _play('hit', 0.5, gap: 60);
 
+  /// Plays one of the curated cues exposed by Skill Management.
+  void skillCue(String cue) {
+    if (const {
+      'shot',
+      'shotgun',
+      'gatling',
+      'slash',
+      'shield',
+      'bomb',
+      'pickup',
+      'hit',
+    }.contains(cue)) {
+      _play(cue, 0.6, gap: 60);
+    }
+  }
+
   /// Existing sounds mapped to otherwise silent interactions.
   void interaction(String event) {
     switch (event) {

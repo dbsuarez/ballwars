@@ -6,6 +6,7 @@ import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../skills/domain/skill_library.dart';
 import '../domain/arena_physics_engine.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
@@ -160,6 +161,7 @@ class MatchSimulationController {
 
   /// The power-up numbers (the admin's settings, or a replay link's). Part of the match, like the seed.
   final PowerUpConfig tuning;
+  final SkillLibrary skillLibrary;
   final bool dualWield;
   final bool endlessBattle;
   final bool mayhem;
@@ -198,6 +200,7 @@ class MatchSimulationController {
     this.mode = MatchMode.threads,
     this.powerUpKinds,
     this.tuning = PowerUpConfig.defaults,
+    this.skillLibrary = SkillLibrary.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
     this.mayhem = false,
@@ -225,6 +228,7 @@ class MatchSimulationController {
         mode: mode,
         powerUpKinds: powerUpKinds,
         tuning: tuning,
+        skillLibrary: skillLibrary,
         dualWield: dualWield,
         endlessBattle: endlessBattle,
         mayhem: mayhem,

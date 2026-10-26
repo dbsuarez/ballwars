@@ -61,6 +61,42 @@ void main() {
     expect(first.enabled, isFalse);
   });
 
+  test('one enabled custom variant replaces its built-in skill at runtime', () {
+    const tuning = PowerUpConfig.defaults;
+    final source = SkillLibrary.defaults.builtIn(PowerUpKind.pistol, tuning);
+    final heavy = SkillLibrary.defaults
+        .duplicate(source, 'Heavy Pistol')
+        .copyWith(
+          enabled: true,
+          arsenalDamage: 44,
+          projectileSpeed: 2.5,
+          spriteMode: SkillVisualMode.vector,
+          effectMode: SkillVisualMode.vector,
+          soundCue: 'bomb',
+        );
+    final library = SkillLibrary.defaults.withDefinition(heavy, tuning);
+
+    expect(library.activeFor(PowerUpKind.pistol, tuning).name, 'Heavy Pistol');
+    expect(library.applyTo(tuning).arenaDamage(PowerUpKind.pistol), 44);
+    expect(
+      library.applyTo(tuning).projectileSpeedRatio(PowerUpKind.pistol),
+      2.5,
+    );
+
+    final faster = library
+        .duplicate(source, 'Faster Pistol')
+        .copyWith(enabled: true);
+    final replaced = library.withDefinition(faster, tuning);
+    expect(
+      replaced.activeFor(PowerUpKind.pistol, tuning).name,
+      'Faster Pistol',
+    );
+    expect(
+      replaced.custom.singleWhere((item) => item.id == heavy.id).enabled,
+      isFalse,
+    );
+  });
+
   test('untrusted definitions are clamped on load', () {
     final library = SkillLibrary.fromJson({
       'version': 1,

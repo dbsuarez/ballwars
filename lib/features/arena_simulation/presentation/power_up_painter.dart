@@ -1115,10 +1115,9 @@ class PowerUpPainter {
     }
   }
 
-  /// Tornadoes that have reached a victim sit above that ball and are painted
-  /// after contestants, so the funnel visibly overlaps the top of the ball.
-  static Offset tornadoVisualCenter(SimulationBall target) =>
-      target.position - Offset(0, target.radius * 1.35);
+  /// Tornadoes that have reached a victim are centered over that ball and are
+  /// painted after contestants, so the funnel visibly surrounds the victim.
+  static Offset tornadoVisualCenter(SimulationBall target) => target.position;
 
   static void paintTornadoOverlays(Canvas canvas, SimulationState state) {
     final p = state.powerUps;
@@ -1743,17 +1742,25 @@ class PowerUpPainter {
     SimulationBall ball, {
     PowerUpKind? weapon,
     int slot = 0,
+    double? gripInset,
   }) {
     final held = weapon ?? ball.held;
     final angle = heldAngle(ball, weapon: held, slot: slot);
     final dir = Offset(math.cos(angle), math.sin(angle));
-    final distance = held == PowerUpKind.shield
-        ? ball.radius
+    final defaultInset = held?.isBlade == true ? 0.2 : 0.0;
+    final inset = (gripInset ?? defaultInset).clamp(0.0, 1.5);
+    final baseDistance = held == PowerUpKind.shield
+        ? 1.0
         : held?.isBlade == true
-        ? ball.radius * 2.0
+        ? 2.0
         : held == PowerUpKind.hook || held == PowerUpKind.threadHarpoon
-        ? ball.radius * 1.55
-        : ball.radius * 1.2;
+        ? 1.55
+        : 1.2;
+    final distance =
+        ball.radius *
+        (held == PowerUpKind.shield
+            ? baseDistance
+            : math.max(0.1, baseDistance - inset));
     return ball.position + dir * distance;
   }
 
@@ -1822,6 +1829,7 @@ class PowerUpPainter {
     double? incomingAttackAngle,
     int Function(PowerUpKind kind)? firedWeaponHoldLeft,
     double Function(PowerUpKind kind)? weaponDisplayScale,
+    double Function(PowerUpKind kind)? weaponGripInset,
     double Function(PowerUpKind kind)? skillRange,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
@@ -2125,6 +2133,7 @@ class PowerUpPainter {
           slot,
           firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
           displayScale: weaponDisplayScale?.call(weapon) ?? 1,
+          gripInset: weaponGripInset?.call(weapon),
         );
       }
     }
@@ -2177,6 +2186,7 @@ class PowerUpPainter {
     int slot, {
     int firedHoldLeft = 0,
     double displayScale = 1,
+    double? gripInset,
   }) {
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
@@ -2224,7 +2234,7 @@ class PowerUpPainter {
         _drawSprite(
           canvas,
           sprite,
-          heldCenter(ball, weapon: held, slot: slot),
+          heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset),
           ball.radius * 0.7 * displayScale,
           angle + math.pi / 2,
         );
@@ -2232,7 +2242,12 @@ class PowerUpPainter {
       return;
     }
     if (sprite == null) {
-      final badge = heldCenter(ball, weapon: held, slot: slot);
+      final badge = heldCenter(
+        ball,
+        weapon: held,
+        slot: slot,
+        gripInset: gripInset,
+      );
       final r = math.max(
         6.0,
         ball.radius * (held.isBlade ? 0.72 : 0.36) * displayScale,
@@ -2247,7 +2262,7 @@ class PowerUpPainter {
     final angle = baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
     final dir = Offset(math.cos(angle), math.sin(angle));
     final center =
-        heldCenter(ball, weapon: held, slot: slot) +
+        heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset) +
         Offset(
           math.sin(drop * math.pi) * ball.radius * 0.25,
           drop * drop * ball.radius * 2.2,

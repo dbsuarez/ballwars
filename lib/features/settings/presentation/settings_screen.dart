@@ -812,7 +812,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 'Item rarities saved for everyone.',
                                           );
                                         },
-                                  child: const Text('Edit item rarities'),
+                                  child: const Text(
+                                    'Edit legacy item rarities',
+                                  ),
                                 ),
                               ],
                             ),

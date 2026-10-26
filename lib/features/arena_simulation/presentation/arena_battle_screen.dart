@@ -773,12 +773,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         Positioned(
                           bottom: 0,
                           right: 54,
-                          child: IconButton.filledTonal(
+                          child: IconButton(
                             tooltip: _audio.effectsOn ? 'SFX: on' : 'SFX: off',
+                            style: IconButton.styleFrom(
+                              backgroundColor: const Color(0xB3000000),
+                              side: const BorderSide(color: Colors.white54),
+                            ),
                             icon: _ArenaAudioGlyph(
                               key: const ValueKey('arena-sfx-icon'),
                               music: false,
                               on: _audio.effectsOn,
+                              color: Colors.white,
                             ),
                             onPressed: () {
                               final on = !_audio.effectsOn;
@@ -791,12 +796,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         Positioned(
                           bottom: 0,
                           right: 0,
-                          child: IconButton.filledTonal(
+                          child: IconButton(
                             tooltip: _audio.musicOn ? 'BGM: on' : 'BGM: off',
+                            style: IconButton.styleFrom(
+                              backgroundColor: const Color(0xB3000000),
+                              side: const BorderSide(color: Colors.white54),
+                            ),
                             icon: _ArenaAudioGlyph(
                               key: const ValueKey('arena-bgm-icon'),
                               music: true,
                               on: _audio.musicOn,
+                              color: Colors.white,
                             ),
                             onPressed: () {
                               _audio.setMusicOn(!_audio.musicOn);
@@ -1255,10 +1265,16 @@ class _SmileyPainter extends CustomPainter {
 /// Font-independent arena audio glyphs. Keeping these as canvas art prevents a
 /// missing Material icon font or stale web cache from producing empty buttons.
 class _ArenaAudioGlyph extends StatelessWidget {
-  const _ArenaAudioGlyph({super.key, required this.music, required this.on});
+  const _ArenaAudioGlyph({
+    super.key,
+    required this.music,
+    required this.on,
+    this.color,
+  });
 
   final bool music;
   final bool on;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
@@ -1266,7 +1282,7 @@ class _ArenaAudioGlyph extends StatelessWidget {
     painter: _ArenaAudioGlyphPainter(
       music: music,
       on: on,
-      color: IconTheme.of(context).color ?? Colors.white,
+      color: color ?? IconTheme.of(context).color ?? Colors.white,
     ),
   );
 }

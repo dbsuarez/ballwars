@@ -15,7 +15,6 @@ import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../settings/presentation/power_up_test_screen.dart';
-import '../../settings/presentation/power_up_rarity_screen.dart';
 import '../domain/skill_library.dart';
 
 class SkillManagementScreen extends StatefulWidget {
@@ -37,6 +36,13 @@ class SkillManagementResult {
 
   final SkillLibrary library;
   final PowerUpConfig tuning;
+}
+
+class _SkillEditResult {
+  const _SkillEditResult(this.skill, this.rarity);
+
+  final SkillDefinition skill;
+  final PowerUpRarity? rarity;
 }
 
 class _SkillManagementScreenState extends State<SkillManagementScreen> {
@@ -135,14 +141,20 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   }
 
   Future<void> _edit(SkillDefinition skill) async {
-    final edited = await showModalBottomSheet<SkillDefinition>(
+    final edited = await showModalBottomSheet<_SkillEditResult>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _SkillEditor(skill: skill),
+      builder: (_) =>
+          _SkillEditor(skill: skill, rarity: _tuning.rarityOf(skill.baseKind)),
     );
     if (edited == null || !mounted) return;
-    setState(() => _library = _library.withDefinition(edited, _tuning));
+    setState(() {
+      if (edited.rarity != null) {
+        _tuning = _tuning.withRarity(skill.baseKind, edited.rarity!);
+      }
+      _library = _library.withDefinition(edited.skill, _tuning);
+    });
   }
 
   Future<void> _duplicate(SkillDefinition source) async {
@@ -451,13 +463,6 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     if (result != null && mounted) setState(() => _tuning = result);
   }
 
-  Future<void> _editItemRarities() async {
-    final result = await Navigator.of(context).push<PowerUpConfig>(
-      MaterialPageRoute(builder: (_) => PowerUpRarityScreen(initial: _tuning)),
-    );
-    if (result != null && mounted) setState(() => _tuning = result);
-  }
-
   static String _formatTuning(TuningField field, num value) {
     if (field.integer) return '${value.round()}';
     return value.toStringAsFixed(4).replaceFirst(RegExp(r'\.?0+$'), '');
@@ -526,12 +531,6 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         appBar: AppBar(
           title: const Text('Skill Management'),
           actions: [
-            IconButton(
-              key: const ValueKey('manage-item-rarities'),
-              tooltip: 'Item rarities',
-              onPressed: _editItemRarities,
-              icon: const Icon(Icons.diamond_outlined),
-            ),
             IconButton(
               key: const ValueKey('import-skill-library'),
               tooltip: 'Import versioned JSON',
@@ -634,8 +633,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
 }
 
 class _SkillEditor extends StatefulWidget {
-  const _SkillEditor({required this.skill});
+  const _SkillEditor({required this.skill, required this.rarity});
   final SkillDefinition skill;
+  final PowerUpRarity? rarity;
 
   @override
   State<_SkillEditor> createState() => _SkillEditorState();
@@ -679,6 +679,9 @@ class _SkillEditorState extends State<_SkillEditor> {
     ),
     'weaponDisplayScale': TextEditingController(
       text: '${widget.skill.weaponDisplayScale}',
+    ),
+    'weaponGripInset': TextEditingController(
+      text: '${widget.skill.weaponGripInset}',
     ),
     'effectStrength': TextEditingController(
       text: '${widget.skill.effectStrength}',
@@ -731,6 +734,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillCalloutStyle _calloutStyle = widget.skill.calloutStyle;
   late SkillBubbleType _bubbleType = widget.skill.bubbleType;
   late SkillHandedness _handedness = widget.skill.handedness;
+  late PowerUpRarity? _rarity = widget.rarity;
   late final _effectColor = TextEditingController(
     text: (widget.skill.effectColor & 0xFFFFFF)
         .toRadixString(16)
@@ -770,14 +774,11 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   bool get _showsFreezeSettings =>
       _usesEffect(SkillEffectType.freeze) ||
-      (!widget.skill.isComposed &&
-          widget.skill.baseKind == PowerUpKind.freeze);
+      (!widget.skill.isComposed && widget.skill.baseKind == PowerUpKind.freeze);
 
   bool get _usesProjectileDelivery =>
       _delivery == SkillDelivery.projectile ||
-      (!widget.skill.isComposed &&
-          widget.skill.baseKind.isWeapon &&
-          widget.skill.projectileCount != null);
+      (!widget.skill.isComposed && widget.skill.baseKind.isGun);
 
   int? get _colorValue {
     final value = _effectColor.text.trim().replaceFirst('#', '');
@@ -812,6 +813,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
 
     setState(() {
+      _rarity = PowerUpConfig.defaults.rarityOf(widget.skill.baseKind);
       _name.text = defaults.name;
       _enabled = defaults.enabled;
       _homing = defaults.homing;
@@ -846,6 +848,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('projectileSize', defaults.projectileSize);
       number('projectileSpin', defaults.projectileSpin);
       number('weaponDisplayScale', defaults.weaponDisplayScale);
+      number('weaponGripInset', defaults.weaponGripInset);
       number('effectStrength', defaults.effectStrength);
       number('healing', defaults.healing);
       number('shieldHits', defaults.shieldHits);
@@ -898,12 +901,17 @@ class _SkillEditorState extends State<_SkillEditor> {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: IconButton.filledTonal(
+                  child: IconButton(
                     tooltip: 'Close preview',
                     onPressed: () => Navigator.of(previewContext).maybePop(),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xB3000000),
+                      side: const BorderSide(color: Colors.white70),
+                    ),
                     icon: const CanvasActionGlyph(
                       CanvasActionGlyphType.close,
                       size: 24,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -945,7 +953,7 @@ class _SkillEditorState extends State<_SkillEditor> {
           'DELIVERY supports immediate, projectile, area, beam, aura, orbit, and boundary-hazard behavior.\n\n'
           'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. The editor only shows parameters used by the selected effect and delivery. Weapons hide healing unless Healing effect is intentionally enabled. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
           'SECONDARY EFFECT runs immediately after the primary effect. START DELAY postpones the first activation. REPEAT COUNT includes the first activation; the interval controls the pause between later activations. DoT uses its own TICK INTERVAL. COOLDOWN prevents the same ball from activating the skill again too soon.\n\n'
-          'EFFECT COLOR tints generated impact particles. SCREEN SHAKE controls impact camera movement from none (0) to maximum (1). HANDEDNESS can preserve the carrier default or explicitly make a weapon one-handed or two-handed. TRACK NEAREST OPPONENT turns an equipped weapon artwork toward its nearest target.\n\n'
+          'EFFECT COLOR tints generated impact particles. SCREEN SHAKE controls impact camera movement from none (0) to maximum (1). HANDEDNESS can preserve the carrier default or explicitly make a weapon one-handed or two-handed. GRIP INSET moves the held artwork inward by a fraction of the ball radius so its handle sits in the hand. TRACK NEAREST OPPONENT turns an equipped weapon artwork toward its nearest target.\n\n'
           'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
           'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball. BUBBLE SHAPE offers Shout for attacks, Speech for recovery, Thought for quiet or psychic skills, and Radio for tech or command skills.',
         ),
@@ -984,6 +992,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       returnsToOrigin: _returnsToOrigin,
       trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
+      weaponGripInset: _double('weaponGripInset'),
       effectStrength: _double('effectStrength'),
       healing: _double('healing'),
       shieldHits: _int('shieldHits'),
@@ -1048,7 +1057,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                 key: const ValueKey('save-skill'),
                 onPressed: result == null || compatibilityIssues.isNotEmpty
                     ? null
-                    : () => Navigator.pop(context, result),
+                    : () => Navigator.pop(
+                        context,
+                        _SkillEditResult(result, _rarity),
+                      ),
                 child: const Text('Done'),
               ),
             ],
@@ -1062,6 +1074,26 @@ class _SkillEditorState extends State<_SkillEditor> {
                 decoration: const InputDecoration(labelText: 'Skill name'),
                 onChanged: (_) => setState(() {}),
               ),
+              if (_rarity != null) ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<PowerUpRarity>(
+                  key: const ValueKey('skill-item-rarity'),
+                  initialValue: _rarity,
+                  decoration: const InputDecoration(
+                    labelText: 'Item rarity',
+                    helperText:
+                        'Controls how often this weapon or power-up appears.',
+                  ),
+                  items: [
+                    for (final rarity in PowerUpRarity.values)
+                      DropdownMenuItem(
+                        value: rarity,
+                        child: Text(rarity.label),
+                      ),
+                  ],
+                  onChanged: (value) => setState(() => _rarity = value),
+                ),
+              ],
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
@@ -1398,14 +1430,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                 _number('bounces', 'Maximum bounces'),
               _number('range', 'Range', suffix: 'arena ratio'),
               if (_usesProjectileDelivery)
-                _number('projectileSize', 'Projectile size', suffix: 'x'),
-              if (_usesProjectileDelivery)
                 _number('projectileSpin', 'Projectile spin', suffix: 'deg/s'),
-              _number(
-                'weaponDisplayScale',
-                'Equipped display scale',
-                suffix: 'x',
-              ),
               _number('effectStrength', 'Effect strength', suffix: 'x'),
               if (_showsHealing) _number('healing', 'Healing', suffix: 'life'),
               if (_showsShieldHits) _number('shieldHits', 'Shield hits'),
@@ -1452,19 +1477,53 @@ class _SkillEditorState extends State<_SkillEditor> {
               Row(
                 children: [
                   Expanded(
-                    child: _VisualModePreview(
-                      label: 'Item',
-                      kind: widget.skill.baseKind,
-                      mode: _sprite,
+                    child: Column(
+                      children: [
+                        _VisualModePreview(
+                          label: 'Item',
+                          kind: widget.skill.baseKind,
+                          mode: _sprite,
+                          scale: _double('weaponDisplayScale') ?? 1,
+                        ),
+                        if (widget.skill.baseKind.isWeapon) ...[
+                          const SizedBox(height: 8),
+                          _number(
+                            'weaponDisplayScale',
+                            'Equipped display scale',
+                            suffix: 'x',
+                          ),
+                          const SizedBox(height: 8),
+                          _number(
+                            'weaponGripInset',
+                            'Grip inset',
+                            suffix: 'ball radius',
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _VisualModePreview(
-                      label: 'Impact',
-                      kind: widget.skill.baseKind,
-                      mode: _effect,
-                      impact: true,
+                    child: Column(
+                      children: [
+                        _VisualModePreview(
+                          label: _usesProjectileDelivery
+                              ? 'Projectile / impact'
+                              : 'Impact',
+                          kind: widget.skill.baseKind,
+                          mode: _effect,
+                          impact: true,
+                          scale: _double('projectileSize') ?? 1,
+                        ),
+                        if (_usesProjectileDelivery) ...[
+                          const SizedBox(height: 8),
+                          _number(
+                            'projectileSize',
+                            'Projectile scale',
+                            suffix: 'x',
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
@@ -1549,7 +1608,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ? _sound.text
                           : 'shot',
                     ),
-                    icon: const CanvasActionGlyph(CanvasActionGlyphType.play),
+                    icon: const CanvasActionGlyph(
+                      CanvasActionGlyphType.play,
+                      color: Colors.white,
+                    ),
                     label: const Text('Play'),
                   ),
                 ],
@@ -1820,48 +1882,53 @@ class _VisualModePreview extends StatelessWidget {
     required this.kind,
     required this.mode,
     this.impact = false,
+    this.scale = 1,
   });
 
   final String label;
   final PowerUpKind kind;
   final SkillVisualMode mode;
   final bool impact;
+  final double scale;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: ValueKey('visual-preview-${label.toLowerCase()}'),
-    height: 92,
-    padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      children: [
-        Text('$label · ${mode.name}'),
-        const SizedBox(height: 6),
-        Expanded(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (impact)
-                Icon(
-                  Icons.brightness_7,
-                  size: 52,
-                  color: PowerUpPainter.colorOf(kind).withValues(alpha: 0.3),
-                ),
-              mode == SkillVisualMode.sprite
-                  ? PowerUpIcon(kind, size: 46)
-                  : CustomPaint(
-                      size: const Size.square(52),
-                      painter: _VectorSkillPreview(kind),
-                    ),
-            ],
+  Widget build(BuildContext context) {
+    final visualSize = (32 * scale).clamp(12.0, 64.0);
+    return Container(
+      key: ValueKey('visual-preview-${impact ? "impact" : "item"}'),
+      height: 92,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text('$label · ${mode.name}'),
+          const SizedBox(height: 6),
+          Expanded(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (impact)
+                  Icon(
+                    Icons.brightness_7,
+                    size: 52,
+                    color: PowerUpPainter.colorOf(kind).withValues(alpha: 0.3),
+                  ),
+                mode == SkillVisualMode.sprite
+                    ? PowerUpIcon(kind, size: visualSize)
+                    : CustomPaint(
+                        size: Size.square(visualSize),
+                        painter: _VectorSkillPreview(kind),
+                      ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _VectorSkillPreview extends CustomPainter {

@@ -596,10 +596,17 @@ class ArenaPainter extends CustomPainter {
           state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
       weaponDisplayScale: (kind) =>
           state.powerUps?.weaponDisplayScale(kind) ?? 1,
+      weaponGripInset: (kind) =>
+          state.powerUps?.weaponGripInset(kind) ?? (kind.isBlade ? 0.2 : 0),
       skillRange: (kind) => state.powerUps?.skillRange(kind) ?? 1,
     );
     if (look != BallLook.pictures || handsOnPictures) {
-      paintHands(canvas, ball);
+      paintHands(
+        canvas,
+        ball,
+        weaponGripInset: (kind) =>
+            state.powerUps?.weaponGripInset(kind) ?? (kind.isBlade ? 0.2 : 0),
+      );
     }
     if (ball.isGhost) canvas.restore();
   }

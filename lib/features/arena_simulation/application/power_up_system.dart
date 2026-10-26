@@ -138,6 +138,9 @@ class PowerUpSystem {
   double weaponDisplayScale(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).weaponDisplayScale;
 
+  double weaponGripInset(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).weaponGripInset;
+
   double skillRange(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).range;
 
@@ -779,11 +782,14 @@ class PowerUpSystem {
       attack.age++;
       if (attack.age % 2 == 0 && attack.hitsShown < attack.totalHits) {
         attack.hitsShown++;
-        attack.owner.position = Offset.lerp(
-          attack.owner.position,
-          attack.target.position,
-          0.72,
-        )!;
+        // Stage each strike just outside collision range. Moving the attacker
+        // into the victim made the physics engine add hidden knockback on
+        // every hit, even when the skill's configured knockback was zero.
+        final strikeAngle = attack.hitsShown * math.pi * 0.73;
+        final separation = (attack.owner.radius + attack.target.radius) * 1.08;
+        attack.owner.position =
+            attack.target.position +
+            Offset.fromDirection(strikeAngle, separation);
         _hit(
           attack.target,
           PowerUpKind.ragingDemon,

@@ -87,7 +87,7 @@ void main() {
         matching: find.byType(IconButton),
       ),
     );
-    expect(close.style!.foregroundColor!.resolve({}), Colors.black);
+    expect(close.style!.foregroundColor!.resolve({}), Colors.white);
     await tester.pump(const Duration(milliseconds: 4400));
     await tester.pumpAndSettle();
     expect(find.text('Finisher Gallery'), findsOneWidget);

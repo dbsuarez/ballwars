@@ -75,17 +75,18 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: IconButton.filledTonal(
+                  child: IconButton(
                     tooltip: 'Close preview',
                     onPressed: () => Navigator.of(previewContext).maybePop(),
                     style: IconButton.styleFrom(
-                      backgroundColor: profile.color,
-                      foregroundColor: Colors.black,
+                      backgroundColor: const Color(0xB3000000),
+                      foregroundColor: Colors.white,
                       side: BorderSide(color: profile.accent, width: 2),
                     ),
                     icon: const CanvasActionGlyph(
                       CanvasActionGlyphType.close,
                       size: 24,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -321,7 +322,10 @@ class _FinisherCard extends StatelessWidget {
                 foregroundColor: Colors.black,
                 side: BorderSide(color: profile.accent, width: 2),
               ),
-              icon: const CanvasActionGlyph(CanvasActionGlyphType.play),
+              icon: const CanvasActionGlyph(
+                CanvasActionGlyphType.play,
+                color: Colors.black,
+              ),
             ),
           ],
         ),

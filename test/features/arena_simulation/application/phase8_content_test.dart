@@ -122,8 +122,9 @@ void main() {
       final match = _match(count: 3, tuning: tuning);
       final [owner, near, far] = match.state.balls;
       owner.position = Offset.zero;
-      near.position = const Offset(45, 0);
+      near.position = const Offset(90, 0);
       far.position = const Offset(180, 0);
+      final targetStart = near.position;
 
       _give(match, owner, PowerUpKind.ragingDemon);
       expect(match.powerUps!.ragingDemonAttacks.single.target, same(near));
@@ -132,6 +133,7 @@ void main() {
       expect(near.life, 93);
       expect(far.life, 100);
       expect(match.powerUps!.ragingDemonAttacks.single.hitsShown, 7);
+      expect(near.position, targetStart);
     },
   );
 }

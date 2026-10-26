@@ -87,6 +87,7 @@ class SkillDefinition {
     this.returnsToOrigin = false,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
+    this.weaponGripInset = 0,
     this.effectStrength = 1,
     this.healing = 10,
     this.shieldHits = 1,
@@ -136,6 +137,7 @@ class SkillDefinition {
   final bool returnsToOrigin;
   final bool trackNearestOpponent;
   final double weaponDisplayScale;
+  final double weaponGripInset;
   final double effectStrength;
   final double healing;
   final int shieldHits;
@@ -216,6 +218,7 @@ class SkillDefinition {
     bool? returnsToOrigin,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
+    double? weaponGripInset,
     double? effectStrength,
     double? healing,
     int? shieldHits,
@@ -264,6 +267,7 @@ class SkillDefinition {
     returnsToOrigin: returnsToOrigin ?? this.returnsToOrigin,
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
+    weaponGripInset: weaponGripInset ?? this.weaponGripInset,
     effectStrength: effectStrength ?? this.effectStrength,
     healing: healing ?? this.healing,
     shieldHits: shieldHits ?? this.shieldHits,
@@ -318,6 +322,7 @@ class SkillDefinition {
     'returns_to_origin': returnsToOrigin,
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
+    'weapon_grip_inset': weaponGripInset,
     'effect_strength': effectStrength,
     'healing': healing,
     'shield_hits': shieldHits,
@@ -389,6 +394,7 @@ class SkillDefinition {
       returnsToOrigin: value['returns_to_origin'] as bool? ?? false,
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
+      weaponGripInset: decimal('weapon_grip_inset') ?? 0,
       effectStrength: decimal('effect_strength') ?? 1,
       healing: decimal('healing') ?? 10,
       shieldHits: integer('shield_hits') ?? 1,
@@ -456,6 +462,7 @@ class SkillDefinition {
     projectileSize: projectileSize.clamp(0.1, 5),
     projectileSpin: projectileSpin.clamp(-2160, 2160),
     weaponDisplayScale: weaponDisplayScale.clamp(0.25, 3),
+    weaponGripInset: weaponGripInset.clamp(0, 1.5),
     effectStrength: effectStrength.clamp(0, 10),
     healing: healing.clamp(0, 500),
     shieldHits: shieldHits.clamp(0, 20),
@@ -921,6 +928,9 @@ class SkillLibrary {
       returnsToOrigin: kind == PowerUpKind.boomerang,
       trackNearestOpponent: kind == PowerUpKind.shield,
       weaponDisplayScale: 1,
+      weaponGripInset: kind.isBlade || kind == PowerUpKind.busterSword
+          ? 0.2
+          : 0,
       effectStrength: switch (kind) {
         PowerUpKind.speed => tuning.speedFactor,
         PowerUpKind.overcharge => tuning.maximumPowerAmount,

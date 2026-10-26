@@ -91,6 +91,7 @@ Replay and video remain last, by agreement.
 - [x] Expose per-skill damage, DoT, duration, tick interval, range, speed, knockback, stun, freeze, pull, healing, and shield parameters.
 - [x] Expose projectile count, size, sprite/vector rendering, speed, spin, spread/scatter, homing, bounce count, and return behavior.
 - [x] Expose equipped weapon display scale globally or per item.
+- [x] Expose per-weapon grip inset so hilted artwork originates at the ball's hand.
 - [x] Expose Maximum Power's empowerment amount and duration.
 - [x] Expose Repulsor values in Skill Management while retaining legacy Power-up Numbers.
 - [x] Allow Speed to deal configurable damage.
@@ -161,7 +162,7 @@ Replay and video remain last, by agreement.
 - [x] Show the selected arena's automatic themed trap in the player-facing Traps section.
 - [x] Make arena traps admin-configurable without turning them into player pickups.
 - [x] Expose the shared arena-trap configuration in Skill Management > Built-in > Traps as well as legacy Power-up Numbers.
-- [x] Fold Item Rarities into Skill Management while retaining the existing Settings shortcut.
+- [x] Put Item rarity directly in each weapon or power-up editor; retain the Gameplay rarity screen as a clearly labeled legacy editor.
 - [x] Add a Chaotic arena mashup that deploys all four arena-only traps.
 
 ## Phase 9 - Replay links and video export

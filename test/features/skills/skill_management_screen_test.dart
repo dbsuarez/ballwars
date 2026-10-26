@@ -1,26 +1,28 @@
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/skills/presentation/skill_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Widget app({VoidCallback? onResult}) => MaterialApp(
+  Widget app({ValueChanged<SkillManagementResult?>? onResult}) => MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
     home: Builder(
       builder: (context) => TextButton(
         onPressed: () async {
-          await Navigator.of(context).push<SkillManagementResult>(
-            MaterialPageRoute(
-              builder: (_) => const SkillManagementScreen(
-                initial: SkillLibrary.defaults,
-                tuning: PowerUpConfig.defaults,
-              ),
-            ),
-          );
-          onResult?.call();
+          final result = await Navigator.of(context)
+              .push<SkillManagementResult>(
+                MaterialPageRoute(
+                  builder: (_) => const SkillManagementScreen(
+                    initial: SkillLibrary.defaults,
+                    tuning: PowerUpConfig.defaults,
+                  ),
+                ),
+              );
+          onResult?.call(result);
         },
         child: const Text('open'),
       ),
@@ -179,6 +181,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('visual-preview-item')), findsOneWidget);
     expect(find.byKey(const ValueKey('visual-preview-impact')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('skill-field-weaponGripInset')),
+      findsOneWidget,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-field-projectileSize')),
+      '2',
+    );
+    await tester.pump();
+    final projectilePreview = find.descendant(
+      of: find.byKey(const ValueKey('visual-preview-impact')),
+      matching: find.byType(PowerUpIcon),
+    );
+    expect(tester.widget<PowerUpIcon>(projectilePreview).size, 64);
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
     expect(
@@ -281,16 +297,29 @@ void main() {
     expect(result!.tuning.value('arenaTrapInterval'), 20);
   });
 
-  testWidgets('item rarities can be managed inside Skill Management', (
-    tester,
-  ) async {
-    await tester.pumpWidget(app());
+  testWidgets('item rarity is edited directly with its skill', (tester) async {
+    SkillManagementResult? result;
+    await tester.pumpWidget(app(onResult: (value) => result = value));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('manage-item-rarities')));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Pistol',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Epic').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Item rarities'), findsOneWidget);
+    expect(result, isNotNull);
+    expect(result!.tuning.rarityOf(PowerUpKind.pistol), PowerUpRarity.epic);
   });
 
   testWidgets('admin can create a composed skill from scratch', (tester) async {

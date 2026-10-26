@@ -33,7 +33,7 @@ class PowerUpTestScreen extends StatefulWidget {
   State<PowerUpTestScreen> createState() => _PowerUpTestScreenState();
 }
 
-enum _TestMotion { moving, idle, random }
+enum _TestMotion { moving, idle, randomStart }
 
 class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
@@ -69,7 +69,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   MatchMode _mode = MatchMode.arsenal;
   String _layout = 'Separated';
   final _motion = [_TestMotion.moving, _TestMotion.moving];
-  final _randomDirectionBucket = [-1, -1];
+  final _randomStart = math.Random();
   final _items = [PowerUpKind.pistol, PowerUpKind.shield];
   final List<PowerUpKind?> _savedItems = [PowerUpKind.pistol, null];
   final List<PowerUpKind?> _secondaryWeapons = [null, PowerUpKind.shield];
@@ -205,9 +205,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       balls[0].velocity = const Offset(100, 0);
       balls[1].velocity = const Offset(-100, 0);
     }
-    _randomDirectionBucket.fillRange(0, _randomDirectionBucket.length, -1);
     for (var i = 0; i < balls.length; i++) {
       _match!.setTestBallPinned(balls[i], _motion[i] == _TestMotion.idle);
+      if (_motion[i] == _TestMotion.randomStart) {
+        _setRandomStartingDirection(i);
+      }
     }
     for (var i = 0; i < _savedItems.length; i++) {
       _reapplyLoadout(i);
@@ -232,7 +234,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     // Ignore background/resume gaps instead of skipping ahead in the fight.
     if (dt <= 0 || dt > 0.25) return;
     setState(() {
-      _applyRandomDirections();
       _match!.tick(dt * _speed);
     });
     _playTestSounds();
@@ -353,23 +354,15 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       _motion[index] = value;
       final ball = _match!.state.balls[index];
       _match!.setTestBallPinned(ball, value == _TestMotion.idle);
-      _randomDirectionBucket[index] = -1;
-      if (value == _TestMotion.random) _applyRandomDirections(force: true);
+      if (value == _TestMotion.randomStart) {
+        _setRandomStartingDirection(index);
+      }
     });
   }
 
-  void _applyRandomDirections({bool force = false}) {
-    final match = _match!;
-    final bucket = match.stepCount ~/ 60;
-    for (var i = 0; i < _motion.length; i++) {
-      if (_motion[i] != _TestMotion.random ||
-          (!force && _randomDirectionBucket[i] == bucket)) {
-        continue;
-      }
-      _randomDirectionBucket[i] = bucket;
-      final angle = (bucket * 2.399963 + i * math.pi * 0.73) % (math.pi * 2);
-      match.state.balls[i].velocity = Offset.fromDirection(angle, 110);
-    }
+  void _setRandomStartingDirection(int index) {
+    final angle = _randomStart.nextDouble() * math.pi * 2;
+    _match!.state.balls[index].velocity = Offset.fromDirection(angle, 110);
   }
 
   Future<void> _chooseLoadoutItem(
@@ -484,12 +477,17 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: IconButton.filledTonal(
+                    child: IconButton(
                       tooltip: 'Close preview',
                       onPressed: () => Navigator.of(previewContext).maybePop(),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xB3000000),
+                        side: const BorderSide(color: Colors.white70),
+                      ),
                       icon: const CanvasActionGlyph(
                         CanvasActionGlyphType.close,
                         size: 24,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -686,9 +684,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         label: Text('Idle'),
                       ),
                       ButtonSegment(
-                        value: _TestMotion.random,
+                        value: _TestMotion.randomStart,
                         icon: Icon(Icons.shuffle, size: 17),
-                        label: Text('Random'),
+                        label: Text('Random start'),
                       ),
                     ],
                     selected: {_motion[i]},
@@ -717,19 +715,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                 Row(
                   children: [
                     Expanded(child: Text('Ball ${i == 0 ? "A" : "B"} loadout')),
-                    IconButton.filledTonal(
+                    IconButton(
                       key: ValueKey('rearm-loadout-$i'),
                       tooltip: 'Re-arm all for Ball ${i == 0 ? "A" : "B"}',
                       visualDensity: VisualDensity.compact,
                       onPressed: () => setState(() => _reapplyLoadout(i)),
-                      icon: const Icon(Icons.refresh, size: 18),
+                      icon: const CanvasActionGlyph(
+                        CanvasActionGlyphType.refresh,
+                        size: 18,
+                      ),
                     ),
                     IconButton(
                       key: ValueKey('clear-loadout-$i'),
                       tooltip: 'Clear all for Ball ${i == 0 ? "A" : "B"}',
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _clearLoadout(i),
-                      icon: const Icon(Icons.clear_all, size: 19),
+                      icon: const CanvasActionGlyph(
+                        CanvasActionGlyphType.clearAll,
+                        size: 19,
+                      ),
                     ),
                   ],
                 ),
@@ -783,19 +787,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         Row(
           children: [
             const Expanded(child: Text('Arena trap loadout')),
-            IconButton.filledTonal(
+            IconButton(
               key: const ValueKey('rearm-all-arena-traps'),
               tooltip: 'Deploy all arena traps again',
               visualDensity: VisualDensity.compact,
               onPressed: () => setState(_rearmAllTraps),
-              icon: const Icon(Icons.refresh, size: 18),
+              icon: const CanvasActionGlyph(
+                CanvasActionGlyphType.refresh,
+                size: 18,
+              ),
             ),
             IconButton(
               key: const ValueKey('clear-all-arena-traps'),
               tooltip: 'Clear all arena traps',
               visualDensity: VisualDensity.compact,
               onPressed: _clearAllTraps,
-              icon: const Icon(Icons.clear_all, size: 19),
+              icon: const CanvasActionGlyph(
+                CanvasActionGlyphType.clearAll,
+                size: 19,
+              ),
             ),
           ],
         ),

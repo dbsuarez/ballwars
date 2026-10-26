@@ -173,7 +173,7 @@ void main() {
     expect((later - center).distance, closeTo(radius * 2.25, 1e-9));
   });
 
-  test('tornado victim overlay is anchored above the ball', () {
+  test('tornado victim overlay is centered over the ball', () {
     final c = MatchSimulationController(
       _balls,
       arenaRadius: 260,
@@ -183,8 +183,26 @@ void main() {
     );
     final ball = c.state.balls.first..position = const Offset(40, 70);
     final center = PowerUpPainter.tornadoVisualCenter(ball);
-    expect(center.dx, ball.position.dx);
-    expect(center.dy, lessThan(ball.position.dy - ball.radius));
+    expect(center, ball.position);
+  });
+
+  test('hilted blades are held slightly inside their artwork', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: 260,
+      seed: 3,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
+    final ball = c.state.balls.first
+      ..position = Offset.zero
+      ..velocity = const Offset(100, 0);
+
+    for (final blade in const [PowerUpKind.knife, PowerUpKind.sword]) {
+      final center = PowerUpPainter.heldCenter(ball, weapon: blade);
+      expect(center.dx, closeTo(ball.radius * 1.8, 1e-9), reason: blade.label);
+      expect(center.dy, closeTo(0, 1e-9), reason: blade.label);
+    }
   });
 
   test('every selection icon paints visible pixels', () async {

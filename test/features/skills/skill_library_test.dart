@@ -211,6 +211,7 @@ void main() {
           homing: true,
           returnsToOrigin: true,
           weaponDisplayScale: 1.4,
+          weaponGripInset: 0.35,
           effectStrength: 2.2,
           healing: 23,
           shieldHits: 4,
@@ -236,6 +237,7 @@ void main() {
     expect(decoded.homing, isTrue);
     expect(decoded.returnsToOrigin, isTrue);
     expect(decoded.weaponDisplayScale, 1.4);
+    expect(decoded.weaponGripInset, 0.35);
     expect(decoded.effectStrength, 2.2);
     expect(decoded.healing, 23);
     expect(decoded.shieldHits, 4);
@@ -324,6 +326,22 @@ void main() {
           ? SkillCalloutStyle.special
           : SkillCalloutStyle.values[tuning.rarityOf(kind)!.index];
       expect(skill.calloutStyle, expected, reason: kind.label);
+    }
+  });
+
+  test('hilted weapons default to an inset hand grip', () {
+    for (final kind in const [
+      PowerUpKind.knife,
+      PowerUpKind.sword,
+      PowerUpKind.busterSword,
+    ]) {
+      expect(
+        SkillLibrary.defaults
+            .builtIn(kind, PowerUpConfig.defaults)
+            .weaponGripInset,
+        0.2,
+        reason: kind.label,
+      );
     }
   });
 

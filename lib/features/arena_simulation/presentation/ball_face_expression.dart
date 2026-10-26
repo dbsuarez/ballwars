@@ -178,7 +178,11 @@ void paintSmiley(
 /// hand and a second hand on the lower free side; an unarmed smiley carries a
 /// relaxed hand on each side. Draw this after [PowerUpPainter.paintBallEffects]
 /// so the grip sits visibly over the weapon.
-void paintHands(Canvas canvas, SimulationBall ball) {
+void paintHands(
+  Canvas canvas,
+  SimulationBall ball, {
+  double Function(PowerUpKind kind)? weaponGripInset,
+}) {
   final r = ball.radius;
   final held = ball.held;
   if (held == null) {
@@ -203,6 +207,7 @@ void paintHands(Canvas canvas, SimulationBall ball) {
         ball,
         weapon: weapon,
         slot: slot,
+        gripInset: weaponGripInset?.call(weapon),
       );
       final dir = _unit(angle);
       _paintHandAt(
@@ -228,7 +233,10 @@ void paintHands(Canvas canvas, SimulationBall ball) {
   final angle = PowerUpPainter.heldAngle(ball);
   final dir = _unit(angle);
   final side = Offset(-dir.dy, dir.dx);
-  final weaponCenter = PowerUpPainter.heldCenter(ball);
+  final weaponCenter = PowerUpPainter.heldCenter(
+    ball,
+    gripInset: weaponGripInset?.call(held),
+  );
   final Offset grip;
   if (held == PowerUpKind.shield) {
     grip = ball.position + dir * (r * 0.95);

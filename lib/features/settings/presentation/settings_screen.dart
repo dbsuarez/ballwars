@@ -4,7 +4,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/presentation/my_groups_screen.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
-import '../../skills/domain/skill_library.dart';
 import '../../skills/presentation/skill_management_screen.dart';
 import '../domain/app_settings.dart';
 import 'power_up_tuning_screen.dart';
@@ -714,10 +713,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onPressed: _busy
                                       ? null
                                       : () async {
-                                          final library =
+                                          final result =
                                               await Navigator.of(
                                                 context,
-                                              ).push<SkillLibrary>(
+                                              ).push<SkillManagementResult>(
                                                 MaterialPageRoute(
                                                   builder: (_) =>
                                                       SkillManagementScreen(
@@ -728,7 +727,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                       ),
                                                 ),
                                               );
-                                          if (!mounted || library == null) {
+                                          if (!mounted || result == null) {
                                             return;
                                           }
                                           final current = AppSettingsScope.of(
@@ -736,9 +735,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           );
                                           await _save(
                                             current.copyWith(
-                                              skillLibrary: library,
-                                              powerUps: library.applyTo(
-                                                current.powerUps,
+                                              skillLibrary: result.library,
+                                              powerUps: result.library.applyTo(
+                                                result.tuning,
                                               ),
                                             ),
                                             done:

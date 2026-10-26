@@ -158,6 +158,8 @@ Replay and video remain last, by agreement.
 - [x] Let players choose and remember an arena in match setup while retaining the admin arena configuration surface.
 - [x] Show the selected arena's automatic themed trap in the player-facing Traps section.
 - [x] Make arena traps admin-configurable without turning them into player pickups.
+- [x] Expose the shared arena-trap configuration in Skill Management > Built-in > Traps as well as legacy Power-up Numbers.
+- [x] Fold Item Rarities into Skill Management while retaining the existing Settings shortcut.
 - [x] Add a Chaotic arena mashup that deploys all four arena-only traps.
 
 ## Phase 9 - Replay links and video export

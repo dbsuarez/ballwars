@@ -12,7 +12,7 @@ void main() {
     home: Builder(
       builder: (context) => TextButton(
         onPressed: () async {
-          await Navigator.of(context).push<SkillLibrary>(
+          await Navigator.of(context).push<SkillManagementResult>(
             MaterialPageRoute(
               builder: (_) => const SkillManagementScreen(
                 initial: SkillLibrary.defaults,
@@ -134,14 +134,14 @@ void main() {
   testWidgets('admin can duplicate, edit and save a custom skill', (
     tester,
   ) async {
-    SkillLibrary? result;
+    SkillManagementResult? result;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              result = await Navigator.of(context).push<SkillLibrary>(
+              result = await Navigator.of(context).push<SkillManagementResult>(
                 MaterialPageRoute(
                   builder: (_) => const SkillManagementScreen(
                     initial: SkillLibrary.defaults,
@@ -217,13 +217,80 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(result, isNotNull);
-    expect(result!.custom.single.name, 'Heavy Pistol');
-    expect(result!.custom.single.arsenalDamage, 42);
-    expect(result!.custom.single.enabled, isTrue);
+    expect(result!.library.custom.single.name, 'Heavy Pistol');
+    expect(result!.library.custom.single.arsenalDamage, 42);
+    expect(result!.library.custom.single.enabled, isTrue);
     expect(
-      result!.applyTo(PowerUpConfig.defaults).arenaDamage(PowerUpKind.pistol),
+      result!.library
+          .applyTo(PowerUpConfig.defaults)
+          .arenaDamage(PowerUpKind.pistol),
       42,
     );
+  });
+
+  testWidgets('arena trap tuning is available in the built-in Traps tab', (
+    tester,
+  ) async {
+    SkillManagementResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              result = await Navigator.of(context).push<SkillManagementResult>(
+                MaterialPageRoute(
+                  builder: (_) => const SkillManagementScreen(
+                    initial: SkillLibrary.defaults,
+                    tuning: PowerUpConfig.defaults,
+                  ),
+                ),
+              );
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Traps'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('arena-trap-config-card')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('never collectibles'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('arena-trap-config-card')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('arena-trap-arenaTrapInterval')),
+      '20',
+    );
+    await tester.tap(find.byKey(const ValueKey('arena-traps-enabled')));
+    await tester.tap(find.byKey(const ValueKey('save-arena-trap-config')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Disabled'), findsOneWidget);
+    expect(find.textContaining('every 20s'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(result, isNotNull);
+    expect(result!.tuning.arenaTrapsEnabled, isFalse);
+    expect(result!.tuning.value('arenaTrapInterval'), 20);
+  });
+
+  testWidgets('item rarities can be managed inside Skill Management', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('manage-item-rarities')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Item rarities'), findsOneWidget);
   });
 
   testWidgets('admin can create a composed skill from scratch', (tester) async {

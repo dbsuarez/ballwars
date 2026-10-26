@@ -14,6 +14,7 @@ import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../settings/presentation/power_up_test_screen.dart';
+import '../../settings/presentation/power_up_rarity_screen.dart';
 import '../domain/skill_library.dart';
 
 class SkillManagementScreen extends StatefulWidget {
@@ -30,8 +31,16 @@ class SkillManagementScreen extends StatefulWidget {
   State<SkillManagementScreen> createState() => _SkillManagementScreenState();
 }
 
+class SkillManagementResult {
+  const SkillManagementResult({required this.library, required this.tuning});
+
+  final SkillLibrary library;
+  final PowerUpConfig tuning;
+}
+
 class _SkillManagementScreenState extends State<SkillManagementScreen> {
   late SkillLibrary _library = widget.initial;
+  late PowerUpConfig _tuning = widget.tuning;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
@@ -132,7 +141,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       builder: (_) => _SkillEditor(skill: skill),
     );
     if (edited == null || !mounted) return;
-    setState(() => _library = _library.withDefinition(edited, widget.tuning));
+    setState(() => _library = _library.withDefinition(edited, _tuning));
   }
 
   Future<void> _duplicate(SkillDefinition source) async {
@@ -164,7 +173,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
     if (name == null || !mounted) return;
     final copy = _library.duplicate(source, name);
-    setState(() => _library = _library.withDefinition(copy, widget.tuning));
+    setState(() => _library = _library.withDefinition(copy, _tuning));
     await _edit(copy);
   }
 
@@ -219,15 +228,15 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       ),
     );
     if (draft == null || !mounted) return;
-    setState(() => _library = _library.withDefinition(draft, widget.tuning));
+    setState(() => _library = _library.withDefinition(draft, _tuning));
     await _edit(draft);
   }
 
-  Widget _list(bool custom, {String? category}) {
+  Widget _list(bool custom, {String? category, Widget? header}) {
     final query = _query.trim().toLowerCase();
     final skills =
         _library
-            .all(widget.tuning)
+            .all(_tuning)
             .where((skill) => skill.custom == custom)
             .where(
               (skill) =>
@@ -245,7 +254,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           ..sort(
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
           );
-    if (skills.isEmpty) {
+    final visibleHeader = _query.isEmpty ? header : null;
+    if (skills.isEmpty && visibleHeader == null) {
       return AnimatedEmptyState(
         icon: custom ? Icons.auto_awesome_outlined : Icons.search_off,
         message: custom
@@ -255,12 +265,13 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-      itemCount: skills.length,
+      itemCount: skills.length + (visibleHeader == null ? 0 : 1),
       itemBuilder: (context, index) {
-        final skill = skills[index];
+        if (visibleHeader != null && index == 0) return visibleHeader;
+        final skill = skills[index - (visibleHeader == null ? 0 : 1)];
         final tierLabel = skill.baseKind.isTrap
             ? 'Special'
-            : widget.tuning.rarityOf(skill.baseKind)!.label;
+            : _tuning.rarityOf(skill.baseKind)!.label;
         final details = <String>[
           tierLabel,
           if (skill.custom) skill.enabled ? 'Active' : 'Inactive',
@@ -281,7 +292,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               style: TextStyle(
                 color: skill.baseKind.isTrap
                     ? const Color(0xFFFFD54F)
-                    : widget.tuning.rarityOf(skill.baseKind)?.color,
+                    : _tuning.rarityOf(skill.baseKind)?.color,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -326,6 +337,160 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       ? 'Traps'
       : 'Power-ups';
 
+  Future<void> _editArenaTraps() async {
+    final fields = PowerUpConfig.fields
+        .where((field) => field.group == 'Arena traps')
+        .toList();
+    final controllers = <String, TextEditingController>{
+      for (final field in fields.where(
+        (field) => field.id != 'arenaTrapsEnabled',
+      ))
+        field.id: TextEditingController(
+          text: _formatTuning(field, _tuning.value(field.id)),
+        ),
+    };
+    var enabled = _tuning.arenaTrapsEnabled;
+    var draft = _tuning;
+    final result = await showDialog<PowerUpConfig>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: const Text('Arena trap configuration'),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    key: const ValueKey('arena-traps-enabled'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enable automatic arena traps'),
+                    subtitle: const Text(
+                      'Arena fixtures spawn automatically and are never collectibles.',
+                    ),
+                    value: enabled,
+                    onChanged: (value) => refresh(() => enabled = value),
+                  ),
+                  const Divider(),
+                  for (final field in fields.where(
+                    (field) => field.id != 'arenaTrapsEnabled',
+                  ))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: TextField(
+                        key: ValueKey('arena-trap-${field.id}'),
+                        controller: controllers[field.id],
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,4}'),
+                          ),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: field.label,
+                          suffixText: _tuningUnit(field),
+                          helperText:
+                              'Default ${_formatTuning(field, field.defaultValue)} • ${_formatTuning(field, field.min)}–${_formatTuning(field, field.max)}',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              key: const ValueKey('restore-arena-trap-defaults'),
+              onPressed: () {
+                refresh(() {
+                  enabled = true;
+                  for (final field in fields.where(
+                    (field) => field.id != 'arenaTrapsEnabled',
+                  )) {
+                    controllers[field.id]!.text = _formatTuning(
+                      field,
+                      field.defaultValue,
+                    );
+                  }
+                });
+              },
+              child: const Text('Restore defaults'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const ValueKey('save-arena-trap-config'),
+              onPressed: () {
+                draft = draft.withValue('arenaTrapsEnabled', enabled ? 1 : 0);
+                for (final field in fields.where(
+                  (field) => field.id != 'arenaTrapsEnabled',
+                )) {
+                  final value = num.tryParse(controllers[field.id]!.text);
+                  if (value != null) draft = draft.withValue(field.id, value);
+                }
+                Navigator.pop(context, draft);
+              },
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+    // Let the dialog's reverse transition detach its text fields before their
+    // controllers are released.
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    for (final controller in controllers.values) {
+      controller.dispose();
+    }
+    if (result != null && mounted) setState(() => _tuning = result);
+  }
+
+  Future<void> _editItemRarities() async {
+    final result = await Navigator.of(context).push<PowerUpConfig>(
+      MaterialPageRoute(builder: (_) => PowerUpRarityScreen(initial: _tuning)),
+    );
+    if (result != null && mounted) setState(() => _tuning = result);
+  }
+
+  static String _formatTuning(TuningField field, num value) {
+    if (field.integer) return '${value.round()}';
+    return value.toStringAsFixed(4).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  static String _tuningUnit(TuningField field) => switch (field.unit) {
+    TuningUnit.seconds => 'seconds',
+    TuningUnit.percent => '%',
+    TuningUnit.ratio => 'ratio',
+    TuningUnit.count => '',
+  };
+
+  Widget _arenaTrapCard() => Card(
+    key: const ValueKey('arena-trap-config-card'),
+    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+    child: ListTile(
+      minVerticalPadding: 14,
+      leading: const Icon(Icons.tune, color: Color(0xFFFFD54F), size: 34),
+      title: const Text(
+        'Arena trap configuration',
+        style: TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(
+        '${_tuning.arenaTrapsEnabled ? "Enabled" : "Disabled"} • '
+        'every ${_formatTuning(PowerUpConfig.fields.firstWhere((f) => f.id == "arenaTrapInterval"), _tuning.value("arenaTrapInterval"))}s • '
+        '${_formatTuning(PowerUpConfig.fields.firstWhere((f) => f.id == "arenaTrapDuration"), _tuning.value("arenaTrapDuration"))}s active\n'
+        'Automatic arena fixtures — never collectibles.',
+      ),
+      isThreeLine: true,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: _editArenaTraps,
+    ),
+  );
+
   Widget _builtInSkills() => DefaultTabController(
     length: 3,
     child: Column(
@@ -343,7 +508,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             children: [
               _list(false, category: 'Weapons'),
               _list(false, category: 'Power-ups'),
-              _list(false, category: 'Traps'),
+              _list(false, category: 'Traps', header: _arenaTrapCard()),
             ],
           ),
         ),
@@ -360,6 +525,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         appBar: AppBar(
           title: const Text('Skill Management'),
           actions: [
+            IconButton(
+              key: const ValueKey('manage-item-rarities'),
+              tooltip: 'Item rarities',
+              onPressed: _editItemRarities,
+              icon: const Icon(Icons.diamond_outlined),
+            ),
             IconButton(
               key: const ValueKey('import-skill-library'),
               tooltip: 'Import versioned JSON',
@@ -445,7 +616,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => Navigator.pop(context, _library),
+                    onPressed: () => Navigator.pop(
+                      context,
+                      SkillManagementResult(library: _library, tuning: _tuning),
+                    ),
                     child: const Text('Save'),
                   ),
                 ),

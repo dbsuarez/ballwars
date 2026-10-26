@@ -372,6 +372,28 @@ class PowerUpSprites {
       ),
     );
 
+    final phaseEightFrames = await SpriteAssetPipeline.load(
+      const SpriteSheetSpec(
+        name: 'Phase 8 skills',
+        asset: 'assets/sprites/phase8-skills.png',
+        columns: 4,
+        rows: 1,
+        cellWidth: 440,
+        cellHeight: 440,
+        safeInset: 12,
+        outputSize: 64,
+      ),
+    );
+    const phaseEightKinds = [
+      PowerUpKind.friedChicken,
+      PowerUpKind.sniperRifle,
+      PowerUpKind.busterSword,
+      PowerUpKind.ragingDemon,
+    ];
+    for (var index = 0; index < phaseEightKinds.length; index++) {
+      _images[phaseEightKinds[index]] = phaseEightFrames[index];
+    }
+
     final rocketData = await rootBundle.load(
       'assets/sprites/rocket-launcher.png',
     );

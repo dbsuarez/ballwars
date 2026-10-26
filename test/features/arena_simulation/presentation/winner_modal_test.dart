@@ -12,6 +12,35 @@ void main() {
     glowColor: Colors.cyan,
   );
 
+  test('series ranking uses wins, then losses, then remaining HP', () {
+    const beta = CustomBall(
+      id: 'b',
+      name: 'Beta',
+      primaryColor: Colors.red,
+      glowColor: Colors.red,
+    );
+    const gamma = CustomBall(
+      id: 'c',
+      name: 'Gamma',
+      primaryColor: Colors.blue,
+      glowColor: Colors.blue,
+    );
+    const delta = CustomBall(
+      id: 'd',
+      name: 'Delta',
+      primaryColor: Colors.green,
+      glowColor: Colors.green,
+    );
+    final ranked = rankSeriesStandings([
+      (ball: winner, wins: 3, losses: 2, hp: 90),
+      (ball: beta, wins: 4, losses: 3, hp: 100),
+      (ball: gamma, wins: 3, losses: 1, hp: 20),
+      (ball: delta, wins: 3, losses: 1, hp: 70),
+    ]);
+
+    expect(ranked.map((entry) => entry.ball.id), ['b', 'd', 'c', 'a']);
+  });
+
   Future<void> pump(
     WidgetTester tester, {
     void Function(bool, bool)? onSlowAnswer,
@@ -113,23 +142,41 @@ void main() {
       expect(tester.hasRunningAnimations, isFalse);
     },
   );
-  testWidgets('Mayhem winner screen ranks the complete knockout tally', (tester) async {
-    const other = CustomBall(id: 'b', name: 'Beta', primaryColor: Colors.red, glowColor: Colors.red);
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.build(AppPalettes.midnight),
-      home: Scaffold(body: WinnerModal(
-        winner: winner, mayhemTally: const [(other, 4, 25.0), (winner, 4, 72.5)],
-        showEffects: false, onReplay: () {}, onPlayAgain: () {}, onExit: () {},
-      )),
-    ));
+  testWidgets('Mayhem winner screen ranks the complete knockout tally', (
+    tester,
+  ) async {
+    const other = CustomBall(
+      id: 'b',
+      name: 'Beta',
+      primaryColor: Colors.red,
+      glowColor: Colors.red,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Scaffold(
+          body: WinnerModal(
+            winner: winner,
+            mayhemTally: const [(other, 4, 25.0), (winner, 4, 72.5)],
+            showEffects: false,
+            onReplay: () {},
+            onPlayAgain: () {},
+            onExit: () {},
+          ),
+        ),
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('MAYHEM TALLY'), findsOneWidget);
     expect(find.text('4 KOs'), findsNWidgets(2));
     expect(find.text('72.5 HP'), findsOneWidget);
     expect(find.text('25.0 HP'), findsOneWidget);
-    final first = tester.getTopLeft(find.byKey(const ValueKey('mayhem-result-a')));
-    final second = tester.getTopLeft(find.byKey(const ValueKey('mayhem-result-b')));
+    final first = tester.getTopLeft(
+      find.byKey(const ValueKey('mayhem-result-a')),
+    );
+    final second = tester.getTopLeft(
+      find.byKey(const ValueKey('mayhem-result-b')),
+    );
     expect(first.dy, lessThan(second.dy));
   });
-
 }

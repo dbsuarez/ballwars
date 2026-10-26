@@ -38,7 +38,9 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
 
   static String _format(TuningField f, num value) {
     if (f.integer) return '${value.round()}';
-    final s = value.toStringAsFixed(2);
+    // Keep small force/ratio defaults exact when the form is opened and saved
+    // without edits (for example the 0.012 Gravity Well force).
+    final s = value.toStringAsFixed(4);
     return s.replaceFirst(RegExp(r'\.?0+$'), '');
   }
 

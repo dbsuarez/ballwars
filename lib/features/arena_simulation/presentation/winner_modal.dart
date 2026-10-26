@@ -6,6 +6,19 @@ import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import 'confetti_painter.dart';
 
+typedef SeriesStanding = ({CustomBall ball, int wins, int losses, double hp});
+
+List<SeriesStanding> rankSeriesStandings(List<SeriesStanding> standings) =>
+    [...standings]..sort((a, b) {
+      final wins = b.wins.compareTo(a.wins);
+      if (wins != 0) return wins;
+      final losses = a.losses.compareTo(b.losses);
+      if (losses != 0) return losses;
+      final hp = b.hp.compareTo(a.hp);
+      if (hp != 0) return hp;
+      return a.ball.name.toLowerCase().compareTo(b.ball.name.toLowerCase());
+    });
+
 /// The end-of-round card over the arena: the winner, the result, and what
 /// to do next. Confetti falls behind it.
 class WinnerModal extends StatefulWidget {
@@ -36,10 +49,10 @@ class WinnerModal extends StatefulWidget {
   final VoidCallback? onShareLink;
 
   /// Multi-round series: the round just played, the score so far (name,
-  /// wins) and whether a ball has now won the series. While it isn't over,
+  /// wins, losses and remaining HP) and whether a ball has now won the series. While it isn't over,
   /// [onNextRound] shows NEXT ROUND as the main button.
   final int? round;
-  final List<(String, int)>? score;
+  final List<SeriesStanding>? score;
   final bool seriesOver;
   final VoidCallback? onNextRound;
 
@@ -217,36 +230,91 @@ class _WinnerModalState extends State<WinnerModal>
       margin: const EdgeInsets.only(top: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('MAYHEM TALLY', style: AppText.mono(12, color: c.muted)),
-          Text('Knockouts first / remaining life breaks ties',
-              style: AppText.ui(11, FontWeight.w500, color: c.muted)),
-          const SizedBox(height: 6),
-          for (var i = 0; i < rows.length; i++)
-            Builder(builder: (context) {
-              final (ball, knockouts, life) = rows[i];
-              final rank = rows.indexWhere((row) => row.$2 == knockouts && row.$3 == life) + 1;
-              return Padding(
-                key: ValueKey('mayhem-result-${ball.id}'),
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(children: [
-                  SizedBox(width: 24, child: Text('$rank', style: AppText.mono(12, color: c.muted))),
-                  Container(width: 8, height: 8, decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: ball.primaryColor)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(ball.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: AppText.ui(13, FontWeight.w700, color: c.text))),
-                  SizedBox(width: 22, child: ball.id == widget.winner.id
-                      ? Icon(Icons.emoji_events, size: 16, color: c.text) : null),
-                  SizedBox(width: 54, child: Text('$knockouts KOs', textAlign: TextAlign.right,
-                      style: AppText.mono(12, color: c.text))),
-                  const SizedBox(width: 8),
-                  SizedBox(width: 72, child: Text('${life.toStringAsFixed(1)} HP', textAlign: TextAlign.right,
-                      style: AppText.mono(12, color: c.muted))),
-                ]),
-              );
-            }),
-        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('MAYHEM TALLY', style: AppText.mono(12, color: c.muted)),
+            Text(
+              'Knockouts first / remaining life breaks ties',
+              style: AppText.ui(11, FontWeight.w500, color: c.muted),
+            ),
+            const SizedBox(height: 6),
+            for (var i = 0; i < rows.length; i++)
+              Builder(
+                builder: (context) {
+                  final (ball, knockouts, life) = rows[i];
+                  final rank =
+                      rows.indexWhere(
+                        (row) => row.$2 == knockouts && row.$3 == life,
+                      ) +
+                      1;
+                  return Padding(
+                    key: ValueKey('mayhem-result-${ball.id}'),
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 24,
+                          child: Text(
+                            '$rank',
+                            style: AppText.mono(12, color: c.muted),
+                          ),
+                        ),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: ball.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            ball.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.ui(
+                              13,
+                              FontWeight.w700,
+                              color: c.text,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 22,
+                          child: ball.id == widget.winner.id
+                              ? Icon(
+                                  Icons.emoji_events,
+                                  size: 16,
+                                  color: c.text,
+                                )
+                              : null,
+                        ),
+                        SizedBox(
+                          width: 54,
+                          child: Text(
+                            '$knockouts KOs',
+                            textAlign: TextAlign.right,
+                            style: AppText.mono(12, color: c.text),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 72,
+                          child: Text(
+                            '${life.toStringAsFixed(1)} HP',
+                            textAlign: TextAlign.right,
+                            style: AppText.mono(12, color: c.muted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -417,8 +485,11 @@ class _WinnerModalState extends State<WinnerModal>
                               border: Border.all(color: c.border),
                             ),
                             child: Text(
-                              score
-                                  .map((e) => '${e.$1}  ${e.$2}')
+                              rankSeriesStandings(score)
+                                  .map(
+                                    (entry) =>
+                                        '${entry.ball.name}  ${entry.wins}W-${entry.losses}L  ${entry.hp.toStringAsFixed(0)} HP',
+                                  )
                                   .join('   ·   '),
                               textAlign: TextAlign.center,
                               style: AppText.mono(14, color: c.text),

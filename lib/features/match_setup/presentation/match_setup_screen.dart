@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../settings/presentation/app_settings_scope.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -84,6 +85,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _mayhem = false;
   int _mayhemSeconds = 120;
   bool _shrinkingArena = false;
+  ArenaDecoration? _arenaDecoration;
   bool _finishersOn = true;
   bool _settingCards = true;
 
@@ -131,6 +133,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final duration =
         int.tryParse(await DevicePrefs.read('mayhem-seconds') ?? '120') ?? 120;
     final shrinkingArena = await DevicePrefs.read('shrinking-arena');
+    final arenaDecoration = await DevicePrefs.read('arena-decoration-user');
     final legacy = await DevicePrefs.read('power-ups');
     for (final gameMode in MatchMode.values) {
       final saved =
@@ -170,6 +173,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           ? duration
           : 120;
       _shrinkingArena = shrinkingArena == '1';
+      _arenaDecoration = ArenaDecoration.values
+          .where((value) => value.name == arenaDecoration)
+          .firstOrNull;
       _powerUps = _modePowerUps[_mode];
       _showEffects = effects;
       _finishersOn = finishers;
@@ -342,6 +348,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         },
         arsenal: _mode == MatchMode.arsenal,
         config: AppSettingsScope.of(context).powerUps,
+        arenaDecoration:
+            _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
       ),
     );
     if (chosen == null || !mounted) return;
@@ -399,6 +407,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mayhemSeconds: _mayhemSeconds,
         shrinkingArena: _shrinkingArena,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
+        arenaDecoration:
+            _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode == MatchMode.threads
             ? PowerUpConfig.defaults
@@ -1205,6 +1215,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       ]),
       _settingsGroup('Appearance', [
         _choice(
+          Icons.stadium_outlined,
+          'Arena',
+          ArenaDecoration.values,
+          _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+          (v) => v.label,
+          (v) {
+            _update(() => _arenaDecoration = v);
+            DevicePrefs.write('arena-decoration-user', v.name);
+          },
+        ),
+        _choice(
           Icons.auto_fix_high,
           'Effects',
           const [true, false],
@@ -1364,11 +1385,13 @@ class _WeaponsDialog extends StatefulWidget {
   final Set<PowerUpKind> initial;
   final bool arsenal;
   final PowerUpConfig config;
+  final ArenaDecoration arenaDecoration;
 
   const _WeaponsDialog({
     required this.initial,
     required this.arsenal,
     required this.config,
+    required this.arenaDecoration,
   });
 
   @override
@@ -1476,8 +1499,89 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
         ),
       ),
       _cardGrid(kinds, selectable: false),
+      if (widget.arenaDecoration != ArenaDecoration.defaultArena)
+        _arenaHazardCard(),
     ],
   );
+
+  Widget _arenaHazardCard() {
+    final enabled = widget.config.arenaTrapsEnabled;
+    final (name, description, icon, color) = switch (widget.arenaDecoration) {
+      ArenaDecoration.space => (
+        'Gravity Well',
+        'Pulls nearby balls inward at ${widget.config.gravityWellForce.toStringAsFixed(3)} force.',
+        Icons.blur_circular,
+        const Color(0xFF738BFF),
+      ),
+      ArenaDecoration.desert => (
+        'Quicksand',
+        'Slows balls and deals ${widget.config.quicksandDamage.toStringAsFixed(0)} damage per DoT.',
+        Icons.blur_on,
+        const Color(0xFFD89A52),
+      ),
+      ArenaDecoration.wilderness => (
+        'Vine Snare',
+        'Roots a caught ball for ${(widget.config.vineSnareSteps / 60).toStringAsFixed(1)} seconds.',
+        Icons.grass,
+        const Color(0xFF58A85F),
+      ),
+      ArenaDecoration.neonGrid => (
+        'Laser Gate',
+        'A rotating gate deals ${widget.config.laserGateDamage.toStringAsFixed(0)} damage per crossing.',
+        Icons.horizontal_rule,
+        const Color(0xFF00E5FF),
+      ),
+      ArenaDecoration.chaotic => (
+        'All Arena Traps',
+        'Gravity Well, Quicksand, Vine Snare, and Laser Gate deploy together.',
+        Icons.cyclone,
+        const Color(0xFFFF4FD8),
+      ),
+      ArenaDecoration.defaultArena => throw StateError('No extra arena trap'),
+    };
+    final appColors = BallWarsColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      child: Card(
+        key: const ValueKey('arena-theme-trap-card'),
+        margin: EdgeInsets.zero,
+        color: appColors.surfaceHigh,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withValues(alpha: 0.18),
+                foregroundColor: color,
+                child: Icon(icon),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: Theme.of(context).textTheme.titleSmall),
+                    Text(
+                      '${widget.arenaDecoration.label} arena trap - ${enabled ? "automatic" : "disabled by admin"}',
+                      style: TextStyle(fontSize: 10, color: appColors.muted),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: appColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.lock_outline_rounded, size: 22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _cardGrid(Iterable<PowerUpKind> kinds, {required bool selectable}) =>
       LayoutBuilder(

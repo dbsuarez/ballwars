@@ -63,6 +63,10 @@ class PowerUpPainter {
     PowerUpKind.tornado: Color(0xFFBCEEFF),
     PowerUpKind.energyWave: Color(0xFF31DFFF),
     PowerUpKind.flamethrower: Color(0xFFFF6422),
+    PowerUpKind.friedChicken: Color(0xFFFFB43B),
+    PowerUpKind.sniperRifle: Color(0xFFFFC107),
+    PowerUpKind.busterSword: Color(0xFFCFB6FF),
+    PowerUpKind.ragingDemon: Color(0xFF8F001D),
   };
 
   /// The color a power-up is drawn in.
@@ -83,6 +87,87 @@ class PowerUpPainter {
     final p = state.powerUps;
     if (p == null) return;
     final r = p.fieldRadius;
+
+    if (p.ragingDemonAttacks.isNotEmpty) {
+      canvas.drawCircle(
+        Offset.zero,
+        arenaRadius,
+        Paint()..color = const Color(0xFF050006).withValues(alpha: 0.82),
+      );
+      for (final attack in p.ragingDemonAttacks) {
+        final pulse = 0.65 + 0.35 * math.sin(attack.age * 1.7).abs();
+        canvas.drawCircle(
+          attack.target.position,
+          r * (1.2 + pulse * 0.6),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(3, r * 0.22)
+            ..color = const Color(0xFFFF1738).withValues(alpha: pulse),
+        );
+        for (var i = 0; i < 6; i++) {
+          final angle = attack.age * 0.31 + i * math.pi / 3;
+          final direction = Offset.fromDirection(angle);
+          canvas.drawLine(
+            attack.target.position - direction * r * 0.35,
+            attack.target.position + direction * r * 1.45,
+            Paint()
+              ..strokeWidth = math.max(2, r * 0.13)
+              ..color = Colors.white.withValues(alpha: pulse * 0.85),
+          );
+        }
+      }
+    }
+
+    if (p.omnislashAttacks.isNotEmpty) {
+      canvas.drawCircle(
+        Offset.zero,
+        arenaRadius,
+        Paint()..color = const Color(0xFF020818).withValues(alpha: 0.58),
+      );
+      for (final attack in p.omnislashAttacks) {
+        for (var i = 0; i < attack.hitsShown; i++) {
+          final angle = i * math.pi / 4 + attack.age * 0.035;
+          final direction = Offset.fromDirection(angle);
+          canvas.drawLine(
+            attack.target.position - direction * r * 1.6,
+            attack.target.position + direction * r * 1.6,
+            Paint()
+              ..strokeWidth = math.max(2, r * 0.16)
+              ..color =
+                  (i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFFFD54F))
+                      .withValues(alpha: 0.86),
+          );
+        }
+      }
+    }
+
+    for (final flash in p.sniperFlashes) {
+      final fade = (1 - flash.age / 24).clamp(0.0, 1.0);
+      final from = flash.owner.position;
+      final to = flash.target.position;
+      canvas.drawLine(
+        from,
+        to,
+        Paint()
+          ..strokeWidth = math.max(4, r * 0.3)
+          ..color = Colors.white.withValues(alpha: fade),
+      );
+      canvas.drawLine(
+        from,
+        to,
+        Paint()
+          ..strokeWidth = math.max(1.5, r * 0.1)
+          ..color = const Color(0xFFFFD54F).withValues(alpha: fade),
+      );
+      canvas.drawCircle(
+        to,
+        r * (0.55 + flash.age * 0.08),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, r * 0.16)
+          ..color = const Color(0xFFFFD54F).withValues(alpha: fade),
+      );
+    }
 
     for (final hazard in p.arenaThemeHazards) {
       _paintArenaThemeHazard(canvas, hazard, arenaRadius, r, state.step);
@@ -265,29 +350,6 @@ class PowerUpPainter {
               0xFFFFB23F,
             ).withValues(alpha: 0.65 - i * 0.16),
         );
-      }
-    }
-    for (final tornado in p.tornadoes) {
-      final frame = PowerUpSprites.effectFrame(
-        AnimatedEffect.tornado,
-        (state.step ~/ 3) % 8,
-      );
-      if (frame != null) {
-        _drawEffect(canvas, frame, tornado.position, r * 2.2, 0);
-      } else {
-        for (var i = 0; i < 3; i++) {
-          canvas.drawOval(
-            Rect.fromCenter(
-              center: tornado.position + Offset(0, (i - 1) * r * 0.45),
-              width: r * (3.2 - i * 0.55),
-              height: r * 0.55,
-            ),
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = math.max(2, r * 0.12)
-              ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.75),
-          );
-        }
       }
     }
     for (final attack in p.energyWaveAttacks) {
@@ -1049,6 +1111,43 @@ class PowerUpPainter {
       for (final shift in [-1.0, 1.0]) {
         final o = m.position + across * shift;
         canvas.drawLine(o - along, o + along, paint);
+      }
+    }
+  }
+
+  /// Tornadoes that have reached a victim sit above that ball and are painted
+  /// after contestants, so the funnel visibly overlaps the top of the ball.
+  static Offset tornadoVisualCenter(SimulationBall target) =>
+      target.position - Offset(0, target.radius * 1.35);
+
+  static void paintTornadoOverlays(Canvas canvas, SimulationState state) {
+    final p = state.powerUps;
+    if (p == null) return;
+    for (final tornado in p.tornadoes) {
+      final target = tornado.target;
+      if (target.isEliminated) continue;
+      final center = tornadoVisualCenter(target);
+      final half = target.radius * 1.65;
+      final frame = PowerUpSprites.effectFrame(
+        AnimatedEffect.tornado,
+        (state.step ~/ 3) % 8,
+      );
+      if (frame != null) {
+        _drawEffect(canvas, frame, center, half, 0);
+      } else {
+        for (var i = 0; i < 3; i++) {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: center + Offset(0, (i - 1) * target.radius * 0.38),
+              width: target.radius * (2.8 - i * 0.5),
+              height: target.radius * 0.5,
+            ),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(2, target.radius * 0.12)
+              ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.8),
+          );
+        }
       }
     }
   }

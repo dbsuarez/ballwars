@@ -251,4 +251,17 @@ void main() {
     expect(decoded.frozenDamageMultiplier, 2);
     expect(decoded.frozenCollisionDamage, 8);
   });
+
+  test('arena trap controls are configurable and replay-safe', () {
+    final config = PowerUpConfig.defaults
+        .withValue('arenaTrapsEnabled', 0)
+        .withValue('arenaTrapInterval', 22)
+        .withValue('gravityWellForce', 0.04)
+        .withValue('laserGateDamage', 17);
+    final decoded = PowerUpConfig.decode(config.encode()!)!;
+    expect(decoded.arenaTrapsEnabled, isFalse);
+    expect(decoded.arenaTrapIntervalSteps, 22 * 60);
+    expect(decoded.gravityWellForce, 0.04);
+    expect(decoded.laserGateDamage, 17);
+  });
 }

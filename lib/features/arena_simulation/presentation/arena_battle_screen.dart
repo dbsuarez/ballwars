@@ -131,6 +131,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   // Series of rounds (MatchConfig.winsNeeded): round number and wins so far.
   int _round = 1;
   final Map<String, int> _roundWins = {};
+  final Map<String, int> _roundLosses = {};
   bool _roundCounted = false;
 
   bool get _seriesOver =>
@@ -179,7 +180,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       shrinkingArena: widget.config.shrinkingArena,
       minimumArenaScale: widget.config.minimumArenaScale,
       bloodColor: AppSettingsScope.of(context).bloodColor,
-      arenaDecoration: AppSettingsScope.of(context).arenaDecoration,
+      arenaDecoration: widget.config.arenaDecoration,
       automaticSpeedUp: widget.config.automaticSpeedUp,
     );
     _roundCounted = replaySeed != null;
@@ -289,6 +290,14 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                 (w) => w + 1,
                 ifAbsent: () => 1,
               );
+              for (final contestant in widget.config.contestants) {
+                if (contestant.id == _winnerBall!.id) continue;
+                _roundLosses.update(
+                  contestant.id,
+                  (losses) => losses + 1,
+                  ifAbsent: () => 1,
+                );
+              }
             }
           });
         });
@@ -436,6 +445,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       mayhemSeconds: widget.config.mayhemSeconds,
       shrinkingArena: widget.config.shrinkingArena,
       minimumArenaScale: widget.config.minimumArenaScale,
+      arenaDecoration: widget.config.arenaDecoration,
     ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -473,6 +483,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       _seedBase = null;
       _round = 1;
       _roundWins.clear();
+      _roundLosses.clear();
       _initMatch();
     });
   }
@@ -685,9 +696,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               arenaSubtitle: AppSettingsScope.of(
                                 context,
                               ).arenaSubtitle,
-                              arenaDecoration: AppSettingsScope.of(
-                                context,
-                              ).arenaDecoration,
+                              arenaDecoration: widget.config.arenaDecoration,
                               wallSparkSize: widget.config.wallSparkSize,
                               repaint: _frame,
                               look: widget.config.look,
@@ -754,10 +763,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           right: 54,
                           child: IconButton.filledTonal(
                             tooltip: _audio.effectsOn ? 'SFX: on' : 'SFX: off',
-                            icon: Icon(
-                              _audio.effectsOn
-                                  ? Icons.volume_up
-                                  : Icons.volume_off,
+                            icon: _ArenaAudioGlyph(
+                              key: const ValueKey('arena-sfx-icon'),
+                              music: false,
+                              on: _audio.effectsOn,
                             ),
                             onPressed: () {
                               final on = !_audio.effectsOn;
@@ -772,10 +781,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           right: 0,
                           child: IconButton.filledTonal(
                             tooltip: _audio.musicOn ? 'BGM: on' : 'BGM: off',
-                            icon: Icon(
-                              _audio.musicOn
-                                  ? Icons.music_note
-                                  : Icons.music_off,
+                            icon: _ArenaAudioGlyph(
+                              key: const ValueKey('arena-bgm-icon'),
+                              music: true,
+                              on: _audio.musicOn,
                             ),
                             onPressed: () {
                               _audio.setMusicOn(!_audio.musicOn);
@@ -944,7 +953,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       score: widget.config.winsNeeded > 1
                           ? [
                               for (final b in widget.config.contestants)
-                                (b.name, _roundWins[b.id] ?? 0),
+                                (
+                                  ball: b,
+                                  wins: _roundWins[b.id] ?? 0,
+                                  losses: _roundLosses[b.id] ?? 0,
+                                  hp: _state.balls
+                                      .firstWhere(
+                                        (stateBall) =>
+                                            stateBall.config.id == b.id,
+                                      )
+                                      .life,
+                                ),
                             ]
                           : null,
                       onExit: () {
@@ -1210,6 +1229,84 @@ class _SmileyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SmileyPainter old) => true;
+}
+
+/// Font-independent arena audio glyphs. Keeping these as canvas art prevents a
+/// missing Material icon font or stale web cache from producing empty buttons.
+class _ArenaAudioGlyph extends StatelessWidget {
+  const _ArenaAudioGlyph({super.key, required this.music, required this.on});
+
+  final bool music;
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: const Size.square(22),
+    painter: _ArenaAudioGlyphPainter(
+      music: music,
+      on: on,
+      color: IconTheme.of(context).color ?? Colors.white,
+    ),
+  );
+}
+
+class _ArenaAudioGlyphPainter extends CustomPainter {
+  const _ArenaAudioGlyphPainter({
+    required this.music,
+    required this.on,
+    required this.color,
+  });
+
+  final bool music;
+  final bool on;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+    if (music) {
+      canvas.drawLine(const Offset(8, 5), const Offset(8, 16), paint);
+      canvas.drawLine(const Offset(8, 5), const Offset(17, 3), paint);
+      canvas.drawLine(const Offset(17, 3), const Offset(17, 14), paint);
+      canvas.drawOval(const Rect.fromLTWH(3, 14, 6, 4), paint);
+      canvas.drawOval(const Rect.fromLTWH(12, 12, 6, 4), paint);
+    } else {
+      final speaker = Path()
+        ..moveTo(3, 9)
+        ..lineTo(7, 9)
+        ..lineTo(12, 5)
+        ..lineTo(12, 17)
+        ..lineTo(7, 13)
+        ..lineTo(3, 13)
+        ..close();
+      canvas.drawPath(speaker, paint);
+      canvas.drawArc(
+        const Rect.fromLTWH(10, 7, 8, 8),
+        -math.pi / 3,
+        math.pi * 2 / 3,
+        false,
+        paint,
+      );
+    }
+    if (!on) {
+      final off = Paint()
+        ..color = color
+        ..strokeWidth = 2.8
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(const Offset(3, 3), const Offset(19, 19), off);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ArenaAudioGlyphPainter oldDelegate) =>
+      oldDelegate.music != music ||
+      oldDelegate.on != on ||
+      oldDelegate.color != color;
 }
 
 /// The red X over the eliminated ball while it flashes (same as the video).

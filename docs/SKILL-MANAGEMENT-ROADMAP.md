@@ -144,17 +144,21 @@ Replay and video remain last, by agreement.
 
 ## Phase 8 - New content, Mayhem, ranking, and experiments
 
-**Status: Not started**
+**Status: Complete**
 
-- [ ] Add epic Fried Chicken: restore to full health, but do nothing at 100 HP or above.
-- [ ] Add gold Special Sniper Rifle: unavoidable dramatic one-shot.
-- [ ] Add gold Special Cloud's Buster Sword: freeze time, target the farthest opponent, slash eight times, and yell `OMNISLASH!`.
-- [ ] Add epic Raging Demon: dash to the nearest opponent, darken the arena, flash 24 configurable one-damage hits, and make it dramatic.
-- [ ] Add Special tier and configurable spawn weights with defaults 50/45/40/35.
-- [ ] Add Mayhem elimination tally.
-- [ ] Define ranking by wins, losses, then remaining HP.
-- [ ] Decide whether arena branding should rotate every minute; default remains static until approved.
-- [ ] Research non-circular contestants and document physics/fairness implications before implementation.
+- [x] Add epic Fried Chicken: restore to full health, but do nothing at 100 HP or above.
+- [x] Add gold Special Sniper Rifle: unavoidable dramatic one-shot.
+- [x] Add gold Special Cloud's Buster Sword: freeze time, target the farthest opponent, slash eight times, and yell `OMNISLASH!`.
+- [x] Add epic Raging Demon: dash to the nearest opponent, darken the arena, flash 24 configurable one-damage hits, and make it dramatic.
+- [x] Add Special tier and configurable spawn weights with defaults 50/45/40/35.
+- [x] Add Mayhem elimination tally.
+- [x] Define ranking by wins, losses, then remaining HP.
+- [x] Decide whether arena branding should rotate every minute; default remains static until approved.
+- [x] Research non-circular contestants and document physics/fairness implications before implementation.
+- [x] Let players choose and remember an arena in match setup while retaining the admin arena configuration surface.
+- [x] Show the selected arena's automatic themed trap in the player-facing Traps section.
+- [x] Make arena traps admin-configurable without turning them into player pickups.
+- [x] Add a Chaotic arena mashup that deploys all four arena-only traps.
 
 ## Phase 9 - Replay links and video export
 
@@ -184,5 +188,5 @@ Replay and video remain last, by agreement.
 ## Current position
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [ ] Phase 9 -> Fully complete
 ```

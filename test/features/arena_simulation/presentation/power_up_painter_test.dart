@@ -173,6 +173,20 @@ void main() {
     expect((later - center).distance, closeTo(radius * 2.25, 1e-9));
   });
 
+  test('tornado victim overlay is anchored above the ball', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: 260,
+      seed: 2,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
+    final ball = c.state.balls.first..position = const Offset(40, 70);
+    final center = PowerUpPainter.tornadoVisualCenter(ball);
+    expect(center.dx, ball.position.dx);
+    expect(center.dy, lessThan(ball.position.dy - ball.radius));
+  });
+
   test('every selection icon paints visible pixels', () async {
     for (final kind in PowerUpKind.values) {
       final recorder = ui.PictureRecorder();
@@ -225,8 +239,17 @@ void main() {
   });
 
   test('every item has a complete hand-authored 16 by 16 sprite', () {
-    expect(pixelIcons.keys.toSet(), PowerUpKind.values.toSet());
-    for (final kind in PowerUpKind.values) {
+    const generatedPhase8 = {
+      PowerUpKind.friedChicken,
+      PowerUpKind.sniperRifle,
+      PowerUpKind.busterSword,
+      PowerUpKind.ragingDemon,
+    };
+    expect(
+      pixelIcons.keys.toSet(),
+      PowerUpKind.values.toSet().difference(generatedPhase8),
+    );
+    for (final kind in pixelIcons.keys) {
       final rows = pixelIcons[kind]!;
       expect(rows, hasLength(pixelSize), reason: kind.label);
       for (final row in rows) {

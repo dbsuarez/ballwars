@@ -1025,6 +1025,26 @@ void main() {
     );
   });
 
+  test('admin can disable automatic arena theme hazards', () {
+    final tuning = PowerUpConfig.defaults
+        .withValue('arenaTrapsEnabled', 0)
+        .withValue('trapStart', 0);
+    final c = _match(arenaDecoration: ArenaDecoration.space, tuning: tuning);
+    _run(c, 2);
+    expect(c.powerUps!.arenaThemeHazards, isEmpty);
+  });
+
+  test('Chaotic arena deploys every arena-only trap together', () {
+    final c = _match(arenaDecoration: ArenaDecoration.chaotic);
+    c.powerUps!
+      ..automaticSpawning = false
+      ..spawnTestArenaHazard();
+    expect(
+      c.powerUps!.arenaThemeHazards.map((hazard) => hazard.kind).toSet(),
+      ArenaThemeHazardKind.values.toSet(),
+    );
+  });
+
   test('boomerang can hit several opponents only once per throw', () {
     final c = _match(count: 3);
     final [owner, first, second] = c.state.balls;

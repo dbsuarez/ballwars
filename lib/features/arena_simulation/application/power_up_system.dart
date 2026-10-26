@@ -98,6 +98,9 @@ class PowerUpSystem {
   final List<EnergyWave> energyWaves = [];
   final List<EnergyWaveAttack> energyWaveAttacks = [];
   final List<FlameCone> flameCones = [];
+  final List<SniperFlash> sniperFlashes = [];
+  final List<OmnislashAttack> omnislashAttacks = [];
+  final List<RagingDemonAttack> ragingDemonAttacks = [];
   final List<ArenaThemeHazard> arenaThemeHazards = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
@@ -293,6 +296,7 @@ class PowerUpSystem {
     energyWaves.removeWhere((wave) => wave.age >= wave.durationSteps);
     _updateEnergyWaveAttacks();
     _updateFlameCones();
+    _updatePhaseEightAttacks();
     _updateShellCasings();
     _countDown();
     _burn();
@@ -314,8 +318,9 @@ class PowerUpSystem {
     // The controller counts a step after it ran, so this is the 1-based number of the running step.
     final number = match.stepCount + 1;
     if (automaticSpawning &&
+        _t.arenaTrapsEnabled &&
         number >= _t.trapStartSteps &&
-        (number - _t.trapStartSteps) % (15 * 60) == 0) {
+        (number - _t.trapStartSteps) % _t.arenaTrapIntervalSteps == 0) {
       _spawnArenaThemeHazard(number);
     }
     if (automaticSpawning &&
@@ -331,13 +336,24 @@ class PowerUpSystem {
       _spawn(number, forcedKind: PowerUpKind.spikeWall);
       return;
     }
+    if (match.arenaDecoration == ArenaDecoration.chaotic) {
+      for (final kind in ArenaThemeHazardKind.values) {
+        _addArenaThemeHazard(kind, number);
+      }
+      return;
+    }
     final kind = switch (match.arenaDecoration) {
       ArenaDecoration.space => ArenaThemeHazardKind.gravityWell,
       ArenaDecoration.desert => ArenaThemeHazardKind.quicksand,
       ArenaDecoration.wilderness => ArenaThemeHazardKind.vineSnare,
       ArenaDecoration.neonGrid => ArenaThemeHazardKind.laserGate,
+      ArenaDecoration.chaotic => throw StateError('Handled above'),
       ArenaDecoration.defaultArena => throw StateError('Handled above'),
     };
+    _addArenaThemeHazard(kind, number);
+  }
+
+  void _addArenaThemeHazard(ArenaThemeHazardKind kind, int number) {
     final angle = rng.nextDoubleRange(0, math.pi * 2);
     final distance = kind == ArenaThemeHazardKind.laserGate
         ? 0.0
@@ -350,14 +366,17 @@ class PowerUpSystem {
         angle: angle,
       ),
     );
-    if (arenaThemeHazards.length > 2) arenaThemeHazards.removeAt(0);
+    final limit = match.arenaDecoration == ArenaDecoration.chaotic ? 8 : 2;
+    while (arenaThemeHazards.length > limit) {
+      arenaThemeHazards.removeAt(0);
+    }
   }
 
   void _updateArenaThemeHazards() {
     final radius = match.arenaRadius * 0.18;
     for (final hazard in arenaThemeHazards.toList()) {
       hazard.age++;
-      if (hazard.age >= 10 * 60) {
+      if (hazard.age >= _t.arenaTrapDurationSteps) {
         arenaThemeHazards.remove(hazard);
         continue;
       }
@@ -368,20 +387,28 @@ class PowerUpSystem {
           case ArenaThemeHazardKind.gravityWell:
             if (offset.distance < radius * 2.2 && offset.distance > 0) {
               ball.velocity +=
-                  offset / offset.distance * match.arenaRadius * 0.012;
+                  offset /
+                  offset.distance *
+                  match.arenaRadius *
+                  _t.gravityWellForce;
             }
           case ArenaThemeHazardKind.quicksand:
             if (offset.distance < radius) {
-              ball.velocity *= 0.93;
+              ball.velocity *= _t.quicksandVelocityMultiplier;
               if (hazard.age % 60 == 0) {
-                _damageArenaHazard(ball, 2, 1, 'Quicksand');
+                _damageArenaHazard(
+                  ball,
+                  _t.quicksandDamage,
+                  _t.quicksandLines,
+                  'Quicksand',
+                );
               }
             }
           case ArenaThemeHazardKind.vineSnare:
             if (offset.distance < radius && hazard.affected.add(ball)) {
               _gooVelocity[ball] = ball.velocity;
               ball
-                ..stickyGooLeft = 2 * 60
+                ..stickyGooLeft = _t.vineSnareSteps
                 ..velocity = Offset.zero;
               _yell(ball, 'VINE SNARE!');
             }
@@ -396,7 +423,12 @@ class PowerUpSystem {
                     .abs();
             if (distanceToBeam < ball.radius * 0.45) {
               if (hazard.affected.add(ball)) {
-                _damageArenaHazard(ball, 8, 3, 'Laser Gate');
+                _damageArenaHazard(
+                  ball,
+                  _t.laserGateDamage,
+                  _t.laserGateLines,
+                  'Laser Gate',
+                );
                 weaponImpacts.add(
                   WeaponImpact(position: ball.position, strength: 0.35),
                 );
@@ -599,6 +631,10 @@ class PowerUpSystem {
           );
           _skillYell(ball, p.kind, 'TWIST AND SHOUT!');
         }
+      case PowerUpKind.friedChicken:
+        _eatFriedChicken(ball);
+      case PowerUpKind.ragingDemon:
+        _startRagingDemon(ball);
       default:
         ball.equipWeapon(
           p.kind,
@@ -609,6 +645,160 @@ class PowerUpSystem {
         if (p.kind.isBlade && match.mode == MatchMode.allOut) {
           ball.sweepLeft = PowerUpTuning.sweepSteps;
         }
+    }
+  }
+
+  void _eatFriedChicken(SimulationBall ball) {
+    if (match.mode == MatchMode.arsenal) {
+      if (ball.life >= 100) return;
+      ball.life = 100;
+      match.state.floatingTexts.spawn(
+        ball.position,
+        'FULL HEALTH!',
+        const Color(0xFFFFD54F),
+      );
+    } else {
+      final claimed = match.claimFreeSlots(ball, 1 << 20);
+      if (claimed == 0) return;
+      match.state.floatingTexts.spawn(
+        ball.position,
+        '+$claimed LINES',
+        const Color(0xFFFFD54F),
+      );
+    }
+    match.state.particles.spawnSparkle(origin: ball.position, rng: rng);
+    _skillYell(ball, PowerUpKind.friedChicken, 'FEAST MODE!');
+  }
+
+  SimulationBall? _farthestTarget(SimulationBall owner) {
+    SimulationBall? result;
+    var distance = -1.0;
+    for (final target in match.state.balls) {
+      if (identical(target, owner) || !_alive(target)) continue;
+      final candidate = (target.position - owner.position).distanceSquared;
+      if (candidate > distance) {
+        result = target;
+        distance = candidate;
+      }
+    }
+    return result;
+  }
+
+  void _freezeTime(int steps) {
+    for (final ball in match.state.balls) {
+      if (!_alive(ball)) continue;
+      if (ball.stunnedLeft == 0) _stunnedVelocity[ball] = ball.velocity;
+      ball
+        ..stunnedLeft = math.max(ball.stunnedLeft, steps)
+        ..velocity = Offset.zero;
+    }
+  }
+
+  void _fireSniper(SimulationBall owner, SimulationBall target) {
+    sniperFlashes.add(SniperFlash(owner: owner, target: target));
+    target.goldenArmorHits = 0;
+    if (match.mode == MatchMode.arsenal) {
+      match.damage(
+        target,
+        math.max(1, target.life),
+        attacker: owner,
+        move: skillName(PowerUpKind.sniperRifle),
+        scaleForCrowd: false,
+        applyFrozenMultiplier: false,
+      );
+    } else {
+      match.cutThreads(
+        target,
+        target.fanLines.length,
+        near: target.position,
+        attacker: owner,
+        move: skillName(PowerUpKind.sniperRifle),
+      );
+    }
+    weaponImpacts.add(WeaponImpact(position: target.position, strength: 1));
+    hits++;
+    _skillSound(PowerUpKind.sniperRifle);
+    _skillYell(owner, PowerUpKind.sniperRifle, 'ONE SHOT.');
+  }
+
+  void _startOmnislash(SimulationBall owner) {
+    final target = _farthestTarget(owner);
+    if (target == null) return;
+    _freezeTime(52);
+    omnislashAttacks.add(OmnislashAttack(owner: owner, target: target));
+    _skillYell(owner, PowerUpKind.busterSword, 'OMNISLASH!');
+  }
+
+  void _startRagingDemon(SimulationBall owner) {
+    final target = _nearestTarget(owner);
+    if (target == null) return;
+    final hits = _t.ragingDemonHits;
+    _freezeTime(hits * 2 + 18);
+    ragingDemonAttacks.add(
+      RagingDemonAttack(owner: owner, target: target, totalHits: hits),
+    );
+    _skillYell(owner, PowerUpKind.ragingDemon, 'DIE ONE THOUSAND DEATHS!');
+  }
+
+  void _updatePhaseEightAttacks() {
+    for (final flash in sniperFlashes) {
+      flash.age++;
+    }
+    sniperFlashes.removeWhere((flash) => flash.age >= 24);
+
+    for (final attack in omnislashAttacks.toList()) {
+      attack.age++;
+      if (attack.age % 5 == 0 && attack.hitsShown < 8) {
+        attack.hitsShown++;
+        attack.owner.position =
+            attack.target.position +
+            Offset.fromDirection(
+              attack.hitsShown * math.pi * 0.73,
+              attack.target.radius * 1.65,
+            );
+        _hit(
+          attack.target,
+          PowerUpKind.busterSword,
+          at: attack.target.position,
+          from: attack.owner,
+          scaleForCrowd: false,
+        );
+        slashMarks.add(
+          SlashMark(
+            position: attack.target.position,
+            angle: attack.hitsShown * math.pi / 4,
+          ),
+        );
+      }
+      if (attack.hitsShown >= 8 && attack.age >= 46) {
+        omnislashAttacks.remove(attack);
+      }
+    }
+
+    for (final attack in ragingDemonAttacks.toList()) {
+      attack.age++;
+      if (attack.age % 2 == 0 && attack.hitsShown < attack.totalHits) {
+        attack.hitsShown++;
+        attack.owner.position = Offset.lerp(
+          attack.owner.position,
+          attack.target.position,
+          0.72,
+        )!;
+        _hit(
+          attack.target,
+          PowerUpKind.ragingDemon,
+          at: attack.target.position,
+          from: attack.owner,
+          scaleForCrowd: false,
+        );
+      }
+      if (attack.hitsShown >= attack.totalHits &&
+          attack.age >= attack.totalHits * 2 + 12) {
+        weaponImpacts.add(
+          WeaponImpact(position: attack.target.position, strength: 1),
+        );
+        ragingDemonAttacks.remove(attack);
+      }
     }
   }
 
@@ -2030,6 +2220,10 @@ class PowerUpSystem {
             case PowerUpKind.flamethrower:
               _startFlamethrower(ball, target);
               _skillYell(ball, kind, 'BURN IT DOWN!');
+            case PowerUpKind.sniperRifle:
+              _fireSniper(ball, target);
+            case PowerUpKind.busterSword:
+              _startOmnislash(ball);
             default:
               _fire(ball, target, kind, 0);
               _skillYell(ball, kind, 'BANG!');

@@ -426,6 +426,26 @@ void main() {
     },
   );
 
+  testWidgets('selected arena trap is listed as automatic in Traps', (
+    tester,
+  ) async {
+    await pumpSetup(tester);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await openSettings(tester);
+    await tester.tap(find.byKey(const ValueKey('setting-Arena')));
+    await tester.pump();
+    expect(find.text('Space'), findsOneWidget);
+    await tester.tap(find.text('Pickups: All'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Traps'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('arena-theme-trap-card')), findsOneWidget);
+    expect(find.text('Gravity Well'), findsOneWidget);
+    expect(find.text('Space arena trap - automatic'), findsOneWidget);
+  });
+
   testWidgets('phone keeps ball picking visible until settings are opened', (
     tester,
   ) async {

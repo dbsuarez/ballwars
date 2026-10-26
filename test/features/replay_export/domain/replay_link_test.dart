@@ -9,6 +9,7 @@ import 'package:ballwars/features/ball_management/data/local_ball_repository.dar
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/replay_export/domain/replay_link.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
 
 const _presets = LocalBallRepository.presets;
 final _presetIds = {for (final b in _presets) b.id};
@@ -69,6 +70,21 @@ void main() {
     expect(uri.queryParameters['autospeed'], '0');
     final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
     expect(parsed.automaticSpeedUp, isFalse);
+  });
+
+  test('round-trips the player-selected arena', () {
+    final uri = ReplayLink(
+      seed: 8,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      arenaDecoration: ArenaDecoration.wilderness,
+    ).toUri(presetIds: _presetIds, appUrl: kWebAppUrl);
+
+    expect(uri.queryParameters['arena'], 'wilderness');
+    expect(
+      ReplayLink.fromUri(uri, presets: _presets)!.arenaDecoration,
+      ArenaDecoration.wilderness,
+    );
   });
 
   test('a linked match plays out exactly like the original', () {

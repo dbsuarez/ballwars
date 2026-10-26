@@ -55,6 +55,7 @@ class PowerUpConfig {
   static const String _arsenal = 'Damage - Arsenal (life)';
   static const String _allOut = 'Damage - All-Out (lines)';
   static const String _effects = 'Effects';
+  static const String _arenaTraps = 'Arena traps';
   static const String _skills = 'Skill Management';
 
   /// The kinds that do damage, with their own damage fields.
@@ -87,6 +88,8 @@ class PowerUpConfig {
     PowerUpKind.tornado,
     PowerUpKind.energyWave,
     PowerUpKind.flamethrower,
+    PowerUpKind.busterSword,
+    PowerUpKind.ragingDemon,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.
@@ -98,10 +101,15 @@ class PowerUpConfig {
         'Rarity assignments',
         kind.rarity!.index,
         min: 0,
-        max: 2,
+        max: 3,
         integer: true,
       ),
-    for (final entry in const {'normal': 50, 'rare': 30, 'epic': 20}.entries)
+    for (final entry in const {
+      'normal': 50,
+      'rare': 45,
+      'epic': 40,
+      'special': 35,
+    }.entries)
       TuningField(
         'rarity.${entry.key}',
         '${entry.key[0].toUpperCase()}${entry.key.substring(1)} spawn weight',
@@ -137,6 +145,94 @@ class PowerUpConfig {
       min: 0,
       max: 600,
       unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'arenaTrapsEnabled',
+      'Arena traps (1 on, 0 off)',
+      _arenaTraps,
+      1,
+      min: 0,
+      max: 1,
+      integer: true,
+    ),
+    TuningField(
+      'arenaTrapInterval',
+      'Spawn interval',
+      _arenaTraps,
+      15,
+      min: 2,
+      max: 120,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'arenaTrapDuration',
+      'Active duration',
+      _arenaTraps,
+      10,
+      min: 1,
+      max: 60,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'gravityWellForce',
+      'Gravity Well force',
+      _arenaTraps,
+      0.012,
+      min: 0,
+      max: 0.1,
+      unit: TuningUnit.ratio,
+    ),
+    TuningField(
+      'quicksandSlowdown',
+      'Quicksand slowdown',
+      _arenaTraps,
+      7,
+      min: 0,
+      max: 50,
+      unit: TuningUnit.percent,
+    ),
+    TuningField(
+      'quicksandDamage',
+      'Quicksand damage / DoT',
+      _arenaTraps,
+      2,
+      min: 0,
+      max: 50,
+    ),
+    TuningField(
+      'quicksandLines',
+      'Quicksand lines / DoT',
+      _arenaTraps,
+      1,
+      min: 0,
+      max: 20,
+      integer: true,
+    ),
+    TuningField(
+      'vineSnareDuration',
+      'Vine Snare hold',
+      _arenaTraps,
+      2,
+      min: 0.25,
+      max: 10,
+      unit: TuningUnit.seconds,
+    ),
+    TuningField(
+      'laserGateDamage',
+      'Laser Gate damage',
+      _arenaTraps,
+      8,
+      min: 0,
+      max: 100,
+    ),
+    TuningField(
+      'laserGateLines',
+      'Laser Gate lines',
+      _arenaTraps,
+      3,
+      min: 0,
+      max: 30,
+      integer: true,
     ),
     TuningField(
       'fieldSize',
@@ -199,6 +295,15 @@ class PowerUpConfig {
       PowerUpTuning.bowArrows,
       min: 1,
       max: 50,
+      integer: true,
+    ),
+    TuningField(
+      'ragingDemonHits',
+      'Raging Demon hits',
+      _guns,
+      24,
+      min: 1,
+      max: 60,
       integer: true,
     ),
     TuningField(
@@ -490,6 +595,16 @@ class PowerUpConfig {
 
   int get firstSpawnSteps => _steps('firstSpawn');
   int get trapStartSteps => _steps('trapStart');
+  bool get arenaTrapsEnabled => value('arenaTrapsEnabled') != 0;
+  int get arenaTrapIntervalSteps => _steps('arenaTrapInterval');
+  int get arenaTrapDurationSteps => _steps('arenaTrapDuration');
+  double get gravityWellForce => value('gravityWellForce').toDouble();
+  double get quicksandVelocityMultiplier => 1 - _share('quicksandSlowdown');
+  double get quicksandDamage => value('quicksandDamage').toDouble();
+  int get quicksandLines => value('quicksandLines').toInt();
+  int get vineSnareSteps => _steps('vineSnareDuration');
+  double get laserGateDamage => value('laserGateDamage').toDouble();
+  int get laserGateLines => value('laserGateLines').toInt();
 
   /// Steps between spawns for [ballCount] balls (more balls, more often), as [PowerUpTuning.spawnInterval].
   int spawnInterval(int ballCount) =>
@@ -499,7 +614,7 @@ class PowerUpConfig {
 
   PowerUpRarity? rarityOf(PowerUpKind kind) => kind.isTrap
       ? null
-      : PowerUpRarity.values[value('tier.${kind.name}').toInt().clamp(0, 2)];
+      : PowerUpRarity.values[value('tier.${kind.name}').toInt().clamp(0, 3)];
 
   PowerUpConfig withRarity(PowerUpKind kind, PowerUpRarity rarity) =>
       kind.isTrap ? this : withValue('tier.${kind.name}', rarity.index);
@@ -514,6 +629,7 @@ class PowerUpConfig {
   int get shotgunPellets => value('pellets').toInt();
   int get gatlingRounds => value('rounds').toInt();
   int get bowArrows => value('arrows').toInt();
+  int get ragingDemonHits => value('ragingDemonHits').toInt();
 
   /// Arsenal life lost per hit of [kind] (0 for kinds that do no damage).
   double arenaDamage(PowerUpKind kind) => _byId.containsKey('dmg.${kind.name}')
@@ -629,7 +745,7 @@ class PowerUpConfig {
             if (digit != '-') return null;
           } else {
             final index = int.tryParse(digit);
-            if (index == null || index < 0 || index > 2) return null;
+            if (index == null || index < 0 || index > 3) return null;
             config = config.withRarity(kind, PowerUpRarity.values[index]);
           }
         }

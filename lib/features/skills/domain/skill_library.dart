@@ -961,6 +961,10 @@ class SkillLibrary {
     PowerUpKind.tornado => 'TWIST AND SHOUT!',
     PowerUpKind.energyWave => 'KA-ME-HA-ME-HAAA!',
     PowerUpKind.flamethrower => 'BURN IT DOWN!',
+    PowerUpKind.friedChicken => 'FULLY CHARGED!',
+    PowerUpKind.sniperRifle => 'ONE SHOT.',
+    PowerUpKind.busterSword => 'OMNISLASH!',
+    PowerUpKind.ragingDemon => 'DIE ONE THOUSAND DEATHS!',
   };
 
   static String _defaultSoundFor(PowerUpKind kind) => switch (kind) {

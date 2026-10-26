@@ -60,7 +60,7 @@ void main() {
 
     expect(find.text('WEAPONS'), findsOneWidget);
     expect(FinisherProfile.coversEveryDamagingArenaItem, isTrue);
-    expect(PowerUpKind.values, hasLength(44));
+    expect(PowerUpKind.values, hasLength(48));
     expect(find.text('POWER-UPS'), findsNothing);
     expect(find.byTooltip('Play Apple finisher'), findsNothing);
     expect(find.byTooltip('Play Magnet finisher'), findsNothing);

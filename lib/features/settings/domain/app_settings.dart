@@ -8,7 +8,8 @@ enum ArenaDecoration {
   space('Space'),
   desert('Desert'),
   wilderness('Wilderness'),
-  neonGrid('Neon Grid');
+  neonGrid('Neon Grid'),
+  chaotic('Chaotic');
 
   const ArenaDecoration(this.label);
   final String label;

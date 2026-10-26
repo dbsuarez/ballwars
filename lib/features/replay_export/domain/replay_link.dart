@@ -5,6 +5,7 @@ import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../settings/domain/app_settings.dart';
 
 /// Where the web app is hosted (GitHub Pages). Links made outside a browser
 /// point here; links made in the browser use the page's own address.
@@ -48,6 +49,7 @@ class ReplayLink {
   final int mayhemSeconds;
   final bool shrinkingArena;
   final double minimumArenaScale;
+  final ArenaDecoration arenaDecoration;
 
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
@@ -69,6 +71,7 @@ class ReplayLink {
     this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
+    this.arenaDecoration = ArenaDecoration.defaultArena,
   });
 
   static const String _weaponsPrefix = 'w.';
@@ -134,8 +137,11 @@ class ReplayLink {
         ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
         : '';
     final automaticSpeed = automaticSpeedUp ? '' : '&autospeed=0';
+    final arena = arenaDecoration == ArenaDecoration.defaultArena
+        ? ''
+        : '&arena=${arenaDecoration.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -233,6 +239,12 @@ class ReplayLink {
     if (params.containsKey('autospeed') && params['autospeed'] != '0') {
       return null;
     }
+    final arenaDecoration = params['arena'] == null
+        ? ArenaDecoration.defaultArena
+        : ArenaDecoration.values
+              .where((value) => value.name == params['arena'])
+              .firstOrNull;
+    if (arenaDecoration == null) return null;
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
@@ -267,6 +279,7 @@ class ReplayLink {
       mayhemSeconds: mayhemSeconds,
       shrinkingArena: shrinkingArena,
       minimumArenaScale: minimumArenaScale,
+      arenaDecoration: arenaDecoration,
     );
   }
 

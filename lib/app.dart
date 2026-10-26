@@ -450,6 +450,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             mayhemSeconds: link.mayhemSeconds,
             shrinkingArena: link.shrinkingArena,
             minimumArenaScale: link.minimumArenaScale,
+            arenaDecoration: link.arenaDecoration,
             showEffects: link.showEffects,
             look: look,
             handsOnPictures: handsOnPictures,

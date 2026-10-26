@@ -7,7 +7,8 @@ import 'simulation_ball.dart';
 enum PowerUpRarity {
   normal('Normal', Color(0xFFFFFFFF)),
   rare('Rare', Color(0xFF58A6FF)),
-  epic('Epic', Color(0xFFB775FF));
+  epic('Epic', Color(0xFFB775FF)),
+  special('Special', Color(0xFFFFD54F));
 
   const PowerUpRarity(this.label, this.color);
   final String label;
@@ -78,7 +79,11 @@ enum PowerUpKind {
   earthquake('Earthquake'),
   tornado('Tornado'),
   energyWave('Energy Wave'),
-  flamethrower('Flamethrower');
+  flamethrower('Flamethrower'),
+  friedChicken('Fried Chicken'),
+  sniperRifle('Sniper Rifle'),
+  busterSword('Buster Sword'),
+  ragingDemon('Raging Demon');
 
   const PowerUpKind(this.label);
 
@@ -104,7 +109,9 @@ enum PowerUpKind {
       this == fireWall ||
       this == waterGun ||
       this == energyWave ||
-      this == flamethrower;
+      this == flamethrower ||
+      this == sniperRifle ||
+      this == busterSword;
 
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
@@ -116,12 +123,15 @@ enum PowerUpKind {
       this == bow ||
       this == threadHarpoon ||
       this == energyWave ||
-      this == flamethrower;
+      this == flamethrower ||
+      this == sniperRifle ||
+      this == busterSword;
 
   /// Camera emphasis for a successful hit; subtle shots stay crisp while
   /// heavyweight attacks move the whole arena.
   double get impactWeight => switch (this) {
     rocketLauncher || omegaTendrils || energyWave => 1.0,
+    sniperRifle || busterSword || ragingDemon => 1.0,
     flamethrower => 0.72,
     grenade || mine || phaseMine || molotov || fireWall => 0.8,
     sword || orbitingFlail || spikeWall || threadHarpoon => 0.48,
@@ -153,7 +163,9 @@ enum PowerUpKind {
       this == fireWall ||
       this == waterGun ||
       this == energyWave ||
-      this == flamethrower;
+      this == flamethrower ||
+      this == sniperRifle ||
+      this == busterSword;
 
   /// Traps spawn close to the arena boundary and arm when collected.
   bool get isTrap =>
@@ -178,6 +190,7 @@ enum PowerUpKind {
       magnet ||
       bow ||
       waterGun => PowerUpRarity.normal,
+      sniperRifle || busterSword => PowerUpRarity.special,
       gatling ||
       threadHarpoon ||
       ghost ||
@@ -190,7 +203,9 @@ enum PowerUpKind {
       earthquake ||
       tornado ||
       energyWave ||
-      flamethrower => PowerUpRarity.epic,
+      flamethrower ||
+      friedChicken ||
+      ragingDemon => PowerUpRarity.epic,
       _ => PowerUpRarity.rare,
     };
   }
@@ -275,6 +290,34 @@ class ShellCasing {
   Offset velocity;
   double angle;
   bool settled = false;
+}
+
+class SniperFlash {
+  SniperFlash({required this.owner, required this.target});
+  final SimulationBall owner;
+  final SimulationBall target;
+  int age = 0;
+}
+
+class OmnislashAttack {
+  OmnislashAttack({required this.owner, required this.target});
+  final SimulationBall owner;
+  final SimulationBall target;
+  int age = 0;
+  int hitsShown = 0;
+}
+
+class RagingDemonAttack {
+  RagingDemonAttack({
+    required this.owner,
+    required this.target,
+    required this.totalHits,
+  });
+  final SimulationBall owner;
+  final SimulationBall target;
+  final int totalHits;
+  int age = 0;
+  int hitsShown = 0;
 }
 
 /// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
@@ -716,6 +759,8 @@ class PowerUpTuning {
     PowerUpKind.tornado: 3,
     PowerUpKind.energyWave: 28,
     PowerUpKind.flamethrower: 3,
+    PowerUpKind.busterSword: 3,
+    PowerUpKind.ragingDemon: 1,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -754,6 +799,8 @@ class PowerUpTuning {
     PowerUpKind.tornado: 1,
     PowerUpKind.energyWave: 12,
     PowerUpKind.flamethrower: 1,
+    PowerUpKind.busterSword: 1,
+    PowerUpKind.ragingDemon: 1,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -817,6 +864,16 @@ String powerUpDescription(
       '$aim sweeps from the leftmost to the rightmost opponent over 2 s, hitting each opponent once for ${dmg(kind)} before knockback.',
     PowerUpKind.flamethrower =>
       '$aim sprays a sustained fire cone for 1.5 s: ${dmg(kind)} per pulse plus burn damage over time.',
+    PowerUpKind.friedChicken =>
+      arsenal
+          ? 'Restores life to 100. Does nothing at 100 HP or above.'
+          : 'Restores every missing thread. Does nothing when no threads are missing.',
+    PowerUpKind.sniperRifle =>
+      '$aim fires one unavoidable Special-tier shot that immediately knocks out its target.',
+    PowerUpKind.busterSword =>
+      '$aim freezes time, dashes to the farthest opponent, and slashes eight times for ${dmg(kind)} each.',
+    PowerUpKind.ragingDemon =>
+      'Dashes to the nearest opponent and lands ${config.ragingDemonHits} unavoidable hits for ${dmg(kind)} each.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '

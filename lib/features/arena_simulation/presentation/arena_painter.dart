@@ -101,6 +101,7 @@ class ArenaPainter extends CustomPainter {
       if (ball.isEliminated) continue;
       _paintSingleBall(canvas, ball);
     }
+    PowerUpPainter.paintTornadoOverlays(canvas, state);
     _paintFloatingText(canvas);
 
     canvas.restore();
@@ -124,6 +125,8 @@ class ArenaPainter extends CustomPainter {
         _paintWildernessFloor(canvas, visibleRadius);
       case ArenaDecoration.neonGrid:
         _paintNeonFloor(canvas, visibleRadius);
+      case ArenaDecoration.chaotic:
+        _paintChaoticFloor(canvas, visibleRadius);
     }
     canvas.restore();
     _paintArenaText(canvas);
@@ -255,6 +258,30 @@ class ArenaPainter extends CustomPainter {
         ..color = const Color(0xFFFF2BD6).withValues(alpha: 0.22)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4,
+    );
+  }
+
+  void _paintChaoticFloor(Canvas canvas, double radius) {
+    void quadrant(Rect clip, void Function(Canvas, double) paint) {
+      canvas.save();
+      canvas.clipRect(clip);
+      paint(canvas, radius);
+      canvas.restore();
+    }
+
+    quadrant(Rect.fromLTRB(-radius, -radius, 0, 0), _paintSpaceFloor);
+    quadrant(Rect.fromLTRB(0, -radius, radius, 0), _paintDesertFloor);
+    quadrant(Rect.fromLTRB(-radius, 0, 0, radius), _paintWildernessFloor);
+    quadrant(Rect.fromLTRB(0, 0, radius, radius), _paintNeonFloor);
+    canvas.drawLine(
+      Offset(-radius, 0),
+      Offset(radius, 0),
+      Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.24),
+    );
+    canvas.drawLine(
+      Offset(0, -radius),
+      Offset(0, radius),
+      Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.24),
     );
   }
 

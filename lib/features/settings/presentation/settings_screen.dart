@@ -335,6 +335,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                               const Color(0xFF315B37),
                                             ArenaDecoration.neonGrid =>
                                               const Color(0xFF00B8D4),
+                                            ArenaDecoration.chaotic =>
+                                              const Color(0xFFFF4FD8),
                                           },
                                         ),
                                         label: Column(
@@ -353,6 +355,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                   'Vine Snare',
                                                 ArenaDecoration.neonGrid =>
                                                   'Laser Gate',
+                                                ArenaDecoration.chaotic =>
+                                                  'All arena traps',
                                               },
                                               style: const TextStyle(
                                                 fontSize: 10,

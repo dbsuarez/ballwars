@@ -23,6 +23,8 @@ void main() {
       PowerUpKind.boomerang,
       PowerUpKind.fireWall,
       PowerUpKind.waterGun,
+      PowerUpKind.sniperRifle,
+      PowerUpKind.busterSword,
     };
     for (final kind in PowerUpKind.values) {
       expect(kind.label, isNotEmpty);
@@ -104,6 +106,8 @@ void main() {
       PowerUpKind.threadHarpoon,
       PowerUpKind.energyWave,
       PowerUpKind.flamethrower,
+      PowerUpKind.sniperRifle,
+      PowerUpKind.busterSword,
     });
   });
 

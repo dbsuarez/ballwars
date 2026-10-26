@@ -1,6 +1,7 @@
 import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../skills/domain/skill_library.dart';
 
 enum WinCondition { domination, timeAttack }
@@ -112,6 +113,9 @@ class MatchConfig {
   /// Smallest playable radius, as a fraction of the starting radius.
   final double minimumArenaScale;
 
+  /// The player's arena choice for this match. Admin settings remain the default.
+  final ArenaDecoration arenaDecoration;
+
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
 
@@ -141,6 +145,7 @@ class MatchConfig {
     this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
+    this.arenaDecoration = ArenaDecoration.defaultArena,
     this.tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
     this.mode = MatchMode.threads,

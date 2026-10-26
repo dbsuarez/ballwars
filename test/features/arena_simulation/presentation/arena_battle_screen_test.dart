@@ -50,6 +50,8 @@ void main() {
       expect(find.text('0:00.0'), findsOneWidget);
       expect(find.text('Threads match'), findsOneWidget);
       expect(find.text('ROUND START'), findsOneWidget);
+      expect(find.byKey(const ValueKey('arena-sfx-icon')), findsOneWidget);
+      expect(find.byKey(const ValueKey('arena-bgm-icon')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('round-start-countdown')),
         findsOneWidget,

@@ -14,6 +14,7 @@ import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/domain/custom_group.dart';
 import '../../../core/audio/game_audio.dart';
 import '../../../core/offline/device_prefs.dart';
+import '../../../core/widgets/animated_empty_state.dart';
 import '../../settings/data/effects_prefs.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../replay_export/domain/replay_link.dart';
@@ -65,6 +66,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   BallSize _ballSize = BallSize.medium;
   MatchMode _mode = MatchMode.threads;
   BallLook _look = BallLook.pictures;
+  bool _handsOnPictures = false;
+  bool _whitePickupBackgrounds = true;
 
   /// Power-up modes: the chosen power-ups, null for all.
   Set<PowerUpKind>? _powerUps;
@@ -118,6 +121,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final size = BallSize.byId(await DevicePrefs.read('size'));
     final mode = MatchMode.byId(await DevicePrefs.read('mode'));
     final look = BallLook.byName(await DevicePrefs.read('look'));
+    final handsOnPictures = await DevicePrefs.read('hands-on-pictures');
+    final whitePickupBackgrounds = await DevicePrefs.read(
+      'white-pickup-backgrounds',
+    );
     final dualWield = await DevicePrefs.read('dual-wield');
     final endlessBattle = await DevicePrefs.read('endless-battle');
     final mayhem = await DevicePrefs.read('mayhem');
@@ -152,6 +159,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       if (size != null) _ballSize = size;
       _mode = widget.initialMode ?? mode ?? MatchMode.threads;
       if (look != null) _look = look;
+      _handsOnPictures = handsOnPictures == '1';
+      _whitePickupBackgrounds = whitePickupBackgrounds != '0';
       _dualWield = dualWield == '1';
       _endlessBattle = endlessBattle == '1';
       _mayhem =
@@ -280,7 +289,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// The categories the current filter shows (Mine / Default / Shared).
   List<BallPack> get _shown => [
     for (final c in _categories)
-      if (c.tag == _filter.tag) c,
+      if (c.tag == _filter.tag && (!_mayhem || c.balls.length >= 6)) c,
   ];
 
   void _setFilter(_CategoryFilter filter) {
@@ -380,6 +389,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ballSize: _mayhem ? BallSize.small : _ballSize,
         mode: _mayhem ? MatchMode.arsenal : _mode,
         look: _look,
+        handsOnPictures: _handsOnPictures,
+        whitePickupBackgrounds: _whitePickupBackgrounds,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
         dualWield: _mode != MatchMode.threads && _dualWield,
         endlessBattle:
@@ -578,11 +589,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (balls.isEmpty) {
-      return Center(
-        child: Text(
-          'No balls here yet.',
-          style: AppText.ui(14, FontWeight.w500, color: c.muted),
-        ),
+      return const AnimatedEmptyState(
+        message: 'No balls here yet.',
+        icon: Icons.sports_baseball_outlined,
       );
     }
     return GridView.builder(
@@ -1139,6 +1148,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 (v) {
                   _update(() {
                     _mayhem = v;
+                    if (v &&
+                        !_shown.any((category) => category.id == _category)) {
+                      _selected.clear();
+                      final first = _shown.firstOrNull;
+                      _category = first?.id;
+                      _categoryText.text = first?.name ?? '';
+                    }
                     if (!v && _selected.length > 4) {
                       final keep = _selected.entries.take(4).toList();
                       _selected
@@ -1232,6 +1248,28 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             DevicePrefs.write('look', v.name);
           },
           tooltip: 'Ball look: ${_look.name}',
+        ),
+        _choice(
+          Icons.back_hand_outlined,
+          'Hands on pictures',
+          const [true, false],
+          _handsOnPictures,
+          (v) => v ? 'On' : 'Off',
+          (v) {
+            _update(() => _handsOnPictures = v);
+            DevicePrefs.write('hands-on-pictures', v ? '1' : '0');
+          },
+        ),
+        _choice(
+          Icons.circle,
+          'White pickup backgrounds',
+          const [true, false],
+          _whitePickupBackgrounds,
+          (v) => v ? 'On' : 'Off',
+          (v) {
+            _update(() => _whitePickupBackgrounds = v);
+            DevicePrefs.write('white-pickup-backgrounds', v ? '1' : '0');
+          },
         ),
         _choice(
           Icons.movie_outlined,

@@ -59,11 +59,17 @@ void paintSmiley(
   List<SimulationBall> balls, {
   Offset? center,
   double? radius,
+  double backgroundAlpha = 1,
 }) {
   final c = center ?? ball.position;
   final r = radius ?? ball.radius;
   final expression = expressionFor(ball, healthRatio);
-  canvas.drawCircle(c, r, Paint()..color = ball.config.primaryColor);
+  canvas.drawCircle(
+    c,
+    r,
+    Paint()
+      ..color = ball.config.primaryColor.withValues(alpha: backgroundAlpha),
+  );
   if (center != null) {
     canvas.drawCircle(
       c,
@@ -203,8 +209,15 @@ void paintHands(Canvas canvas, SimulationBall ball) {
         canvas,
         weapon == PowerUpKind.shield
             ? ball.position + dir * (r * 0.95)
-            : center - dir * (r * (weapon.isBlade ? 1.3 :
-                weapon == PowerUpKind.hook || weapon == PowerUpKind.threadHarpoon ? 0.65 : 0.5)),
+            : center -
+                  dir *
+                      (r *
+                          (weapon.isBlade
+                              ? 1.3
+                              : weapon == PowerUpKind.hook ||
+                                    weapon == PowerUpKind.threadHarpoon
+                              ? 0.65
+                              : 0.5)),
         r,
         gripAngle: angle,
       );
@@ -219,7 +232,9 @@ void paintHands(Canvas canvas, SimulationBall ball) {
   final Offset grip;
   if (held == PowerUpKind.shield) {
     grip = ball.position + dir * (r * 0.95);
-  } else if (held.isBlade || held == PowerUpKind.hook || held == PowerUpKind.threadHarpoon) {
+  } else if (held.isBlade ||
+      held == PowerUpKind.hook ||
+      held == PowerUpKind.threadHarpoon) {
     grip = weaponCenter - dir * (r * (held.isBlade ? 1.3 : 0.65));
   } else {
     // The sprite flips vertically when it points left, so its local grip does

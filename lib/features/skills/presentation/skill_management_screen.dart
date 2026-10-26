@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/animated_empty_state.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/presentation/power_up_painter.dart';
@@ -245,13 +246,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
           );
     if (skills.isEmpty) {
-      return Center(
-        child: Text(
-          custom
-              ? 'No custom skills yet. Duplicate a built-in skill to create one.'
-              : 'No matching skills.',
-          textAlign: TextAlign.center,
-        ),
+      return AnimatedEmptyState(
+        icon: custom ? Icons.auto_awesome_outlined : Icons.search_off,
+        message: custom
+            ? 'No custom skills yet. Duplicate a built-in skill to create one.'
+            : 'No matching skills.',
       );
     }
     return ListView.builder(

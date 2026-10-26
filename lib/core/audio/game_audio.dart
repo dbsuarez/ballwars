@@ -64,10 +64,18 @@ class GameAudio with WidgetsBindingObserver {
   int _musicEpoch = 0;
   bool _menuMusicOn = true;
   bool _effectsOn = true;
+  bool _uxOn = true;
+  double _musicLevel = 1;
+  double _effectsLevel = 0.9;
+  double _uxLevel = 0.9;
 
   static const String _musicKey = 'pref:music';
   static const String _menuMusicKey = 'pref:menu-music';
   static const String _effectsKey = 'pref:sfx';
+  static const String _uxKey = 'pref:ux-sound';
+  static const String _musicLevelKey = 'pref:music-volume';
+  static const String _effectsLevelKey = 'pref:sfx-volume';
+  static const String _uxLevelKey = 'pref:ux-volume';
   static const double _musicVolume = 0.3;
   static const double _menuVolume = 0.35;
 
@@ -98,6 +106,10 @@ class GameAudio with WidgetsBindingObserver {
   bool get menuMusicOn => _menuMusicOn;
 
   bool get effectsOn => _effectsOn;
+  bool get uxOn => _uxOn;
+  double get musicLevel => _musicLevel;
+  double get effectsLevel => _effectsLevel;
+  double get uxLevel => _uxLevel;
 
   MusicTrack get track => _track;
 
@@ -133,6 +145,10 @@ class GameAudio with WidgetsBindingObserver {
       _musicOn = await _readFlag(_musicKey);
       _menuMusicOn = await _readFlag(_menuMusicKey);
       _effectsOn = await _readFlag(_effectsKey);
+      _uxOn = await _readFlag(_uxKey);
+      _musicLevel = await _readLevel(_musicLevelKey, 1);
+      _effectsLevel = await _readLevel(_effectsLevelKey, 0.9);
+      _uxLevel = await _readLevel(_uxLevelKey, 0.9);
       if (enabled) {
         WidgetsBinding.instance.addObserver(this);
         await AudioPlayer.global.setAudioContext(
@@ -194,6 +210,30 @@ class GameAudio with WidgetsBindingObserver {
     await _writeFlag(_effectsKey, on);
   }
 
+  Future<void> setUxOn(bool on) async {
+    _uxOn = on;
+    await _writeFlag(_uxKey, on);
+  }
+
+  Future<void> setMusicLevel(double value) async {
+    _musicLevel = value.clamp(0, 1);
+    await _writeLevel(_musicLevelKey, _musicLevel);
+    await _music?.setVolume(
+      (_slow ? _musicVolume * 0.45 : _musicVolume) * _musicLevel,
+    );
+    await _menu?.setVolume(_menuVolume * _musicLevel);
+  }
+
+  Future<void> setEffectsLevel(double value) async {
+    _effectsLevel = value.clamp(0, 1);
+    await _writeLevel(_effectsLevelKey, _effectsLevel);
+  }
+
+  Future<void> setUxLevel(double value) async {
+    _uxLevel = value.clamp(0, 1);
+    await _writeLevel(_uxLevelKey, _uxLevel);
+  }
+
   static Future<bool> _readFlag(String key) async {
     final saved = await OfflineStore.instance.read(key);
     return saved == null || utf8.decode(saved) != 'false';
@@ -205,10 +245,24 @@ class GameAudio with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  static Future<double> _readLevel(String key, double fallback) async {
+    final saved = await OfflineStore.instance.read(key);
+    if (saved == null) return fallback;
+    return (double.tryParse(utf8.decode(saved)) ?? fallback).clamp(0, 1);
+  }
+
+  static Future<void> _writeLevel(String key, double value) async {
+    try {
+      await OfflineStore.instance.write(key, utf8.encode('$value'));
+    } catch (_) {}
+  }
+
   /// A tap. Browsers only allow sound after the user interacts with the
   /// page, so a Home music that couldn't start at launch starts here.
   void click() {
-    _play('click', 0.6);
+    if (enabled && _uxOn && _foreground) {
+      _voices.putIfAbsent('click', () => _Voices('click')).play(0.6 * _uxLevel);
+    }
     if (_playMenu && _menuWanted && _menu?.state != PlayerState.playing) {
       _startMenu();
     }
@@ -350,7 +404,7 @@ class GameAudio with WidgetsBindingObserver {
         await menu.resume();
         return;
       }
-      await menu.setVolume(_menuVolume);
+      await menu.setVolume(_menuVolume * _musicLevel);
       if (!wanted()) return;
       await menu.play(AssetSource(_menuTrack.asset));
       if (!_playMenu || !_menuWanted) await menu.pause();
@@ -392,7 +446,9 @@ class GameAudio with WidgetsBindingObserver {
     if (music == null) return;
     _queueMusic(() async {
       await music.setPlaybackRate(slow ? 0.8 : 1.0);
-      await music.setVolume(slow ? _musicVolume * 0.45 : _musicVolume);
+      await music.setVolume(
+        (slow ? _musicVolume * 0.45 : _musicVolume) * _musicLevel,
+      );
     });
   }
 
@@ -408,14 +464,16 @@ class GameAudio with WidgetsBindingObserver {
       final music = _music ??= _newPlayer();
       await music.setReleaseMode(ReleaseMode.loop);
       await music.setPlaybackRate(_slow ? 0.8 : 1.0);
-      await music.setVolume(_slow ? _musicVolume * 0.45 : _musicVolume);
+      await music.setVolume(
+        (_slow ? _musicVolume * 0.45 : _musicVolume) * _musicLevel,
+      );
       if (!wanted()) return;
       if (!restart && music.state == PlayerState.paused) {
         await music.resume();
       } else {
         await music.play(
           AssetSource(_track.asset),
-          volume: _slow ? _musicVolume * 0.45 : _musicVolume,
+          volume: (_slow ? _musicVolume * 0.45 : _musicVolume) * _musicLevel,
         );
       }
       if (!wanted() && (!_playMusic || !_musicWanted || _musicPausedByUser)) {
@@ -473,7 +531,7 @@ class GameAudio with WidgetsBindingObserver {
       if (last != null && now - last < gap) return;
       _lastPlayed[name] = now;
     }
-    _voices.putIfAbsent(name, () => _Voices(name)).play(volume);
+    _voices.putIfAbsent(name, () => _Voices(name)).play(volume * _effectsLevel);
   }
 
   /// A player without position updates. By default audioplayers polls the playback position on every

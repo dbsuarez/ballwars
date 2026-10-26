@@ -58,6 +58,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
     return switch (f.id) {
       'pellets' => PowerUpKind.shotgun,
       'rounds' => PowerUpKind.gatling,
+      'arrows' => PowerUpKind.bow,
       'grenadeSpeed' => PowerUpKind.grenade,
       'bash' || 'lines.bash' || 'block' || 'keep' => PowerUpKind.shield,
       'heal' || 'maxLife' || 'appleLines' => PowerUpKind.apple,
@@ -279,7 +280,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
                           onPressed: config == null
                               ? null
                               : () => Navigator.of(context).pop(config),
-                          child: const Text('Save for everyone'),
+                          child: const Text('Save'),
                         ),
                       ),
                     ],

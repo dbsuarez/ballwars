@@ -74,6 +74,7 @@ class PowerUpPainter {
     SimulationState state,
     double arenaRadius, {
     bool showEffects = true,
+    bool whitePickupBackgrounds = true,
   }) {
     final p = state.powerUps;
     if (p == null) return;
@@ -542,6 +543,7 @@ class PowerUpPainter {
           0.35 + 0.65 * pulse,
           ring: p.match.tuning.rarityOf(item.kind)?.color,
           useSprite: p.usesSprite(item.kind),
+          whiteBackground: whitePickupBackgrounds,
         );
       }
     }
@@ -1332,6 +1334,7 @@ class PowerUpPainter {
     double ringAlpha, {
     Color? ring,
     bool useSprite = true,
+    bool whiteBackground = true,
   }) {
     final color = ring ?? colorOf(kind);
     canvas.drawCircle(
@@ -1348,7 +1351,9 @@ class PowerUpPainter {
           [0.6, 1],
         ),
     );
-    canvas.drawCircle(c, r, Paint()..color = const Color(0xFFF4F4F2));
+    if (whiteBackground) {
+      canvas.drawCircle(c, r, Paint()..color = const Color(0xFFF4F4F2));
+    }
     canvas.drawCircle(
       c,
       r,

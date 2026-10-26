@@ -43,8 +43,9 @@ enum MatchMode {
 /// How balls are drawn (cosmetic, not part of the match or of replay links): their pictures, or
 /// smiley faces that follow the opponent and get hurt.
 enum BallLook {
-  pictures('Pictures'),
-  faces('Faces');
+  pictures('Picture'),
+  faces('Face'),
+  both('Both');
 
   final String label;
 
@@ -89,6 +90,8 @@ class MatchConfig {
   final MatchMode mode;
 
   final BallLook look;
+  final bool handsOnPictures;
+  final bool whitePickupBackgrounds;
 
   /// Power-up modes: the power-ups that can spawn; null for all of them.
   final Set<PowerUpKind>? powerUps;
@@ -128,6 +131,8 @@ class MatchConfig {
     this.winCondition = WinCondition.domination,
     this.ballSize = BallSize.medium,
     this.look = BallLook.pictures,
+    this.handsOnPictures = false,
+    this.whitePickupBackgrounds = true,
     this.question,
     this.powerUps,
     this.dualWield = false,

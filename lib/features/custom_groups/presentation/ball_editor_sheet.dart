@@ -27,7 +27,12 @@ class BallEditorSheet extends StatefulWidget {
   final CustomGroupRepository repository;
   final CustomBall? existing;
 
-  const BallEditorSheet({super.key, required this.groupId, required this.repository, this.existing});
+  const BallEditorSheet({
+    super.key,
+    required this.groupId,
+    required this.repository,
+    this.existing,
+  });
 
   /// Returned by [show] when the user deleted the ball.
   static const CustomBall deleted = CustomBall(
@@ -43,13 +48,16 @@ class BallEditorSheet extends StatefulWidget {
     required String groupId,
     required CustomGroupRepository repository,
     CustomBall? existing,
-  }) =>
-      showModalBottomSheet<CustomBall>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (_) => BallEditorSheet(groupId: groupId, repository: repository, existing: existing),
-      );
+  }) => showModalBottomSheet<CustomBall>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => BallEditorSheet(
+      groupId: groupId,
+      repository: repository,
+      existing: existing,
+    ),
+  );
 
   @override
   State<BallEditorSheet> createState() => _BallEditorSheetState();
@@ -60,7 +68,8 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   ui.Image? _picture;
   Rect? _crop;
   Color? _suggested;
-  BallImageStyle _style = BallImageStyle.cover; // New balls: picture fills the ball.
+  BallImageStyle _style =
+      BallImageStyle.cover; // New balls: picture fills the ball.
   Color? _color;
   bool _working = false;
   String? _error;
@@ -88,7 +97,10 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   Color get _lineColor => _color ?? _suggested ?? kBallColorPresets.first;
 
   Future<void> _pick() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
     final file = result?.files.single;
     final bytes = file?.bytes;
     if (bytes == null) return;
@@ -98,7 +110,10 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
     });
     try {
       final picture = await ImagePrep.decodeForCropping(bytes);
-      final suggestion = await ImagePrep.fromImage(picture, BallImageStyle.cover);
+      final suggestion = await ImagePrep.fromImage(
+        picture,
+        BallImageStyle.cover,
+      );
       if (!mounted) return;
       setState(() {
         _picture?.dispose();
@@ -112,7 +127,11 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
         }
       });
     } catch (_) {
-      if (mounted) setState(() => _error = "That picture couldn't be read. Try a PNG or JPEG.");
+      if (mounted) {
+        setState(
+          () => _error = "That picture couldn't be read. Try a PNG or JPEG.",
+        );
+      }
     } finally {
       if (mounted) setState(() => _working = false);
     }
@@ -121,17 +140,31 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   Future<void> _save() async {
     final name = _name.text.trim();
     final picture = _picture;
-    if (name.isEmpty || (picture == null && !_editing)) return;
+    if (name.isEmpty) return;
     setState(() {
       _working = true;
       _error = null;
     });
     try {
-      final png = picture == null ? null : (await ImagePrep.fromImage(picture, _style, crop: _crop)).png;
+      final png = picture == null
+          ? null
+          : (await ImagePrep.fromImage(picture, _style, crop: _crop)).png;
       final existing = widget.existing;
       final ball = existing == null
-          ? await widget.repository.addBall(groupId: widget.groupId, name: name, png: png!, style: _style, color: _lineColor)
-          : await widget.repository.updateBall(existing, name: name, style: _style, color: _lineColor, png: png);
+          ? await widget.repository.addBall(
+              groupId: widget.groupId,
+              name: name,
+              png: png,
+              style: _style,
+              color: _lineColor,
+            )
+          : await widget.repository.updateBall(
+              existing,
+              name: name,
+              style: _style,
+              color: _lineColor,
+              png: png,
+            );
       if (mounted) Navigator.of(context).pop(ball);
     } catch (e) {
       if (mounted) {
@@ -147,7 +180,7 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
     final picture = _picture;
-    final canSave = !_working && (picture != null || _editing) && _name.text.trim().isNotEmpty;
+    final canSave = !_working && _name.text.trim().isNotEmpty;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -159,12 +192,21 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
             Row(
               children: [
                 Expanded(
-                  child: Text(_editing ? 'Edit ball' : 'Add ball', style: AppText.ui(18, FontWeight.w700, color: c.text)),
+                  child: Text(
+                    _editing ? 'Edit ball' : 'Add ball',
+                    style: AppText.ui(18, FontWeight.w700, color: c.text),
+                  ),
                 ),
                 if (_editing)
                   TextButton(
-                    onPressed: _working ? null : () => Navigator.of(context).pop(BallEditorSheet.deleted),
-                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF7A59)),
+                    onPressed: _working
+                        ? null
+                        : () => Navigator.of(
+                            context,
+                          ).pop(BallEditorSheet.deleted),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFFF7A59),
+                    ),
                     child: const Text('Delete'),
                   ),
               ],
@@ -172,22 +214,46 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
             const SizedBox(height: 16),
             Center(
               child: picture != null
-                  ? CircleCropper(image: picture, ringColor: _lineColor, onChanged: (r) => _crop = r)
+                  ? CircleCropper(
+                      image: picture,
+                      ringColor: _lineColor,
+                      onChanged: (r) => _crop = r,
+                    )
                   : InkWell(
                       onTap: _working ? null : _pick,
                       customBorder: const CircleBorder(),
                       child: _editing
-                          ? CircularBallPreview(ball: widget.existing!.copyWith(imageStyle: _style, primaryColor: _lineColor), size: 140)
+                          ? CircularBallPreview(
+                              ball: widget.existing!.copyWith(
+                                imageStyle: _style,
+                                primaryColor: _lineColor,
+                              ),
+                              size: 140,
+                            )
                           : Container(
                               width: 140,
                               height: 140,
-                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: c.border, width: 1.5)),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: c.border, width: 1.5),
+                              ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add_photo_alternate_outlined, color: c.muted, size: 32),
+                                  Icon(
+                                    Icons.add_photo_alternate_outlined,
+                                    color: c.muted,
+                                    size: 32,
+                                  ),
                                   const SizedBox(height: 6),
-                                  Text('Pick picture', style: AppText.ui(13, FontWeight.w600, color: c.muted)),
+                                  Text(
+                                    'Pick picture',
+                                    style: AppText.ui(
+                                      13,
+                                      FontWeight.w600,
+                                      color: c.muted,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -196,13 +262,24 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
             const SizedBox(height: 8),
             Center(
               child: picture != null
-                  ? Text('Drag to move · pinch or scroll to zoom', style: AppText.ui(12, FontWeight.w500, color: c.muted))
+                  ? Text(
+                      'Drag to move · pinch or scroll to zoom',
+                      style: AppText.ui(12, FontWeight.w500, color: c.muted),
+                    )
                   : _editing
-                  ? TextButton(onPressed: _working ? null : _pick, child: const Text('Change picture'))
+                  ? TextButton(
+                      onPressed: _working ? null : _pick,
+                      child: const Text('Change picture'),
+                    )
                   : const SizedBox.shrink(),
             ),
             if (picture != null)
-              Center(child: TextButton(onPressed: _working ? null : _pick, child: const Text('Choose another'))),
+              Center(
+                child: TextButton(
+                  onPressed: _working ? null : _pick,
+                  child: const Text('Choose another'),
+                ),
+              ),
             const SizedBox(height: 12),
             TextField(
               controller: _name,
@@ -211,29 +288,59 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 4),
-            Text('PICTURE', style: AppText.ui(11, FontWeight.w700, color: c.muted, letterSpacing: 0.8)),
+            Text(
+              'PICTURE',
+              style: AppText.ui(
+                11,
+                FontWeight.w700,
+                color: c.muted,
+                letterSpacing: 0.8,
+              ),
+            ),
             const SizedBox(height: 8),
             SegmentedButton<BallImageStyle>(
               showSelectedIcon: false,
               segments: const [
-                ButtonSegment(value: BallImageStyle.logo, label: Text('Logo on white')),
-                ButtonSegment(value: BallImageStyle.cover, label: Text('Fill the ball')),
+                ButtonSegment(
+                  value: BallImageStyle.logo,
+                  label: Text('Logo on white'),
+                ),
+                ButtonSegment(
+                  value: BallImageStyle.cover,
+                  label: Text('Fill the ball'),
+                ),
               ],
               selected: {_style},
-              onSelectionChanged: _working ? null : (s) => setState(() => _style = s.first),
+              onSelectionChanged: _working
+                  ? null
+                  : (s) => setState(() => _style = s.first),
             ),
             const SizedBox(height: 20),
-            Text('LINE COLOR', style: AppText.ui(11, FontWeight.w700, color: c.muted, letterSpacing: 0.8)),
+            Text(
+              'LINE COLOR',
+              style: AppText.ui(
+                11,
+                FontWeight.w700,
+                color: c.muted,
+                letterSpacing: 0.8,
+              ),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
-                for (final color in {?_suggested, ?widget.existing?.primaryColor, ...kBallColorPresets})
+                for (final color in {
+                  ?_suggested,
+                  ?widget.existing?.primaryColor,
+                  ...kBallColorPresets,
+                })
                   Semantics(
                     button: true,
                     selected: color.toARGB32() == _lineColor.toARGB32(),
-                    label: color == _suggested ? 'Color from the picture' : 'Line color',
+                    label: color == _suggested
+                        ? 'Color from the picture'
+                        : 'Line color',
                     child: InkWell(
                       onTap: () => setState(() => _color = color),
                       customBorder: const CircleBorder(),
@@ -244,11 +351,18 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: color.toARGB32() == _lineColor.toARGB32() ? c.text : Colors.transparent,
+                            color: color.toARGB32() == _lineColor.toARGB32()
+                                ? c.text
+                                : Colors.transparent,
                             width: 2,
                           ),
                         ),
-                        child: DecoratedBox(decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -257,28 +371,49 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
             if (_suggested != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text('The first color comes from your picture.', style: AppText.ui(12, FontWeight.w500, color: c.muted)),
+                child: Text(
+                  'The first color comes from your picture.',
+                  style: AppText.ui(12, FontWeight.w500, color: c.muted),
+                ),
               ),
-            if (_working) const Padding(padding: EdgeInsets.only(top: 16), child: LinearProgressIndicator()),
+            if (_working)
+              const Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: LinearProgressIndicator(),
+              ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: Text(_error!, style: AppText.ui(13, FontWeight.w600, color: const Color(0xFFFF7A59))),
+                child: Text(
+                  _error!,
+                  style: AppText.ui(
+                    13,
+                    FontWeight.w600,
+                    color: const Color(0xFFFF7A59),
+                  ),
+                ),
               ),
             const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _working ? null : () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
+                    onPressed: _working
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                    ),
                     child: const Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: FilledButton(onPressed: canSave ? _save : null, child: Text(_editing ? 'Save' : 'Add')),
+                  child: FilledButton(
+                    onPressed: canSave ? _save : null,
+                    child: Text(_editing ? 'Save' : 'Add'),
+                  ),
                 ),
               ],
             ),

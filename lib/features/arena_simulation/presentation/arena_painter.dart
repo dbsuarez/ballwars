@@ -27,6 +27,8 @@ class ArenaPainter extends CustomPainter {
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
   final ArenaDecoration arenaDecoration;
+  final bool handsOnPictures;
+  final bool whitePickupBackgrounds;
 
   /// The theme's background (inside the arena) and text color (the rim).
   final Color background;
@@ -47,6 +49,8 @@ class ArenaPainter extends CustomPainter {
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.handsOnPictures = false,
+    this.whitePickupBackgrounds = true,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
@@ -73,7 +77,13 @@ class ArenaPainter extends CustomPainter {
     _paintRim(canvas);
     _paintFanLines(canvas);
     _paintBeamAttack(canvas);
-    PowerUpPainter.paint(canvas, state, arenaRadius, showEffects: showEffects);
+    PowerUpPainter.paint(
+      canvas,
+      state,
+      arenaRadius,
+      showEffects: showEffects,
+      whitePickupBackgrounds: whitePickupBackgrounds,
+    );
     if (showEffects) _paintParticles(canvas);
     // Depth order: sort balls by distance from center (farthest drawn first = behind)
     final sortedBalls = List<SimulationBall>.from(state.balls)
@@ -531,6 +541,15 @@ class ArenaPainter extends CustomPainter {
         ball.config,
         ball.cachedUiImage,
       );
+      if (look == BallLook.both) {
+        paintSmiley(
+          canvas,
+          ball,
+          faceHealth(ball),
+          state.balls,
+          backgroundAlpha: 0.38,
+        );
+      }
     }
     PowerUpPainter.paintBallEffects(
       canvas,
@@ -543,7 +562,7 @@ class ArenaPainter extends CustomPainter {
           state.powerUps?.weaponDisplayScale(kind) ?? 1,
       skillRange: (kind) => state.powerUps?.skillRange(kind) ?? 1,
     );
-    if (look == BallLook.faces) {
+    if (look != BallLook.pictures || handsOnPictures) {
       paintHands(canvas, ball);
     }
     if (ball.isGhost) canvas.restore();

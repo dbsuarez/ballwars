@@ -3,6 +3,7 @@ import '../../../core/offline/device_prefs.dart';
 import '../../arena_simulation/presentation/finisher_profile.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../../core/widgets/screen_awake.dart';
+import '../../../core/widgets/animated_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -65,6 +66,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   final _pinned = [false, false];
   final _items = [PowerUpKind.pistol, PowerUpKind.shield];
   final List<PowerUpKind?> _savedItems = [PowerUpKind.pistol, null];
+  final List<PowerUpKind?> _secondaryWeapons = [null, PowerUpKind.shield];
+  final List<PowerUpKind?> _powerUps = [null, null];
+  PowerUpKind? _arenaTrap;
   final _pickerTabs = [0, 0];
 
   @override
@@ -130,8 +134,18 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         await DevicePrefs.read('power-test-item-tab-$i') ?? '',
       );
       if (tab != null && tab >= 0 && tab < 3) _pickerTabs[i] = tab;
+      _secondaryWeapons[i] = _rememberedKind(
+        await DevicePrefs.read('power-test-secondary-$i'),
+      );
+      _powerUps[i] = _rememberedKind(
+        await DevicePrefs.read('power-test-power-$i'),
+      );
     }
+    _arenaTrap = _rememberedKind(await DevicePrefs.read('power-test-trap'));
   }
+
+  PowerUpKind? _rememberedKind(String? raw) =>
+      PowerUpKind.values.where((kind) => kind.name == raw).firstOrNull;
 
   void _reset() {
     _heardPowerUps = (0, 0, 0, 0, 0, 0);
@@ -160,6 +174,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       lookAhead: false,
       slowMotionLines: 0,
       endlessBattle: _endless,
+      dualWield: true,
       arenaDecoration: settings.arenaDecoration,
     );
     _match!.powerUps!.automaticSpawning = _randomSpawns;
@@ -175,9 +190,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       _match!.setTestBallPinned(balls[i], _pinned[i]);
     }
     for (var i = 0; i < _savedItems.length; i++) {
-      final kind = _savedItems[i];
-      if (kind != null) _applyItem(i, kind);
+      _reapplyLoadout(i);
     }
+    if (_arenaTrap != null) _applyItem(0, _arenaTrap!);
     _audio.resetEffects();
     _paused = true;
     _previous = null;
@@ -256,13 +271,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  void _give(int index) {
-    final kind = _items[index];
-    _savedItems[index] = kind;
-    _applyItem(index, kind);
-    _playTestSounds();
-  }
-
   void _applyItem(int index, PowerUpKind kind) {
     final match = _match!;
     final ball = match.state.balls[index];
@@ -277,6 +285,18 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           spawnStep: match.stepCount,
         ),
       );
+    }
+  }
+
+  void _reapplyLoadout(int index) {
+    final ball = _match!.state.balls[index];
+    _match!.powerUps!.resetForRespawn(ball);
+    for (final kind in [
+      _savedItems[index],
+      _secondaryWeapons[index],
+      _powerUps[index],
+    ]) {
+      if (kind != null) _applyItem(index, kind);
     }
   }
 
@@ -312,40 +332,67 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     });
   }
 
-  Future<void> _chooseItem(int index) async {
-    // Pause before opening controls so the user never misses the fight.
+  Future<void> _chooseLoadoutItem(
+    int index,
+    int category, {
+    bool secondary = false,
+  }) async {
     setState(() {
       _paused = true;
       _ticker.stop();
       _previous = null;
     });
+    final current = category == 0
+        ? (secondary ? _secondaryWeapons[index] : _savedItems[index])
+        : _powerUps[index];
     final selected = await showModalBottomSheet<Object>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _ItemPicker(
         tuning: _match!.tuning,
-        initialTab: _pickerTabs[index],
-        selected: _savedItems[index],
-        onTabChanged: (tab) {
-          _pickerTabs[index] = tab;
-          DevicePrefs.write('power-test-item-tab-$index', tab);
-        },
+        initialTab: category,
+        selected: current,
+        lockedTab: category,
+        onTabChanged: (_) {},
       ),
     );
     if (!mounted || selected == null) return;
     setState(() {
-      final ball = _match!.state.balls[index];
-      _match!.powerUps!.resetForRespawn(ball);
-      if (selected is PowerUpKind) {
-        _items[index] = selected;
-        _savedItems[index] = selected;
-        _applyItem(index, selected);
-        DevicePrefs.write('power-test-item-$index', selected.name);
+      final kind = selected is PowerUpKind ? selected : null;
+      if (category == 0 && secondary) {
+        _secondaryWeapons[index] = kind;
+        DevicePrefs.write('power-test-secondary-$index', kind?.name ?? 'none');
+      } else if (category == 0) {
+        _savedItems[index] = kind;
+        if (kind != null) _items[index] = kind;
+        DevicePrefs.write('power-test-item-$index', kind?.name ?? 'none');
       } else {
-        _savedItems[index] = null;
-        DevicePrefs.write('power-test-item-$index', 'none');
+        _powerUps[index] = kind;
+        DevicePrefs.write('power-test-power-$index', kind?.name ?? 'none');
       }
+      _reapplyLoadout(index);
+    });
+  }
+
+  Future<void> _chooseTrap() async {
+    final selected = await showModalBottomSheet<Object>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _ItemPicker(
+        tuning: _match!.tuning,
+        initialTab: 2,
+        selected: _arenaTrap,
+        lockedTab: 2,
+        onTabChanged: (_) {},
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _arenaTrap = selected is PowerUpKind ? selected : null;
+      DevicePrefs.write('power-test-trap', _arenaTrap?.name ?? 'none');
+      if (_arenaTrap != null) _applyItem(0, _arenaTrap!);
     });
   }
 
@@ -572,33 +619,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  Future<void> _showItemInfo(int index) async {
-    final item = _savedItems[index];
-    if (item == null) return;
-    setState(() {
-      _paused = true;
-      _ticker.stop();
-      _previous = null;
-    });
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: PowerUpName(item, tuning: _match!.tuning),
-        content: SingleChildScrollView(
-          child: Text(
-            '${_match!.tuning.rarityOf(item)?.label ?? "Trap"}\n\n${powerUpDescription(item, arsenal: _mode == MatchMode.arsenal, config: _match!.tuning)}',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _controls() => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     child: Column(
@@ -607,56 +627,81 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         for (var i = 0; i < 2; i++)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 12,
-                  backgroundColor: _balls[i].primaryColor,
-                  child: Text(
-                    i == 0 ? 'A' : 'B',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    key: ValueKey('choose-item-$i'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
+                Text('Ball ${i == 0 ? "A" : "B"} loadout'),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _loadoutButton(
+                        key: ValueKey('choose-item-$i'),
+                        label: 'Weapon 1',
+                        item: _savedItems[i],
+                        onTap: () => _chooseLoadoutItem(i, 0),
+                      ),
                     ),
-                    onPressed: () => _chooseItem(i),
-                    child: _savedItems[i] == null
-                        ? const Text('Choose item')
-                        : PowerUpName(_savedItems[i]!, tuning: _match!.tuning),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Item info for Ball ${i == 0 ? "A" : "B"}',
-                  onPressed: _savedItems[i] == null
-                      ? null
-                      : () => _showItemInfo(i),
-                  icon: const Icon(Icons.info_outline),
-                ),
-                IconButton(
-                  tooltip: 'Give item again to Ball ${i == 0 ? "A" : "B"}',
-                  constraints: const BoxConstraints(
-                    minWidth: 48,
-                    minHeight: 48,
-                  ),
-                  onPressed:
-                      _savedItems[i] == null ||
-                          _match!.state.status == MatchStatus.finished ||
-                          _match!.state.balls[i].isEliminated
-                      ? null
-                      : () => setState(() {
-                          _items[i] = _savedItems[i]!;
-                          _give(i);
-                        }),
-                  icon: const Icon(Icons.refresh),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: _loadoutButton(
+                        key: ValueKey('choose-weapon-2-$i'),
+                        label: 'Weapon 2',
+                        item: _secondaryWeapons[i],
+                        onTap: () => _chooseLoadoutItem(i, 0, secondary: true),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: _loadoutButton(
+                        key: ValueKey('choose-power-$i'),
+                        label: 'Power-up',
+                        item: _powerUps[i],
+                        onTap: () => _chooseLoadoutItem(i, 1),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _loadoutButton(
+            key: const ValueKey('choose-arena-trap'),
+            label: 'Arena trap',
+            item: _arenaTrap,
+            onTap: _chooseTrap,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _loadoutButton({
+    Key? key,
+    required String label,
+    required PowerUpKind? item,
+    required VoidCallback onTap,
+  }) => OutlinedButton(
+    key: key,
+    onPressed: onTap,
+    style: OutlinedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (item == null)
+          const Icon(Icons.add_circle_outline, size: 20)
+        else
+          PowerUpIcon(item, size: 22),
+        Text(
+          item?.label ?? label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11),
+        ),
       ],
     ),
   );
@@ -748,11 +793,19 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  Widget _audioToggle({required bool music}) {
-    final on = music ? _audio.musicOn : _audio.effectsOn;
+  Widget _audioToggle(String channel) {
+    final music = channel == 'BGM';
+    final effects = channel == 'SFX';
+    final on = music
+        ? _audio.musicOn
+        : effects
+        ? _audio.effectsOn
+        : _audio.uxOn;
     return IconButton(
-      tooltip:
-          '${music ? "Background music" : "Sound effects"}: ${on ? "on" : "off"}',
+      key: ValueKey('audio-$channel'),
+      constraints: const BoxConstraints.tightFor(width: 38, height: 48),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      tooltip: '$channel: ${on ? "on" : "off"}. Long press for volume.',
       onPressed: () async {
         if (music) {
           // Start during the tap gesture, before waiting on preference storage.
@@ -761,27 +814,80 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           if (!on) _audio.startMusic();
           setState(() {});
           await saved;
-        } else {
+        } else if (effects) {
           final saved = _audio.setEffectsOn(!on);
           if (!on) _audio.click();
+          setState(() {});
+          await saved;
+        } else {
+          final saved = _audio.setUxOn(!on);
           setState(() {});
           await saved;
         }
         if (mounted) setState(() {});
       },
+      onLongPress: () => _showVolume(channel),
       icon: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             music
                 ? (on ? Icons.music_note : Icons.music_off)
-                : (on ? Icons.volume_up : Icons.volume_off),
+                : effects
+                ? (on ? Icons.volume_up : Icons.volume_off)
+                : (on ? Icons.touch_app : Icons.do_not_touch),
             size: 20,
           ),
-          Text(music ? 'BG' : 'SFX', style: const TextStyle(fontSize: 9)),
+          Text(channel, style: const TextStyle(fontSize: 9)),
         ],
       ),
     );
+  }
+
+  Future<void> _showVolume(String channel) async {
+    var value = channel == 'BGM'
+        ? _audio.musicLevel
+        : channel == 'SFX'
+        ? _audio.effectsLevel
+        : _audio.uxLevel;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: Text('$channel volume'),
+          content: Row(
+            children: [
+              const Icon(Icons.volume_down),
+              Expanded(
+                child: Slider(
+                  value: value,
+                  divisions: 10,
+                  label: '${(value * 100).round()}%',
+                  onChanged: (next) => refresh(() => value = next),
+                ),
+              ),
+              Text('${(value * 100).round()}%'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (channel == 'BGM') await _audio.setMusicLevel(value);
+                if (channel == 'SFX') await _audio.setEffectsLevel(value);
+                if (channel == 'UX') await _audio.setUxLevel(value);
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
   }
 
   Widget _playback() {
@@ -799,7 +905,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                 Expanded(
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 52),
+                      minimumSize: const Size(0, 48),
                     ),
                     onPressed: _togglePlayback,
                     icon: Icon(
@@ -807,30 +913,27 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     ),
                     label: Text(
                       finished
-                          ? 'Replay fight'
+                          ? 'Replay'
                           : _paused
                           ? 'Play'
                           : 'Pause',
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 52),
+                      minimumSize: const Size(0, 48),
                     ),
                     onPressed: () => setState(_reset),
                     icon: const Icon(Icons.restart_alt),
-                    label: const Text('Reset fight'),
+                    label: const Text('Reset Fight'),
                   ),
                 ),
-              ],
-            ),
-            Row(
-              children: [
+                const SizedBox(width: 6),
                 Expanded(
-                  child: OutlinedButton(
+                  child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 48),
                     ),
@@ -843,18 +946,27 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                             );
                             _playTestSounds();
                           }),
-                    child: const Text('Step frame'),
+                    icon: const Icon(Icons.skip_next),
+                    label: const Text('Skip Frame'),
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Text('Speed '),
-                DropdownButton<double>(
-                  value: _speed,
-                  items: [
-                    for (final speed in [0.25, 0.5, 1.0, 2.0])
-                      DropdownMenuItem(value: speed, child: Text('${speed}x')),
-                  ],
-                  onChanged: (value) => setState(() => _speed = value!),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: DropdownButtonFormField<double>(
+                    initialValue: _speed,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.speed, size: 18),
+                      isDense: true,
+                    ),
+                    items: [
+                      for (final speed in [0.25, 0.5, 1.0, 2.0])
+                        DropdownMenuItem(
+                          value: speed,
+                          child: Text('${speed}x'),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _speed = value!),
+                  ),
                 ),
               ],
             ),
@@ -881,13 +993,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
-            'Power-up Tests',
+            'Power-up Test',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           actions: [
-            _audioToggle(music: true),
-            _audioToggle(music: false),
+            _audioToggle('BGM'),
+            _audioToggle('SFX'),
+            _audioToggle('UX'),
             IconButton(
               tooltip: 'Fight setup',
               onPressed: _showSetup,
@@ -939,11 +1052,13 @@ class _ItemPicker extends StatefulWidget {
     required this.initialTab,
     required this.selected,
     required this.onTabChanged,
+    this.lockedTab,
   });
   final PowerUpConfig tuning;
   final int initialTab;
   final PowerUpKind? selected;
   final ValueChanged<int> onTabChanged;
+  final int? lockedTab;
 
   @override
   State<_ItemPicker> createState() => _ItemPickerState();
@@ -956,15 +1071,16 @@ class _ItemPickerState extends State<_ItemPicker> {
   @override
   Widget build(BuildContext context) {
     final query = _query.trim().toLowerCase();
-    final searching = query.isNotEmpty;
+    final searching = query.isNotEmpty && widget.lockedTab == null;
+    final activeTab = widget.lockedTab ?? _tab;
     final items =
         PowerUpKind.values
             .where(
               (kind) =>
                   (searching ||
-                      (_tab == 0
+                      (activeTab == 0
                           ? kind.isWeapon
-                          : _tab == 1
+                          : activeTab == 1
                           ? kind.isPowerUp
                           : kind.isTrap)) &&
                   kind.label.toLowerCase().contains(query),
@@ -1002,17 +1118,26 @@ class _ItemPickerState extends State<_ItemPicker> {
                   onChanged: (value) => setState(() => _query = value),
                 ),
               ),
-              TabBar(
-                onTap: (index) {
-                  setState(() => _tab = index);
-                  widget.onTabChanged(index);
-                },
-                tabs: const [
-                  Tab(text: 'Weapons'),
-                  Tab(text: 'Power-ups'),
-                  Tab(text: 'Traps'),
-                ],
-              ),
+              if (widget.lockedTab == null)
+                TabBar(
+                  onTap: (index) {
+                    setState(() => _tab = index);
+                    widget.onTabChanged(index);
+                  },
+                  tabs: const [
+                    Tab(text: 'Weapons'),
+                    Tab(text: 'Power-ups'),
+                    Tab(text: 'Traps'),
+                  ],
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    const ['Weapons', 'Power-ups', 'Arena traps'][activeTab],
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
               if (searching)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 4),
@@ -1026,7 +1151,10 @@ class _ItemPickerState extends State<_ItemPicker> {
               ),
               Expanded(
                 child: items.isEmpty
-                    ? const Center(child: Text('No matching items'))
+                    ? const AnimatedEmptyState(
+                        message: 'No matching items',
+                        icon: Icons.search_off,
+                      )
                     : ListView.builder(
                         itemCount: items.length,
                         itemBuilder: (context, index) {

@@ -61,7 +61,7 @@ abstract class CustomGroupRepository {
   Future<CustomBall> addBall({
     required String groupId,
     required String name,
-    required Uint8List png,
+    required Uint8List? png,
     required BallImageStyle style,
     required Color color,
   });
@@ -243,11 +243,11 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   Future<CustomBall> addBall({
     required String groupId,
     required String name,
-    required Uint8List png,
+    required Uint8List? png,
     required BallImageStyle style,
     required Color color,
   }) async {
-    final path = await _upload(png);
+    final path = png == null ? null : await _upload(png);
     try {
       final row = await _client
           .from('group_balls')
@@ -261,7 +261,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
           .single();
       return _ball(row);
     } catch (_) {
-      await _images.remove([path]);
+      if (path != null) await _images.remove([path]);
       rethrow;
     }
   }
@@ -528,7 +528,7 @@ class AccountAwareCustomGroupRepository implements CustomGroupRepository {
   Future<CustomBall> addBall({
     required String groupId,
     required String name,
-    required Uint8List png,
+    required Uint8List? png,
     required BallImageStyle style,
     required Color color,
   }) async => (await _active()).addBall(

@@ -420,6 +420,9 @@ class _HomeScreenState extends State<_HomeScreen> {
     // The ball look is the viewer's own choice (cosmetic, not in links).
     final look =
         BallLook.byName(await DevicePrefs.read('look')) ?? BallLook.pictures;
+    final handsOnPictures = await DevicePrefs.read('hands-on-pictures') == '1';
+    final whitePickupBackgrounds =
+        await DevicePrefs.read('white-pickup-backgrounds') != '0';
     final wallSparkSize =
         WallSparkSize.byId(await DevicePrefs.read('wall-spark-size')) ??
         WallSparkSize.normal;
@@ -449,6 +452,8 @@ class _HomeScreenState extends State<_HomeScreen> {
             minimumArenaScale: link.minimumArenaScale,
             showEffects: link.showEffects,
             look: look,
+            handsOnPictures: handsOnPictures,
+            whitePickupBackgrounds: whitePickupBackgrounds,
             wallSparkSize: wallSparkSize,
           ),
           seed: link.seed,

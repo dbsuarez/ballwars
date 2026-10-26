@@ -54,10 +54,10 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(true));
     await tester.pumpAndSettle();
-    final give = find.byTooltip('Give item again to Ball A');
-    await tester.ensureVisible(give);
-    await tester.tap(give);
-    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('choose-power-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('power-test-item-apple')));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Play'));
     await tester.tap(find.text('Play'));
     await tester.pump();
@@ -66,11 +66,11 @@ void main() {
     await tester.tap(find.text('Pause'));
     await tester.pump();
     expect(find.text('Play'), findsOneWidget);
-    await tester.tap(find.text('Reset fight'));
+    await tester.tap(find.text('Reset Fight'));
     await tester.pump();
     expect(find.text('Paused - 0.0 s'), findsOneWidget);
     final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
-    expect(arena.state.balls.first.held, PowerUpKind.pistol);
+    expect(arena.state.balls.first.life, greaterThan(100));
   });
 
   testWidgets('an unsaved skill opens preselected in the live test arena', (
@@ -118,14 +118,14 @@ void main() {
       expect(find.byType(Scrollable), findsNothing);
       await tester.tap(find.byKey(const ValueKey('choose-item-1')));
       await tester.pumpAndSettle();
-      expect(find.byType(TabBar), findsOneWidget);
+      expect(find.text('Weapons'), findsOneWidget);
       expect(find.text('Boomerang').hitTestable(), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'shotgun');
       await tester.pump();
       expect(find.text('Shotgun'), findsOneWidget);
       await tester.tap(find.text('Shotgun'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Reset fight'));
+      await tester.tap(find.text('Reset Fight'));
       await tester.pump();
       final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
       expect(arena.state.balls[1].held, PowerUpKind.shotgun);
@@ -166,66 +166,72 @@ void main() {
     },
   );
 
-  testWidgets('tests default to endless and expose BG and SFX toggles', (
+  testWidgets('tests default to endless and expose BGM, SFX and UX controls', (
     tester,
   ) async {
     final audio = GameAudio.instance;
     final originalMusic = audio.musicOn;
     final originalEffects = audio.effectsOn;
+    final originalUx = audio.uxOn;
     addTearDown(() async {
       await audio.setMusicOn(originalMusic);
       await audio.setEffectsOn(originalEffects);
+      await audio.setUxOn(originalUx);
     });
     await tester.pumpWidget(_app(true));
     await tester.pumpAndSettle();
     final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
     expect(arena.state.powerUps!.match.endlessBattle, isTrue);
-    expect(find.text('BG').hitTestable(), findsOneWidget);
-    expect(find.text('SFX').hitTestable(), findsOneWidget);
-    await tester.tap(find.text('SFX'));
+    expect(
+      find.byKey(const ValueKey('audio-BGM')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('audio-SFX')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('audio-UX')).hitTestable(),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('audio-SFX')));
     await tester.pumpAndSettle();
     expect(audio.effectsOn, !originalEffects);
-    await tester.tap(find.text('BG'));
+    await tester.tap(find.byKey(const ValueKey('audio-BGM')));
     await tester.pumpAndSettle();
     expect(audio.musicOn, !originalMusic);
   });
 
-  testWidgets(
-    'item info beside re-equip explains the selected power and pauses',
-    (tester) async {
-      await tester.pumpWidget(_app(true));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Play'));
-      await tester.pump();
-      await tester.tap(find.byTooltip('Item info for Ball A'));
-      await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('Pistol'), findsWidgets);
-      expect(find.textContaining('fires one shot'), findsOneWidget);
-      await tester.tap(find.text('Close'));
-      await tester.pumpAndSettle();
-      expect(find.text('Play'), findsOneWidget);
-    },
-  );
+  testWidgets('each ball has two weapon selectors and one power-up selector', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 2; i++) {
+      expect(find.byKey(ValueKey('choose-item-$i')), findsOneWidget);
+      expect(find.byKey(ValueKey('choose-weapon-2-$i')), findsOneWidget);
+      expect(find.byKey(ValueKey('choose-power-$i')), findsOneWidget);
+    }
+    expect(find.byKey(const ValueKey('choose-arena-trap')), findsOneWidget);
+  });
 
-  testWidgets(
-    'search spans all categories and clearing restores the selected tab',
-    (tester) async {
-      await tester.pumpWidget(_app(true));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('choose-item-0')));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'apple');
-      await tester.pump();
-      expect(find.text('Apple'), findsOneWidget);
-      expect(find.text('Results from all categories'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '');
-      await tester.pump();
-      expect(find.text('Apple'), findsNothing);
-      expect(find.text('Boomerang'), findsOneWidget);
-      expect(find.text('Results from all categories'), findsNothing);
-    },
-  );
+  testWidgets('separate selectors keep searches inside their item category', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('choose-power-0')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'apple');
+    await tester.pump();
+    expect(find.text('Apple'), findsWidgets);
+    expect(find.text('Power-ups'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    expect(find.text('Apple'), findsWidgets);
+    expect(find.text('Boomerang'), findsNothing);
+    expect(find.text('Results from all categories'), findsNothing);
+  });
 
   testWidgets(
     'the remembered item is selected and placed first in its picker',

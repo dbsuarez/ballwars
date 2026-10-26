@@ -17,6 +17,8 @@ class ArenaCanvas extends StatelessWidget {
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
   final ArenaDecoration arenaDecoration;
+  final bool handsOnPictures;
+  final bool whitePickupBackgrounds;
 
   /// Repaints the arena when it notifies, without rebuilding any widgets.
   final Listenable? repaint;
@@ -36,6 +38,8 @@ class ArenaCanvas extends StatelessWidget {
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.handsOnPictures = false,
+    this.whitePickupBackgrounds = true,
     this.repaint,
     this.look = BallLook.pictures,
   });
@@ -58,6 +62,8 @@ class ArenaCanvas extends StatelessWidget {
           arenaSubtitle: arenaSubtitle,
           wallSparkSize: wallSparkSize,
           arenaDecoration: arenaDecoration,
+          handsOnPictures: handsOnPictures,
+          whitePickupBackgrounds: whitePickupBackgrounds,
           background: c.background,
           rimColor: c.text,
           repaint: repaint,

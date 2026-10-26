@@ -58,7 +58,7 @@ void main() {
   }
 
   Future<void> save(WidgetTester tester) async {
-    final button = find.text('Save for everyone');
+    final button = find.text('Save');
     await tester.ensureVisible(button);
     await tester.pumpAndSettle();
     await tester.tap(button);
@@ -128,7 +128,7 @@ void main() {
     await open(tester, PowerUpConfig.defaults, () async {
       await tester.enterText(await field(tester, 'dmg.pistol'), '');
       await tester.pump();
-      final button = find.widgetWithText(FilledButton, 'Save for everyone');
+      final button = find.widgetWithText(FilledButton, 'Save');
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
     });
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/animated_empty_state.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../ball_management/presentation/widgets/circular_ball_preview.dart';
 import '../../ball_packs/data/ball_pack_repository.dart';
@@ -67,7 +68,8 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     super.dispose();
   }
 
-  CustomGroupRepository get _edits => widget.editRepository ?? widget.repository;
+  CustomGroupRepository get _edits =>
+      widget.editRepository ?? widget.repository;
 
   @override
   void initState() {
@@ -78,7 +80,9 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   Future<void> _reload() async {
     setState(() => _error = null);
     try {
-      final groups = widget.allGroups ? await _edits.allGroups() : await widget.repository.myGroups();
+      final groups = widget.allGroups
+          ? await _edits.allGroups()
+          : await widget.repository.myGroups();
       List<CustomGroup> saved;
       try {
         saved = await widget.repository.savedGroups();
@@ -89,7 +93,8 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
       var links = _packLinks;
       var submitted = _submitted;
       try {
-        submitted = await (widget.allGroups ? _edits : widget.repository).submittedGroupIds();
+        submitted = await (widget.allGroups ? _edits : widget.repository)
+            .submittedGroupIds();
       } catch (_) {
         // Not set up yet (migration 008) or offline.
       }
@@ -110,12 +115,19 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           _submitted = submitted;
           // Admin: A-Z (the search box narrows it down as it grows).
           if (widget.allGroups) {
-            _groups = [...groups]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+            _groups = [...groups]
+              ..sort(
+                (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+              );
           }
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = "Couldn't load the groups. Check your connection.\n$e");
+      if (mounted) {
+        setState(
+          () => _error = "Couldn't load the groups. Check your connection.\n$e",
+        );
+      }
     }
   }
 
@@ -125,7 +137,11 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
       await action();
       await _reload();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -141,12 +157,20 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           controller: controller,
           autofocus: true,
           maxLength: 40,
-          decoration: const InputDecoration(hintText: 'e.g. Anime, Pokémon, My barkada'),
+          decoration: const InputDecoration(
+            hintText: 'e.g. Anime, Pokémon, My barkada',
+          ),
           onSubmitted: (v) => Navigator.of(context).pop(v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Save'),
+          ),
         ],
       ),
     ).whenComplete(controller.dispose);
@@ -158,8 +182,14 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
         builder: (context) => AlertDialog(
           content: Text(message),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
           ],
         ),
       ) ??
@@ -172,23 +202,39 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   }
 
   Future<void> _rename(CustomGroup group) async {
-    final name = (await _askName(title: 'Rename group', initial: group.name))?.trim();
+    final name = (await _askName(
+      title: 'Rename group',
+      initial: group.name,
+    ))?.trim();
     if (name == null || name.isEmpty || name == group.name) return;
     await _run(() => _edits.renameGroup(group.id, name));
   }
 
   Future<void> _deleteGroup(CustomGroup group) async {
-    if (!await _confirm('Delete "${group.name}" and its ${group.balls.length} balls?')) return;
+    if (!await _confirm(
+      'Delete "${group.name}" and its ${group.balls.length} balls?',
+    )) {
+      return;
+    }
     await _run(() => _edits.deleteGroup(group));
   }
 
   Future<void> _addBall(CustomGroup group) async {
-    final added = await BallEditorSheet.show(context, groupId: group.id, repository: _edits);
+    final added = await BallEditorSheet.show(
+      context,
+      groupId: group.id,
+      repository: _edits,
+    );
     if (added != null) await _reload();
   }
 
   Future<void> _editBall(CustomGroup group, CustomBall ball) async {
-    final result = await BallEditorSheet.show(context, groupId: group.id, repository: _edits, existing: ball);
+    final result = await BallEditorSheet.show(
+      context,
+      groupId: group.id,
+      repository: _edits,
+      existing: ball,
+    );
     if (result == BallEditorSheet.deleted) {
       await _run(() => _edits.deleteBall(ball));
     } else if (result != null) {
@@ -197,10 +243,12 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   }
 
   Future<void> _addToPack(CustomGroup group) async {
-    final packs = [..._packs]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final packs = [..._packs]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     final packId = await showDialog<String>(
       context: context,
-      builder: (context) => _PackPickerDialog(groupName: group.name, packs: packs),
+      builder: (context) =>
+          _PackPickerDialog(groupName: group.name, packs: packs),
     );
     if (packId == null) return;
     await _run(() => _edits.linkToPack(group.id, packId));
@@ -210,7 +258,11 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     await _run(() => widget.repository.setSubmitted(group.id, submit));
     if (mounted && submit) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${group.name}" was sent to the admin for the main categories.')),
+        SnackBar(
+          content: Text(
+            '"${group.name}" was sent to the admin for the main categories.',
+          ),
+        ),
       );
     }
   }
@@ -225,19 +277,30 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     if (q.isEmpty) return groups;
     return [
       for (final g in groups)
-        if (g.name.toLowerCase().contains(q) || g.balls.any((b) => b.name.toLowerCase().contains(q))) g,
+        if (g.name.toLowerCase().contains(q) ||
+            g.balls.any((b) => b.name.toLowerCase().contains(q)))
+          g,
     ];
   }
 
   void _share(CustomGroup group) {
-    Clipboard.setData(ClipboardData(text: ReplayLink.groupUri(group.id).toString()));
+    Clipboard.setData(
+      ClipboardData(text: ReplayLink.groupUri(group.id).toString()),
+    );
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Link copied. Anyone who opens it can add "${group.name}" to their categories.')),
+      SnackBar(
+        content: Text(
+          'Link copied. Anyone who opens it can add "${group.name}" to their categories.',
+        ),
+      ),
     );
   }
 
-  Future<void> _setSaved(CustomGroup group, bool saved) =>
-      _run(() => saved ? widget.repository.saveGroup(group.id) : widget.repository.unsaveGroup(group.id));
+  Future<void> _setSaved(CustomGroup group, bool saved) => _run(
+    () => saved
+        ? widget.repository.saveGroup(group.id)
+        : widget.repository.unsaveGroup(group.id),
+  );
 
   Future<void> _deleteBall(CustomBall ball) async {
     if (!await _confirm('Delete "${ball.name}"?')) return;
@@ -257,12 +320,20 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
               padding: const EdgeInsets.only(right: 12),
               child: FilledButton(
                 onPressed: _busy ? null : _newGroup,
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 38), padding: const EdgeInsets.symmetric(horizontal: 14)),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 38),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
                 child: const Text('New group'),
               ),
             ),
         ],
-        bottom: _busy ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator()) : null,
+        bottom: _busy
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(2),
+                child: LinearProgressIndicator(),
+              )
+            : null,
       ),
       body: Center(
         child: ConstrainedBox(
@@ -273,25 +344,28 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_error!, textAlign: TextAlign.center, style: AppText.ui(14, FontWeight.w500, color: c.muted)),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: AppText.ui(14, FontWeight.w500, color: c.muted),
+                      ),
                       const SizedBox(height: 12),
-                      FilledButton(onPressed: _reload, child: const Text('Try again')),
+                      FilledButton(
+                        onPressed: _reload,
+                        child: const Text('Try again'),
+                      ),
                     ],
                   ),
                 )
               : groups == null
               ? const CircularProgressIndicator()
               : groups.isEmpty && _saved.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Text(
-                    widget.allGroups
-                        ? 'Nobody has made a group yet.'
-                        : 'Make your own group of balls: anime characters, your friends, local brands…\n'
-                              'They appear as categories when you start a match.',
-                    textAlign: TextAlign.center,
-                    style: AppText.ui(14, FontWeight.w500, color: c.muted, height: 1.5),
-                  ),
+              ? AnimatedEmptyState(
+                  icon: Icons.groups_outlined,
+                  message: widget.allGroups
+                      ? 'Nobody has made a group yet.'
+                      : 'Make your own group of balls: anime characters, your friends, or local brands.\n'
+                            'They appear as categories when you start a match.',
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -309,14 +383,17 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                           ),
                         ),
                       ),
-                    for (final g in widget.allGroups ? _matching(groups) : groups)
+                    for (final g
+                        in widget.allGroups ? _matching(groups) : groups)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _groupCard(
                           c,
                           g,
                           // Admin list: a switch for other players' groups.
-                          inMyCategories: widget.allGroups && g.ownerId != widget.repository.userId
+                          inMyCategories:
+                              widget.allGroups &&
+                                  g.ownerId != widget.repository.userId
                               ? _saved.any((s) => s.id == g.id)
                               : null,
                         ),
@@ -324,10 +401,20 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                     if (!widget.allGroups && _saved.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
-                        child: Text('ADDED FROM OTHERS', style: AppText.mono(11, color: c.muted, letterSpacing: 1.2)),
+                        child: Text(
+                          'ADDED FROM OTHERS',
+                          style: AppText.mono(
+                            11,
+                            color: c.muted,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
                       ),
                       for (final g in _saved)
-                        Padding(padding: const EdgeInsets.only(bottom: 12), child: _groupCard(c, g, editable: false)),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _groupCard(c, g, editable: false),
+                        ),
                     ],
                     Padding(
                       padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
@@ -345,7 +432,12 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
 
   /// [editable] false: another player's group (no editing, can be removed).
   /// [inMyCategories] non-null shows the admin's "in my categories" switch.
-  Widget _groupCard(BallWarsColors c, CustomGroup group, {bool editable = true, bool? inMyCategories}) {
+  Widget _groupCard(
+    BallWarsColors c,
+    CustomGroup group, {
+    bool editable = true,
+    bool? inMyCategories,
+  }) {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 8, 4, 18),
       decoration: BoxDecoration(
@@ -362,8 +454,14 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                 child: Text.rich(
                   TextSpan(
                     children: [
-                      TextSpan(text: group.name, style: AppText.ui(16, FontWeight.w700, color: c.text)),
-                      TextSpan(text: '   ${group.balls.length} balls', style: AppText.mono(12, color: c.muted)),
+                      TextSpan(
+                        text: group.name,
+                        style: AppText.ui(16, FontWeight.w700, color: c.text),
+                      ),
+                      TextSpan(
+                        text: '   ${group.balls.length} balls',
+                        style: AppText.mono(12, color: c.muted),
+                      ),
                     ],
                   ),
                 ),
@@ -383,32 +481,52 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                   _ => _deleteGroup(group),
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'share', child: Text('Copy share link')),
+                  const PopupMenuItem(
+                    value: 'share',
+                    child: Text('Copy share link'),
+                  ),
                   if (editable) ...const [
                     PopupMenuItem(value: 'rename', child: Text('Rename')),
                     PopupMenuItem(value: 'delete', child: Text('Delete group')),
                   ] else
-                    const PopupMenuItem(value: 'remove', child: Text('Remove from my categories')),
+                    const PopupMenuItem(
+                      value: 'remove',
+                      child: Text('Remove from my categories'),
+                    ),
                   if (!widget.allGroups && editable)
                     _submitted.contains(group.id)
-                        ? const PopupMenuItem(value: 'withdraw', child: Text('Withdraw submission'))
-                        : const PopupMenuItem(value: 'submit', child: Text('Submit to main categories')),
+                        ? const PopupMenuItem(
+                            value: 'withdraw',
+                            child: Text('Withdraw submission'),
+                          )
+                        : const PopupMenuItem(
+                            value: 'submit',
+                            child: Text('Submit to main categories'),
+                          ),
                   if (widget.allGroups && _packs.isNotEmpty)
                     _packLinks.containsKey(group.id)
                         ? PopupMenuItem(
                             value: 'unpack',
-                            child: Text('Remove from ${_packName(_packLinks[group.id]!)}'),
+                            child: Text(
+                              'Remove from ${_packName(_packLinks[group.id]!)}',
+                            ),
                           )
-                        : const PopupMenuItem(value: 'pack', child: Text('Add to main category…')),
+                        : const PopupMenuItem(
+                            value: 'pack',
+                            child: Text('Add to main category…'),
+                          ),
                 ],
               ),
             ],
           ),
-          if (_submitted.contains(group.id) && !_packLinks.containsKey(group.id))
+          if (_submitted.contains(group.id) &&
+              !_packLinks.containsKey(group.id))
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                widget.allGroups ? 'Submitted for the main categories' : 'Submitted: the admin may add it to a main category',
+                widget.allGroups
+                    ? 'Submitted for the main categories'
+                    : 'Submitted: the admin may add it to a main category',
                 style: AppText.ui(13, FontWeight.w600, color: c.muted),
               ),
             ),
@@ -433,8 +551,16 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
           if (inMyCategories != null)
             Row(
               children: [
-                Expanded(child: Text('In my categories', style: AppText.ui(13, FontWeight.w600, color: c.muted))),
-                Switch(value: inMyCategories, onChanged: _busy ? null : (v) => _setSaved(group, v)),
+                Expanded(
+                  child: Text(
+                    'In my categories',
+                    style: AppText.ui(13, FontWeight.w600, color: c.muted),
+                  ),
+                ),
+                Switch(
+                  value: inMyCategories,
+                  onChanged: _busy ? null : (v) => _setSaved(group, v),
+                ),
                 const SizedBox(width: 8),
               ],
             ),
@@ -447,8 +573,12 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                 SizedBox(
                   width: 60,
                   child: InkWell(
-                    onTap: _busy || !editable ? null : () => _editBall(group, ball),
-                    onLongPress: _busy || !editable ? null : () => _deleteBall(ball),
+                    onTap: _busy || !editable
+                        ? null
+                        : () => _editBall(group, ball),
+                    onLongPress: _busy || !editable
+                        ? null
+                        : () => _deleteBall(ball),
                     borderRadius: BorderRadius.circular(12),
                     child: Column(
                       children: [
@@ -458,7 +588,11 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                           ball.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.ui(11, FontWeight.w600, color: c.muted),
+                          style: AppText.ui(
+                            11,
+                            FontWeight.w600,
+                            color: c.muted,
+                          ),
                         ),
                       ],
                     ),
@@ -475,11 +609,21 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
                         Container(
                           width: 50,
                           height: 50,
-                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: c.border, width: 1.5)),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: c.border, width: 1.5),
+                          ),
                           child: Icon(Icons.add, color: c.muted),
                         ),
                         const SizedBox(height: 6),
-                        Text('Add', style: AppText.ui(11, FontWeight.w600, color: c.muted)),
+                        Text(
+                          'Add',
+                          style: AppText.ui(
+                            11,
+                            FontWeight.w600,
+                            color: c.muted,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -532,26 +676,38 @@ class _PackPickerDialogState extends State<_PackPickerDialog> {
             ListTile(
               leading: const Icon(Icons.add_box_outlined),
               title: const Text('New category'),
-              subtitle: Text('"${widget.groupName}" becomes a main category for everyone'),
+              subtitle: Text(
+                '"${widget.groupName}" becomes a main category for everyone',
+              ),
               onTap: () => Navigator.of(context).pop(CustomGroup.ownCategory),
             ),
             const Divider(),
             TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search categories', isDense: true),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Search categories',
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 6),
             Expanded(
               child: packs.isEmpty
-                  ? Center(child: Text('No category matches.', style: AppText.ui(13, FontWeight.w500, color: c.muted)))
+                  ? const AnimatedEmptyState(
+                      message: 'No category matches.',
+                      icon: Icons.search_off,
+                    )
                   : ListView(
                       children: [
                         for (final p in packs)
                           ListTile(
                             dense: true,
                             title: Text(p.name),
-                            trailing: Text('${p.balls.length}', style: AppText.mono(12, color: c.muted)),
+                            trailing: Text(
+                              '${p.balls.length}',
+                              style: AppText.mono(12, color: c.muted),
+                            ),
                             onTap: () => Navigator.of(context).pop(p.id),
                           ),
                       ],
@@ -560,7 +716,12 @@ class _PackPickerDialogState extends State<_PackPickerDialog> {
           ],
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel'))],
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
     );
   }
 }

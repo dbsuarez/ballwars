@@ -691,6 +691,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               wallSparkSize: widget.config.wallSparkSize,
                               repaint: _frame,
                               look: widget.config.look,
+                              handsOnPictures: widget.config.handsOnPictures,
+                              whitePickupBackgrounds:
+                                  widget.config.whitePickupBackgrounds,
                             ),
                           ),
                         ),

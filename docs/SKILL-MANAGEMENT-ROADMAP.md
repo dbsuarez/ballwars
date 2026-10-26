@@ -102,30 +102,30 @@ Replay and video remain last, by agreement.
 
 ## Phase 6 - Admin, match setup, and Power-up Test UX
 
-**Status: Not started**
+**Status: Complete**
 
 - [x] Lock mobile gameplay to portrait orientation.
 - [x] Remember match settings, including rounds, speed, mode, size, look, effects, finishers, Mayhem, and per-mode pickups.
 - [x] Let users enable or disable automatic per-minute battle acceleration and preserve the choice in replays and videos.
-- [ ] Organize Admin Settings into clear category tabs without long scrolling.
-- [ ] Rework legacy Power-up Numbers into Common, Arsenal, and All-Out tabs with fixed side-by-side Restore and Save actions.
-- [ ] Include arrow count and every missing legacy power-up value.
+- [x] Organize Admin Settings into clear category tabs without long scrolling.
+- [x] Rework legacy Power-up Numbers into Common, Arsenal, and All-Out tabs with fixed side-by-side Restore and Save actions.
+- [x] Include arrow count and every missing legacy power-up value.
 - [x] Use concise `DoT` labels everywhere.
 - [x] Use admin branding text in Power-up Test.
 - [x] Changing a Power-up Test selection must not reset ball positions; only Reset Fight may do that.
-- [ ] Separate Power-up Test selectors for Ball A, Ball B, and arena traps without changing arena size.
-- [ ] Put Play, Reset Fight, Skip Frame, and Speed in one compact row.
-- [ ] Support two weapons plus one power-up per ball in Power-up Test.
+- [x] Separate Power-up Test selectors for Ball A, Ball B, and arena traps without changing arena size.
+- [x] Put Play, Reset Fight, Skip Frame, and Speed in one compact row.
+- [x] Support two weapons plus one power-up per ball in Power-up Test.
 - [x] Remember and visibly restore every Power-up Test selection and its last category tab.
-- [ ] Put arena BGM and SFX controls side by side on the right and fix missing icons.
-- [ ] Add a separate UX-sound channel alongside BGM and SFX.
-- [ ] Make BGM, SFX, and UX sound tap-to-toggle and long-press-for-volume; default to 100/90/90.
-- [ ] Allow My Groups balls without uploaded pictures by using generated initials.
-- [ ] In Mayhem, hide groups with fewer than six balls.
-- [ ] Add centered horizontal-and-vertical empty-state animation to every empty list.
-- [ ] Add a configurable hands-on-picture-faces option.
-- [ ] Add Picture, Face, and Both face modes; Both uses a lower-opacity picture under the face.
-- [ ] Add a toggle for white pickup backgrounds while preserving the pulse.
+- [x] Put arena BGM and SFX controls side by side on the right and fix missing icons.
+- [x] Add a separate UX-sound channel alongside BGM and SFX.
+- [x] Make BGM, SFX, and UX sound tap-to-toggle and long-press-for-volume; default to 100/90/90.
+- [x] Allow My Groups balls without uploaded pictures by using generated initials.
+- [x] In Mayhem, hide groups with fewer than six balls.
+- [x] Add centered horizontal-and-vertical empty-state animation to every empty list.
+- [x] Add a configurable hands-on-picture-faces option.
+- [x] Add Picture, Face, and Both face modes; Both uses a lower-opacity picture under the face.
+- [x] Add a toggle for white pickup backgrounds while preserving the pulse.
 
 ## Phase 7 - Sprite, effects, and audio asset system
 
@@ -184,5 +184,5 @@ Replay and video remain last, by agreement.
 ## Current position
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [~] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
 ```

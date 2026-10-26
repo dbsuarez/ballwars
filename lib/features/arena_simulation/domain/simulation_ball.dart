@@ -25,43 +25,61 @@ class SimulationBall {
   /// Primary and optional secondary equipped weapon.
   PowerUpKind? held;
   PowerUpKind? heldSecondary;
+  bool heldTwoHanded = false;
+  bool heldSecondaryTwoHanded = false;
 
   List<PowerUpKind> get equippedWeapons => [?held, ?heldSecondary];
 
-  void equipWeapon(PowerUpKind weapon, {required bool dualWield}) {
+  void equipWeapon(
+    PowerUpKind weapon, {
+    required bool dualWield,
+    bool? twoHanded,
+  }) {
     assert(weapon.isWeapon);
+    final usesTwoHands = twoHanded ?? weapon.isTwoHanded;
     if (!dualWield) {
       held = weapon;
       heldSecondary = null;
+      heldTwoHanded = usesTwoHands;
+      heldSecondaryTwoHanded = false;
       return;
     }
 
     // A two-handed weapon clears both hands. Picking up any weapon while one
     // is held drops it and starts a fresh one-handed loadout.
-    if (weapon.isTwoHanded) {
+    if (usesTwoHands) {
       held = weapon;
       heldSecondary = null;
+      heldTwoHanded = true;
+      heldSecondaryTwoHanded = false;
       return;
     }
-    if (held?.isTwoHanded ?? false) {
+    if (heldTwoHanded) {
       held = weapon;
       heldSecondary = null;
+      heldTwoHanded = false;
+      heldSecondaryTwoHanded = false;
       return;
     }
 
     if (held == null) {
       held = weapon;
+      heldTwoHanded = false;
     } else {
       heldSecondary = weapon;
+      heldSecondaryTwoHanded = false;
     }
   }
 
   void removeWeapon(PowerUpKind weapon) {
     if (held == weapon) {
       held = heldSecondary;
+      heldTwoHanded = heldSecondaryTwoHanded;
       heldSecondary = null;
+      heldSecondaryTwoHanded = false;
     } else if (heldSecondary == weapon) {
       heldSecondary = null;
+      heldSecondaryTwoHanded = false;
     }
   }
 

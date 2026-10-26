@@ -178,6 +178,21 @@ void main() {
     expect(decoded.compatibilityIssues, isEmpty);
   });
 
+  test('visual impact and handedness settings round-trip and clamp', () {
+    final skill = SkillLibrary.defaults
+        .create('Heavy Flash', PowerUpKind.pistol)
+        .copyWith(
+          effectColor: 0xFF22CC88,
+          screenShake: 8,
+          handedness: SkillHandedness.twoHanded,
+        );
+    final decoded = SkillDefinition.fromJson(skill.toJson())!;
+
+    expect(decoded.effectColor, 0xFF22CC88);
+    expect(decoded.screenShake, 1);
+    expect(decoded.handedness, SkillHandedness.twoHanded);
+  });
+
   test('impossible composed combinations explain what must change', () {
     final skill = SkillLibrary.defaults
         .create('Bad Shot', PowerUpKind.apple)

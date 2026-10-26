@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/audio/game_audio.dart';
@@ -164,7 +166,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       itemCount: skills.length,
       itemBuilder: (context, index) {
         final skill = skills[index];
+        final tierLabel = skill.baseKind.isTrap
+            ? 'Special'
+            : widget.tuning.rarityOf(skill.baseKind)!.label;
         final details = <String>[
+          tierLabel,
           if (skill.custom) skill.enabled ? 'Active' : 'Inactive',
           if (skill.arsenalDamage != null) '${skill.arsenalDamage} life',
           if (skill.allOutDamage != null) '${skill.allOutDamage} lines',
@@ -177,7 +183,16 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           child: ListTile(
             minVerticalPadding: 12,
             leading: PowerUpIcon(skill.baseKind, size: 38),
-            title: Text(skill.name),
+            title: Text(
+              skill.name,
+              key: ValueKey('skill-name-${skill.id}'),
+              style: TextStyle(
+                color: skill.baseKind.isTrap
+                    ? const Color(0xFFFFD54F)
+                    : widget.tuning.rarityOf(skill.baseKind)?.color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             subtitle: Text(
               '${skill.baseKind.isWeapon
                   ? "Weapon"
@@ -370,6 +385,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       'cooldown': TextEditingController(
         text: '${widget.skill.cooldownSeconds}',
       ),
+    if (widget.skill.isComposed)
+      'screenShake': TextEditingController(text: '${widget.skill.screenShake}'),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
@@ -382,6 +399,13 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillEffectType? _secondaryEffectType = widget.skill.secondaryEffectType;
   late SkillCalloutStyle _calloutStyle = widget.skill.calloutStyle;
   late SkillBubbleType _bubbleType = widget.skill.bubbleType;
+  late SkillHandedness _handedness = widget.skill.handedness;
+  late final _effectColor = TextEditingController(
+    text: (widget.skill.effectColor & 0xFFFFFF)
+        .toRadixString(16)
+        .padLeft(6, '0')
+        .toUpperCase(),
+  );
   late final _yell = TextEditingController(text: widget.skill.yell);
   late final _sound = TextEditingController(text: widget.skill.soundCue);
 
@@ -390,6 +414,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     _name.dispose();
     _sound.dispose();
     _yell.dispose();
+    _effectColor.dispose();
     for (final controller in _numbers.values) {
       controller.dispose();
     }
@@ -398,6 +423,12 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   double? _double(String key) => double.tryParse(_numbers[key]?.text ?? '');
   int? _int(String key) => int.tryParse(_numbers[key]?.text ?? '');
+
+  int? get _colorValue {
+    final value = _effectColor.text.trim().replaceFirst('#', '');
+    if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(value)) return null;
+    return 0xFF000000 | int.parse(value, radix: 16);
+  }
 
   void _restoreDefaults() {
     final defaults = widget.skill.custom
@@ -437,6 +468,11 @@ class _SkillEditorState extends State<_SkillEditor> {
       _secondaryEffectType = defaults.secondaryEffectType;
       _calloutStyle = defaults.calloutStyle;
       _bubbleType = defaults.bubbleType;
+      _handedness = defaults.handedness;
+      _effectColor.text = (defaults.effectColor & 0xFFFFFF)
+          .toRadixString(16)
+          .padLeft(6, '0')
+          .toUpperCase();
       _sound.text = defaults.soundCue;
       _yell.text = defaults.yell;
       number('arsenal', defaults.arsenalDamage);
@@ -452,6 +488,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('startDelay', defaults.startDelaySeconds);
       number('tickInterval', defaults.tickIntervalSeconds);
       number('cooldown', defaults.cooldownSeconds);
+      number('screenShake', defaults.screenShake);
     });
   }
 
@@ -508,6 +545,15 @@ class _SkillEditorState extends State<_SkillEditor> {
     );
   }
 
+  Future<void> _previewSkill() async {
+    final skill = _result;
+    if (skill == null) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _SkillPreviewDialog(skill: skill),
+    );
+  }
+
   void _showInfo() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
@@ -521,6 +567,7 @@ class _SkillEditorState extends State<_SkillEditor> {
           'DELIVERY chooses an immediate effect, a traveling projectile, or an area effect.\n\n'
           'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
           'SECONDARY EFFECT runs immediately after the primary effect. START DELAY postpones the first activation. REPEAT COUNT includes the first activation; the interval controls the pause between later activations. DoT uses its own TICK INTERVAL. COOLDOWN prevents the same ball from activating the skill again too soon.\n\n'
+          'EFFECT COLOR tints generated impact particles. SCREEN SHAKE controls impact camera movement from none (0) to maximum (1). HANDEDNESS can preserve the carrier default or explicitly make a weapon one-handed or two-handed.\n\n'
           'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
           'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball. BUBBLE SHAPE offers Shout for attacks, Speech for recovery, Thought for quiet or psychic skills, and Radio for tech or command skills.',
         ),
@@ -536,7 +583,8 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   SkillDefinition? get _result {
     if (_name.text.trim().isEmpty ||
-        _numbers.values.any((c) => double.tryParse(c.text) == null)) {
+        _numbers.values.any((c) => double.tryParse(c.text) == null) ||
+        (widget.skill.isComposed && _colorValue == null)) {
       return null;
     }
     return widget.skill.copyWith(
@@ -566,6 +614,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       yell: _yell.text,
       calloutStyle: _calloutStyle,
       bubbleType: _bubbleType,
+      effectColor: _colorValue,
+      screenShake: _double('screenShake'),
+      handedness: _handedness,
     );
   }
 
@@ -790,6 +841,62 @@ class _SkillEditorState extends State<_SkillEditor> {
                 ),
                 const SizedBox(height: 12),
                 _number('tickInterval', 'DoT tick interval', suffix: 's'),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey('skill-effect-color'),
+                        controller: _effectColor,
+                        maxLength: 7,
+                        decoration: InputDecoration(
+                          labelText: 'Effect color',
+                          prefixText: '#',
+                          helperText: _colorValue == null
+                              ? 'Enter a 6-digit hex color.'
+                              : 'Generated impact particle color.',
+                          errorText: _colorValue == null
+                              ? 'Use a color like FF6B6B.'
+                              : null,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: CircleAvatar(
+                        key: const ValueKey('skill-effect-color-preview'),
+                        backgroundColor: Color(_colorValue ?? 0xFF000000),
+                      ),
+                    ),
+                  ],
+                ),
+                _number('screenShake', 'Screen shake', suffix: '0-1'),
+                if (widget.skill.baseKind.isWeapon) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<SkillHandedness>(
+                    key: const ValueKey('skill-handedness'),
+                    initialValue: _handedness,
+                    decoration: const InputDecoration(labelText: 'Handedness'),
+                    items: const [
+                      DropdownMenuItem(
+                        value: SkillHandedness.carrierDefault,
+                        child: Text('Carrier default'),
+                      ),
+                      DropdownMenuItem(
+                        value: SkillHandedness.oneHanded,
+                        child: Text('One-handed'),
+                      ),
+                      DropdownMenuItem(
+                        value: SkillHandedness.twoHanded,
+                        child: Text('Two-handed'),
+                      ),
+                    ],
+                    onChanged: (value) => setState(() => _handedness = value!),
+                  ),
+                ],
                 if (compatibilityIssues.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Card(
@@ -857,6 +964,13 @@ class _SkillEditorState extends State<_SkillEditor> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                key: const ValueKey('preview-skill'),
+                onPressed: result == null ? null : _previewSkill,
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('Preview skill'),
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
@@ -937,6 +1051,90 @@ class _SkillEditorState extends State<_SkillEditor> {
   }
 }
 
+class _SkillPreviewDialog extends StatefulWidget {
+  const _SkillPreviewDialog({required this.skill});
+
+  final SkillDefinition skill;
+
+  @override
+  State<_SkillPreviewDialog> createState() => _SkillPreviewDialogState();
+}
+
+class _SkillPreviewDialogState extends State<_SkillPreviewDialog> {
+  var _replay = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _play());
+  }
+
+  void _play() {
+    GameAudio.instance.previewSkillCue(widget.skill.soundCue);
+    setState(() => _replay++);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.skill.name),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TweenAnimationBuilder<double>(
+          key: ValueKey(_replay),
+          tween: Tween(begin: 0.72, end: 1),
+          duration: const Duration(milliseconds: 650),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: Container(
+            width: 116,
+            height: 116,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Color(widget.skill.effectColor),
+                width: 5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(
+                    widget.skill.effectColor,
+                  ).withValues(alpha: 0.55),
+                  blurRadius: 24,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: PowerUpIcon(widget.skill.baseKind, size: 64),
+          ),
+        ),
+        const SizedBox(height: 18),
+        _CalloutPreview(
+          text: widget.skill.yell.isEmpty
+              ? widget.skill.name
+              : widget.skill.yell,
+          style: widget.skill.calloutStyle,
+          bubbleType: widget.skill.bubbleType,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton.icon(
+        key: const ValueKey('replay-skill-preview'),
+        onPressed: _play,
+        icon: const Icon(Icons.replay),
+        label: const Text('Replay'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Close'),
+      ),
+    ],
+  );
+}
+
 class _CalloutPreview extends StatelessWidget {
   const _CalloutPreview({
     required this.text,
@@ -965,41 +1163,138 @@ class _CalloutPreview extends StatelessWidget {
       ),
     };
     return Center(
-      child: Container(
+      child: SizedBox(
         key: const ValueKey('callout-style-preview'),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        decoration: BoxDecoration(
-          color: colors.$1,
-          border: Border.all(
-            color: colors.$2,
-            width: style == SkillCalloutStyle.special ? 4 : 2.5,
+        width: 280,
+        height: 82,
+        child: CustomPaint(
+          key: ValueKey('callout-bubble-${bubbleType.name}'),
+          painter: _CalloutBubblePainter(
+            bubbleType: bubbleType,
+            fill: colors.$1,
+            outline: colors.$2,
+            strokeWidth: style == SkillCalloutStyle.special ? 4 : 2.5,
+            glow: style == SkillCalloutStyle.special,
           ),
-          borderRadius: BorderRadius.circular(
-            bubbleType == SkillBubbleType.shout
-                ? 2
-                : bubbleType == SkillBubbleType.thought
-                ? 28
-                : bubbleType == SkillBubbleType.radio
-                ? 0
-                : style == SkillCalloutStyle.epic
-                ? 4
-                : 12,
-          ),
-          boxShadow: style == SkillCalloutStyle.special
-              ? const [BoxShadow(color: Color(0x88FF6D00), blurRadius: 10)]
-              : null,
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: colors.$2,
-            fontWeight: FontWeight.w900,
-            fontSize: style == SkillCalloutStyle.special ? 18 : 15,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(30, 12, 30, 22),
+              child: Text(
+                text,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colors.$2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: style == SkillCalloutStyle.special ? 18 : 15,
+                ),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _CalloutBubblePainter extends CustomPainter {
+  const _CalloutBubblePainter({
+    required this.bubbleType,
+    required this.fill,
+    required this.outline,
+    required this.strokeWidth,
+    required this.glow,
+  });
+
+  final SkillBubbleType bubbleType;
+  final Color fill;
+  final Color outline;
+  final double strokeWidth;
+  final bool glow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = switch (bubbleType) {
+      SkillBubbleType.shout => _shoutPath(size),
+      SkillBubbleType.speech => _speechPath(size),
+      SkillBubbleType.thought => _thoughtPath(size),
+      SkillBubbleType.radio => _radioPath(size),
+    };
+    if (glow) canvas.drawShadow(path, const Color(0xFFFF6D00), 10, true);
+    canvas.drawPath(path, Paint()..color = fill);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = outline
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  Path _speechPath(Size size) => Path()
+    ..addRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(8, 5, size.width - 16, size.height - 25),
+        const Radius.circular(18),
+      ),
+    )
+    ..moveTo(size.width * 0.68, size.height - 21)
+    ..lineTo(size.width * 0.79, size.height - 3)
+    ..lineTo(size.width * 0.62, size.height - 20)
+    ..close();
+
+  Path _thoughtPath(Size size) => Path()
+    ..addOval(Rect.fromLTWH(8, 3, size.width - 16, size.height - 28))
+    ..addOval(
+      Rect.fromCircle(
+        center: Offset(size.width * 0.72, size.height - 16),
+        radius: 6,
+      ),
+    )
+    ..addOval(
+      Rect.fromCircle(
+        center: Offset(size.width * 0.78, size.height - 5),
+        radius: 3,
+      ),
+    );
+
+  Path _radioPath(Size size) => Path()
+    ..moveTo(20, 5)
+    ..lineTo(size.width - 20, 5)
+    ..lineTo(size.width - 7, 18)
+    ..lineTo(size.width - 7, size.height - 23)
+    ..lineTo(size.width - 22, size.height - 8)
+    ..lineTo(22, size.height - 8)
+    ..lineTo(7, size.height - 23)
+    ..lineTo(7, 18)
+    ..close();
+
+  Path _shoutPath(Size size) {
+    final center = Offset(size.width / 2, (size.height - 8) / 2);
+    final path = Path();
+    const points = 24;
+    for (var i = 0; i < points; i++) {
+      final angle = -math.pi / 2 + i * math.pi * 2 / points;
+      final radius = i.isEven ? size.height * 0.46 : size.height * 0.34;
+      final point = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    return path..close();
+  }
+
+  @override
+  bool shouldRepaint(covariant _CalloutBubblePainter oldDelegate) =>
+      bubbleType != oldDelegate.bubbleType ||
+      fill != oldDelegate.fill ||
+      outline != oldDelegate.outline ||
+      strokeWidth != oldDelegate.strokeWidth ||
+      glow != oldDelegate.glow;
 }
 
 class _VisualModePreview extends StatelessWidget {

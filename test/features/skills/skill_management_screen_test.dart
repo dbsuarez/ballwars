@@ -60,6 +60,40 @@ void main() {
     },
   );
 
+  testWidgets('skill names use normal rare epic and special tier colors', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    Future<Color?> colorFor(String query, String id) async {
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        query,
+      );
+      await tester.pumpAndSettle();
+      return tester
+          .widget<Text>(find.byKey(ValueKey('skill-name-$id')))
+          .style
+          ?.color;
+    }
+
+    expect(await colorFor('Pistol', 'builtin.pistol'), Colors.white);
+    expect(
+      await colorFor('Shotgun', 'builtin.shotgun'),
+      PowerUpRarity.rare.color,
+    );
+    expect(
+      await colorFor('Rocket Launcher', 'builtin.rocketLauncher'),
+      PowerUpRarity.epic.color,
+    );
+    expect(
+      await colorFor('Spike Wall', 'builtin.spikeWall'),
+      const Color(0xFFFFD54F),
+    );
+  });
+
   testWidgets('admin can duplicate, edit and save a custom skill', (
     tester,
   ) async {
@@ -119,12 +153,22 @@ void main() {
     expect(find.text('Skill settings guide'), findsOneWidget);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, 1400));
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-field-arsenal')),
+      find.byType(ListView).last,
+      const Offset(0, 300),
+    );
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('skill-field-arsenal')),
       '42',
     );
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-enabled')),
+      find.byType(ListView).last,
+      const Offset(0, 300),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('skill-enabled')));
     await tester.pump();
     await tester.tap(find.text('Done'));
@@ -164,6 +208,27 @@ void main() {
     expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
     expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
     expect(find.byKey(const ValueKey('skill-bubble-type')), findsOneWidget);
+    expect(find.byKey(const ValueKey('callout-bubble-shout')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('skill-bubble-type')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Thought - quiet or psychic').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('callout-bubble-thought')),
+      findsOneWidget,
+    );
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('preview-skill')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('preview-skill')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('replay-skill-preview')), findsOneWidget);
+    expect(find.text('Gravity Burst'), findsWidgets);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('invalid composed combinations are explained and cannot save', (
@@ -180,7 +245,11 @@ void main() {
     );
     await tester.tap(find.text('Build skill'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('skill-targeting')));
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-targeting')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('skill-targeting')));
     await tester.pumpAndSettle();

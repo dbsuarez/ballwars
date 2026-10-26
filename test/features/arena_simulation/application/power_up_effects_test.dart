@@ -695,6 +695,41 @@ void main() {
     expect(ball.equippedWeapons, [PowerUpKind.sword, PowerUpKind.pistol]);
   });
 
+  test('custom handedness overrides the carrier weapon default', () {
+    final pistol = SkillLibrary.defaults
+        .create('Heavy Pistol', PowerUpKind.pistol)
+        .copyWith(enabled: true, handedness: SkillHandedness.twoHanded);
+    final heavyPistol = _match(
+      dualWield: true,
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        pistol,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final first = heavyPistol.state.balls.first;
+    _give(heavyPistol, first, PowerUpKind.pistol);
+    _give(heavyPistol, first, PowerUpKind.sword);
+    expect(first.equippedWeapons, [PowerUpKind.sword]);
+
+    final launcher = SkillLibrary.defaults
+        .create('Light Launcher', PowerUpKind.rocketLauncher)
+        .copyWith(enabled: true, handedness: SkillHandedness.oneHanded);
+    final lightLauncher = _match(
+      dualWield: true,
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        launcher,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final second = lightLauncher.state.balls.first;
+    _give(lightLauncher, second, PowerUpKind.rocketLauncher);
+    _give(lightLauncher, second, PowerUpKind.sword);
+    expect(second.equippedWeapons, [
+      PowerUpKind.rocketLauncher,
+      PowerUpKind.sword,
+    ]);
+  });
+
   test('boomerang can hit several opponents only once per throw', () {
     final c = _match(count: 3);
     final [owner, first, second] = c.state.balls;

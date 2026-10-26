@@ -87,6 +87,7 @@ class GameAudio with WidgetsBindingObserver {
   final Stopwatch _effectClock = Stopwatch()..start();
   Future<void> _musicQueue = Future.value();
   Future<void> _menuQueue = Future.value();
+  Future<void> _skillPreviewQueue = Future.value();
   int _menuEpoch = 0;
 
   @visibleForTesting
@@ -285,7 +286,23 @@ class GameAudio with WidgetsBindingObserver {
       'pickup',
       'hit',
     }.contains(cue)) {
-      _voices.putIfAbsent(cue, () => _Voices(cue)).play(0.8);
+      _skillPreviewQueue = _skillPreviewQueue
+          .then((_) async {
+            final player = _preview ??= _newPlayer();
+            await player.stop();
+            await player.setReleaseMode(ReleaseMode.stop);
+            await player.play(
+              AssetSource('sounds/$cue.wav'),
+              volume: 1,
+              mode: PlayerMode.mediaPlayer,
+            );
+          })
+          .catchError((Object e) {
+            debugPrint('GameAudio skill preview: $e');
+            final failed = _preview;
+            _preview = null;
+            if (failed != null) _guard(failed.dispose);
+          });
     }
   }
 

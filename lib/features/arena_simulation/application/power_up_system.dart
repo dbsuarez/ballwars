@@ -147,6 +147,8 @@ class PowerUpSystem {
     ball
       ..held = null
       ..heldSecondary = null
+      ..heldTwoHanded = false
+      ..heldSecondaryTwoHanded = false
       ..speedLeft = 0
       ..frozenLeft = 0
       ..stunnedLeft = 0
@@ -410,13 +412,23 @@ class PowerUpSystem {
           _skillYell(ball, p.kind, 'TWIST AND SHOUT!');
         }
       default:
-        ball.equipWeapon(p.kind, dualWield: match.dualWield);
+        ball.equipWeapon(
+          p.kind,
+          dualWield: match.dualWield,
+          twoHanded: _twoHandedOverride(activeSkill),
+        );
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
         if (p.kind.isBlade && match.mode == MatchMode.allOut) {
           ball.sweepLeft = PowerUpTuning.sweepSteps;
         }
     }
   }
+
+  bool? _twoHandedOverride(SkillDefinition skill) => switch (skill.handedness) {
+    SkillHandedness.carrierDefault => null,
+    SkillHandedness.oneHanded => false,
+    SkillHandedness.twoHanded => true,
+  };
 
   void _launchOmegaTendrils(SimulationBall owner) {
     for (final target in match.state.balls) {
@@ -1371,6 +1383,18 @@ class PowerUpSystem {
       if (skill.secondaryEffectType != null) {
         _applyComposedEffect(owner, target, skill, skill.secondaryEffectType);
       }
+      match.state.particles.spawnImpact(
+        origin: target.position,
+        rng: rng,
+        color: Color(skill.effectColor),
+        accent: const Color(0xFFFFFFFF),
+        count: 7 + (skill.screenShake * 10).round(),
+      );
+      if (skill.screenShake > 0) {
+        weaponImpacts.add(
+          WeaponImpact(position: target.position, strength: skill.screenShake),
+        );
+      }
     }
   }
 
@@ -1500,12 +1524,18 @@ class PowerUpSystem {
         _teleport(target, target.position);
       case SkillEffectType.equipCarrier:
         if (skill.baseKind.isWeapon) {
-          target.equipWeapon(skill.baseKind, dualWield: match.dualWield);
+          target.equipWeapon(
+            skill.baseKind,
+            dualWield: match.dualWield,
+            twoHanded: _twoHandedOverride(skill),
+          );
         }
       case SkillEffectType.disarm:
         target
           ..held = null
-          ..heldSecondary = null;
+          ..heldSecondary = null
+          ..heldTwoHanded = false
+          ..heldSecondaryTwoHanded = false;
       case null:
     }
   }

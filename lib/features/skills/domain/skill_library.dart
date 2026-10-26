@@ -28,6 +28,8 @@ enum SkillCalloutStyle { normal, rare, epic, special }
 
 enum SkillBubbleType { shout, speech, thought, radio }
 
+enum SkillHandedness { carrierDefault, oneHanded, twoHanded }
+
 class SkillDefinition {
   static const List<String> soundCues = [
     'shot',
@@ -67,6 +69,9 @@ class SkillDefinition {
     this.startDelaySeconds = 0,
     this.tickIntervalSeconds = 0.5,
     this.cooldownSeconds = 0,
+    this.effectColor = 0xFFFF6B6B,
+    this.screenShake = 0,
+    this.handedness = SkillHandedness.carrierDefault,
     this.yell = '',
     this.calloutStyle = SkillCalloutStyle.normal,
     this.bubbleType = SkillBubbleType.shout,
@@ -98,6 +103,9 @@ class SkillDefinition {
   final double startDelaySeconds;
   final double tickIntervalSeconds;
   final double cooldownSeconds;
+  final int effectColor;
+  final double screenShake;
+  final SkillHandedness handedness;
   final String yell;
   final SkillCalloutStyle calloutStyle;
   final SkillBubbleType bubbleType;
@@ -133,6 +141,9 @@ class SkillDefinition {
     double? startDelaySeconds,
     double? tickIntervalSeconds,
     double? cooldownSeconds,
+    int? effectColor,
+    double? screenShake,
+    SkillHandedness? handedness,
     String? yell,
     SkillCalloutStyle? calloutStyle,
     SkillBubbleType? bubbleType,
@@ -165,6 +176,9 @@ class SkillDefinition {
     startDelaySeconds: startDelaySeconds ?? this.startDelaySeconds,
     tickIntervalSeconds: tickIntervalSeconds ?? this.tickIntervalSeconds,
     cooldownSeconds: cooldownSeconds ?? this.cooldownSeconds,
+    effectColor: effectColor ?? this.effectColor,
+    screenShake: screenShake ?? this.screenShake,
+    handedness: handedness ?? this.handedness,
     yell: yell ?? this.yell,
     calloutStyle: calloutStyle ?? this.calloutStyle,
     bubbleType: bubbleType ?? this.bubbleType,
@@ -198,6 +212,9 @@ class SkillDefinition {
     'start_delay_seconds': startDelaySeconds,
     'tick_interval_seconds': tickIntervalSeconds,
     'cooldown_seconds': cooldownSeconds,
+    'effect_color': effectColor,
+    'screen_shake': screenShake,
+    'handedness': handedness.name,
     if (yell.isNotEmpty) 'yell': yell,
     'callout_style': calloutStyle.name,
     'bubble_type': bubbleType.name,
@@ -261,6 +278,13 @@ class SkillDefinition {
       startDelaySeconds: decimal('start_delay_seconds') ?? 0,
       tickIntervalSeconds: decimal('tick_interval_seconds') ?? 0.5,
       cooldownSeconds: decimal('cooldown_seconds') ?? 0,
+      effectColor: integer('effect_color') ?? 0xFFFF6B6B,
+      screenShake: decimal('screen_shake') ?? 0,
+      handedness: enumValue(
+        'handedness',
+        SkillHandedness.values,
+        SkillHandedness.carrierDefault,
+      ),
       yell: value['yell'] as String? ?? '',
       calloutStyle: enumValue(
         'callout_style',
@@ -290,6 +314,8 @@ class SkillDefinition {
     startDelaySeconds: startDelaySeconds.clamp(0, 30),
     tickIntervalSeconds: tickIntervalSeconds.clamp(0.1, 10),
     cooldownSeconds: cooldownSeconds.clamp(0, 60),
+    effectColor: effectColor.clamp(0, 0xFFFFFFFF),
+    screenShake: screenShake.clamp(0, 1),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
   );

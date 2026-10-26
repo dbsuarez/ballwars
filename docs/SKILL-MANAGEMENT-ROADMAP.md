@@ -28,7 +28,7 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 - [x] Target self, the nearest opponent, or every opponent.
 - [x] Deliver an instant, projectile, or area effect.
 - [x] Apply damage, healing, freeze, speed, or knockback.
-- [x] Preview item/impact rendering and sound.
+- [x] Preview item/impact rendering, tier-colored skill names, callouts, and sound in one replayable skill preview.
 - [x] Customize yells with Shout, Speech, Thought, or Radio bubbles and Normal, Rare, Epic, or Special styling.
 - [x] Preview damaging finishers.
 - [x] Restore editor defaults and show a settings guide.
@@ -43,9 +43,9 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 - [x] Add DoT, shield, pull, teleport, stun, and equipment effects.
 - [x] Add repeat count and repeat interval.
 - [x] Add start delay, DoT tick interval, and cooldown.
-- [ ] Add configurable colors and screen shake.
+- [x] Add configurable colors and screen shake.
 - [x] Validate trigger, target, delivery, and carrier compatibility.
-- [ ] Add explicit one-handed/two-handed equipment choice.
+- [x] Add explicit one-handed/two-handed equipment choice.
 - [x] Chain primary and secondary effects in a defined order.
 
 ## Phase 3 - Testing, previews, and safety

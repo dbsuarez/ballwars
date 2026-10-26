@@ -54,7 +54,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(true));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('choose-power-0')));
+    await tester.longPress(find.byKey(const ValueKey('choose-power-0')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('power-test-item-apple')));
     await tester.pumpAndSettle();
@@ -73,33 +73,41 @@ void main() {
     expect(arena.state.balls.first.life, greaterThan(100));
   });
 
-  testWidgets('loadouts and arena traps expose re-arm controls', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_app(true));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'slot tap rearms and hold opens selection without refresh buttons',
+    (tester) async {
+      await tester.pumpWidget(_app(true));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('rearm-loadout-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rearm-loadout-1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rearm-weapon-1-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rearm-weapon-2-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rearm-power-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('clear-weapon-1-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('clear-weapon-2-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('clear-power-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('clear-loadout-0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('rearm-all-arena-traps')), findsOneWidget);
-    expect(find.byKey(const ValueKey('clear-all-arena-traps')), findsOneWidget);
-    for (var i = 0; i < 3; i++) {
-      expect(find.byKey(ValueKey('choose-arena-trap-$i')), findsOneWidget);
-      expect(find.byKey(ValueKey('rearm-arena-trap-$i')), findsOneWidget);
-      expect(find.byKey(ValueKey('clear-arena-trap-$i')), findsOneWidget);
-    }
-    await tester.tap(find.byKey(const ValueKey('rearm-weapon-1-0')));
-    await tester.pump();
-    final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
-    expect(arena.state.balls.first.held, PowerUpKind.pistol);
-  });
+      expect(find.byKey(const ValueKey('rearm-loadout-0')), findsNothing);
+      expect(find.byKey(const ValueKey('rearm-weapon-1-0')), findsNothing);
+      expect(find.byKey(const ValueKey('rearm-power-0')), findsNothing);
+      expect(find.byKey(const ValueKey('clear-weapon-1-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('clear-weapon-2-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('clear-power-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('clear-loadout-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('rearm-all-arena-traps')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('clear-all-arena-traps')),
+        findsOneWidget,
+      );
+      for (var i = 0; i < 3; i++) {
+        expect(find.byKey(ValueKey('choose-arena-trap-$i')), findsOneWidget);
+        expect(find.byKey(ValueKey('rearm-arena-trap-$i')), findsNothing);
+        expect(find.byKey(ValueKey('clear-arena-trap-$i')), findsOneWidget);
+      }
+      final before = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+      before.state.balls.first.held = null;
+      await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+      await tester.pump();
+      final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+      expect(arena.state.balls.first.held, PowerUpKind.pistol);
+
+      await tester.longPress(find.byKey(const ValueKey('choose-item-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('Weapons'), findsOneWidget);
+    },
+  );
 
   testWidgets('an unsaved skill opens preselected in the live test arena', (
     tester,
@@ -169,7 +177,7 @@ void main() {
           matching: find.byType(Scrollable),
         ),
       );
-      await tester.tap(find.byKey(const ValueKey('choose-item-1')));
+      await tester.longPress(find.byKey(const ValueKey('choose-item-1')));
       await tester.pumpAndSettle();
       expect(find.text('Weapons'), findsOneWidget);
       expect(find.text('Boomerang').hitTestable(), findsOneWidget);
@@ -235,7 +243,7 @@ void main() {
         matching: find.byType(Scrollable),
       ),
     );
-    await tester.tap(find.byKey(const ValueKey('choose-power-0')));
+    await tester.longPress(find.byKey(const ValueKey('choose-power-0')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'raging demon');
     await tester.pump();
@@ -307,7 +315,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_app(true));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('choose-power-0')));
+    await tester.longPress(find.byKey(const ValueKey('choose-power-0')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'apple');
     await tester.pump();
@@ -325,7 +333,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(_app(true));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+      await tester.longPress(find.byKey(const ValueKey('choose-item-0')));
       await tester.pumpAndSettle();
 
       final pistol = find.byKey(const ValueKey('power-test-item-pistol'));
@@ -355,7 +363,7 @@ void main() {
     before.state.balls[0].position = const Offset(31, 47);
     before.state.balls[1].position = const Offset(-62, 19);
 
-    await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+    await tester.longPress(find.byKey(const ValueKey('choose-item-0')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'shotgun');
     await tester.pump();

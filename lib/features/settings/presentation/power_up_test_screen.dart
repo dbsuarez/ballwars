@@ -405,7 +405,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         _powerUps[index] = kind;
         DevicePrefs.write('power-test-power-$index', kind?.name ?? 'none');
       }
-      _reapplyLoadout(index);
+      if (kind == null) {
+        _reapplyLoadout(index);
+      } else {
+        _applyItem(index, kind);
+      }
     });
   }
 
@@ -737,16 +741,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                   children: [
                     Expanded(child: Text('Ball ${i == 0 ? "A" : "B"} loadout')),
                     IconButton(
-                      key: ValueKey('rearm-loadout-$i'),
-                      tooltip: 'Re-arm all for Ball ${i == 0 ? "A" : "B"}',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => setState(() => _reapplyLoadout(i)),
-                      icon: const CanvasActionGlyph(
-                        CanvasActionGlyphType.refresh,
-                        size: 18,
-                      ),
-                    ),
-                    IconButton(
                       key: ValueKey('clear-loadout-$i'),
                       tooltip: 'Clear all for Ball ${i == 0 ? "A" : "B"}',
                       visualDensity: VisualDensity.compact,
@@ -764,7 +758,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     Expanded(
                       child: _loadoutSlot(
                         buttonKey: ValueKey('choose-item-$i'),
-                        rearmKey: ValueKey('rearm-weapon-1-$i'),
                         clearKey: ValueKey('clear-weapon-1-$i'),
                         label: 'Weapon 1',
                         item: _savedItems[i],
@@ -777,7 +770,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     Expanded(
                       child: _loadoutSlot(
                         buttonKey: ValueKey('choose-weapon-2-$i'),
-                        rearmKey: ValueKey('rearm-weapon-2-$i'),
                         clearKey: ValueKey('clear-weapon-2-$i'),
                         label: 'Weapon 2',
                         item: _secondaryWeapons[i],
@@ -791,7 +783,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     Expanded(
                       child: _loadoutSlot(
                         buttonKey: ValueKey('choose-power-$i'),
-                        rearmKey: ValueKey('rearm-power-$i'),
                         clearKey: ValueKey('clear-power-$i'),
                         label: 'Power-up',
                         item: _powerUps[i],
@@ -808,16 +799,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         Row(
           children: [
             const Expanded(child: Text('Arena trap loadout')),
-            IconButton(
-              key: const ValueKey('rearm-all-arena-traps'),
-              tooltip: 'Deploy all arena traps again',
-              visualDensity: VisualDensity.compact,
-              onPressed: () => setState(_rearmAllTraps),
-              icon: const CanvasActionGlyph(
-                CanvasActionGlyphType.refresh,
-                size: 18,
-              ),
-            ),
             IconButton(
               key: const ValueKey('clear-all-arena-traps'),
               tooltip: 'Clear all arena traps',
@@ -843,7 +824,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     width: width,
                     child: _loadoutSlot(
                       buttonKey: ValueKey('choose-arena-trap-$i'),
-                      rearmKey: ValueKey('rearm-arena-trap-$i'),
                       clearKey: ValueKey('clear-arena-trap-$i'),
                       label: 'Trap ${i + 1}',
                       item: _arenaTraps[i],
@@ -913,7 +893,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 
   Widget _loadoutSlot({
     required Key buttonKey,
-    required Key rearmKey,
     required Key clearKey,
     required String label,
     required PowerUpKind? item,
@@ -927,17 +906,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           key: buttonKey,
           label: label,
           item: item,
-          onTap: onChoose,
+          onTap: item == null ? onChoose : onRearm,
+          onLongPress: onChoose,
         ),
-      ),
-      IconButton(
-        key: rearmKey,
-        tooltip: 'Re-arm $label',
-        visualDensity: VisualDensity.compact,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 30, height: 42),
-        onPressed: item == null ? null : onRearm,
-        icon: const Icon(Icons.refresh, size: 17),
       ),
       IconButton(
         key: clearKey,
@@ -956,31 +927,40 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     required String label,
     required PowerUpKind? item,
     required VoidCallback onTap,
+    required VoidCallback onLongPress,
   }) => Tooltip(
-    message: item?.label ?? label,
+    message: item == null
+        ? 'Choose $label'
+        : '${item.label}: tap to re-arm, hold to replace',
     child: Semantics(
-      label: item == null ? 'Choose $label' : '$label: ${item.label}',
+      label: item == null
+          ? 'Choose $label'
+          : '$label: ${item.label}. Tap to re-arm. Hold to replace.',
       button: true,
-      child: OutlinedButton(
+      onLongPress: onLongPress,
+      child: GestureDetector(
         key: key,
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+        onLongPress: onLongPress,
+        child: OutlinedButton(
+          onPressed: onTap,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+          ),
+          child: item != null
+              ? PowerUpIcon(item, size: 30)
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_circle_outline, size: 20),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ],
+                ),
         ),
-        child: item != null
-            ? PowerUpIcon(item, size: 30)
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.add_circle_outline, size: 20),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ],
-              ),
       ),
     ),
   );

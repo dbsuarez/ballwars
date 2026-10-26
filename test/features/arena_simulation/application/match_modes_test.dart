@@ -120,20 +120,30 @@ void main() {
     expect(match.lastEliminatedId, contestants.last.id);
   });
 
-  test('Mayhem honors selected time and clamps overshooting terminal frames', () {
-    final match = MatchSimulationController(_balls, arenaRadius: _arenaRadius,
-      seed: 42, lookAhead: false, mode: MatchMode.arsenal,
-      endlessBattle: true, mayhem: true, mayhemSeconds: 30);
-    match.tick(29.9);
-    expect(match.state.status, isNot(MatchStatus.finished));
-    match.tick(13);
-    expect(match.state.status, MatchStatus.finished);
-    expect(match.elapsedSeconds, 30);
-    match.tick(10);
-    expect(match.elapsedSeconds, 30);
-  });
+  test(
+    'Mayhem honors selected time and clamps overshooting terminal frames',
+    () {
+      final match = MatchSimulationController(
+        _balls,
+        arenaRadius: _arenaRadius,
+        seed: 42,
+        lookAhead: false,
+        mode: MatchMode.arsenal,
+        endlessBattle: true,
+        mayhem: true,
+        mayhemSeconds: 30,
+      );
+      match.tick(29.9);
+      expect(match.state.status, isNot(MatchStatus.finished));
+      match.tick(13);
+      expect(match.state.status, MatchStatus.finished);
+      expect(match.elapsedSeconds, 30);
+      match.tick(10);
+      expect(match.elapsedSeconds, 30);
+    },
+  );
 
-  test('Threads mode plays exactly as before' , () {
+  test('Threads mode plays exactly as before', () {
     for (final (count, seed, winner, wallHits, ballHits, steps)
         in _threadsBaseline) {
       final c = MatchSimulationController(
@@ -412,14 +422,31 @@ void main() {
       expect(PowerUpTuning.arenaLife - crowd.state.balls[0].life, 40);
     },
   );
-  test('Mayhem cinematic loser is lowest KOs then lowest remaining life', () {
-    final contestants = List.generate(6, (i) => CustomBall(
-      id: 'mayhem-$i', name: 'Ball $i', primaryColor: Colors.red, glowColor: Colors.red));
-    final match = MatchSimulationController(contestants,
-      arenaRadius: _arenaRadius, mode: MatchMode.arsenal,
-      endlessBattle: true, mayhem: true, lookAhead: false, seed: 42);
+  test('Mayhem ranks by KOs, fewer deaths, then remaining life', () {
+    final contestants = List.generate(
+      6,
+      (i) => CustomBall(
+        id: 'mayhem-$i',
+        name: 'Ball $i',
+        primaryColor: Colors.red,
+        glowColor: Colors.red,
+      ),
+    );
+    final match = MatchSimulationController(
+      contestants,
+      arenaRadius: _arenaRadius,
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+      mayhem: true,
+      lookAhead: false,
+      seed: 42,
+    );
     match.eliminations[contestants[0].id] = 8;
+    match.eliminations[contestants[1].id] = 8;
+    match.deaths[contestants[0].id] = 2;
+    match.deaths[contestants[1].id] = 3;
     match.state.balls[0].life = 1;
+    match.state.balls[1].life = 100;
     match.state.balls[4].life = 12;
     match.state.balls[5].life = 20;
     match.tick(MatchSimulationController.mayhemDurationSeconds);
@@ -427,4 +454,26 @@ void main() {
     expect(match.lastEliminatedId, contestants[4].id);
   });
 
+  test('Mayhem counts KOs and times eliminated separately', () {
+    final match = MatchSimulationController(
+      _balls.take(2).toList(),
+      arenaRadius: _arenaRadius,
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+      mayhem: true,
+      lookAhead: false,
+      seed: 43,
+    );
+    final attacker = _ball(match, 'a');
+    final victim = _ball(match, 'b');
+    victim.ghostLeft = 0;
+
+    match.damage(victim, PowerUpTuning.arenaLife * 2, attacker: attacker);
+    match.tick(MatchSimulationController.fixedTimestep * 1.01);
+
+    expect(match.eliminations, {'a': 1});
+    expect(match.deaths, {'b': 1});
+    expect(victim.life, PowerUpTuning.arenaLife);
+    expect(victim.isEliminated, isFalse);
+  });
 }

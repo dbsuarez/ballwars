@@ -83,12 +83,15 @@ void main() {
             balls: balls,
             mode: MatchMode.arsenal,
             eliminations: const {'a': 3},
+            deaths: const {'a': 2, 'b': 4},
           ),
         ),
       ),
     );
-    expect(find.text('3 KOs'), findsOneWidget);
-    expect(find.text('0 KOs'), findsOneWidget);
+    expect(find.text('3 W'), findsOneWidget);
+    expect(find.text('0 W'), findsOneWidget);
+    expect(find.text('2 L'), findsOneWidget);
+    expect(find.text('4 L'), findsOneWidget);
   });
 
   testWidgets('scoreboard shows equipped weapons and active power-ups', (
@@ -177,18 +180,36 @@ void main() {
     expect(find.text('45 lines'), findsOneWidget);
     expect(tester.widget<HeartsRow>(find.byType(HeartsRow)).hearts, 5.0);
   });
-  testWidgets('six-player mobile scoreboard fits compact cards in two rows', (tester) async {
-    final balls = [for (var i = 0; i < 6; i++) _ball('player$i', 0)..life = 100];
-    await tester.pumpWidget(MaterialApp(home: Scaffold(
-      body: Align(alignment: Alignment.topCenter, child: SizedBox(width: 360,
-        child: ScoreboardOverlay(compact: true, balls: balls,
-            mode: MatchMode.arsenal, eliminations: const {}),
-      )),
-    )));
+  testWidgets('six-player mobile scoreboard fits compact cards in two rows', (
+    tester,
+  ) async {
+    final balls = [
+      for (var i = 0; i < 6; i++) _ball('player$i', 0)..life = 100,
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: 360,
+              child: ScoreboardOverlay(
+                compact: true,
+                balls: balls,
+                mode: MatchMode.arsenal,
+                eliminations: const {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     expect(find.byType(Card), findsNWidgets(6));
-    expect(find.text('100 HP / 0 KOs'), findsNWidgets(6));
-    expect(tester.getSize(find.byType(ScoreboardOverlay)).height, lessThan(220));
+    expect(find.text('100 HP / 0 W'), findsNWidgets(6));
+    expect(
+      tester.getSize(find.byType(ScoreboardOverlay)).height,
+      lessThan(220),
+    );
     expect(tester.takeException(), isNull);
   });
-
 }

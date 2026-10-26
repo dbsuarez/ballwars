@@ -27,7 +27,7 @@ class WinnerModal extends StatefulWidget {
   final String? winningMove;
 
   /// Final Mayhem knockouts for every contestant, including zero scores.
-  final List<(CustomBall, int, double)>? mayhemTally;
+  final List<(CustomBall, int, int, double)>? mayhemTally;
 
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
@@ -222,7 +222,9 @@ class _WinnerModalState extends State<WinnerModal>
       ..sort((a, b) {
         final score = b.$2.compareTo(a.$2);
         if (score != 0) return score;
-        final life = b.$3.compareTo(a.$3);
+        final timesEliminated = a.$3.compareTo(b.$3);
+        if (timesEliminated != 0) return timesEliminated;
+        final life = b.$4.compareTo(a.$4);
         if (life != 0) return life;
         return original.indexOf(a).compareTo(original.indexOf(b));
       });
@@ -237,17 +239,20 @@ class _WinnerModalState extends State<WinnerModal>
           children: [
             Text('MAYHEM TALLY', style: AppText.mono(12, color: c.muted)),
             Text(
-              'Knockouts first / remaining life breaks ties',
+              'Wins / fewer eliminations / remaining health',
               style: AppText.ui(11, FontWeight.w500, color: c.muted),
             ),
             const SizedBox(height: 6),
             for (var i = 0; i < rows.length; i++)
               Builder(
                 builder: (context) {
-                  final (ball, knockouts, life) = rows[i];
+                  final (ball, knockouts, deaths, life) = rows[i];
                   final rank =
                       rows.indexWhere(
-                        (row) => row.$2 == knockouts && row.$3 == life,
+                        (row) =>
+                            row.$2 == knockouts &&
+                            row.$3 == deaths &&
+                            row.$4 == life,
                       ) +
                       1;
                   return Padding(
@@ -294,11 +299,20 @@ class _WinnerModalState extends State<WinnerModal>
                               : null,
                         ),
                         SizedBox(
-                          width: 54,
+                          width: 34,
                           child: Text(
-                            '$knockouts KOs',
+                            '$knockouts W',
                             textAlign: TextAlign.right,
                             style: AppText.mono(12, color: c.text),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 34,
+                          child: Text(
+                            '$deaths L',
+                            textAlign: TextAlign.right,
+                            style: AppText.mono(12, color: c.muted),
                           ),
                         ),
                         const SizedBox(width: 8),

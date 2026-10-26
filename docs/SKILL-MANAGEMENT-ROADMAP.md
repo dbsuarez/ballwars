@@ -154,7 +154,9 @@ Replay and video remain last, by agreement.
 - [x] Add gold Special Cloud's Buster Sword: freeze time, target the farthest opponent, slash eight times, and yell `OMNISLASH!`.
 - [x] Add epic Raging Demon: dash to the nearest opponent, darken the arena, flash 24 configurable one-damage hits, and make it dramatic.
 - [x] Add Special tier and configurable spawn weights with defaults 50/45/40/35.
-- [x] Add Mayhem elimination tally.
+- [x] Add Mayhem KO tally.
+- [x] Add a separate Mayhem tally for how many times each ball was eliminated.
+- [x] Rank Mayhem by wins/KOs, then fewer eliminations, then remaining health.
 - [x] Define ranking by wins, losses, then remaining HP.
 - [x] Decide whether arena branding should rotate every minute; default remains static until approved.
 - [x] Research non-circular contestants and document physics/fairness implications before implementation.

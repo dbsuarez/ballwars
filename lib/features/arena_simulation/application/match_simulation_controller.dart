@@ -118,6 +118,11 @@ class MatchSimulationController {
   String? _winningMove;
   final Map<SimulationBall, String> _lastMove = {};
   final Map<String, int> eliminations = {};
+
+  /// Number of times each ball has been knocked out in an endless/Mayhem match.
+  /// [eliminations] records KOs credited to attackers; these are deliberately
+  /// separate because an environmental knockout may have no attacker.
+  final Map<String, int> deaths = {};
   final Map<SimulationBall, SimulationBall> _lastDamageBy = {};
 
   /// [layoutRotation] fixes where ball 0 starts (radians); by default the
@@ -595,12 +600,16 @@ class MatchSimulationController {
           eliminations[a.config.id] ?? 0,
         );
         if (knockouts != 0) return knockouts;
+        final timesEliminated = (deaths[a.config.id] ?? 0).compareTo(
+          deaths[b.config.id] ?? 0,
+        );
+        if (timesEliminated != 0) return timesEliminated;
         final life = b.life.compareTo(a.life);
         if (life != 0) return life;
         return _balls.indexOf(a).compareTo(_balls.indexOf(b));
       });
     _winnerId = ranked.first.config.id;
-    // The visual loser must match the bottom of the final KO/life tally.
+    // The visual loser must match the bottom of the final KO/death/life tally.
     _lastEliminatedId = ranked.length > 1 ? ranked.last.config.id : null;
     _winningMove = 'Knockout lead';
     _status = MatchStatus.finished;
@@ -864,6 +873,7 @@ class MatchSimulationController {
 
     if (endlessBattle && eliminatedNow.isNotEmpty) {
       for (final ball in eliminatedNow) {
+        deaths.update(ball.config.id, (count) => count + 1, ifAbsent: () => 1);
         final attacker = _lastDamageBy.remove(ball);
         if (attacker != null) {
           eliminations.update(

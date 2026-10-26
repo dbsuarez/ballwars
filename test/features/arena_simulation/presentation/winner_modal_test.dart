@@ -157,7 +157,7 @@ void main() {
         home: Scaffold(
           body: WinnerModal(
             winner: winner,
-            mayhemTally: const [(other, 4, 25.0), (winner, 4, 72.5)],
+            mayhemTally: const [(other, 4, 3, 99.0), (winner, 4, 1, 72.5)],
             showEffects: false,
             onReplay: () {},
             onPlayAgain: () {},
@@ -168,9 +168,11 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('MAYHEM TALLY'), findsOneWidget);
-    expect(find.text('4 KOs'), findsNWidgets(2));
+    expect(find.text('4 W'), findsNWidgets(2));
+    expect(find.text('3 L'), findsOneWidget);
+    expect(find.text('1 L'), findsOneWidget);
     expect(find.text('72.5 HP'), findsOneWidget);
-    expect(find.text('25.0 HP'), findsOneWidget);
+    expect(find.text('99.0 HP'), findsOneWidget);
     final first = tester.getTopLeft(
       find.byKey(const ValueKey('mayhem-result-a')),
     );

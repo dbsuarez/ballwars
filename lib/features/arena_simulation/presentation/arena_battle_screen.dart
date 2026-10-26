@@ -667,6 +667,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         eliminations: widget.config.endlessBattle
             ? _controller.eliminations
             : null,
+        deaths: widget.config.endlessBattle ? _controller.deaths : null,
       ),
     );
 
@@ -901,6 +902,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 (
                                   ball.config,
                                   _controller.eliminations[ball.config.id] ?? 0,
+                                  _controller.deaths[ball.config.id] ?? 0,
                                   ball.life,
                                 ),
                             ]

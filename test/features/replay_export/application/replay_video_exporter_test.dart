@@ -73,6 +73,7 @@ void main() {
     final expected = _matchFrames(4, fps) +
         1 +
         (ReplayVideoExporter.finalHoldSeconds * fps).round() +
+        (ReplayVideoExporter.finisherSeconds * fps).round() +
         (ReplayVideoExporter.loserSeconds * fps).round() +
         (ReplayVideoExporter.winnerCardSeconds * fps).round();
     expect(path, '/tmp/replay.mp4');

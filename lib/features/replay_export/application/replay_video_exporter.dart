@@ -7,6 +7,7 @@ import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../skills/domain/skill_library.dart';
 import '../data/video_encoder.dart';
 import '../presentation/replay_frame_painter.dart';
 
@@ -44,6 +45,7 @@ class ReplayVideoExporter {
   static const double winnerCardSeconds = 2.5;
   // The runner-up shown big before the winner card (as in the app).
   static const double loserSeconds = 1.8;
+  static const double finisherSeconds = 2.4;
   // Guard against a match that never ends (none do in practice).
   static const int maxMatchFrames = fps * 60 * 10;
 
@@ -70,6 +72,7 @@ class ReplayVideoExporter {
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
+    SkillLibrary skillLibrary = SkillLibrary.defaults,
     bool endlessBattle = false,
     bool dualWield = false,
     bool mayhem = false,
@@ -77,6 +80,7 @@ class ReplayVideoExporter {
     bool shrinkingArena = false,
     double minimumArenaScale = 0.60,
     ReplayStyle style = const ReplayStyle(),
+    bool finishersEnabled = true,
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
   }) async {
@@ -91,6 +95,7 @@ class ReplayVideoExporter {
       mode: mode,
       powerUpKinds: powerUps,
       tuning: tuning,
+      skillLibrary: skillLibrary,
       endlessBattle: endlessBattle,
       dualWield: dualWield,
       mayhem: mayhem,
@@ -99,6 +104,7 @@ class ReplayVideoExporter {
       minimumArenaScale: minimumArenaScale,
       bloodColor: style.bloodColor,
       automaticSpeedUp: automaticSpeedUp,
+      arenaDecoration: style.arenaDecoration,
     );
     final frameDelta = speedMultiplier / fps;
 
@@ -113,7 +119,16 @@ class ReplayVideoExporter {
     final holdFrames = (finalHoldSeconds * fps).round();
     final cardFrames = (winnerCardSeconds * fps).round();
     final loserFrames = (loserSeconds * fps).round();
-    final totalFrames = matchFrames + 1 + holdFrames + loserFrames + cardFrames;
+    final finisherFrames = finishersEnabled && dryRun.winningMove != null
+        ? (finisherSeconds * fps).round()
+        : 0;
+    final totalFrames =
+        matchFrames +
+        1 +
+        holdFrames +
+        finisherFrames +
+        loserFrames +
+        cardFrames;
 
     final match = newMatch();
     await match.preloadImages();
@@ -177,6 +192,27 @@ class ReplayVideoExporter {
       final loser = finalState.balls
           .where((b) => b.config.id == match.lastEliminatedId)
           .firstOrNull;
+      final winner = finalState.balls
+          .where((b) => b.config.id == finalState.winnerId)
+          .firstOrNull;
+      for (
+        var i = 0;
+        i < finisherFrames && winner != null && loser != null;
+        i++
+      ) {
+        await emit(
+          (canvas, size) => ReplayFramePainter.paintFinisher(
+            canvas,
+            size,
+            winner,
+            loser,
+            match.winningMove!,
+            i / finisherFrames,
+            videoTime: videoTime(),
+            style: style,
+          ),
+        );
+      }
       for (var i = 0; i < loserFrames && loser != null; i++) {
         match.tick(frameDelta);
         await emit(
@@ -195,9 +231,6 @@ class ReplayVideoExporter {
         );
       }
 
-      final winner = finalState.balls
-          .where((b) => b.config.id == finalState.winnerId)
-          .firstOrNull;
       for (var i = 0; i < cardFrames && winner != null; i++) {
         await emit(
           (canvas, size) =>

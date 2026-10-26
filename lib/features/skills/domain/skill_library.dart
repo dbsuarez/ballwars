@@ -521,6 +521,7 @@ class SkillLibrary {
   static const int currentVersion = 1;
   static const int maxImportCharacters = 1000000;
   static const int maxImportedDefinitions = 512;
+  static const int maxReplayCharacters = 48000;
 
   bool get isDefault => overrides.isEmpty && custom.isEmpty;
 
@@ -741,6 +742,32 @@ class SkillLibrary {
     },
     'custom': [for (final item in custom) item.toJson()],
   };
+
+  /// Immutable skill snapshot embedded in replay links. The replay keeps the
+  /// exact definitions that were active when it was created, so later admin
+  /// edits cannot change an old match.
+  String? encodeReplay() {
+    if (isDefault) return null;
+    final source = jsonEncode(toJson());
+    if (source.length > maxReplayCharacters) {
+      throw const FormatException('The active skill snapshot is too large.');
+    }
+    return base64Url.encode(utf8.encode(source)).replaceAll('=', '');
+  }
+
+  static SkillLibrary? decodeReplay(String encoded) {
+    if (encoded.isEmpty || encoded.length > maxReplayCharacters * 2) {
+      return null;
+    }
+    try {
+      final padded = encoded.padRight((encoded.length + 3) ~/ 4 * 4, '=');
+      final source = utf8.decode(base64Url.decode(padded));
+      if (source.length > maxReplayCharacters) return null;
+      return importJson(source);
+    } catch (_) {
+      return null;
+    }
+  }
 
   factory SkillLibrary.fromJson(Object? value) {
     if (value is! Map) return defaults;

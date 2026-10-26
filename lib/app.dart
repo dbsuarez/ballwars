@@ -276,6 +276,7 @@ class _HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<_HomeScreen> {
   BallPackRepository get _packs => widget.packs;
   String _version = '1.14.11';
+  String? _savedReplay;
 
   @override
   void initState() {
@@ -290,6 +291,11 @@ class _HomeScreenState extends State<_HomeScreen> {
     GameAudio.instance.startMenuMusic();
     // Opened from a shared replay link (web): go straight to that match.
     _openReplayLink(Uri.base);
+    DevicePrefs.read('saved-replay').then((value) {
+      if (mounted && value != null && value.isNotEmpty) {
+        setState(() => _savedReplay = value);
+      }
+    });
     // Or from a group share link: offer to add that group.
     _openGroupLink(Uri.base);
   }
@@ -443,7 +449,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             question: link.question,
             powerUps: link.powerUps,
             tuning: link.tuning,
-            skillLibrary: AppSettingsScope.of(context).skillLibrary,
+            skillLibrary: link.skillLibrary,
             dualWield: link.dualWield,
             endlessBattle: link.endlessBattle,
             mayhem: link.mayhem,
@@ -637,6 +643,14 @@ class _HomeScreenState extends State<_HomeScreen> {
                       ),
                     ],
                   ),
+                  if (_savedReplay != null) ...[
+                    const SizedBox(height: 12),
+                    _HomeTile(
+                      title: 'Saved replay',
+                      subtitle: 'Watch the last replay saved on this device',
+                      onTap: () => _openReplayLink(Uri.parse(_savedReplay!)),
+                    ),
+                  ],
                   if (!kIsWeb &&
                       defaultTargetPlatform == TargetPlatform.android)
                     TextButton.icon(

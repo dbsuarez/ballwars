@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/animated_empty_state.dart';
+import '../../../core/widgets/canvas_action_glyph.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/presentation/power_up_painter.dart';
@@ -874,9 +875,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                   child: IconButton.filledTonal(
                     tooltip: 'Close preview',
                     onPressed: () => Navigator.of(previewContext).maybePop(),
-                    icon: const Text(
-                      '×',
-                      style: TextStyle(fontSize: 28, height: 1),
+                    icon: const CanvasActionGlyph(
+                      CanvasActionGlyphType.close,
+                      size: 24,
                     ),
                   ),
                 ),
@@ -1480,7 +1481,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ? _sound.text
                           : 'shot',
                     ),
-                    icon: const Text('▶', style: TextStyle(fontSize: 18)),
+                    icon: const CanvasActionGlyph(CanvasActionGlyphType.play),
                     label: const Text('Play'),
                   ),
                 ],

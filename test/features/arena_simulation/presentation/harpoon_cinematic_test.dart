@@ -56,6 +56,10 @@ void main() {
     expect(FinisherProfile.coversEveryDamagingArenaItem, isTrue);
   });
 
+  test('Energy Wave uses its beam renderer instead of a letter glyph', () {
+    expect(FinisherProfile.forMove('Energy Wave').symbol, isEmpty);
+  });
+
   testWidgets('grenade uses its own blast finisher instead of the hook move', (
     tester,
   ) async {

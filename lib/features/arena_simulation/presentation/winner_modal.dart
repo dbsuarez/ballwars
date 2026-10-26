@@ -47,6 +47,7 @@ class WinnerModal extends StatefulWidget {
 
   /// Shows a SHARE button when set.
   final VoidCallback? onShareLink;
+  final VoidCallback? onSaveReplay;
 
   /// Multi-round series: the round just played, the score so far (name,
   /// wins, losses and remaining HP) and whether a ball has now won the series. While it isn't over,
@@ -77,6 +78,7 @@ class WinnerModal extends StatefulWidget {
     required this.onExit,
     this.onSaveVideo,
     this.onShareLink,
+    this.onSaveReplay,
     this.round,
     this.score,
     this.seriesOver = true,
@@ -470,6 +472,15 @@ class _WinnerModalState extends State<WinnerModal>
                           onPressed: widget.onReplayFinisher,
                           icon: const Icon(Icons.replay_rounded),
                           label: const Text('Replay finisher'),
+                        ),
+                      ],
+                      if (widget.onSaveReplay != null) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          key: const ValueKey('save-replay'),
+                          onPressed: widget.onSaveReplay,
+                          icon: const Icon(Icons.bookmark_add_outlined),
+                          label: const Text('Save replay'),
                         ),
                       ],
                       if (score != null) ...[

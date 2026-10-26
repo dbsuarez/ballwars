@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import '../../../core/audio/game_audio.dart';
 import '../../../core/offline/device_prefs.dart';
 import '../../arena_simulation/presentation/finisher_profile.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../../core/widgets/screen_awake.dart';
+import '../../../core/widgets/canvas_action_glyph.dart';
 import '../../../core/widgets/animated_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -29,6 +32,8 @@ class PowerUpTestScreen extends StatefulWidget {
   @override
   State<PowerUpTestScreen> createState() => _PowerUpTestScreenState();
 }
+
+enum _TestMotion { moving, idle, random }
 
 class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
@@ -63,12 +68,15 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   double _speed = 1;
   MatchMode _mode = MatchMode.arsenal;
   String _layout = 'Separated';
-  final _pinned = [false, false];
+  final _motion = [_TestMotion.moving, _TestMotion.moving];
+  final _randomDirectionBucket = [-1, -1];
   final _items = [PowerUpKind.pistol, PowerUpKind.shield];
   final List<PowerUpKind?> _savedItems = [PowerUpKind.pistol, null];
   final List<PowerUpKind?> _secondaryWeapons = [null, PowerUpKind.shield];
   final List<PowerUpKind?> _powerUps = [null, null];
-  PowerUpKind? _arenaTrap;
+  final List<PowerUpKind?> _arenaTraps = [
+    ...PowerUpKind.values.where((kind) => kind.isTrap),
+  ];
   final _pickerTabs = [0, 0];
 
   @override
@@ -141,7 +149,18 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         await DevicePrefs.read('power-test-power-$i'),
       );
     }
-    _arenaTrap = _rememberedKind(await DevicePrefs.read('power-test-trap'));
+    for (var i = 0; i < _arenaTraps.length; i++) {
+      final saved = await DevicePrefs.read('power-test-trap-$i');
+      if (saved != null) _arenaTraps[i] = _rememberedKind(saved);
+    }
+    // Migrate the original one-slot preference into the first slot.
+    final legacyTrap = _rememberedKind(
+      await DevicePrefs.read('power-test-trap'),
+    );
+    if (legacyTrap != null &&
+        await DevicePrefs.read('power-test-trap-0') == null) {
+      _arenaTraps[0] = legacyTrap;
+    }
   }
 
   PowerUpKind? _rememberedKind(String? raw) =>
@@ -186,13 +205,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       balls[0].velocity = const Offset(100, 0);
       balls[1].velocity = const Offset(-100, 0);
     }
+    _randomDirectionBucket.fillRange(0, _randomDirectionBucket.length, -1);
     for (var i = 0; i < balls.length; i++) {
-      _match!.setTestBallPinned(balls[i], _pinned[i]);
+      _match!.setTestBallPinned(balls[i], _motion[i] == _TestMotion.idle);
     }
     for (var i = 0; i < _savedItems.length; i++) {
       _reapplyLoadout(i);
     }
-    if (_arenaTrap != null) _applyItem(0, _arenaTrap!);
+    _rearmAllTraps();
     _audio.resetEffects();
     _paused = true;
     _previous = null;
@@ -211,7 +231,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     final dt = (elapsed - previous).inMicroseconds / 1000000;
     // Ignore background/resume gaps instead of skipping ahead in the fight.
     if (dt <= 0 || dt > 0.25) return;
-    setState(() => _match!.tick(dt * _speed));
+    setState(() {
+      _applyRandomDirections();
+      _match!.tick(dt * _speed);
+    });
     _playTestSounds();
     if (_match!.state.status == MatchStatus.finished) {
       _ticker.stop();
@@ -325,11 +348,28 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     });
   }
 
-  void _freeze(int index, bool value) {
+  void _setMotion(int index, _TestMotion value) {
     setState(() {
-      _pinned[index] = value;
-      _match!.setTestBallPinned(_match!.state.balls[index], value);
+      _motion[index] = value;
+      final ball = _match!.state.balls[index];
+      _match!.setTestBallPinned(ball, value == _TestMotion.idle);
+      _randomDirectionBucket[index] = -1;
+      if (value == _TestMotion.random) _applyRandomDirections(force: true);
     });
+  }
+
+  void _applyRandomDirections({bool force = false}) {
+    final match = _match!;
+    final bucket = match.stepCount ~/ 60;
+    for (var i = 0; i < _motion.length; i++) {
+      if (_motion[i] != _TestMotion.random ||
+          (!force && _randomDirectionBucket[i] == bucket)) {
+        continue;
+      }
+      _randomDirectionBucket[i] = bucket;
+      final angle = (bucket * 2.399963 + i * math.pi * 0.73) % (math.pi * 2);
+      match.state.balls[i].velocity = Offset.fromDirection(angle, 110);
+    }
   }
 
   Future<void> _chooseLoadoutItem(
@@ -375,7 +415,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     });
   }
 
-  Future<void> _chooseTrap() async {
+  Future<void> _chooseTrap(int slot) async {
     final selected = await showModalBottomSheet<Object>(
       context: context,
       isScrollControlled: true,
@@ -383,17 +423,31 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       builder: (_) => _ItemPicker(
         tuning: _match!.tuning,
         initialTab: 2,
-        selected: _arenaTrap,
+        selected: _arenaTraps[slot],
         lockedTab: 2,
         onTabChanged: (_) {},
       ),
     );
     if (!mounted || selected == null) return;
     setState(() {
-      _arenaTrap = selected is PowerUpKind ? selected : null;
-      DevicePrefs.write('power-test-trap', _arenaTrap?.name ?? 'none');
-      if (_arenaTrap != null) _applyItem(0, _arenaTrap!);
+      _arenaTraps[slot] = selected is PowerUpKind ? selected : null;
+      DevicePrefs.write(
+        'power-test-trap-$slot',
+        _arenaTraps[slot]?.name ?? 'none',
+      );
+      _rearmTrap(slot);
     });
+  }
+
+  void _rearmTrap(int slot) {
+    final trap = _arenaTraps[slot];
+    if (trap != null) _applyItem(0, trap);
+  }
+
+  void _rearmAllTraps() {
+    for (var i = 0; i < _arenaTraps.length; i++) {
+      _rearmTrap(i);
+    }
   }
 
   Future<void> _previewFinisher(int index) async {
@@ -433,9 +487,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     child: IconButton.filledTonal(
                       tooltip: 'Close preview',
                       onPressed: () => Navigator.of(previewContext).maybePop(),
-                      icon: const Text(
-                        '×',
-                        style: TextStyle(fontSize: 28, height: 1),
+                      icon: const CanvasActionGlyph(
+                        CanvasActionGlyphType.close,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -601,29 +655,50 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               )
               .join(' / '),
         ),
-        Row(
-          children: [
-            for (var i = 0; i < 2; i++)
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 48),
-                    ),
-                    onPressed: () => _freeze(i, !_pinned[i]),
-                    icon: Icon(
-                      _pinned[i] ? Icons.lock : Icons.directions_run,
+        for (var i = 0; i < 2; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 26,
+                  child: Text(
+                    i == 0 ? 'A' : 'B',
+                    style: TextStyle(
                       color: _balls[i].primaryColor,
-                    ),
-                    label: Text(
-                      '${i == 0 ? "A" : "B"}: ${_pinned[i] ? "Frozen" : "Moving"}',
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-              ),
-          ],
-        ),
+                Expanded(
+                  child: SegmentedButton<_TestMotion>(
+                    key: ValueKey('motion-${i == 0 ? "A" : "B"}'),
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: _TestMotion.moving,
+                        icon: Icon(Icons.directions_run, size: 17),
+                        label: Text('Moving'),
+                      ),
+                      ButtonSegment(
+                        value: _TestMotion.idle,
+                        icon: Icon(Icons.pause, size: 17),
+                        label: Text('Idle'),
+                      ),
+                      ButtonSegment(
+                        value: _TestMotion.random,
+                        icon: Icon(Icons.shuffle, size: 17),
+                        label: Text('Random'),
+                      ),
+                    ],
+                    selected: {_motion[i]},
+                    onSelectionChanged: (selected) =>
+                        _setMotion(i, selected.first),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -639,34 +714,65 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Ball ${i == 0 ? "A" : "B"} loadout'),
+                Row(
+                  children: [
+                    Expanded(child: Text('Ball ${i == 0 ? "A" : "B"} loadout')),
+                    IconButton.filledTonal(
+                      key: ValueKey('rearm-loadout-$i'),
+                      tooltip: 'Re-arm all for Ball ${i == 0 ? "A" : "B"}',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => setState(() => _reapplyLoadout(i)),
+                      icon: const Icon(Icons.refresh, size: 18),
+                    ),
+                    IconButton(
+                      key: ValueKey('clear-loadout-$i'),
+                      tooltip: 'Clear all for Ball ${i == 0 ? "A" : "B"}',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _clearLoadout(i),
+                      icon: const Icon(Icons.clear_all, size: 19),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 3),
                 Row(
                   children: [
                     Expanded(
-                      child: _loadoutButton(
-                        key: ValueKey('choose-item-$i'),
+                      child: _loadoutSlot(
+                        buttonKey: ValueKey('choose-item-$i'),
+                        rearmKey: ValueKey('rearm-weapon-1-$i'),
+                        clearKey: ValueKey('clear-weapon-1-$i'),
                         label: 'Weapon 1',
                         item: _savedItems[i],
-                        onTap: () => _chooseLoadoutItem(i, 0),
+                        onChoose: () => _chooseLoadoutItem(i, 0),
+                        onRearm: () => _rearmItem(i, _savedItems[i]),
+                        onClear: () => _clearLoadoutSlot(i, 0),
                       ),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
-                      child: _loadoutButton(
-                        key: ValueKey('choose-weapon-2-$i'),
+                      child: _loadoutSlot(
+                        buttonKey: ValueKey('choose-weapon-2-$i'),
+                        rearmKey: ValueKey('rearm-weapon-2-$i'),
+                        clearKey: ValueKey('clear-weapon-2-$i'),
                         label: 'Weapon 2',
                         item: _secondaryWeapons[i],
-                        onTap: () => _chooseLoadoutItem(i, 0, secondary: true),
+                        onChoose: () =>
+                            _chooseLoadoutItem(i, 0, secondary: true),
+                        onRearm: () => _rearmItem(i, _secondaryWeapons[i]),
+                        onClear: () => _clearLoadoutSlot(i, 1),
                       ),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
-                      child: _loadoutButton(
-                        key: ValueKey('choose-power-$i'),
+                      child: _loadoutSlot(
+                        buttonKey: ValueKey('choose-power-$i'),
+                        rearmKey: ValueKey('rearm-power-$i'),
+                        clearKey: ValueKey('clear-power-$i'),
                         label: 'Power-up',
                         item: _powerUps[i],
-                        onTap: () => _chooseLoadoutItem(i, 1),
+                        onChoose: () => _chooseLoadoutItem(i, 1),
+                        onRearm: () => _rearmItem(i, _powerUps[i]),
+                        onClear: () => _clearLoadoutSlot(i, 2),
                       ),
                     ),
                   ],
@@ -674,17 +780,144 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               ],
             ),
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _loadoutButton(
-            key: const ValueKey('choose-arena-trap'),
-            label: 'Arena trap',
-            item: _arenaTrap,
-            onTap: _chooseTrap,
-          ),
+        Row(
+          children: [
+            const Expanded(child: Text('Arena trap loadout')),
+            IconButton.filledTonal(
+              key: const ValueKey('rearm-all-arena-traps'),
+              tooltip: 'Deploy all arena traps again',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => setState(_rearmAllTraps),
+              icon: const Icon(Icons.refresh, size: 18),
+            ),
+            IconButton(
+              key: const ValueKey('clear-all-arena-traps'),
+              tooltip: 'Clear all arena traps',
+              visualDensity: VisualDensity.compact,
+              onPressed: _clearAllTraps,
+              icon: const Icon(Icons.clear_all, size: 19),
+            ),
+          ],
+        ),
+        LayoutBuilder(
+          builder: (context, bounds) {
+            final columns = bounds.maxWidth >= 560 ? 6 : 3;
+            final width = (bounds.maxWidth - (columns - 1) * 5) / columns;
+            return Wrap(
+              spacing: 5,
+              runSpacing: 4,
+              children: [
+                for (var i = 0; i < _arenaTraps.length; i++)
+                  SizedBox(
+                    width: width,
+                    child: _loadoutSlot(
+                      buttonKey: ValueKey('choose-arena-trap-$i'),
+                      rearmKey: ValueKey('rearm-arena-trap-$i'),
+                      clearKey: ValueKey('clear-arena-trap-$i'),
+                      label: 'Trap ${i + 1}',
+                      item: _arenaTraps[i],
+                      onChoose: () => _chooseTrap(i),
+                      onRearm: () => setState(() => _rearmTrap(i)),
+                      onClear: () => _clearTrap(i),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ],
     ),
+  );
+
+  void _rearmItem(int index, PowerUpKind? item) {
+    if (item == null) return;
+    setState(() => _applyItem(index, item));
+  }
+
+  void _clearLoadoutSlot(int index, int slot) {
+    setState(() {
+      if (slot == 0) {
+        _savedItems[index] = null;
+        DevicePrefs.write('power-test-item-$index', 'none');
+      } else if (slot == 1) {
+        _secondaryWeapons[index] = null;
+        DevicePrefs.write('power-test-secondary-$index', 'none');
+      } else {
+        _powerUps[index] = null;
+        DevicePrefs.write('power-test-power-$index', 'none');
+      }
+      _reapplyLoadout(index);
+    });
+  }
+
+  void _clearLoadout(int index) {
+    setState(() {
+      _savedItems[index] = null;
+      _secondaryWeapons[index] = null;
+      _powerUps[index] = null;
+      DevicePrefs.write('power-test-item-$index', 'none');
+      DevicePrefs.write('power-test-secondary-$index', 'none');
+      DevicePrefs.write('power-test-power-$index', 'none');
+      _reapplyLoadout(index);
+    });
+  }
+
+  void _clearTrap(int slot) {
+    setState(() {
+      _arenaTraps[slot] = null;
+      DevicePrefs.write('power-test-trap-$slot', 'none');
+      _reset();
+    });
+  }
+
+  void _clearAllTraps() {
+    setState(() {
+      for (var i = 0; i < _arenaTraps.length; i++) {
+        _arenaTraps[i] = null;
+        DevicePrefs.write('power-test-trap-$i', 'none');
+      }
+      _reset();
+    });
+  }
+
+  Widget _loadoutSlot({
+    required Key buttonKey,
+    required Key rearmKey,
+    required Key clearKey,
+    required String label,
+    required PowerUpKind? item,
+    required VoidCallback onChoose,
+    required VoidCallback onRearm,
+    required VoidCallback onClear,
+  }) => Row(
+    children: [
+      Expanded(
+        child: _loadoutButton(
+          key: buttonKey,
+          label: label,
+          item: item,
+          onTap: onChoose,
+        ),
+      ),
+      IconButton(
+        key: rearmKey,
+        tooltip: 'Re-arm $label',
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 30, height: 42),
+        onPressed: item == null ? null : onRearm,
+        icon: const Icon(Icons.refresh, size: 17),
+      ),
+      IconButton(
+        key: clearKey,
+        tooltip: 'Clear $label',
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 28, height: 42),
+        onPressed: item == null ? null : onClear,
+        icon: const CanvasActionGlyph(CanvasActionGlyphType.close, size: 15),
+      ),
+    ],
   );
 
   Widget _loadoutButton({

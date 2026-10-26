@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -8,6 +10,9 @@ import '../../arena_simulation/domain/power_up_config.dart';
 import '../application/replay_video_exporter.dart';
 import '../data/video_encoder.dart';
 import 'replay_frame_painter.dart';
+import '../../skills/domain/skill_library.dart';
+import '../../../core/widgets/screen_awake.dart';
+import '../../settings/domain/app_settings.dart';
 
 /// Exports a finished match as a video, saves it to the gallery and offers
 /// to share it. Shows progress and can be cancelled.
@@ -28,12 +33,14 @@ class ExportVideoDialog extends StatefulWidget {
   final MatchMode mode;
   final Set<PowerUpKind>? powerUps;
   final PowerUpConfig tuning;
+  final SkillLibrary skillLibrary;
   final bool endlessBattle;
   final bool dualWield;
   final bool mayhem;
   final int mayhemSeconds;
   final bool shrinkingArena;
   final double minimumArenaScale;
+  final bool finishersEnabled;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -50,12 +57,14 @@ class ExportVideoDialog extends StatefulWidget {
     this.mode = MatchMode.threads,
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
+    this.skillLibrary = SkillLibrary.defaults,
     this.endlessBattle = false,
     this.dualWield = false,
     this.mayhem = false,
     this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
+    this.finishersEnabled = true,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -75,12 +84,15 @@ class ExportVideoDialog extends StatefulWidget {
     MatchMode mode = MatchMode.threads,
     Set<PowerUpKind>? powerUps,
     PowerUpConfig tuning = PowerUpConfig.defaults,
+    SkillLibrary skillLibrary = SkillLibrary.defaults,
     bool endlessBattle = false,
     bool dualWield = false,
     bool mayhem = false,
     int mayhemSeconds = 120,
     bool shrinkingArena = false,
     double minimumArenaScale = 0.60,
+    bool finishersEnabled = true,
+    ArenaDecoration arenaDecoration = ArenaDecoration.defaultArena,
     BallLook look = BallLook.pictures,
     String headline = 'WHO WINS?',
     BallWarsColors? colors,
@@ -106,12 +118,14 @@ class ExportVideoDialog extends StatefulWidget {
         mode: mode,
         powerUps: powerUps,
         tuning: tuning,
+        skillLibrary: skillLibrary,
         endlessBattle: endlessBattle,
         dualWield: dualWield,
         mayhem: mayhem,
         mayhemSeconds: mayhemSeconds,
         shrinkingArena: shrinkingArena,
         minimumArenaScale: minimumArenaScale,
+        finishersEnabled: finishersEnabled,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -122,6 +136,7 @@ class ExportVideoDialog extends StatefulWidget {
           bloodColor: bloodColor,
           arenaTitle: arenaTitle,
           arenaSubtitle: arenaSubtitle,
+          arenaDecoration: arenaDecoration,
         ),
         encoder: backend,
         saver: backend,
@@ -141,11 +156,24 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
   bool _cancelled = false;
   String? _savedVideo;
   String? _error;
+  final Stopwatch _elapsed = Stopwatch();
+  Timer? _elapsedTimer;
 
   @override
   void initState() {
     super.initState();
+    _elapsed.start();
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _phase == _Phase.exporting) setState(() {});
+    });
     _run();
+  }
+
+  @override
+  void dispose() {
+    _elapsedTimer?.cancel();
+    _elapsed.stop();
+    super.dispose();
   }
 
   Future<void> _run() async {
@@ -163,12 +191,14 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         mode: widget.mode,
         powerUps: widget.powerUps,
         tuning: widget.tuning,
+        skillLibrary: widget.skillLibrary,
         endlessBattle: widget.endlessBattle,
         dualWield: widget.dualWield,
         mayhem: widget.mayhem,
         mayhemSeconds: widget.mayhemSeconds,
         shrinkingArena: widget.shrinkingArena,
         minimumArenaScale: widget.minimumArenaScale,
+        finishersEnabled: widget.finishersEnabled,
         style: widget.style,
         isCancelled: () => _cancelled,
         onProgress: (p) {
@@ -195,7 +225,12 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ScreenAwake(
+    enabled: _phase == _Phase.exporting,
+    child: _buildDialog(context),
+  );
+
+  Widget _buildDialog(BuildContext context) {
     switch (_phase) {
       case _Phase.exporting:
         return AlertDialog(
@@ -208,6 +243,12 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
               const SizedBox(height: 12),
               Text(
                 '${(_progress * 100).round()}%',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Elapsed ${_formatElapsed(_elapsed.elapsed)}',
+                key: const ValueKey('video-export-elapsed'),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -250,5 +291,11 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
           ],
         );
     }
+  }
+
+  static String _formatElapsed(Duration value) {
+    final minutes = value.inMinutes;
+    final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }

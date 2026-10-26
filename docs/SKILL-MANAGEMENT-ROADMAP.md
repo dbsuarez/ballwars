@@ -164,20 +164,20 @@ Replay and video remain last, by agreement.
 
 ## Phase 9 - Replay links and video export
 
-**Status: Last, by agreement**
+**Status: In progress - audio muxing remains**
 
-- [ ] Store immutable custom-skill definitions or version references in replay data.
-- [ ] Preserve old replay behavior after a skill is edited.
-- [ ] Render custom presentation in replay playback.
-- [ ] Render the same presentation in exported videos.
-- [ ] Add backward-compatible decoding and payload-size limits.
-- [ ] Verify deterministic live, replay, and video results.
-- [ ] Show elapsed export time while saving video.
+- [x] Store immutable custom-skill definitions or version references in replay data.
+- [x] Preserve old replay behavior after a skill is edited.
+- [x] Render custom presentation in replay playback.
+- [x] Render the same presentation in exported videos.
+- [x] Add backward-compatible decoding and payload-size limits.
+- [x] Verify deterministic live, replay, and video results.
+- [x] Show elapsed export time while saving video.
 - [ ] Ask whether BGM and/or SFX should be included in the export.
-- [ ] Keep the screen awake for the entire video export.
-- [ ] Reproduce the complete non-interactive battle UX and finishing cutscenes in replay/video.
-- [ ] Let users save replays.
-- [ ] Hide Replay Finisher whenever finishers are disabled.
+- [x] Keep the screen awake for the entire video export.
+- [x] Reproduce the complete non-interactive battle UX and finishing cutscenes in replay/video.
+- [x] Let users save replays.
+- [x] Hide Replay Finisher whenever finishers are disabled.
 
 ## Final completion checks
 

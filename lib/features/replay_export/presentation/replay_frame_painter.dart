@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../arena_simulation/domain/simulation_ball.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_painter.dart';
@@ -54,6 +55,7 @@ class ReplayFramePainter {
         showBallGlow: _style.ballGlowEnabled,
         arenaTitle: _style.arenaTitle,
         arenaSubtitle: _style.arenaSubtitle,
+        arenaDecoration: _style.arenaDecoration,
         background: _style.background,
         rimColor: _style.text,
         look: _style.look,
@@ -125,6 +127,58 @@ class ReplayFramePainter {
         _style.muted,
         y: 1010,
         letterSpacing: 1.5,
+      );
+    });
+  }
+
+  /// Non-interactive rendering of the live finishing beat for video exports.
+  static void paintFinisher(
+    Canvas canvas,
+    Size size,
+    SimulationBall winner,
+    SimulationBall loser,
+    String move,
+    double progress, {
+    required double videoTime,
+    ReplayStyle style = const ReplayStyle(),
+  }) {
+    _style = style;
+    _withDesignSpace(canvas, size, videoTime, () {
+      _paintHeader(canvas, dimmed: true);
+      final eased = Curves.easeInOutCubic.transform(progress.clamp(0, 1));
+      final attacker = Offset(165 + eased * 105, 610);
+      final target = Offset(555 - eased * 45, 610);
+      _paintBallFace(canvas, winner, attacker, 92);
+      _paintBallFace(canvas, loser, target, 92);
+      final impact = ((progress - 0.45) / 0.2).clamp(0.0, 1.0);
+      if (impact > 0) {
+        canvas.drawCircle(
+          target,
+          35 + impact * 105,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 14 * (1 - impact)
+            ..color = _gold.withValues(alpha: 1 - impact),
+        );
+      }
+      _paintText(
+        canvas,
+        move.toUpperCase(),
+        44,
+        FontWeight.w900,
+        _gold,
+        y: 820,
+        letterSpacing: 2,
+        maxWidth: 650,
+      );
+      _paintText(
+        canvas,
+        '${winner.config.name.toUpperCase()} FINISHES IT!',
+        26,
+        FontWeight.w800,
+        _style.text,
+        y: 890,
+        maxWidth: 650,
       );
     });
   }
@@ -396,6 +450,7 @@ class ReplayStyle {
   final Color bloodColor;
   final String arenaTitle;
   final String arenaSubtitle;
+  final ArenaDecoration arenaDecoration;
 
   /// Ball look (pictures or faces), as in the app.
   final BallLook look;
@@ -409,6 +464,7 @@ class ReplayStyle {
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
+    this.arenaDecoration = ArenaDecoration.defaultArena,
     this.look = BallLook.pictures,
   });
 }

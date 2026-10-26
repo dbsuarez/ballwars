@@ -1,4 +1,5 @@
 import '../../../core/widgets/screen_awake.dart';
+import '../../../core/offline/device_prefs.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -428,25 +429,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Copies a link that replays this exact match in the web app: a short
   /// `?r=<code>` link when the server is reachable, else the long one.
   Future<void> _copyReplayLink() async {
-    Uri link = ReplayLink(
-      seed: _controller.seed,
-      speedMultiplier: widget.config.speedMultiplier,
-      automaticSpeedUp: widget.config.automaticSpeedUp,
-      showEffects: _showEffects,
-      contestants: widget.config.contestants,
-      ballSize: widget.config.ballSize,
-      mode: widget.config.mode,
-      question: widget.config.question,
-      powerUps: widget.config.powerUps,
-      tuning: widget.config.tuning,
-      dualWield: widget.config.dualWield,
-      endlessBattle: widget.config.endlessBattle,
-      mayhem: widget.config.mayhem,
-      mayhemSeconds: widget.config.mayhemSeconds,
-      shrinkingArena: widget.config.shrinkingArena,
-      minimumArenaScale: widget.config.minimumArenaScale,
-      arenaDecoration: widget.config.arenaDecoration,
-    ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
+    Uri link = _replayUri();
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
       try {
@@ -465,6 +448,35 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
           'Replay link copied. Anyone who opens it watches this match.',
         ),
       ),
+    );
+  }
+
+  Uri _replayUri() => ReplayLink(
+    seed: _controller.seed,
+    speedMultiplier: widget.config.speedMultiplier,
+    automaticSpeedUp: widget.config.automaticSpeedUp,
+    showEffects: _showEffects,
+    contestants: widget.config.contestants,
+    ballSize: widget.config.ballSize,
+    mode: widget.config.mode,
+    question: widget.config.question,
+    powerUps: widget.config.powerUps,
+    tuning: widget.config.tuning,
+    dualWield: widget.config.dualWield,
+    endlessBattle: widget.config.endlessBattle,
+    mayhem: widget.config.mayhem,
+    mayhemSeconds: widget.config.mayhemSeconds,
+    shrinkingArena: widget.config.shrinkingArena,
+    minimumArenaScale: widget.config.minimumArenaScale,
+    arenaDecoration: widget.config.arenaDecoration,
+    skillLibrary: widget.config.skillLibrary,
+  ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
+
+  Future<void> _saveReplay() async {
+    await DevicePrefs.write('saved-replay', _replayUri().toString());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Replay saved on this device.')),
     );
   }
 
@@ -910,6 +922,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 look: widget.config.look,
                                 powerUps: widget.config.powerUps,
                                 tuning: widget.config.tuning,
+                                skillLibrary: widget.config.skillLibrary,
                                 endlessBattle: widget.config.endlessBattle,
                                 dualWield: widget.config.dualWield,
                                 mayhem: widget.config.mayhem,
@@ -917,6 +930,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 shrinkingArena: widget.config.shrinkingArena,
                                 minimumArenaScale:
                                     widget.config.minimumArenaScale,
+                                finishersEnabled: _finishersOn,
+                                arenaDecoration: widget.config.arenaDecoration,
                                 headline: headline,
                                 colors: c,
                                 ballGlowEnabled: AppSettingsScope.of(
@@ -938,9 +953,15 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         _audio.click();
                         _copyReplayLink();
                       },
+                      onSaveReplay: () {
+                        _audio.click();
+                        _saveReplay();
+                      },
                       onReplay: _replay,
                       onReplayFinisher:
-                          _controller.winningMove != null && _loserBall != null
+                          _finishersOn &&
+                              _controller.winningMove != null &&
+                              _loserBall != null
                           ? () {
                               _audio.click();
                               setState(() => _showHarpoonCinematic = true);

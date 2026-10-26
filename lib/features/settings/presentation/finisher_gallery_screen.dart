@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/canvas_action_glyph.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/presentation/finisher_profile.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
@@ -82,9 +83,9 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                       foregroundColor: Colors.black,
                       side: BorderSide(color: profile.accent, width: 2),
                     ),
-                    icon: const Text(
-                      '×',
-                      style: TextStyle(fontSize: 28, height: 1),
+                    icon: const CanvasActionGlyph(
+                      CanvasActionGlyphType.close,
+                      size: 24,
                     ),
                   ),
                 ),
@@ -320,7 +321,7 @@ class _FinisherCard extends StatelessWidget {
                 foregroundColor: Colors.black,
                 side: BorderSide(color: profile.accent, width: 2),
               ),
-              icon: const Text('▶', style: TextStyle(fontSize: 18)),
+              icon: const CanvasActionGlyph(CanvasActionGlyphType.play),
             ),
           ],
         ),

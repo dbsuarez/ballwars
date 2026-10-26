@@ -10,6 +10,7 @@ import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/replay_export/domain/replay_link.dart';
 import 'package:ballwars/features/settings/domain/app_settings.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
 
 const _presets = LocalBallRepository.presets;
 final _presetIds = {for (final b in _presets) b.id};
@@ -232,7 +233,10 @@ void main() {
     });
 
     test('oversized links are rejected before parsing', () {
-      expect(parse('seed=1&balls=$two&pad=${'a' * 5000}'), isNull);
+      expect(
+        parse('seed=1&balls=$two&pad=${'a' * ReplayLink.maxLinkLength}'),
+        isNull,
+      );
     });
   });
 
@@ -570,5 +574,68 @@ void main() {
     final decoded = ReplayLink.fromUri(uri, presets: _presets)!;
     expect(decoded.shrinkingArena, isTrue);
     expect(decoded.minimumArenaScale, 0.45);
+  });
+
+  test('custom skill definitions are immutable replay snapshots', () {
+    final draft = SkillLibrary.defaults.create(
+      'Replay Bolt',
+      PowerUpKind.pistol,
+    );
+    final original = SkillLibrary.defaults.withDefinition(
+      draft.copyWith(enabled: true, arsenalDamage: 37, yell: 'SNAPSHOT!'),
+      PowerUpConfig.defaults,
+    );
+    final uri = ReplayLink(
+      seed: 9,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      skillLibrary: original,
+    ).toUri(presetIds: _presetIds);
+
+    final restored = ReplayLink.fromUri(uri, presets: _presets)!;
+    final skill = restored.skillLibrary.activeFor(
+      PowerUpKind.pistol,
+      PowerUpConfig.defaults,
+    );
+    expect(skill.name, 'Replay Bolt');
+    expect(skill.arsenalDamage, 37);
+    expect(skill.yell, 'SNAPSHOT!');
+
+    final changed = original.withDefinition(
+      skill.copyWith(arsenalDamage: 99, yell: 'CHANGED!'),
+      PowerUpConfig.defaults,
+    );
+    expect(
+      changed
+          .activeFor(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .arsenalDamage,
+      99,
+    );
+    expect(
+      restored.skillLibrary
+          .activeFor(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .arsenalDamage,
+      37,
+    );
+  });
+
+  test('old links use default skills and malformed snapshots are rejected', () {
+    final old = Uri.parse(
+      'https://x/?seed=1&balls=m.arsenal,p.${_presets[0].id},p.${_presets[1].id}',
+    );
+    expect(
+      ReplayLink.fromUri(old, presets: _presets)!.skillLibrary.isDefault,
+      isTrue,
+    );
+    expect(
+      ReplayLink.fromUri(
+        old.replace(
+          queryParameters: {...old.queryParameters, 'skills': 'broken'},
+        ),
+        presets: _presets,
+      ),
+      isNull,
+    );
   });
 }

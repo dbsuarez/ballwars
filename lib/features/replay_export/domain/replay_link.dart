@@ -6,6 +6,7 @@ import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../skills/domain/skill_library.dart';
 
 /// Where the web app is hosted (GitHub Pages). Links made outside a browser
 /// point here; links made in the browser use the page's own address.
@@ -50,6 +51,7 @@ class ReplayLink {
   final bool shrinkingArena;
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
+  final SkillLibrary skillLibrary;
 
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
@@ -72,6 +74,7 @@ class ReplayLink {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.skillLibrary = SkillLibrary.defaults,
   });
 
   static const String _weaponsPrefix = 'w.';
@@ -140,8 +143,10 @@ class ReplayLink {
     final arena = arenaDecoration == ArenaDecoration.defaultArena
         ? ''
         : '&arena=${arenaDecoration.name}';
+    final skillSnapshot = skillLibrary.encodeReplay();
+    final skills = skillSnapshot == null ? '' : '&skills=$skillSnapshot';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -255,6 +260,14 @@ class ReplayLink {
       if (decoded == null) return null;
       tuning = decoded;
     }
+    var skillLibrary = SkillLibrary.defaults;
+    final skills = params['skills'];
+    if (skills != null) {
+      if (mode == MatchMode.threads) return null;
+      final decoded = SkillLibrary.decodeReplay(skills);
+      if (decoded == null) return null;
+      skillLibrary = decoded;
+    }
 
     final contestants = <CustomBall>[];
     for (var i = 0; i < tokens.length; i++) {
@@ -280,6 +293,7 @@ class ReplayLink {
       shrinkingArena: shrinkingArena,
       minimumArenaScale: minimumArenaScale,
       arenaDecoration: arenaDecoration,
+      skillLibrary: skillLibrary,
     );
   }
 
@@ -370,7 +384,7 @@ class ReplayLink {
   static const double maxSpeed = 4;
 
   /// Longest accepted query (four custom balls fit easily).
-  static const int maxLinkLength = 4096;
+  static const int maxLinkLength = 65536;
   static const int maxNameLength = 40;
 
   static bool _within(double v, double min, double max) =>

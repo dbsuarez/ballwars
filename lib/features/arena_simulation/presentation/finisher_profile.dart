@@ -422,7 +422,7 @@ class FinisherProfile {
       color: Color(0xFF27E5FF),
       accent: Color(0xFFFFFFFF),
       style: FinisherStyle.projectile,
-      symbol: 'K',
+      symbol: '',
     ),
     'Flamethrower': FinisherProfile(
       move: 'Flamethrower',

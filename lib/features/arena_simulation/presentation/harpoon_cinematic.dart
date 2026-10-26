@@ -192,7 +192,8 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                     ),
                     _name(widget.loser.name, loserX, loserY, diameter, bounds),
                     Positioned(
-                      right: 12, bottom: 12,
+                      right: 12,
+                      bottom: 12,
                       child: FilledButton.tonalIcon(
                         key: const ValueKey('skip-finisher'),
                         onPressed: _finish,
@@ -426,18 +427,27 @@ class _FinisherPainter extends CustomPainter {
               final zig = i == 8 ? 0.0 : (i.isEven ? -1 : 1) * radius * 0.28;
               path.lineTo(point.dx + zig + bolt * radius * 0.2, point.dy);
             }
-            canvas.drawPath(path, Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = radius * 0.16
-              ..color = const Color(0xFF62BFFF).withValues(alpha: 0.7));
-            canvas.drawPath(path, Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = radius * 0.05
-              ..color = const Color(0xFFF4FCFF));
+            canvas.drawPath(
+              path,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = radius * 0.16
+                ..color = const Color(0xFF62BFFF).withValues(alpha: 0.7),
+            );
+            canvas.drawPath(
+              path,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = radius * 0.05
+                ..color = const Color(0xFFF4FCFF),
+            );
           }
           if (progress >= 1) {
-            canvas.drawCircle(loserCenter, radius * 1.2, Paint()
-              ..color = const Color(0xFFBDEBFF).withValues(alpha: 0.28));
+            canvas.drawCircle(
+              loserCenter,
+              radius * 1.2,
+              Paint()..color = const Color(0xFFBDEBFF).withValues(alpha: 0.28),
+            );
           }
         }
 
@@ -738,6 +748,62 @@ class _FinisherPainter extends CustomPainter {
             final angle = math.atan2(towardBall.dy, towardBall.dx);
             _paintArrowGlyph(canvas, point, profile.accent, angle: angle);
           }
+        }
+      case PowerUpKind.energyWave:
+        if (hookProgress > 0) {
+          final direction = loserCenter - from;
+          final length = direction.distance;
+          if (length > 0) {
+            final unit = direction / length;
+            final charge = (hookProgress / 0.32).clamp(0.0, 1.0);
+            final orb = from + unit * radius * 0.3;
+            final pulse = 0.9 + math.sin(hookProgress * math.pi * 18) * 0.1;
+            canvas.drawCircle(
+              orb,
+              radius * (0.25 + charge * 0.5) * pulse,
+              Paint()
+                ..shader = ui.Gradient.radial(
+                  orb,
+                  radius,
+                  const [Colors.white, Color(0xFF2DE7FF), Color(0x002468FF)],
+                  const [0.0, 0.55, 1.0],
+                ),
+            );
+            if (hookProgress > 0.28) {
+              final fire = ((hookProgress - 0.28) / 0.34).clamp(0.0, 1.0);
+              final end = orb + unit * (length + radius * 1.8) * fire;
+              final width = radius * (0.75 + pulse * 0.16);
+              for (final layer in const [
+                (1.7, Color(0x59167DFF)),
+                (1.0, Color(0xE632E4FF)),
+                (0.38, Colors.white),
+              ]) {
+                canvas.drawLine(
+                  orb,
+                  end,
+                  Paint()
+                    ..strokeCap = StrokeCap.round
+                    ..strokeWidth = width * layer.$1
+                    ..color = layer.$2,
+                );
+              }
+              for (var ring = 0; ring < 3; ring++) {
+                canvas.drawCircle(
+                  orb,
+                  width * (0.7 + ring * 0.3 + fire * 0.25),
+                  Paint()
+                    ..style = PaintingStyle.stroke
+                    ..strokeWidth = math.max(2, radius * 0.08)
+                    ..color = const Color(
+                      0xFFA7F7FF,
+                    ).withValues(alpha: 0.8 - ring * 0.2),
+                );
+              }
+            }
+          }
+        }
+        if (impactProgress > 0) {
+          _paintImpact(canvas, loserCenter, impactProgress);
         }
       case PowerUpKind.rocketLauncher:
         if (hookProgress > 0 && hookProgress < 1) {

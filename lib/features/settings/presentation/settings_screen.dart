@@ -4,6 +4,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../custom_groups/data/custom_group_repository.dart';
 import '../../custom_groups/presentation/my_groups_screen.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
+import '../../skills/domain/skill_library.dart';
+import '../../skills/presentation/skill_management_screen.dart';
 import '../domain/app_settings.dart';
 import 'power_up_tuning_screen.dart';
 import 'power_up_rarity_screen.dart';
@@ -614,6 +616,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
+                                FilledButton.icon(
+                                  key: const ValueKey('open-skill-management'),
+                                  onPressed: _busy
+                                      ? null
+                                      : () async {
+                                          final library =
+                                              await Navigator.of(
+                                                context,
+                                              ).push<SkillLibrary>(
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      SkillManagementScreen(
+                                                        initial: settings
+                                                            .skillLibrary,
+                                                        tuning:
+                                                            settings.powerUps,
+                                                      ),
+                                                ),
+                                              );
+                                          if (!mounted || library == null) {
+                                            return;
+                                          }
+                                          final current = AppSettingsScope.of(
+                                            this.context,
+                                          );
+                                          await _save(
+                                            current.copyWith(
+                                              skillLibrary: library,
+                                              powerUps: library.applyTo(
+                                                current.powerUps,
+                                              ),
+                                            ),
+                                            done:
+                                                'Skill library saved for everyone.',
+                                          );
+                                        },
+                                  icon: const Icon(Icons.auto_awesome_motion),
+                                  label: const Text('Open Skill Management'),
+                                ),
+                                const SizedBox(height: 8),
                                 OutlinedButton(
                                   onPressed: _busy
                                       ? null

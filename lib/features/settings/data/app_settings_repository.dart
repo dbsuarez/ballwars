@@ -1,4 +1,5 @@
 import '../../arena_simulation/domain/power_up_config.dart';
+import '../../skills/domain/skill_library.dart';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -49,6 +50,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasBloodColorColumn = false;
   bool _hasArenaTextColumns = false;
   bool _hasMinimumArenaScaleColumn = false;
+  bool _hasSkillLibraryColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
     : _writer = writer ?? _client;
@@ -87,8 +89,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasPowerUpsColumn = row.containsKey('power_ups');
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
     _hasBloodColorColumn = row.containsKey('blood_color');
-    _hasArenaTextColumns = row.containsKey('arena_title') && row.containsKey('arena_subtitle');
+    _hasArenaTextColumns =
+        row.containsKey('arena_title') && row.containsKey('arena_subtitle');
     _hasMinimumArenaScaleColumn = row.containsKey('minimum_arena_scale');
+    _hasSkillLibraryColumn = row.containsKey('skill_library');
+    final legacyPowerUps = PowerUpConfig.fromJson(row['power_ups']);
+    final skillLibrary = SkillLibrary.fromJson(row['skill_library']);
     return AppSettings(
       headline: row['headline'] as String,
       themeId: row['theme'] as String,
@@ -114,20 +120,30 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           AppSettings.defaultSlowMotionLines,
       slowMotionBeforeWinSeconds: (row['slow_motion_before_win'] as num?)
           ?.toDouble(),
-      powerUps: PowerUpConfig.fromJson(row['power_ups']),
+      powerUps: skillLibrary.applyTo(legacyPowerUps),
+      skillLibrary: skillLibrary,
     );
   }
 
   @override
   Future<void> save(AppSettings settings) async {
     if (!_hasPowerUpsColumn && !settings.powerUps.isDefault) {
-      throw StateError('Power-up settings could not be saved: the power_ups '
-          'column was not loaded. Reload settings; if it is missing, apply migration 011.');
+      throw StateError(
+        'Power-up settings could not be saved: the power_ups '
+        'column was not loaded. Reload settings; if it is missing, apply migration 011.',
+      );
     }
     if (!_hasArenaTextColumns &&
         (settings.arenaTitle != AppSettings.defaultArenaTitle ||
-         settings.arenaSubtitle != AppSettings.defaultArenaSubtitle)) {
-      throw StateError('Arena branding was not saved: reload settings. If arena_title or arena_subtitle is missing, apply migration 014_arena_text.sql.');
+            settings.arenaSubtitle != AppSettings.defaultArenaSubtitle)) {
+      throw StateError(
+        'Arena branding was not saved: reload settings. If arena_title or arena_subtitle is missing, apply migration 014_arena_text.sql.',
+      );
+    }
+    if (!_hasSkillLibraryColumn && !settings.skillLibrary.isDefault) {
+      throw StateError(
+        'Skill Management could not be saved: apply migration 016_skill_library.sql and reload settings.',
+      );
     }
     final updated = await _writer
         .from('app_settings')
@@ -145,6 +161,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasSlowMotionColumn)
             'slow_motion_before_win': settings.slowMotionBeforeWinSeconds,
           if (_hasPowerUpsColumn) 'power_ups': settings.powerUps.toJson(),
+          if (_hasSkillLibraryColumn)
+            'skill_library': settings.skillLibrary.toJson(),
           if (_hasBallGlowColumn) 'ball_glow_enabled': settings.ballGlowEnabled,
           if (_hasBloodColorColumn)
             'blood_color': settings.bloodColor.toARGB32(),
@@ -163,12 +181,24 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     }
     if (_hasArenaTextColumns &&
         (updated.first['arena_title'] != settings.arenaTitle.trim() ||
-         updated.first['arena_subtitle'] != settings.arenaSubtitle.trim())) {
-      throw StateError('The server did not confirm the arena branding. Reload settings before saving again.');
+            updated.first['arena_subtitle'] != settings.arenaSubtitle.trim())) {
+      throw StateError(
+        'The server did not confirm the arena branding. Reload settings before saving again.',
+      );
+    }
+    if (_hasSkillLibraryColumn) {
+      final confirmed = SkillLibrary.fromJson(updated.first['skill_library']);
+      if (jsonEncode(confirmed.toJson()) !=
+          jsonEncode(settings.skillLibrary.toJson())) {
+        throw StateError(
+          'The server did not confirm the Skill Library. Reload settings before saving again.',
+        );
+      }
     }
     try {
       await OfflineStore.instance.write(
-        'settings', utf8.encode(jsonEncode(updated.first)),
+        'settings',
+        utf8.encode(jsonEncode(updated.first)),
       );
     } catch (_) {
       // The server save succeeded; report cache failure separately on next load.

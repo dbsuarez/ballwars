@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../arena_simulation/domain/power_up_config.dart';
+import '../../skills/domain/skill_library.dart';
 
 /// App-wide settings, set by the admin and shown to everyone
 /// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005, 006, 009 and 011).
@@ -36,6 +37,7 @@ class AppSettings {
 
   /// The power-up numbers for Arsenal and All-Out matches (only the changed values are stored).
   final PowerUpConfig powerUps;
+  final SkillLibrary skillLibrary;
 
   const AppSettings({
     this.headline = defaultHeadline,
@@ -52,6 +54,7 @@ class AppSettings {
     this.slowMotionLines = defaultSlowMotionLines,
     this.slowMotionBeforeWinSeconds,
     this.powerUps = PowerUpConfig.defaults,
+    this.skillLibrary = SkillLibrary.defaults,
   });
 
   static const String defaultHeadline = 'WHO WINS?';
@@ -81,6 +84,7 @@ class AppSettings {
     int? slowMotionLines,
     double? Function()? slowMotionBeforeWinSeconds,
     PowerUpConfig? powerUps,
+    SkillLibrary? skillLibrary,
   }) => AppSettings(
     headline: headline ?? this.headline,
     themeId: themeId ?? this.themeId,
@@ -98,5 +102,6 @@ class AppSettings {
         ? this.slowMotionBeforeWinSeconds
         : slowMotionBeforeWinSeconds(),
     powerUps: powerUps ?? this.powerUps,
+    skillLibrary: skillLibrary ?? this.skillLibrary,
   );
 }

@@ -1446,7 +1446,7 @@ class PowerUpSystem {
   }
 
   void _fireBow(SimulationBall ball, SimulationBall target) {
-    const count = PowerUpTuning.bowArrows;
+    final count = _t.bowArrows;
     final spread = PowerUpTuning.bowSpread(
       (target.position - ball.position).distance,
       match.arenaRadius,

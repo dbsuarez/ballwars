@@ -828,7 +828,7 @@ String powerUpDescription(
       'A row of 6 boundary spikes that deals ${dmg(kind)} and knocks the ball inward.',
     PowerUpKind.goldenArmor => 'Completely blocks the next two damaging hits.',
     PowerUpKind.bow =>
-      '$aim fires a ${PowerUpTuning.bowArrows}-arrow volley spanning twice a grenade blast: ${dmg(kind)} each.',
+      '$aim fires a ${config.bowArrows}-arrow volley spanning twice a grenade blast: ${dmg(kind)} each.',
     PowerUpKind.stickyGoo =>
       'Holds the first ball that touches it in place for 2 s.',
     PowerUpKind.poisonSwamp =>

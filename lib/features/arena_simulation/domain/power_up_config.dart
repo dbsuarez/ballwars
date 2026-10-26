@@ -192,6 +192,15 @@ class PowerUpConfig {
       integer: true,
     ),
     TuningField(
+      'arrows',
+      'Bow arrows',
+      _guns,
+      PowerUpTuning.bowArrows,
+      min: 1,
+      max: 50,
+      integer: true,
+    ),
+    TuningField(
       'unarmedCollision',
       'Unequipped ball collision damage',
       _arsenal,
@@ -388,6 +397,7 @@ class PowerUpConfig {
   double get grenadeSpeedRatio => value('grenadeSpeed').toDouble();
   int get shotgunPellets => value('pellets').toInt();
   int get gatlingRounds => value('rounds').toInt();
+  int get bowArrows => value('arrows').toInt();
 
   /// Arsenal life lost per hit of [kind] (0 for kinds that do no damage).
   double arenaDamage(PowerUpKind kind) => _byId.containsKey('dmg.${kind.name}')

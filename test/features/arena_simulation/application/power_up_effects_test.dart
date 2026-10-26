@@ -169,6 +169,44 @@ void main() {
     expect(target.life, _life - 21);
   });
 
+  test('composed start delay and cooldown use deterministic match steps', () {
+    final draft = SkillLibrary.defaults
+        .create('Delayed Pulse', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.allOpponents,
+          delivery: SkillDelivery.area,
+          effectType: SkillEffectType.damage,
+          arsenalDamage: 8,
+          startDelaySeconds: 0.1,
+          cooldownSeconds: 1,
+        );
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        draft,
+        PowerUpConfig.defaults,
+      ),
+    );
+    c.powerUps!.automaticSpawning = false;
+    final owner = c.state.balls.first;
+    final target = c.state.balls.last;
+
+    _give(c, owner, PowerUpKind.apple);
+    expect(target.life, _life);
+    _run(c, 6);
+    expect(target.life, _life - 8);
+
+    _give(c, owner, PowerUpKind.apple);
+    _run(c, 6);
+    expect(target.life, _life - 8);
+
+    _run(c, 48);
+    _give(c, owner, PowerUpKind.apple);
+    _run(c, 6);
+    expect(target.life, _life - 16);
+  });
+
   test('advanced composed effects execute in live simulation', () {
     SkillLibrary libraryFor(
       SkillEffectType effect, {

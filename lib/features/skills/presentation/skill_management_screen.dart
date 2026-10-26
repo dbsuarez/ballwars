@@ -358,6 +358,18 @@ class _SkillEditorState extends State<_SkillEditor> {
       'repeatInterval': TextEditingController(
         text: '${widget.skill.repeatIntervalSeconds}',
       ),
+    if (widget.skill.isComposed)
+      'startDelay': TextEditingController(
+        text: '${widget.skill.startDelaySeconds}',
+      ),
+    if (widget.skill.isComposed)
+      'tickInterval': TextEditingController(
+        text: '${widget.skill.tickIntervalSeconds}',
+      ),
+    if (widget.skill.isComposed)
+      'cooldown': TextEditingController(
+        text: '${widget.skill.cooldownSeconds}',
+      ),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
@@ -437,6 +449,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('knockback', defaults.knockback);
       number('repeatCount', defaults.repeatCount);
       number('repeatInterval', defaults.repeatIntervalSeconds);
+      number('startDelay', defaults.startDelaySeconds);
+      number('tickInterval', defaults.tickIntervalSeconds);
+      number('cooldown', defaults.cooldownSeconds);
     });
   }
 
@@ -505,7 +520,7 @@ class _SkillEditorState extends State<_SkillEditor> {
           'TARGETING chooses the owner, nearest opponent, or every opponent.\n\n'
           'DELIVERY chooses an immediate effect, a traveling projectile, or an area effect.\n\n'
           'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects; projectile count controls shield hits.\n\n'
-          'SECONDARY EFFECT runs immediately after the primary effect. REPEAT COUNT includes the first activation; the interval controls the pause between later activations.\n\n'
+          'SECONDARY EFFECT runs immediately after the primary effect. START DELAY postpones the first activation. REPEAT COUNT includes the first activation; the interval controls the pause between later activations. DoT uses its own TICK INTERVAL. COOLDOWN prevents the same ball from activating the skill again too soon.\n\n'
           'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
           'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball. BUBBLE SHAPE offers Shout for attacks, Speech for recovery, Thought for quiet or psychic skills, and Radio for tech or command skills.',
         ),
@@ -545,6 +560,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       secondaryEffectType: _secondaryEffectType,
       repeatCount: _int('repeatCount'),
       repeatIntervalSeconds: _double('repeatInterval'),
+      startDelaySeconds: _double('startDelay'),
+      tickIntervalSeconds: _double('tickInterval'),
+      cooldownSeconds: _double('cooldown'),
       yell: _yell.text,
       calloutStyle: _calloutStyle,
       bubbleType: _bubbleType,
@@ -758,6 +776,20 @@ class _SkillEditorState extends State<_SkillEditor> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _number('startDelay', 'Start delay', suffix: 's'),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _number('cooldown', 'Cooldown', suffix: 's'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _number('tickInterval', 'DoT tick interval', suffix: 's'),
                 if (compatibilityIssues.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Card(

@@ -162,6 +162,9 @@ void main() {
           bubbleType: SkillBubbleType.speech,
           repeatCount: 99,
           repeatIntervalSeconds: 0,
+          startDelaySeconds: 99,
+          tickIntervalSeconds: 0,
+          cooldownSeconds: 99,
         );
     final decoded = SkillDefinition.fromJson(skill.toJson())!;
 
@@ -169,6 +172,9 @@ void main() {
     expect(decoded.bubbleType, SkillBubbleType.speech);
     expect(decoded.repeatCount, 10);
     expect(decoded.repeatIntervalSeconds, 0.1);
+    expect(decoded.startDelaySeconds, 30);
+    expect(decoded.tickIntervalSeconds, 0.1);
+    expect(decoded.cooldownSeconds, 60);
     expect(decoded.compatibilityIssues, isEmpty);
   });
 

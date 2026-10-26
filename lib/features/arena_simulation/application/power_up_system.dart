@@ -48,6 +48,7 @@ class PowerUpSystem {
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
   final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
   final List<_CustomDamageOverTime> _customDamageOverTime = [];
+  final Map<(SimulationBall, String), int> _composedCooldownUntil = {};
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -184,6 +185,7 @@ class PowerUpSystem {
       (effect) =>
           identical(effect.owner, ball) || identical(effect.target, ball),
     );
+    _composedCooldownUntil.removeWhere((key, _) => identical(key.$1, ball));
     pulls.removeWhere(
       (pull) => identical(pull.owner, ball) || identical(pull.target, ball),
     );
@@ -1313,6 +1315,8 @@ class PowerUpSystem {
     SkillDefinition skill, {
     SimulationBall? primary,
   }) {
+    final cooldownKey = (owner, skill.id);
+    if ((_composedCooldownUntil[cooldownKey] ?? 0) > match.stepCount) return;
     final targets = switch (skill.targeting) {
       SkillTargeting.self => [owner],
       SkillTargeting.nearestOpponent => [?primary ?? _nearestTarget(owner)],
@@ -1322,13 +1326,26 @@ class PowerUpSystem {
       ],
       null => const <SimulationBall>[],
     };
-    for (final target in targets) {
-      _applyComposedEffect(owner, target, skill, skill.effectType);
-      if (skill.secondaryEffectType != null) {
-        _applyComposedEffect(owner, target, skill, skill.secondaryEffectType);
-      }
+    if (targets.isEmpty) return;
+    if (skill.cooldownSeconds > 0) {
+      _composedCooldownUntil[cooldownKey] =
+          match.stepCount + (skill.cooldownSeconds * 60).round();
     }
-    if (skill.repeatCount > 1 && targets.isNotEmpty) {
+    if (skill.startDelaySeconds > 0) {
+      _scheduledComposedEffects.add(
+        _ScheduledComposedEffect(
+          owner: owner,
+          targets: List.unmodifiable(targets),
+          skill: skill,
+          repeatsLeft: skill.repeatCount,
+          stepsLeft: (skill.startDelaySeconds * 60).round(),
+          announceOnNext: true,
+        ),
+      );
+      return;
+    }
+    _applyComposedEffects(owner, targets, skill);
+    if (skill.repeatCount > 1) {
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
           owner: owner,
@@ -1343,26 +1360,39 @@ class PowerUpSystem {
     if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
   }
 
+  void _applyComposedEffects(
+    SimulationBall owner,
+    Iterable<SimulationBall> targets,
+    SkillDefinition skill,
+  ) {
+    for (final target in targets) {
+      if (!_alive(target)) continue;
+      _applyComposedEffect(owner, target, skill, skill.effectType);
+      if (skill.secondaryEffectType != null) {
+        _applyComposedEffect(owner, target, skill, skill.secondaryEffectType);
+      }
+    }
+  }
+
   void _updateScheduledComposedEffects() {
     for (final scheduled in _scheduledComposedEffects.toList()) {
       scheduled.stepsLeft--;
       if (scheduled.stepsLeft > 0) continue;
-      for (final target in scheduled.targets) {
-        if (!_alive(target)) continue;
-        _applyComposedEffect(
-          scheduled.owner,
-          target,
-          scheduled.skill,
-          scheduled.skill.effectType,
-        );
-        if (scheduled.skill.secondaryEffectType != null) {
-          _applyComposedEffect(
+      _applyComposedEffects(
+        scheduled.owner,
+        scheduled.targets,
+        scheduled.skill,
+      );
+      if (scheduled.announceOnNext) {
+        _skillSound(scheduled.skill.baseKind);
+        if (scheduled.skill.yell.isNotEmpty) {
+          _skillYell(
             scheduled.owner,
-            target,
-            scheduled.skill,
-            scheduled.skill.secondaryEffectType,
+            scheduled.skill.baseKind,
+            scheduled.skill.yell,
           );
         }
+        scheduled.announceOnNext = false;
       }
       scheduled.repeatsLeft--;
       if (scheduled.repeatsLeft <= 0 || !_alive(scheduled.owner)) {
@@ -1389,7 +1419,7 @@ class PowerUpSystem {
           effect.skill,
           SkillEffectType.damage,
         );
-        effect.stepsUntilTick = 30;
+        effect.stepsUntilTick = (effect.skill.tickIntervalSeconds * 60).round();
       }
       if (effect.stepsLeft <= 0) _customDamageOverTime.remove(effect);
     }
@@ -1427,6 +1457,7 @@ class PowerUpSystem {
             target: target,
             skill: skill,
             stepsLeft: ((skill.durationSeconds ?? 2) * 60).round(),
+            stepsUntilTick: (skill.tickIntervalSeconds * 60).round(),
           ),
         );
       case SkillEffectType.heal:
@@ -2496,6 +2527,7 @@ class _ScheduledComposedEffect {
     required this.skill,
     required this.repeatsLeft,
     required this.stepsLeft,
+    this.announceOnNext = false,
   });
 
   final SimulationBall owner;
@@ -2503,6 +2535,7 @@ class _ScheduledComposedEffect {
   final SkillDefinition skill;
   int repeatsLeft;
   int stepsLeft;
+  bool announceOnNext;
 }
 
 class _CustomDamageOverTime {
@@ -2511,11 +2544,12 @@ class _CustomDamageOverTime {
     required this.target,
     required this.skill,
     required this.stepsLeft,
+    required this.stepsUntilTick,
   });
 
   final SimulationBall owner;
   final SimulationBall target;
   final SkillDefinition skill;
   int stepsLeft;
-  int stepsUntilTick = 30;
+  int stepsUntilTick;
 }

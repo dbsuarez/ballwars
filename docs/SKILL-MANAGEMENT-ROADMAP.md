@@ -42,7 +42,7 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 - [ ] Add beam, aura, orbit, and boundary-hazard delivery.
 - [x] Add DoT, shield, pull, teleport, stun, and equipment effects.
 - [x] Add repeat count and repeat interval.
-- [ ] Add start delay, DoT tick interval, and cooldown.
+- [x] Add start delay, DoT tick interval, and cooldown.
 - [ ] Add configurable colors and screen shake.
 - [x] Validate trigger, target, delivery, and carrier compatibility.
 - [ ] Add explicit one-handed/two-handed equipment choice.

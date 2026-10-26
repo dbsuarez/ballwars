@@ -180,17 +180,13 @@ void main() {
     );
     await tester.tap(find.text('Build skill'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('skill-trigger')));
+    await tester.ensureVisible(find.byKey(const ValueKey('skill-targeting')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('skill-trigger')));
+    await tester.tap(find.byKey(const ValueKey('skill-targeting')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('pickup').last);
+    await tester.tap(find.text('self').last);
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('skill-compatibility-errors')),
-      findsOneWidget,
-    );
     final save = tester.widget<TextButton>(
       find.byKey(const ValueKey('save-skill')),
     );

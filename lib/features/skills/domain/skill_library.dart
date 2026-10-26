@@ -64,6 +64,9 @@ class SkillDefinition {
     this.secondaryEffectType,
     this.repeatCount = 1,
     this.repeatIntervalSeconds = 0.5,
+    this.startDelaySeconds = 0,
+    this.tickIntervalSeconds = 0.5,
+    this.cooldownSeconds = 0,
     this.yell = '',
     this.calloutStyle = SkillCalloutStyle.normal,
     this.bubbleType = SkillBubbleType.shout,
@@ -92,6 +95,9 @@ class SkillDefinition {
   final SkillEffectType? secondaryEffectType;
   final int repeatCount;
   final double repeatIntervalSeconds;
+  final double startDelaySeconds;
+  final double tickIntervalSeconds;
+  final double cooldownSeconds;
   final String yell;
   final SkillCalloutStyle calloutStyle;
   final SkillBubbleType bubbleType;
@@ -124,6 +130,9 @@ class SkillDefinition {
     Object? secondaryEffectType = _unset,
     int? repeatCount,
     double? repeatIntervalSeconds,
+    double? startDelaySeconds,
+    double? tickIntervalSeconds,
+    double? cooldownSeconds,
     String? yell,
     SkillCalloutStyle? calloutStyle,
     SkillBubbleType? bubbleType,
@@ -153,6 +162,9 @@ class SkillDefinition {
         : secondaryEffectType as SkillEffectType?,
     repeatCount: repeatCount ?? this.repeatCount,
     repeatIntervalSeconds: repeatIntervalSeconds ?? this.repeatIntervalSeconds,
+    startDelaySeconds: startDelaySeconds ?? this.startDelaySeconds,
+    tickIntervalSeconds: tickIntervalSeconds ?? this.tickIntervalSeconds,
+    cooldownSeconds: cooldownSeconds ?? this.cooldownSeconds,
     yell: yell ?? this.yell,
     calloutStyle: calloutStyle ?? this.calloutStyle,
     bubbleType: bubbleType ?? this.bubbleType,
@@ -183,6 +195,9 @@ class SkillDefinition {
       'secondary_effect_type': secondaryEffectType!.name,
     'repeat_count': repeatCount,
     'repeat_interval_seconds': repeatIntervalSeconds,
+    'start_delay_seconds': startDelaySeconds,
+    'tick_interval_seconds': tickIntervalSeconds,
+    'cooldown_seconds': cooldownSeconds,
     if (yell.isNotEmpty) 'yell': yell,
     'callout_style': calloutStyle.name,
     'bubble_type': bubbleType.name,
@@ -243,6 +258,9 @@ class SkillDefinition {
       ),
       repeatCount: integer('repeat_count') ?? 1,
       repeatIntervalSeconds: decimal('repeat_interval_seconds') ?? 0.5,
+      startDelaySeconds: decimal('start_delay_seconds') ?? 0,
+      tickIntervalSeconds: decimal('tick_interval_seconds') ?? 0.5,
+      cooldownSeconds: decimal('cooldown_seconds') ?? 0,
       yell: value['yell'] as String? ?? '',
       calloutStyle: enumValue(
         'callout_style',
@@ -269,6 +287,9 @@ class SkillDefinition {
     knockback: knockback.clamp(0, 10),
     repeatCount: repeatCount.clamp(1, 10),
     repeatIntervalSeconds: repeatIntervalSeconds.clamp(0.1, 10),
+    startDelaySeconds: startDelaySeconds.clamp(0, 30),
+    tickIntervalSeconds: tickIntervalSeconds.clamp(0.1, 10),
+    cooldownSeconds: cooldownSeconds.clamp(0, 60),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
   );

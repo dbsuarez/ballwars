@@ -300,15 +300,20 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
   void _playPowerUpSounds() {
     final soundController = _controller;
-    if (soundController.threadCuts < _heardCuts || soundController.knockouts < _heardKnockouts) {
+    if (soundController.threadCuts < _heardCuts ||
+        soundController.knockouts < _heardKnockouts) {
       _heardInteractions.clear();
     }
     if (soundController.threadCuts > _heardCuts) _audio.interaction('cut');
     if (soundController.knockouts > _heardKnockouts) _audio.interaction('out');
     _heardCuts = soundController.threadCuts;
     _heardKnockouts = soundController.knockouts;
-    for (final event in soundController.powerUps?.interactionSounds.entries ?? const <MapEntry<String, int>>[]) {
-      if (event.value > (_heardInteractions[event.key] ?? 0)) _audio.interaction(event.key);
+    for (final event
+        in soundController.powerUps?.interactionSounds.entries ??
+            const <MapEntry<String, int>>[]) {
+      if (event.value > (_heardInteractions[event.key] ?? 0)) {
+        _audio.interaction(event.key);
+      }
       _heardInteractions[event.key] = event.value;
     }
 
@@ -602,7 +607,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       builder: (context, _) => ScoreboardOverlay(
         tuning: widget.config.tuning,
         mode: widget.config.mode,
-        compact: MediaQuery.sizeOf(context).height >= MediaQuery.sizeOf(context).width,
+        compact:
+            MediaQuery.sizeOf(context).height >=
+            MediaQuery.sizeOf(context).width,
         balls: _state.balls,
         wins: widget.config.winsNeeded > 1 ? _roundWins : null,
         eliminations: widget.config.endlessBattle
@@ -614,349 +621,377 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     return ScreenAwake(
       enabled: !_isPaused && _foreground && !finished,
       child: Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isPortrait = constraints.maxHeight >= constraints.maxWidth;
-            // Side margins keep the arena off the screen edges on phones;
-            // the slow-motion badge sits at the top of the arena.
-            final arena = ListenableBuilder(
-              listenable: _frame,
-              builder: (context, _) => Transform.translate(
-                offset: _screenShakeOffset().scale(0.2, 0.2),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 0,
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: RepaintBoundary(
-                          child: ArenaCanvas(
-                            state: _state,
-                            arenaRadius: _controller.arenaRadius,
-                            worldRadius: _arenaRadius,
-                            rimInset: 0,
-                            rimAngle: _rimAngle,
-                            showEffects: _showEffects,
-                            showBallGlow: AppSettingsScope.of(
-                              context,
-                            ).ballGlowEnabled,
-                            arenaTitle: AppSettingsScope.of(context).arenaTitle,
-                            arenaSubtitle: AppSettingsScope.of(
-                              context,
-                            ).arenaSubtitle,
-                            wallSparkSize: widget.config.wallSparkSize,
-                            repaint: _frame,
-                            look: widget.config.look,
-                          ),
-                        ),
-                      ),
-                      Positioned(bottom: 0, left: 0, child: IconButton.filledTonal(
-                        tooltip: _audio.effectsOn ? 'SFX: on' : 'SFX: off',
-                        icon: Icon(_audio.effectsOn ? Icons.volume_up : Icons.volume_off),
-                        onPressed: () {
-                          final on = !_audio.effectsOn;
-                          _audio.setEffectsOn(on);
-                          if (on) _audio.click();
-                          setState(() {});
-                        },
-                      )),
-                      Positioned(bottom: 0, right: 0, child: IconButton.filledTonal(
-                        tooltip: _audio.musicOn ? 'BGM: on' : 'BGM: off',
-                        icon: Icon(_audio.musicOn ? Icons.music_note : Icons.music_off),
-                        onPressed: () {
-                          _audio.setMusicOn(!_audio.musicOn);
-                          setState(() {});
-                        },
-                      )),
-                      // Positioned like the arena: a non-positioned child would
-                      // size the Stack (to nothing, while there's no badge).
-                      Positioned.fill(
-                        child: ListenableBuilder(
-                          listenable: _frame,
-                          builder: (context, _) =>
-                              _state.status == MatchStatus.slowMotion
-                              ? const Align(
-                                  alignment: Alignment.topCenter,
-                                  child: SlowMotionBadge(),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ),
-                      if (widget.config.shrinkingArena)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: IgnorePointer(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.68),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.22),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                child: Text(
-                                  'ARENA ${(_controller.arenaRadius / _controller.initialArenaRadius * 100).round()}%',
-                                  key: const ValueKey('arena-shrink-percent'),
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.7,
-                                      ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-
-            final overlays = <Widget>[
-              // The runner-up shown big, then the winner card.
-              if (_showDissolve && !_dissolveComplete && _loserBall != null)
-                _buildDissolveAnimation(),
-              if (_showHarpoonCinematic &&
-                  _winnerBall != null &&
-                  _loserBall != null)
-                Positioned.fill(
-                  child: HarpoonCinematic(
-                    winner: _winnerBall!,
-                    loser: _loserBall!,
-                    move: _controller.winningMove ?? 'Collision',
-                    onHookFired: _playFinisherLaunch,
-                    onImpact: _playFinisherImpact,
-                    onFinished: () {
-                      if (!mounted) return;
-                      _audio.win();
-                      setState(() => _showHarpoonCinematic = false);
-                    },
-                  ),
-                ),
-              if (_dissolveComplete &&
-                  !_showHarpoonCinematic &&
-                  _winnerBall != null)
-                Positioned.fill(
-                  child: WinnerModal(
-                    winner: _winnerBall!,
-                    mayhemTally: widget.config.mayhem ? [
-                      for (final ball in _state.balls)
-                        (ball.config, _controller.eliminations[ball.config.id] ?? 0, ball.life),
-                    ] : null,
-                    question: widget.config.question,
-                    durationSeconds: _controller.elapsedSeconds,
-                    winningMove: _controller.winningMove,
-                    onSaveVideo: _videoExport == null
-                        ? null
-                        : () {
-                            _audio.click();
-                            ExportVideoDialog.show(
-                              context,
-                              contestants: widget.config.contestants,
-                              seed: _controller.seed,
-                              arenaRadius: _arenaRadius,
-                              speedMultiplier: widget.config.speedMultiplier,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isPortrait = constraints.maxHeight >= constraints.maxWidth;
+              // Side margins keep the arena off the screen edges on phones;
+              // the slow-motion badge sits at the top of the arena.
+              final arena = ListenableBuilder(
+                listenable: _frame,
+                builder: (context, _) => Transform.translate(
+                  offset: _screenShakeOffset().scale(0.2, 0.2),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 0,
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: RepaintBoundary(
+                            child: ArenaCanvas(
+                              state: _state,
+                              arenaRadius: _controller.arenaRadius,
+                              worldRadius: _arenaRadius,
+                              rimInset: 0,
+                              rimAngle: _rimAngle,
                               showEffects: _showEffects,
-                              slowMotionLines: AppSettingsScope.of(
-                                context,
-                              ).slowMotionLines,
-                              slowMotionBeforeWinSeconds: AppSettingsScope.of(
-                                context,
-                              ).slowMotionBeforeWinSeconds,
-                              ballScale: widget.config.ballSize.scale,
-                              mode: widget.config.mode,
-                              look: widget.config.look,
-                              powerUps: widget.config.powerUps,
-                              tuning: widget.config.tuning,
-                              endlessBattle: widget.config.endlessBattle,
-                              dualWield: widget.config.dualWield,
-                              mayhem: widget.config.mayhem,
-                              mayhemSeconds: widget.config.mayhemSeconds,
-                              shrinkingArena: widget.config.shrinkingArena,
-                              minimumArenaScale:
-                                  widget.config.minimumArenaScale,
-                              headline: headline,
-                              colors: c,
-                              ballGlowEnabled: AppSettingsScope.of(
+                              showBallGlow: AppSettingsScope.of(
                                 context,
                               ).ballGlowEnabled,
-                              bloodColor: AppSettingsScope.of(
-                                context,
-                              ).bloodColor,
                               arenaTitle: AppSettingsScope.of(
                                 context,
                               ).arenaTitle,
                               arenaSubtitle: AppSettingsScope.of(
                                 context,
                               ).arenaSubtitle,
-                              backend: _videoExport,
-                            );
-                          },
-                    onShareLink: () {
-                      _audio.click();
-                      _copyReplayLink();
-                    },
-                    onReplay: _replay,
-                    onReplayFinisher:
-                        _controller.winningMove != null && _loserBall != null
-                        ? () {
-                            _audio.click();
-                            setState(() => _showHarpoonCinematic = true);
-                          }
-                        : null,
-                    onPlayAgain: _playAgain,
-                    round: widget.config.winsNeeded > 1 ? _round : null,
-                    seriesOver: _seriesOver,
-                    onNextRound: _seriesOver ? null : _nextRound,
-                    score: widget.config.winsNeeded > 1
-                        ? [
-                            for (final b in widget.config.contestants)
-                              (b.name, _roundWins[b.id] ?? 0),
-                          ]
-                        : null,
-                    onExit: () {
-                      _audio.click();
-                      Navigator.of(context).maybePop();
-                    },
-                    showEffects: _showEffects,
-                    onSlowAnswer: _showEffects && _askSlow ? _answerSlow : null,
+                              wallSparkSize: widget.config.wallSparkSize,
+                              repaint: _frame,
+                              look: widget.config.look,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 54,
+                          child: IconButton.filledTonal(
+                            tooltip: _audio.effectsOn ? 'SFX: on' : 'SFX: off',
+                            icon: Icon(
+                              _audio.effectsOn
+                                  ? Icons.volume_up
+                                  : Icons.volume_off,
+                            ),
+                            onPressed: () {
+                              final on = !_audio.effectsOn;
+                              _audio.setEffectsOn(on);
+                              if (on) _audio.click();
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: IconButton.filledTonal(
+                            tooltip: _audio.musicOn ? 'BGM: on' : 'BGM: off',
+                            icon: Icon(
+                              _audio.musicOn
+                                  ? Icons.music_note
+                                  : Icons.music_off,
+                            ),
+                            onPressed: () {
+                              _audio.setMusicOn(!_audio.musicOn);
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                        // Positioned like the arena: a non-positioned child would
+                        // size the Stack (to nothing, while there's no badge).
+                        Positioned.fill(
+                          child: ListenableBuilder(
+                            listenable: _frame,
+                            builder: (context, _) =>
+                                _state.status == MatchStatus.slowMotion
+                                ? const Align(
+                                    alignment: Alignment.topCenter,
+                                    child: SlowMotionBadge(),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ),
+                        if (widget.config.shrinkingArena)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.68),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.22),
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  child: Text(
+                                    'ARENA ${(_controller.arenaRadius / _controller.initialArenaRadius * 100).round()}%',
+                                    key: const ValueKey('arena-shrink-percent'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.7,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-            ];
+              );
 
-            final leave = IconButton(
-              icon: const Icon(Icons.close_rounded),
-              tooltip: 'Leave match',
-              onPressed: () {
-                _audio.click();
-                Navigator.of(context).maybePop();
-              },
-            );
+              final overlays = <Widget>[
+                // The runner-up shown big, then the winner card.
+                if (_showDissolve && !_dissolveComplete && _loserBall != null)
+                  _buildDissolveAnimation(),
+                if (_showHarpoonCinematic &&
+                    _winnerBall != null &&
+                    _loserBall != null)
+                  Positioned.fill(
+                    child: HarpoonCinematic(
+                      winner: _winnerBall!,
+                      loser: _loserBall!,
+                      move: _controller.winningMove ?? 'Collision',
+                      onHookFired: _playFinisherLaunch,
+                      onImpact: _playFinisherImpact,
+                      onFinished: () {
+                        if (!mounted) return;
+                        _audio.win();
+                        setState(() => _showHarpoonCinematic = false);
+                      },
+                    ),
+                  ),
+                if (_dissolveComplete &&
+                    !_showHarpoonCinematic &&
+                    _winnerBall != null)
+                  Positioned.fill(
+                    child: WinnerModal(
+                      winner: _winnerBall!,
+                      mayhemTally: widget.config.mayhem
+                          ? [
+                              for (final ball in _state.balls)
+                                (
+                                  ball.config,
+                                  _controller.eliminations[ball.config.id] ?? 0,
+                                  ball.life,
+                                ),
+                            ]
+                          : null,
+                      question: widget.config.question,
+                      durationSeconds: _controller.elapsedSeconds,
+                      winningMove: _controller.winningMove,
+                      onSaveVideo: _videoExport == null
+                          ? null
+                          : () {
+                              _audio.click();
+                              ExportVideoDialog.show(
+                                context,
+                                contestants: widget.config.contestants,
+                                seed: _controller.seed,
+                                arenaRadius: _arenaRadius,
+                                speedMultiplier: widget.config.speedMultiplier,
+                                showEffects: _showEffects,
+                                slowMotionLines: AppSettingsScope.of(
+                                  context,
+                                ).slowMotionLines,
+                                slowMotionBeforeWinSeconds: AppSettingsScope.of(
+                                  context,
+                                ).slowMotionBeforeWinSeconds,
+                                ballScale: widget.config.ballSize.scale,
+                                mode: widget.config.mode,
+                                look: widget.config.look,
+                                powerUps: widget.config.powerUps,
+                                tuning: widget.config.tuning,
+                                endlessBattle: widget.config.endlessBattle,
+                                dualWield: widget.config.dualWield,
+                                mayhem: widget.config.mayhem,
+                                mayhemSeconds: widget.config.mayhemSeconds,
+                                shrinkingArena: widget.config.shrinkingArena,
+                                minimumArenaScale:
+                                    widget.config.minimumArenaScale,
+                                headline: headline,
+                                colors: c,
+                                ballGlowEnabled: AppSettingsScope.of(
+                                  context,
+                                ).ballGlowEnabled,
+                                bloodColor: AppSettingsScope.of(
+                                  context,
+                                ).bloodColor,
+                                arenaTitle: AppSettingsScope.of(
+                                  context,
+                                ).arenaTitle,
+                                arenaSubtitle: AppSettingsScope.of(
+                                  context,
+                                ).arenaSubtitle,
+                                backend: _videoExport,
+                              );
+                            },
+                      onShareLink: () {
+                        _audio.click();
+                        _copyReplayLink();
+                      },
+                      onReplay: _replay,
+                      onReplayFinisher:
+                          _controller.winningMove != null && _loserBall != null
+                          ? () {
+                              _audio.click();
+                              setState(() => _showHarpoonCinematic = true);
+                            }
+                          : null,
+                      onPlayAgain: _playAgain,
+                      round: widget.config.winsNeeded > 1 ? _round : null,
+                      seriesOver: _seriesOver,
+                      onNextRound: _seriesOver ? null : _nextRound,
+                      score: widget.config.winsNeeded > 1
+                          ? [
+                              for (final b in widget.config.contestants)
+                                (b.name, _roundWins[b.id] ?? 0),
+                            ]
+                          : null,
+                      onExit: () {
+                        _audio.click();
+                        Navigator.of(context).maybePop();
+                      },
+                      showEffects: _showEffects,
+                      onSlowAnswer: _showEffects && _askSlow
+                          ? _answerSlow
+                          : null,
+                    ),
+                  ),
+              ];
 
-            if (isPortrait) {
-              return Stack(
+              final leave = IconButton(
+                icon: const Icon(Icons.close_rounded),
+                tooltip: 'Leave match',
+                onPressed: () {
+                  _audio.click();
+                  Navigator.of(context).maybePop();
+                },
+              );
+
+              if (isPortrait) {
+                return Stack(
+                  children: [
+                    Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                          child: Row(
+                            children: [
+                              leave,
+                              Expanded(
+                                child: MatchStatusHeader(
+                                  headline: headline,
+                                  subtitle: roundLabel,
+                                  dimmed: finished,
+                                ),
+                              ),
+                              pause,
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+                          child: ListenableBuilder(
+                            listenable: _frame,
+                            builder: (context, _) => _VersusHeader(
+                              balls: _state.balls,
+                              compact: true,
+                              look: widget.config.look,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: arena),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                          child: scoreboard,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                          child: Row(children: [timer, restart]),
+                        ),
+                      ],
+                    ),
+                    ...overlays,
+                  ],
+                );
+              }
+
+              // Wide screens (web, landscape): the game takes the left half and
+              // the winner card stays there, centered on the arena; the
+              // headline, scores and controls sit in the right half.
+              return Row(
                 children: [
-                  Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
-                        child: Row(
-                          children: [
-                            leave,
-                            Expanded(
-                              child: MatchStatusHeader(
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: arena),
+                        ...overlays,
+                      ],
+                    ),
+                  ),
+                  Container(width: 1, color: c.border),
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: leave,
+                              ),
+                              const SizedBox(height: 8),
+                              ListenableBuilder(
+                                listenable: _frame,
+                                builder: (context, _) => _VersusHeader(
+                                  balls: _state.balls,
+                                  look: widget.config.look,
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+                              MatchStatusHeader(
                                 headline: headline,
                                 subtitle: roundLabel,
                                 dimmed: finished,
+                                align: TextAlign.start,
                               ),
-                            ),
-                            pause,
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
-                        child: ListenableBuilder(
-                          listenable: _frame,
-                          builder: (context, _) => _VersusHeader(
-                            balls: _state.balls,
-                            compact: true,
-                            look: widget.config.look,
+                              const SizedBox(height: 28),
+                              scoreboard,
+                              const SizedBox(height: 28),
+                              Row(
+                                children: [
+                                  timer,
+                                  pause,
+                                  const SizedBox(width: 8),
+                                  restart,
+                                ],
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                      Expanded(child: arena),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                        child: scoreboard,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                        child: Row(children: [timer, restart]),
-                      ),
-                    ],
-                  ),
-                  ...overlays,
-                ],
-              );
-            }
-
-            // Wide screens (web, landscape): the game takes the left half and
-            // the winner card stays there, centered on the arena; the
-            // headline, scores and controls sit in the right half.
-            return Row(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(child: arena),
-                      ...overlays,
-                    ],
-                  ),
-                ),
-                Container(width: 1, color: c.border),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: leave,
-                            ),
-                            const SizedBox(height: 8),
-                            ListenableBuilder(
-                              listenable: _frame,
-                              builder: (context, _) => _VersusHeader(
-                                balls: _state.balls,
-                                look: widget.config.look,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            MatchStatusHeader(
-                              headline: headline,
-                              subtitle: roundLabel,
-                              dimmed: finished,
-                              align: TextAlign.start,
-                            ),
-                            const SizedBox(height: 28),
-                            scoreboard,
-                            const SizedBox(height: 28),
-                            Row(
-                              children: [
-                                timer,
-                                pause,
-                                const SizedBox(width: 8),
-                                restart,
-                              ],
-                            ),
-                          ],
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
-      ),
       ),
     );
   }

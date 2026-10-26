@@ -406,8 +406,11 @@ void main() {
     _run(c, PowerUpTuning.aimSteps);
     expect(c.powerUps!.energyWaveAttacks, hasLength(1));
     expect(b.life, PowerUpTuning.arenaLife);
+    final casterPosition = a.position;
+    a.velocity = const Offset(900, 0);
 
     _run(c, EnergyWaveAttack.chargeSteps + EnergyWaveAttack.beamSteps - 1);
+    expect(a.position, casterPosition);
     expect(b.velocity, Offset.zero);
     expect(
       b.life,
@@ -467,8 +470,11 @@ void main() {
     );
 
     _run(c, EnergyWaveAttack.chargeSteps);
-    expect(balls.map((ball) => ball.life), everyElement(PowerUpTuning.arenaLife),
-      reason: 'opponents must not all take damage when the beam first appears');
+    expect(
+      balls.map((ball) => ball.life),
+      everyElement(PowerUpTuning.arenaLife),
+      reason: 'opponents must not all take damage when the beam first appears',
+    );
     _run(c, EnergyWaveAttack.beamSteps - 1);
 
     final expectedLife =

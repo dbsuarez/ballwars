@@ -49,6 +49,19 @@ void _aimAtWall(SimulationBall ball, double degrees) {
 }
 
 void main() {
+  test('Arsenal eliminates a ball with less than one life', () {
+    final controller = MatchSimulationController(
+      _twoBalls(),
+      arenaRadius: _arenaRadius,
+      seed: 1,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
+    final b = _ball(controller, 'b')..life = 0.9;
+    controller.tick(1 / 60);
+    expect(b.isEliminated, isTrue);
+  });
+
   test('the final weapon is recorded as the winning move', () {
     final controller = MatchSimulationController(
       _twoBalls(),

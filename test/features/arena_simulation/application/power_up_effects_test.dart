@@ -123,6 +123,40 @@ void main() {
     expect(armored.life, _life);
     expect(armored.goldenArmorHits, 0);
     expect(c.powerUps!.blasts, 2);
+    for (final target in [shieldedGhost, armored]) {
+      final away = target.position - owner.position;
+      expect(
+        target.velocity.dx * away.dx + target.velocity.dy * away.dy,
+        greaterThan(0),
+      );
+    }
+  });
+
+  test('Mirror returns a projectile and damages its original attacker', () {
+    final c = _match();
+    final [attacker, mirror] = c.state.balls;
+    mirror.mirrorCharges = 1;
+    c.powerUps!.projectiles.add(_bulletAt(attacker, mirror));
+    _run(c, 90);
+    expect(mirror.life, _life);
+    expect(mirror.mirrorCharges, 0);
+    expect(attacker.life, lessThan(_life));
+  });
+
+  test('Magnetic field returns only one projectile per attacker', () {
+    final c = _match();
+    final [attacker, field] = c.state.balls;
+    field.magneticFieldLeft = 120;
+    c.powerUps!.projectiles.addAll([
+      _bulletAt(attacker, field),
+      _bulletAt(attacker, field),
+    ]);
+    _run(c, 90);
+    expect(field.life, _life);
+    expect(
+      attacker.life,
+      _life - PowerUpTuning.arenaDamage[PowerUpKind.pistol]!,
+    );
   });
 
   test(

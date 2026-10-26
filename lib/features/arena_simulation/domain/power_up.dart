@@ -153,10 +153,26 @@ enum PowerUpKind {
   PowerUpRarity? get rarity {
     if (isTrap) return null;
     return switch (this) {
-      pistol || knife || apple || speed || magnet || bow || waterGun => PowerUpRarity.normal,
-      gatling || threadHarpoon || ghost || overcharge || goldenArmor ||
-      rocketLauncher || omegaTendrils || fireWall || lightningStrikes ||
-      earthquake || tornado || energyWave || flamethrower => PowerUpRarity.epic,
+      pistol ||
+      knife ||
+      apple ||
+      speed ||
+      magnet ||
+      bow ||
+      waterGun => PowerUpRarity.normal,
+      gatling ||
+      threadHarpoon ||
+      ghost ||
+      overcharge ||
+      goldenArmor ||
+      rocketLauncher ||
+      omegaTendrils ||
+      fireWall ||
+      lightningStrikes ||
+      earthquake ||
+      tornado ||
+      energyWave ||
+      flamethrower => PowerUpRarity.epic,
       _ => PowerUpRarity.rare,
     };
   }
@@ -204,7 +220,7 @@ class Projectile {
   final Offset? landAt;
   SimulationBall? target;
 
-  final SimulationBall owner;
+  SimulationBall owner;
   final PowerUpKind kind;
   Offset position;
   Offset velocity;
@@ -413,10 +429,17 @@ class EnergyWaveAttack {
     required this.targets,
     required this.direction,
   }) : savedOwnerVelocity = owner.velocity,
+       savedOwnerPosition = owner.position,
        savedVelocities = {
          for (final target in targets) target: target.velocity,
+       },
+       savedPositions = {
+         for (final target in targets) target: target.position,
        } {
-    final bounds = sweepBounds(owner.position, targets.map((ball) => ball.position));
+    final bounds = sweepBounds(
+      owner.position,
+      targets.map((ball) => ball.position),
+    );
     startAngle = bounds.$1;
     endAngle = bounds.$2;
   }
@@ -431,7 +454,9 @@ class EnergyWaveAttack {
   late final double startAngle;
   late final double endAngle;
   final Offset savedOwnerVelocity;
+  final Offset savedOwnerPosition;
   final Map<SimulationBall, Offset> savedVelocities;
+  final Map<SimulationBall, Offset> savedPositions;
   int age = 0;
   int currentIndex = -1;
   final Set<SimulationBall> hitTargets = {};
@@ -448,7 +473,9 @@ class EnergyWaveAttack {
     var gap = -1.0;
     var startIndex = 0;
     for (var i = 0; i < angles.length; i++) {
-      final next = i + 1 < angles.length ? angles[i + 1] : angles.first + 2 * math.pi;
+      final next = i + 1 < angles.length
+          ? angles[i + 1]
+          : angles.first + 2 * math.pi;
       if (next - angles[i] > gap) {
         gap = next - angles[i];
         startIndex = (i + 1) % angles.length;

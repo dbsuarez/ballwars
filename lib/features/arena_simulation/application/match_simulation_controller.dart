@@ -523,7 +523,12 @@ class MatchSimulationController {
     }
 
     if (!realDeltaSeconds.isFinite || realDeltaSeconds <= 0) return;
-    if (mayhem) realDeltaSeconds = math.min(realDeltaSeconds, math.max(0.0, mayhemSeconds - _elapsedSeconds));
+    if (mayhem) {
+      realDeltaSeconds = math.min(
+        realDeltaSeconds,
+        math.max(0.0, mayhemSeconds - _elapsedSeconds),
+      );
+    }
     _elapsedSeconds += realDeltaSeconds;
     if (mayhem && _elapsedSeconds >= mayhemSeconds) {
       _finishMayhem();
@@ -696,18 +701,8 @@ class MatchSimulationController {
               ..position += normal * ((reach - distance) / 2)
               ..velocity = normal * speedB;
             ballHits++;
-            damage(
-              a,
-              _bodyCollisionDamage(b),
-              attacker: b,
-              move: 'Collision',
-            );
-            damage(
-              b,
-              _bodyCollisionDamage(a),
-              attacker: a,
-              move: 'Collision',
-            );
+            damage(a, _bodyCollisionDamage(b), attacker: b, move: 'Collision');
+            damage(b, _bodyCollisionDamage(a), attacker: a, move: 'Collision');
             _floatingTexts.spawn(
               (a.position + b.position) / 2,
               'MAGNETIC BOUNCE!',
@@ -736,18 +731,8 @@ class MatchSimulationController {
           b.rotation -= impactAngle * 0.05;
 
           // In Arsenal, every genuine ball-to-ball bounce hurts both balls.
-          damage(
-            a,
-            _bodyCollisionDamage(b),
-            attacker: b,
-            move: 'Collision',
-          );
-          damage(
-            b,
-            _bodyCollisionDamage(a),
-            attacker: a,
-            move: 'Collision',
-          );
+          damage(a, _bodyCollisionDamage(b), attacker: b, move: 'Collision');
+          damage(b, _bodyCollisionDamage(a), attacker: a, move: 'Collision');
 
           // Melee power-ups (knife, shield bash) strike on contact.
           _powerUps?.onContact(a, b);
@@ -815,7 +800,7 @@ class MatchSimulationController {
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
 
-      if (arsenal ? ball.life <= 0 : ball.fanLines.isEmpty) {
+      if (arsenal ? ball.life < 1 : ball.fanLines.isEmpty) {
         ball.isEliminated = true;
         knockouts++;
         eliminatedNow.add(ball);
@@ -862,7 +847,7 @@ class MatchSimulationController {
       final survivor = tied[_rng.nextInt(tied.length)];
       survivor.isEliminated = false;
       // An Arsenal survivor keeps one point of life, so its life bar isn't empty.
-      if (arsenal && survivor.life <= 0) survivor.life = 1;
+      if (arsenal && survivor.life < 1) survivor.life = 1;
       activeBalls = [survivor];
     }
     final knockedOut = eliminatedNow.where((b) => b.isEliminated);
@@ -930,8 +915,8 @@ class MatchSimulationController {
   /// Buffs do not count as equipment. Ordinary armed bumps keep their base damage.
   double _bodyCollisionDamage(SimulationBall attacker) =>
       attacker.held == null && attacker.heldSecondary == null
-          ? tuning.unarmedCollisionDamage
-          : PowerUpTuning.arenaCollisionDamage;
+      ? tuning.unarmedCollisionDamage
+      : PowerUpTuning.arenaCollisionDamage;
 
   /// Keeps the bounce directions from the elastic collision but applies only
   /// [collisionSpeedTransfer] of its speed exchange, then rescales both balls

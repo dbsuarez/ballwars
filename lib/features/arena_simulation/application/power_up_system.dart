@@ -86,7 +86,8 @@ class PowerUpSystem {
   /// How many power-ups balls have picked up so far (the screen plays a sound when it goes up).
   int pickups = 0;
   final Map<String, int> interactionSounds = {};
-  void _sound(String event) => interactionSounds.update(event, (value) => value + 1, ifAbsent: () => 1);
+  void _sound(String event) =>
+      interactionSounds.update(event, (value) => value + 1, ifAbsent: () => 1);
 
   /// Bullets, pellets and freeze shots fired so far (the screen plays a sound when it goes up).
   int shots = 0;
@@ -132,6 +133,7 @@ class PowerUpSystem {
       ..aimLeft = 0
       ..aimTarget = null
       ..burstLeft = 0;
+    ball.magneticReflectedOwners.clear();
     _frozenVelocity.remove(ball);
     _gooVelocity.remove(ball);
     _burstVolley.remove(ball);
@@ -326,6 +328,7 @@ class PowerUpSystem {
         _yell(ball, 'CHAOS MODE!');
       case PowerUpKind.magneticField:
         ball.magneticFieldLeft = PowerUpTuning.specialEffectSteps;
+        ball.magneticReflectedOwners.clear();
         _yell(ball, 'NOTHING GETS THROUGH!');
       case PowerUpKind.goldenArmor:
         ball.goldenArmorHits = 2;
@@ -462,11 +465,14 @@ class PowerUpSystem {
       tendril.stepsLeft--;
       if (tendril.stepsLeft > 0) continue;
 
-      target.position += Offset(0, target.radius * 0.55);
-      target.velocity = Offset(
-        tendril.savedVelocity.dx * 0.25,
-        math.max(tendril.savedVelocity.distance, match.arenaRadius * 0.45),
-      );
+      final away = target.position - tendril.owner.position;
+      final direction = away.distance == 0
+          ? const Offset(0, 1)
+          : away / away.distance;
+      target.position += direction * target.radius * 0.55;
+      target.velocity =
+          direction *
+          math.max(tendril.savedVelocity.distance, match.arenaRadius * 0.45);
       final lost = match.damage(
         target,
         _t.arenaDamage(PowerUpKind.omegaTendrils),
@@ -477,7 +483,7 @@ class PowerUpSystem {
       target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
       match.state.particles.spawnBlood(
         origin: target.position,
-        direction: const Offset(0, 1),
+        direction: direction,
         color: match.bloodColor,
         rng: rng,
       );
@@ -822,7 +828,12 @@ class PowerUpSystem {
       if (ball.timeBubbleLeft > 0) ball.timeBubbleLeft--;
       if (ball.vampireLeft > 0) ball.vampireLeft--;
       if (ball.overchargeLeft > 0) ball.overchargeLeft--;
-      if (ball.magneticFieldLeft > 0) ball.magneticFieldLeft--;
+      if (ball.magneticFieldLeft > 0) {
+        ball.magneticFieldLeft--;
+        if (ball.magneticFieldLeft == 0) {
+          ball.magneticReflectedOwners.clear();
+        }
+      }
       if (!_alive(ball)) ball.magnetPending = false;
     }
   }
@@ -1019,7 +1030,8 @@ class PowerUpSystem {
         ? kinds.where((kind) => !kind.isTrap).toList()
         : kinds;
     if (eligibleKinds.isEmpty && forcedKind == null) return;
-    final kind = forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
+    final kind =
+        forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);
@@ -1545,9 +1557,13 @@ class PowerUpSystem {
         continue;
       }
       attack.age++;
+      attack.owner.position = attack.savedOwnerPosition;
       attack.owner.velocity = Offset.zero;
       for (final target in attack.targets) {
-        if (_alive(target)) target.velocity = Offset.zero;
+        if (_alive(target)) {
+          target.position = attack.savedPositions[target] ?? target.position;
+          target.velocity = Offset.zero;
+        }
       }
       if (attack.age < EnergyWaveAttack.chargeSteps) continue;
 
@@ -1557,8 +1573,13 @@ class PowerUpSystem {
             attack.owner.position + attack.direction * attack.owner.radius;
         final end = start + attack.direction * match.arenaRadius * 2.4;
         energyWaves.add(
-          EnergyWave(owner: attack.owner, start: start, end: end,
-            sweepStartAngle: attack.startAngle, sweepEndAngle: attack.endAngle),
+          EnergyWave(
+            owner: attack.owner,
+            start: start,
+            end: end,
+            sweepStartAngle: attack.startAngle,
+            sweepEndAngle: attack.endAngle,
+          ),
         );
       }
 
@@ -1570,13 +1591,22 @@ class PowerUpSystem {
       for (final target in attack.targets) {
         if (!_alive(target) || attack.hitTargets.contains(target)) continue;
         final delta = target.position - attack.owner.position;
-        final bearing = (math.atan2(delta.dy, delta.dx) - startAngle) %
-            (2 * math.pi);
-        if (bearing > progress * (attack.endAngle - attack.startAngle) + 0.000001) continue;
+        final bearing =
+            (math.atan2(delta.dy, delta.dx) - startAngle) % (2 * math.pi);
+        if (bearing >
+            progress * (attack.endAngle - attack.startAngle) + 0.000001) {
+          continue;
+        }
         attack.hitTargets.add(target);
         weaponImpacts.add(WeaponImpact(position: target.position, strength: 1));
-        _hit(target, PowerUpKind.energyWave, at: target.position,
-          from: attack.owner, unavoidable: true, scaleForCrowd: false);
+        _hit(
+          target,
+          PowerUpKind.energyWave,
+          at: target.position,
+          from: attack.owner,
+          unavoidable: true,
+          scaleForCrowd: false,
+        );
         _yell(target, 'BLASTED!');
       }
 
@@ -1589,6 +1619,7 @@ class PowerUpSystem {
 
   void _releaseEnergyWave(EnergyWaveAttack attack, {required bool launchAway}) {
     if (_alive(attack.owner)) {
+      attack.owner.position = attack.savedOwnerPosition;
       attack.owner.velocity = attack.savedOwnerVelocity;
     }
     for (final target in attack.targets) {
@@ -1641,12 +1672,6 @@ class PowerUpSystem {
         }
         final angle = math.atan2(offset.dy, offset.dx);
         if (_wrap(angle - cone.angle).abs() > 0.48) continue;
-        _hit(
-          target,
-          PowerUpKind.flamethrower,
-          at: target.position,
-          from: cone.owner,
-        );
         _applyDamageOverTime(
           target,
           PowerUpKind.flamethrower,
@@ -1750,7 +1775,10 @@ class PowerUpSystem {
           from,
           to,
           ball.position,
-          ball.magneticFieldLeft > 0 ? ball.radius * 2 : ball.radius,
+          ball.magneticFieldLeft > 0 &&
+                  !ball.magneticReflectedOwners.contains(p.owner)
+              ? ball.radius * 2
+              : ball.radius,
         );
         if (t != null && t < strikeAt) {
           struck = ball;
@@ -1796,6 +1824,11 @@ class PowerUpSystem {
 
       p.position = end;
       if (struck != null) {
+        if (struck.magneticFieldLeft > 0 &&
+            struck.magneticReflectedOwners.contains(p.owner)) {
+          p.spent = true;
+          continue;
+        }
         if (struck.magneticFieldLeft > 0 || struck.mirrorCharges > 0) {
           final normal = end - struck.position;
           final unit = normal.distance == 0
@@ -1807,6 +1840,10 @@ class PowerUpSystem {
           if (struck.mirrorCharges > 0 && struck.magneticFieldLeft == 0) {
             struck.mirrorCharges--;
           }
+          if (struck.magneticFieldLeft > 0) {
+            struck.magneticReflectedOwners.add(p.owner);
+          }
+          p.owner = struck;
           _yell(struck, 'RETURN TO SENDER!');
           continue;
         }

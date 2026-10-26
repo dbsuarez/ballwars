@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import '../offline/offline_store.dart';
 
 /// A background track: match music (`assets/sounds/bgm_<id>.wav`) or Home
@@ -38,9 +37,11 @@ class MusicTrack {
     MusicTrack.home('starlight', 'Starlight', 'Dreamy and sparse · 64 bpm'),
   ];
 
-  static MusicTrack byId(String id) => all.firstWhere((t) => t.id == id, orElse: () => all.first);
+  static MusicTrack byId(String id) =>
+      all.firstWhere((t) => t.id == id, orElse: () => all.first);
 
-  static MusicTrack menuById(String id) => menu.firstWhere((t) => t.id == id, orElse: () => menu.first);
+  static MusicTrack menuById(String id) =>
+      menu.firstWhere((t) => t.id == id, orElse: () => menu.first);
 }
 
 /// The game's 8-bit sounds (assets/sounds, made by tool/sounds/make_sounds.py):
@@ -103,7 +104,9 @@ class GameAudio with WidgetsBindingObserver {
   set track(MusicTrack track) {
     if (track.id == _track.id) return;
     _track = track;
-    if (_playMusic && _musicWanted && _music?.state == PlayerState.playing) _startMusic(restart: true);
+    if (_playMusic && _musicWanted && _music?.state == PlayerState.playing) {
+      _startMusic(restart: true);
+    }
   }
 
   MusicTrack get menuTrack => _menuTrack;
@@ -119,7 +122,8 @@ class GameAudio with WidgetsBindingObserver {
 
   bool get _playMusic => enabled && _musicOn && _foreground;
 
-  bool get _playMenu => enabled && _menuMusicOn && _foreground && _previewing == null;
+  bool get _playMenu =>
+      enabled && _menuMusicOn && _foreground && _previewing == null;
 
   /// Loads the saved choices, and lets the sounds mix with each other (and with
   /// other apps) instead of taking audio focus from one another on Android.
@@ -131,7 +135,9 @@ class GameAudio with WidgetsBindingObserver {
       if (enabled) {
         WidgetsBinding.instance.addObserver(this);
         await AudioPlayer.global.setAudioContext(
-          AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build(),
+          AudioContextConfig(
+            focus: AudioContextConfigFocus.mixWithOthers,
+          ).build(),
         );
       }
     } catch (e) {
@@ -202,7 +208,9 @@ class GameAudio with WidgetsBindingObserver {
   /// page, so a Home music that couldn't start at launch starts here.
   void click() {
     _play('click', 0.6);
-    if (_playMenu && _menuWanted && _menu?.state != PlayerState.playing) _startMenu();
+    if (_playMenu && _menuWanted && _menu?.state != PlayerState.playing) {
+      _startMenu();
+    }
   }
 
   /// A ball hit the rim. Rapid repeats are thinned out.
@@ -224,7 +232,9 @@ class GameAudio with WidgetsBindingObserver {
     final old = _voices.values.toList();
     _voices.clear();
     _lastPlayed.clear();
-    for (final voices in old) voices.dispose();
+    for (final voices in old) {
+      voices.dispose();
+    }
   }
 
   // Power-ups (Arsenal / All-Out). Rapid repeats (gatling, pellets) are thinned out.
@@ -247,12 +257,17 @@ class GameAudio with WidgetsBindingObserver {
   /// Existing sounds mapped to otherwise silent interactions.
   void interaction(String event) {
     switch (event) {
-      case 'warp': pickup();
+      case 'warp':
+        pickup();
       case 'freeze':
-      case 'repel': shield();
-      case 'trap': hit();
-      case 'cut': slash();
-      case 'out': out();
+      case 'repel':
+        shield();
+      case 'trap':
+        hit();
+      case 'cut':
+        slash();
+      case 'out':
+        out();
     }
   }
 
@@ -332,7 +347,11 @@ class GameAudio with WidgetsBindingObserver {
   void _startMusic({bool restart = false}) {
     final epoch = ++_musicEpoch;
     _queueMusic(() async {
-      bool wanted() => epoch == _musicEpoch && _playMusic && _musicWanted && !_musicPausedByUser;
+      bool wanted() =>
+          epoch == _musicEpoch &&
+          _playMusic &&
+          _musicWanted &&
+          !_musicPausedByUser;
       if (!wanted()) return;
       final music = _music ??= _newPlayer();
       await music.setReleaseMode(ReleaseMode.loop);
@@ -342,10 +361,14 @@ class GameAudio with WidgetsBindingObserver {
       if (!restart && music.state == PlayerState.paused) {
         await music.resume();
       } else {
-        await music.play(AssetSource(_track.asset),
-            volume: _slow ? _musicVolume * 0.45 : _musicVolume);
+        await music.play(
+          AssetSource(_track.asset),
+          volume: _slow ? _musicVolume * 0.45 : _musicVolume,
+        );
       }
-      if (!wanted() && (!_playMusic || !_musicWanted || _musicPausedByUser)) await music.pause();
+      if (!wanted() && (!_playMusic || !_musicWanted || _musicPausedByUser)) {
+        await music.pause();
+      }
     });
   }
 
@@ -364,7 +387,9 @@ class GameAudio with WidgetsBindingObserver {
     _guard(() async {
       final player = _preview ??= _newPlayer();
       await player.stop();
-      await player.setReleaseMode(ReleaseMode.stop).timeout(const Duration(seconds: 3));
+      await player
+          .setReleaseMode(ReleaseMode.stop)
+          .timeout(const Duration(seconds: 3));
       await player.play(AssetSource(track.asset), volume: 0.6);
       await player.onPlayerComplete.first;
       if (_previewing == track.asset) {
@@ -403,10 +428,12 @@ class GameAudio with WidgetsBindingObserver {
   /// frame while a player plays (FramePositionUpdater): it keeps the app drawing at the screen's full rate
   /// (120 Hz) even on still screens and sends a platform call per frame, which on Android runs on the
   /// same thread as the app and made every screen slow while music played. Nothing here reads positions.
-  static AudioPlayer _newPlayer() => playerFactory?.call() ?? (AudioPlayer()..positionUpdater = null);
+  static AudioPlayer _newPlayer() =>
+      playerFactory?.call() ?? (AudioPlayer()..positionUpdater = null);
 
   void _queueMenu(Future<void> Function() action) {
-    _menuQueue = _menuQueue.then((_) => action().timeout(const Duration(seconds: 4)))
+    _menuQueue = _menuQueue
+        .then((_) => action().timeout(const Duration(seconds: 4)))
         .catchError((Object e) {
           debugPrint('GameAudio menu: $e');
           final failed = _menu;
@@ -416,7 +443,8 @@ class GameAudio with WidgetsBindingObserver {
   }
 
   void _queueMusic(Future<void> Function() action) {
-    _musicQueue = _musicQueue.then((_) => action().timeout(const Duration(seconds: 4)))
+    _musicQueue = _musicQueue
+        .then((_) => action().timeout(const Duration(seconds: 4)))
         .catchError((Object e) {
           debugPrint('GameAudio music: $e');
           final failed = _music;
@@ -447,26 +475,44 @@ class _Voices {
     AudioPlayer? available;
     for (var i = 0; i < _players.length; i++) {
       final candidate = _players[_next++ % _players.length];
-      if (!_busy.contains(candidate)) { available = candidate; break; }
+      if (!_busy.contains(candidate)) {
+        available = candidate;
+        break;
+      }
     }
-    if (available == null) return; // Never issue overlapping commands to a player.
+    if (available == null) {
+      return; // Never issue overlapping commands to a player.
+    }
     final player = available;
     _busy.add(player);
     GameAudio._guard(() async {
       try {
         // Keep reusable media players on both platforms. Low-latency native
         // sound handles have gone silent after repeated match/restart cycles.
-        await player.setReleaseMode(ReleaseMode.stop).timeout(const Duration(seconds: 3));
+        await player
+            .setReleaseMode(ReleaseMode.stop)
+            .timeout(const Duration(seconds: 3));
         if (_disposed) return;
-        await player.play(AssetSource('sounds/$name.wav'), volume: volume,
-            mode: PlayerMode.mediaPlayer).timeout(const Duration(seconds: 3));
+        await player
+            .play(
+              AssetSource('sounds/$name.wav'),
+              volume: volume,
+              mode: PlayerMode.mediaPlayer,
+            )
+            .timeout(const Duration(seconds: 3));
       } catch (_) {
         _players.remove(player);
-        try { await player.dispose(); } catch (_) {}
+        try {
+          await player.dispose();
+        } catch (_) {}
         rethrow; // Logged; the next event gets a new player instead of a dead one.
       } finally {
         _busy.remove(player);
-        if (_disposed) { try { await player.dispose(); } catch (_) {} }
+        if (_disposed) {
+          try {
+            await player.dispose();
+          } catch (_) {}
+        }
       }
     });
   }

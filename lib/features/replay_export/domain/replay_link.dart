@@ -124,7 +124,9 @@ class ReplayLink {
     final endless = mode == MatchMode.arsenal && endlessBattle
         ? '&endless=1'
         : '';
-    final mayhemToken = mode == MatchMode.arsenal && mayhem ? '&mayhem=1&duration=$mayhemSeconds' : '';
+    final mayhemToken = mode == MatchMode.arsenal && mayhem
+        ? '&mayhem=1&duration=$mayhemSeconds'
+        : '';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
     final minimumArena = shrinkingArena && minimumArenaScale != 0.60
         ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
@@ -185,8 +187,12 @@ class ReplayLink {
     }
     final mayhem = params['mayhem'] == '1';
     final mayhemSeconds = int.tryParse(params['duration'] ?? '120');
-    if (mayhemSeconds == null || mayhemSeconds < 30 || mayhemSeconds > 1800 ||
-        (params.containsKey('duration') && !mayhem)) return null;
+    if (mayhemSeconds == null ||
+        mayhemSeconds < 30 ||
+        mayhemSeconds > 1800 ||
+        (params.containsKey('duration') && !mayhem)) {
+      return null;
+    }
     if (params.containsKey('mayhem') && params['mayhem'] != '1') return null;
     if (seed == null ||
         tokens.length < minBalls ||

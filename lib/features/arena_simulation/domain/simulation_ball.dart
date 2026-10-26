@@ -76,6 +76,7 @@ class SimulationBall {
   int overchargeLeft = 0;
   int gremlinShots = 0;
   int magneticFieldLeft = 0;
+  final Set<SimulationBall> magneticReflectedOwners = {};
   int goldenArmorHits = 0;
   int stickyGooLeft = 0;
   int burningLeft = 0;

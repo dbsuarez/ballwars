@@ -352,6 +352,12 @@ class _SkillEditorState extends State<_SkillEditor> {
       'spread': TextEditingController(text: '${widget.skill.spreadDegrees}'),
     if (widget.skill.maxBounces != null)
       'bounces': TextEditingController(text: '${widget.skill.maxBounces}'),
+    if (widget.skill.isComposed)
+      'repeatCount': TextEditingController(text: '${widget.skill.repeatCount}'),
+    if (widget.skill.isComposed)
+      'repeatInterval': TextEditingController(
+        text: '${widget.skill.repeatIntervalSeconds}',
+      ),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
@@ -361,6 +367,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillTargeting? _targeting = widget.skill.targeting;
   late SkillDelivery? _delivery = widget.skill.delivery;
   late SkillEffectType? _effectType = widget.skill.effectType;
+  late SkillEffectType? _secondaryEffectType = widget.skill.secondaryEffectType;
   late SkillCalloutStyle _calloutStyle = widget.skill.calloutStyle;
   late final _yell = TextEditingController(text: widget.skill.yell);
   late final _sound = TextEditingController(text: widget.skill.soundCue);
@@ -414,6 +421,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _targeting = defaults.targeting;
       _delivery = defaults.delivery;
       _effectType = defaults.effectType;
+      _secondaryEffectType = defaults.secondaryEffectType;
       _calloutStyle = defaults.calloutStyle;
       _sound.text = defaults.soundCue;
       _yell.text = defaults.yell;
@@ -425,6 +433,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('spread', defaults.spreadDegrees);
       number('bounces', defaults.maxBounces);
       number('knockback', defaults.knockback);
+      number('repeatCount', defaults.repeatCount);
+      number('repeatInterval', defaults.repeatIntervalSeconds);
     });
   }
 
@@ -467,7 +477,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                   child: IconButton.filledTonal(
                     tooltip: 'Close preview',
                     onPressed: () => Navigator.of(previewContext).maybePop(),
-                    icon: const Icon(Icons.close),
+                    icon: const Text(
+                      '×',
+                      style: TextStyle(fontSize: 28, height: 1),
+                    ),
                   ),
                 ),
               ],
@@ -490,6 +503,7 @@ class _SkillEditorState extends State<_SkillEditor> {
           'TARGETING chooses the owner, nearest opponent, or every opponent.\n\n'
           'DELIVERY chooses an immediate effect, a traveling projectile, or an area effect.\n\n'
           'EFFECT decides what happens: damage, healing, freezing, speed, or knockback. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects.\n\n'
+          'SECONDARY EFFECT runs immediately after the primary effect. REPEAT COUNT includes the first activation; the interval controls the pause between later activations.\n\n'
           'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
           'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball.',
         ),
@@ -526,6 +540,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       targeting: _targeting,
       delivery: _delivery,
       effectType: _effectType,
+      secondaryEffectType: _secondaryEffectType,
+      repeatCount: _int('repeatCount'),
+      repeatIntervalSeconds: _double('repeatInterval'),
       yell: _yell.text,
       calloutStyle: _calloutStyle,
     );
@@ -542,6 +559,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   @override
   Widget build(BuildContext context) {
     final result = _result;
+    final compatibilityIssues = result?.compatibilityIssues ?? const <String>[];
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
@@ -561,7 +579,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                 icon: const Icon(Icons.info_outline),
               ),
               TextButton(
-                onPressed: result == null
+                key: const ValueKey('save-skill'),
+                onPressed: result == null || compatibilityIssues.isNotEmpty
                     ? null
                     : () => Navigator.pop(context, result),
                 child: const Text('Done'),
@@ -627,6 +646,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<SkillTargeting>(
+                  key: const ValueKey('skill-targeting'),
                   initialValue: _targeting,
                   decoration: const InputDecoration(labelText: 'Targeting'),
                   items: [
@@ -637,6 +657,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<SkillDelivery>(
+                  key: const ValueKey('skill-delivery'),
                   initialValue: _delivery,
                   decoration: const InputDecoration(labelText: 'Delivery'),
                   items: [
@@ -656,6 +677,71 @@ class _SkillEditorState extends State<_SkillEditor> {
                   ],
                   onChanged: (value) => setState(() => _effectType = value),
                 ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: const ValueKey('skill-secondary-effect-type'),
+                  initialValue: _secondaryEffectType?.name ?? 'none',
+                  decoration: const InputDecoration(
+                    labelText: 'Secondary effect',
+                    helperText: 'Runs after the primary effect.',
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: 'none', child: Text('None')),
+                    for (final value in SkillEffectType.values)
+                      DropdownMenuItem(
+                        value: value.name,
+                        child: Text(value.name),
+                      ),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _secondaryEffectType = value == 'none'
+                        ? null
+                        : SkillEffectType.values.firstWhere(
+                            (effect) => effect.name == value,
+                          );
+                  }),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _number(
+                        'repeatCount',
+                        'Repeat count',
+                        suffix: 'times',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _number(
+                        'repeatInterval',
+                        'Repeat interval',
+                        suffix: 's',
+                      ),
+                    ),
+                  ],
+                ),
+                if (compatibilityIssues.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    key: const ValueKey('skill-compatibility-errors'),
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Fix this combination',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          for (final issue in compatibilityIssues)
+                            Text('• $issue'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
               TextField(
                 key: const ValueKey('skill-yell'),
@@ -762,15 +848,15 @@ class _SkillEditorState extends State<_SkillEditor> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filledTonal(
+                  OutlinedButton.icon(
                     key: const ValueKey('preview-skill-sound'),
-                    tooltip: 'Play sound preview',
-                    onPressed: () => GameAudio.instance.skillCue(
+                    onPressed: () => GameAudio.instance.previewSkillCue(
                       SkillDefinition.soundCues.contains(_sound.text)
                           ? _sound.text
                           : 'shot',
                     ),
-                    icon: const Icon(Icons.play_arrow),
+                    icon: const Text('▶', style: TextStyle(fontSize: 18)),
+                    label: const Text('Play'),
                   ),
                 ],
               ),

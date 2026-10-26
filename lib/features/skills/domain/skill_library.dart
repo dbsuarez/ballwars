@@ -46,6 +46,9 @@ class SkillDefinition {
     this.targeting,
     this.delivery,
     this.effectType,
+    this.secondaryEffectType,
+    this.repeatCount = 1,
+    this.repeatIntervalSeconds = 0.5,
     this.yell = '',
     this.calloutStyle = SkillCalloutStyle.normal,
   });
@@ -70,6 +73,9 @@ class SkillDefinition {
   final SkillTargeting? targeting;
   final SkillDelivery? delivery;
   final SkillEffectType? effectType;
+  final SkillEffectType? secondaryEffectType;
+  final int repeatCount;
+  final double repeatIntervalSeconds;
   final String yell;
   final SkillCalloutStyle calloutStyle;
   bool get isComposed =>
@@ -98,6 +104,9 @@ class SkillDefinition {
     SkillTargeting? targeting,
     SkillDelivery? delivery,
     SkillEffectType? effectType,
+    Object? secondaryEffectType = _unset,
+    int? repeatCount,
+    double? repeatIntervalSeconds,
     String? yell,
     SkillCalloutStyle? calloutStyle,
   }) => SkillDefinition(
@@ -121,6 +130,11 @@ class SkillDefinition {
     targeting: targeting ?? this.targeting,
     delivery: delivery ?? this.delivery,
     effectType: effectType ?? this.effectType,
+    secondaryEffectType: identical(secondaryEffectType, _unset)
+        ? this.secondaryEffectType
+        : secondaryEffectType as SkillEffectType?,
+    repeatCount: repeatCount ?? this.repeatCount,
+    repeatIntervalSeconds: repeatIntervalSeconds ?? this.repeatIntervalSeconds,
     yell: yell ?? this.yell,
     calloutStyle: calloutStyle ?? this.calloutStyle,
   );
@@ -146,6 +160,10 @@ class SkillDefinition {
     if (targeting != null) 'targeting': targeting!.name,
     if (delivery != null) 'delivery': delivery!.name,
     if (effectType != null) 'effect_type': effectType!.name,
+    if (secondaryEffectType != null)
+      'secondary_effect_type': secondaryEffectType!.name,
+    'repeat_count': repeatCount,
+    'repeat_interval_seconds': repeatIntervalSeconds,
     if (yell.isNotEmpty) 'yell': yell,
     'callout_style': calloutStyle.name,
   };
@@ -199,6 +217,12 @@ class SkillDefinition {
       targeting: nullableEnum('targeting', SkillTargeting.values),
       delivery: nullableEnum('delivery', SkillDelivery.values),
       effectType: nullableEnum('effect_type', SkillEffectType.values),
+      secondaryEffectType: nullableEnum(
+        'secondary_effect_type',
+        SkillEffectType.values,
+      ),
+      repeatCount: integer('repeat_count') ?? 1,
+      repeatIntervalSeconds: decimal('repeat_interval_seconds') ?? 0.5,
       yell: value['yell'] as String? ?? '',
       calloutStyle: enumValue(
         'callout_style',
@@ -218,10 +242,33 @@ class SkillDefinition {
     spreadDegrees: spreadDegrees?.clamp(0, 360),
     maxBounces: maxBounces?.clamp(0, 20),
     knockback: knockback.clamp(0, 10),
+    repeatCount: repeatCount.clamp(1, 10),
+    repeatIntervalSeconds: repeatIntervalSeconds.clamp(0.1, 10),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
   );
+
+  List<String> get compatibilityIssues {
+    if (!isComposed) return const [];
+    final issues = <String>[];
+    if ((trigger == SkillTrigger.aimedFire ||
+            trigger == SkillTrigger.collision) &&
+        !baseKind.isWeapon) {
+      issues.add('Aimed fire and collision triggers require a weapon carrier.');
+    }
+    if (delivery == SkillDelivery.projectile &&
+        trigger != SkillTrigger.aimedFire) {
+      issues.add('Projectile delivery requires the aimed fire trigger.');
+    }
+    if (delivery == SkillDelivery.projectile &&
+        targeting == SkillTargeting.self) {
+      issues.add('A projectile cannot target its owner.');
+    }
+    return List.unmodifiable(issues);
+  }
 }
+
+const Object _unset = Object();
 
 class SkillLibrary {
   const SkillLibrary({

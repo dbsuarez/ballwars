@@ -82,7 +82,10 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                       foregroundColor: Colors.black,
                       side: BorderSide(color: profile.accent, width: 2),
                     ),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Text(
+                      '×',
+                      style: TextStyle(fontSize: 28, height: 1),
+                    ),
                   ),
                 ),
               ],
@@ -271,7 +274,9 @@ class _FinisherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
-    final item = PowerUpKind.values.where((kind) => kind.label == profile.move).firstOrNull;
+    final item = PowerUpKind.values
+        .where((kind) => kind.label == profile.move)
+        .firstOrNull;
     return Card(
       margin: EdgeInsets.zero,
       color: c.surfaceHigh,
@@ -285,9 +290,17 @@ class _FinisherCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (item != null) PowerUpName(item, tuning: AppSettingsScope.of(context).powerUps,
-                      style: AppText.ui(14, FontWeight.w800, color: c.text))
-                  else Text(profile.move, style: AppText.ui(14, FontWeight.w800, color: c.text)),
+                  if (item != null)
+                    PowerUpName(
+                      item,
+                      tuning: AppSettingsScope.of(context).powerUps,
+                      style: AppText.ui(14, FontWeight.w800, color: c.text),
+                    )
+                  else
+                    Text(
+                      profile.move,
+                      style: AppText.ui(14, FontWeight.w800, color: c.text),
+                    ),
                   const SizedBox(height: 2),
                   Text(
                     '${profile.yell}  •  ${profile.impactYell}',
@@ -307,7 +320,7 @@ class _FinisherCard extends StatelessWidget {
                 foregroundColor: Colors.black,
                 side: BorderSide(color: profile.accent, width: 2),
               ),
-              icon: const Icon(Icons.play_arrow_rounded),
+              icon: const Text('▶', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),

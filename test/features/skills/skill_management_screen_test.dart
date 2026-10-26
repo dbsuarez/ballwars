@@ -164,4 +164,36 @@ void main() {
     expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
     expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
   });
+
+  testWidgets('invalid composed combinations are explained and cannot save', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('create-new-skill')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Skill name'),
+      'Invalid Apple Shot',
+    );
+    await tester.tap(find.text('Build skill'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('skill-trigger')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('pickup').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('skill-compatibility-errors')),
+      findsOneWidget,
+    );
+    final save = tester.widget<TextButton>(
+      find.byKey(const ValueKey('save-skill')),
+    );
+    expect(save.onPressed, isNull);
+  });
 }

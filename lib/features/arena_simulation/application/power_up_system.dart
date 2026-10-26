@@ -46,6 +46,7 @@ class PowerUpSystem {
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
+  final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -171,6 +172,10 @@ class PowerUpSystem {
     _firedWeaponHold.remove(ball);
     _shieldedVolley.remove(ball);
     _volleyLabel.remove(ball);
+    _scheduledComposedEffects.removeWhere(
+      (effect) =>
+          identical(effect.owner, ball) || effect.targets.contains(ball),
+    );
     pulls.removeWhere(
       (pull) => identical(pull.owner, ball) || identical(pull.target, ball),
     );
@@ -233,6 +238,7 @@ class PowerUpSystem {
 
   void step() {
     _updateFiredWeaponHold();
+    _updateScheduledComposedEffects();
     _updateOmegaTendrils();
     _updateLightningStrikes();
     _updateEarthquakesAndTornadoes();
@@ -1293,49 +1299,103 @@ class PowerUpSystem {
       null => const <SimulationBall>[],
     };
     for (final target in targets) {
-      switch (skill.effectType) {
-        case SkillEffectType.damage:
-          if (match.mode == MatchMode.arsenal) {
-            final dealt = match.damage(
-              target,
-              skill.arsenalDamage ?? 0,
-              move: skill.name,
-              attacker: owner,
-            );
-            _showDamage(target, target.position, dealt, 0);
-          } else {
-            final cut = match.cutThreads(
-              target,
-              skill.allOutDamage ?? 0,
-              near: target.position,
-              move: skill.name,
-            );
-            _showDamage(target, target.position, cut, 0);
-          }
-        case SkillEffectType.heal:
-          if (match.mode == MatchMode.arsenal) {
-            target.life = math.min(
-              _t.arenaMaxLife,
-              target.life + (skill.arsenalDamage ?? 10),
-            );
-          }
-        case SkillEffectType.freeze:
-          if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
-          target.frozenLeft = ((skill.durationSeconds ?? 2) * 60).round();
-          target.velocity = Offset.zero;
-        case SkillEffectType.speed:
-          target.speedLeft = ((skill.durationSeconds ?? 2) * 60).round();
-        case SkillEffectType.knockback:
-          final away = target.position - owner.position;
-          if (away.distance > 0) {
-            target.velocity =
-                away / away.distance * match.arenaRadius * skill.knockback;
-          }
-        case null:
+      _applyComposedEffect(owner, target, skill, skill.effectType);
+      if (skill.secondaryEffectType != null) {
+        _applyComposedEffect(owner, target, skill, skill.secondaryEffectType);
       }
+    }
+    if (skill.repeatCount > 1 && targets.isNotEmpty) {
+      _scheduledComposedEffects.add(
+        _ScheduledComposedEffect(
+          owner: owner,
+          targets: List.unmodifiable(targets),
+          skill: skill,
+          repeatsLeft: skill.repeatCount - 1,
+          stepsLeft: (skill.repeatIntervalSeconds * 60).round(),
+        ),
+      );
     }
     _skillSound(skill.baseKind);
     if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
+  }
+
+  void _updateScheduledComposedEffects() {
+    for (final scheduled in _scheduledComposedEffects.toList()) {
+      scheduled.stepsLeft--;
+      if (scheduled.stepsLeft > 0) continue;
+      for (final target in scheduled.targets) {
+        if (!_alive(target)) continue;
+        _applyComposedEffect(
+          scheduled.owner,
+          target,
+          scheduled.skill,
+          scheduled.skill.effectType,
+        );
+        if (scheduled.skill.secondaryEffectType != null) {
+          _applyComposedEffect(
+            scheduled.owner,
+            target,
+            scheduled.skill,
+            scheduled.skill.secondaryEffectType,
+          );
+        }
+      }
+      scheduled.repeatsLeft--;
+      if (scheduled.repeatsLeft <= 0 || !_alive(scheduled.owner)) {
+        _scheduledComposedEffects.remove(scheduled);
+      } else {
+        scheduled.stepsLeft = (scheduled.skill.repeatIntervalSeconds * 60)
+            .round();
+      }
+    }
+  }
+
+  void _applyComposedEffect(
+    SimulationBall owner,
+    SimulationBall target,
+    SkillDefinition skill,
+    SkillEffectType? effect,
+  ) {
+    switch (effect) {
+      case SkillEffectType.damage:
+        if (match.mode == MatchMode.arsenal) {
+          final dealt = match.damage(
+            target,
+            skill.arsenalDamage ?? 0,
+            move: skill.name,
+            attacker: owner,
+          );
+          _showDamage(target, target.position, dealt, 0);
+        } else {
+          final cut = match.cutThreads(
+            target,
+            skill.allOutDamage ?? 0,
+            near: target.position,
+            move: skill.name,
+          );
+          _showDamage(target, target.position, cut, 0);
+        }
+      case SkillEffectType.heal:
+        if (match.mode == MatchMode.arsenal) {
+          target.life = math.min(
+            _t.arenaMaxLife,
+            target.life + (skill.arsenalDamage ?? 10),
+          );
+        }
+      case SkillEffectType.freeze:
+        if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
+        target.frozenLeft = ((skill.durationSeconds ?? 2) * 60).round();
+        target.velocity = Offset.zero;
+      case SkillEffectType.speed:
+        target.speedLeft = ((skill.durationSeconds ?? 2) * 60).round();
+      case SkillEffectType.knockback:
+        final away = target.position - owner.position;
+        if (away.distance > 0) {
+          target.velocity =
+              away / away.distance * match.arenaRadius * skill.knockback;
+        }
+      case null:
+    }
   }
 
   /// Guns aim at the nearest opponent for [_t.aimSteps] steps, then fire. A gatling then
@@ -2341,4 +2401,20 @@ class PowerUpSystem {
     return side(q1, q2, p1) * side(q1, q2, p2) < 0 &&
         side(p1, p2, q1) * side(p1, p2, q2) < 0;
   }
+}
+
+class _ScheduledComposedEffect {
+  _ScheduledComposedEffect({
+    required this.owner,
+    required this.targets,
+    required this.skill,
+    required this.repeatsLeft,
+    required this.stepsLeft,
+  });
+
+  final SimulationBall owner;
+  final List<SimulationBall> targets;
+  final SkillDefinition skill;
+  int repeatsLeft;
+  int stepsLeft;
 }

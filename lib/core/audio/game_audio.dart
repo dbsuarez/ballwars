@@ -270,6 +270,25 @@ class GameAudio with WidgetsBindingObserver {
     }
   }
 
+  /// Plays a curated skill cue from an explicit admin preview action.
+  /// Previewing intentionally ignores the SFX preference: the administrator
+  /// must be able to audition a cue before deciding whether to enable sounds.
+  void previewSkillCue(String cue) {
+    if (!enabled || !_foreground) return;
+    if (const {
+      'shot',
+      'shotgun',
+      'gatling',
+      'slash',
+      'shield',
+      'bomb',
+      'pickup',
+      'hit',
+    }.contains(cue)) {
+      _voices.putIfAbsent(cue, () => _Voices(cue)).play(0.8);
+    }
+  }
+
   /// Existing sounds mapped to otherwise silent interactions.
   void interaction(String event) {
     switch (event) {

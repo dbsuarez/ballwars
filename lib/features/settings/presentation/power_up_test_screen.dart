@@ -362,7 +362,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     child: IconButton.filledTonal(
                       tooltip: 'Close preview',
                       onPressed: () => Navigator.of(previewContext).maybePop(),
-                      icon: const Icon(Icons.close),
+                      icon: const Text(
+                        '×',
+                        style: TextStyle(fontSize: 28, height: 1),
+                      ),
                     ),
                   ),
                 ],

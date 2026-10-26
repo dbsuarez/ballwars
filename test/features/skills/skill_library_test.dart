@@ -117,4 +117,38 @@ void main() {
     expect(skill.projectileCount, 100);
     expect(skill.knockback, 10);
   });
+
+  test('composed chains and repeat timing round-trip and clamp', () {
+    final skill = SkillLibrary.defaults
+        .create('Stunning Shot', PowerUpKind.pistol)
+        .copyWith(
+          secondaryEffectType: SkillEffectType.freeze,
+          repeatCount: 99,
+          repeatIntervalSeconds: 0,
+        );
+    final decoded = SkillDefinition.fromJson(skill.toJson())!;
+
+    expect(decoded.secondaryEffectType, SkillEffectType.freeze);
+    expect(decoded.repeatCount, 10);
+    expect(decoded.repeatIntervalSeconds, 0.1);
+    expect(decoded.compatibilityIssues, isEmpty);
+  });
+
+  test('impossible composed combinations explain what must change', () {
+    final skill = SkillLibrary.defaults
+        .create('Bad Shot', PowerUpKind.apple)
+        .copyWith(
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.self,
+          delivery: SkillDelivery.projectile,
+        );
+
+    expect(
+      skill.compatibilityIssues,
+      containsAll([
+        'Projectile delivery requires the aimed fire trigger.',
+        'A projectile cannot target its owner.',
+      ]),
+    );
+  });
 }

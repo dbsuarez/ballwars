@@ -138,6 +138,37 @@ void main() {
     expect(c.powerUps!.skillSounds, isNotEmpty);
   });
 
+  test('a composed skill chains effects and repeats deterministically', () {
+    final draft = SkillLibrary.defaults
+        .create('Stunning Pulse', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.allOpponents,
+          delivery: SkillDelivery.area,
+          effectType: SkillEffectType.damage,
+          secondaryEffectType: SkillEffectType.speed,
+          arsenalDamage: 7,
+          durationSeconds: 1,
+          repeatCount: 3,
+          repeatIntervalSeconds: 0.1,
+        );
+    final library = SkillLibrary.defaults.withDefinition(
+      draft,
+      PowerUpConfig.defaults,
+    );
+    final c = _match(skillLibrary: library);
+    final owner = c.state.balls.first;
+    final target = c.state.balls.last;
+
+    _give(c, owner, PowerUpKind.apple);
+    expect(target.life, _life - 7);
+    expect(target.speedLeft, greaterThan(0));
+
+    _run(c, 12);
+    expect(target.life, _life - 21);
+  });
+
   test('frozen targets take configured extra damage and collision damage', () {
     final tuning = PowerUpConfig.defaults
         .withValue('frozenDamageMultiplier', 1.5)

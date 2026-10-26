@@ -605,8 +605,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       ),
     );
     final restart = OutlinedButton(
+      key: const ValueKey('restart-match'),
       onPressed: _playAgain,
-      child: const Text('New match'),
+      child: Text(
+        widget.config.mayhem
+            ? 'Mayhem match'
+            : '${widget.config.mode.label} match',
+      ),
     );
     final pause = IconButton(
       icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded),

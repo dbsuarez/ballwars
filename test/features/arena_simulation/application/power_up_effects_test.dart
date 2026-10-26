@@ -1209,11 +1209,11 @@ void main() {
   test(
     'a ball with no life or threads left this step neither fires nor is aimed at',
     () {
-      // Arsenal: A is at 0 life but not yet marked out.
+      // Arsenal: A is below one life but not yet marked out.
       final c = _match(count: 3);
       final [a, b, other] = c.state.balls;
       a
-        ..life = 0
+        ..life = 0.5
         ..held = PowerUpKind.pistol
         ..aimLeft = 1;
       b

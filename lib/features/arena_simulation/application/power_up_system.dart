@@ -1043,7 +1043,7 @@ class PowerUpSystem {
   bool _alive(SimulationBall ball) =>
       !ball.isEliminated &&
       (match.mode == MatchMode.arsenal
-          ? ball.life > 0
+          ? ball.life >= 1
           : ball.fanLines.isNotEmpty);
 
   /// Counts the speed boosts, ghosts and sweeps down, ages blasts; a ball that is out drops its waiting

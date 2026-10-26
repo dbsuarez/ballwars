@@ -252,4 +252,27 @@ void main() {
       );
     },
   );
+
+  testWidgets('changing a test item preserves the live ball positions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    final before = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+    before.state.balls[0].position = const Offset(31, 47);
+    before.state.balls[1].position = const Offset(-62, 19);
+
+    await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'shotgun');
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const ValueKey('power-test-item-shotgun')).hitTestable(),
+    );
+    await tester.pumpAndSettle();
+
+    final after = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+    expect(after.state.balls[0].position, const Offset(31, 47));
+    expect(after.state.balls[1].position, const Offset(-62, 19));
+  });
 }

@@ -48,27 +48,52 @@ void main() {
       // Each ball starts holding half of the 180 rim slots.
       expect(find.text('90 lines'), findsNWidgets(2));
       expect(find.text('0:00.0'), findsOneWidget);
+      expect(find.text('Threads match'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
 
-  testWidgets('hidden arena stays stopped and resuming skips the background gap', (tester) async {
-    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls,
-      mode: MatchMode.arsenal, endlessBattle: true, mayhem: true, mayhemSeconds: 30)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    final before = tester.widget<Text>(find.byKey(const Key('match-timer'))).data;
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-    await tester.pump(const Duration(seconds: 40));
-    expect(tester.widget<Text>(find.byKey(const Key('match-timer'))).data, before);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pump(const Duration(seconds: 5));
-    expect(tester.widget<Text>(find.byKey(const Key('match-timer'))).data, before);
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(tester.widget<Text>(find.byKey(const Key('match-timer'))).data, isNot(before));
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+  testWidgets(
+    'hidden arena stays stopped and resuming skips the background gap',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const MatchConfig(
+            contestants: _balls,
+            mode: MatchMode.arsenal,
+            endlessBattle: true,
+            mayhem: true,
+            mayhemSeconds: 30,
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Mayhem match'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 100));
+      final before = tester
+          .widget<Text>(find.byKey(const Key('match-timer')))
+          .data;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump(const Duration(seconds: 40));
+      expect(
+        tester.widget<Text>(find.byKey(const Key('match-timer'))).data,
+        before,
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump(const Duration(seconds: 5));
+      expect(
+        tester.widget<Text>(find.byKey(const Key('match-timer'))).data,
+        before,
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        tester.widget<Text>(find.byKey(const Key('match-timer'))).data,
+        isNot(before),
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   testWidgets('pause button toggles between pause and play icons', (
     tester,
@@ -108,7 +133,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('0:00.0'), findsNothing);
 
-    await tester.tap(find.text('New match'));
+    await tester.tap(find.byKey(const ValueKey('restart-match')));
     await tester.pump();
     expect(find.text('0:00.0'), findsOneWidget);
     expect(find.text('90 lines'), findsNWidgets(2));
@@ -127,8 +152,11 @@ void main() {
       await _playUntilWinnerCard(tester);
       expect(find.text('wins!'), findsOneWidget);
       // The screen's own New match stays tappable under the card.
-      expect(find.text('New match').hitTestable(), findsOneWidget);
-      await tester.tap(find.text('New match'));
+      expect(
+        find.byKey(const ValueKey('restart-match')).hitTestable(),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('restart-match')));
       await tester.pump();
       expect(find.text('Exit'), findsNothing);
       expect(find.text('0:00.0'), findsOneWidget);

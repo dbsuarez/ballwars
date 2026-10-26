@@ -29,6 +29,11 @@ import 'match_simulation_controller.dart';
 /// Balls yell what they do ("BANG!", "SHIELD BASH!") and every hit shows the damage taken, as floating
 /// labels (drawn only; no randomness).
 class PowerUpSystem {
+  static const int maxScheduledCustomEffects = 64;
+  static const int maxCustomDamageOverTimeEffects = 64;
+  static const int maxComposedProjectiles = 96;
+  static const int maxMayhemAllOpponentRepeats = 5;
+
   PowerUpSystem(this.match, this.rng) {
     for (final ball in match.state.balls) {
       _lastVital[ball] = _vital(ball);
@@ -55,6 +60,11 @@ class PowerUpSystem {
   final List<_CustomDamageOverTime> _customDamageOverTime = [];
   final Map<(SimulationBall, String), int> _composedCooldownUntil = {};
   final Map<SimulationBall, double> _lastVital = {};
+
+  int get activeCustomEffectCount =>
+      _composedProjectiles.length +
+      _scheduledComposedEffects.length +
+      _customDamageOverTime.length;
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -1465,6 +1475,7 @@ class PowerUpSystem {
     SkillDefinition skill,
   ) {
     if (skill.delivery == SkillDelivery.projectile) {
+      if (_composedProjectiles.length >= maxComposedProjectiles) return;
       final delta = target.position - owner.position;
       final direction = delta.distance == 0
           ? const Offset(1, 0)
@@ -1511,13 +1522,18 @@ class PowerUpSystem {
       _composedCooldownUntil[cooldownKey] =
           match.stepCount + (skill.cooldownSeconds * 60).round();
     }
+    final repeatCount =
+        match.mayhem && skill.targeting == SkillTargeting.allOpponents
+        ? math.min(skill.repeatCount, maxMayhemAllOpponentRepeats)
+        : skill.repeatCount;
     if (skill.startDelaySeconds > 0) {
+      if (_scheduledComposedEffects.length >= maxScheduledCustomEffects) return;
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
           owner: owner,
           targets: List.unmodifiable(targets),
           skill: skill,
-          repeatsLeft: skill.repeatCount,
+          repeatsLeft: repeatCount,
           stepsLeft: (skill.startDelaySeconds * 60).round(),
           announceOnNext: true,
         ),
@@ -1525,13 +1541,14 @@ class PowerUpSystem {
       return;
     }
     _applyComposedEffects(owner, targets, skill);
-    if (skill.repeatCount > 1) {
+    if (repeatCount > 1 &&
+        _scheduledComposedEffects.length < maxScheduledCustomEffects) {
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
           owner: owner,
           targets: List.unmodifiable(targets),
           skill: skill,
-          repeatsLeft: skill.repeatCount - 1,
+          repeatsLeft: repeatCount - 1,
           stepsLeft: (skill.repeatIntervalSeconds * 60).round(),
         ),
       );
@@ -1644,6 +1661,9 @@ class PowerUpSystem {
           _showDamage(target, target.position, cut, 0);
         }
       case SkillEffectType.damageOverTime:
+        if (_customDamageOverTime.length >= maxCustomDamageOverTimeEffects) {
+          break;
+        }
         _customDamageOverTime.add(
           _CustomDamageOverTime(
             owner: owner,

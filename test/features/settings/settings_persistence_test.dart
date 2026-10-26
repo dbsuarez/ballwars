@@ -141,6 +141,54 @@ void main() {
     },
   );
 
+  test('two clients synchronize the shared skill library row', () async {
+    final row = <String, dynamic>{
+      'id': 1,
+      'headline': 'WHO WINS?',
+      'theme': 'midnight',
+      'power_ups': <String, dynamic>{},
+      'skill_library': SkillLibrary.defaults.toJson(),
+    };
+    Future<http.Response> handler(http.Request request) async {
+      if (request.method == 'PATCH') {
+        row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
+      }
+      return http.Response(
+        jsonEncode([row]),
+        200,
+        request: request,
+        headers: {'content-type': 'application/json'},
+      );
+    }
+
+    final browserClient = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      httpClient: MockClient(handler),
+    );
+    final phoneClient = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      httpClient: MockClient(handler),
+    );
+    addTearDown(browserClient.dispose);
+    addTearDown(phoneClient.dispose);
+    final browser = SupabaseAppSettingsRepository(browserClient);
+    final phone = SupabaseAppSettingsRepository(phoneClient);
+    final browserSettings = await browser.load();
+    final custom = browserSettings.skillLibrary
+        .create('Shared Pulse', PowerUpKind.apple)
+        .copyWith(enabled: true);
+    final changed = browserSettings.skillLibrary.withDefinition(
+      custom,
+      browserSettings.powerUps,
+    );
+    await browser.save(browserSettings.copyWith(skillLibrary: changed));
+
+    final loadedOnPhone = await phone.load();
+    expect(loadedOnPhone.skillLibrary.custom.single.name, 'Shared Pulse');
+  });
+
   test('missing skill library column rejects custom skill changes', () async {
     var writes = 0;
     final client = SupabaseClient(

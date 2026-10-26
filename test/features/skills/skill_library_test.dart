@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
@@ -211,5 +213,50 @@ void main() {
         'A projectile cannot target its owner.',
       ]),
     );
+  });
+
+  test('versioned JSON import round-trips and rejects unsafe shapes', () {
+    const tuning = PowerUpConfig.defaults;
+    final custom = SkillLibrary.defaults
+        .create('Imported Pulse', PowerUpKind.apple)
+        .copyWith(enabled: true);
+    final source = SkillLibrary.defaults.withDefinition(custom, tuning);
+    final imported = SkillLibrary.importJson(
+      const JsonEncoder().convert(source.toJson()),
+    );
+
+    expect(imported.custom.single.name, 'Imported Pulse');
+    expect(
+      () =>
+          SkillLibrary.importJson('{"version":99,"overrides":{},"custom":[]}'),
+      throwsFormatException,
+    );
+    expect(() => SkillLibrary.importJson('[]'), throwsFormatException);
+  });
+
+  test('effect-heavy Mayhem skills show their runtime safety limits', () {
+    final skill = SkillLibrary.defaults
+        .create('Storm', PowerUpKind.apple)
+        .copyWith(
+          targeting: SkillTargeting.allOpponents,
+          effectType: SkillEffectType.damageOverTime,
+          repeatCount: 10,
+          durationSeconds: 10,
+          tickIntervalSeconds: 0.1,
+        );
+
+    expect(skill.estimatedMayhemLoad, greaterThan(120));
+    expect(skill.performanceIssues, hasLength(2));
+  });
+
+  test('built-in callout styles match their actual rarity tier', () {
+    const tuning = PowerUpConfig.defaults;
+    for (final kind in PowerUpKind.values) {
+      final skill = SkillLibrary.defaults.builtIn(kind, tuning);
+      final expected = kind.isTrap
+          ? SkillCalloutStyle.special
+          : SkillCalloutStyle.values[tuning.rarityOf(kind)!.index];
+      expect(skill.calloutStyle, expected, reason: kind.label);
+    }
   });
 }

@@ -50,6 +50,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.widgetWithText(ListTile, 'Pistol'), findsOneWidget);
 
+      await tester.tap(find.byKey(const ValueKey('clear-skill-search')));
+      await tester.pumpAndSettle();
+      expect(find.text('Apple'), findsOneWidget);
+
       await tester.enterText(
         find.widgetWithText(TextField, 'Search skills'),
         '',
@@ -91,6 +95,39 @@ void main() {
     expect(
       await colorFor('Spike Wall', 'builtin.spikeWall'),
       const Color(0xFFFFD54F),
+    );
+  });
+
+  testWidgets('versioned JSON can be exported and imported as a draft', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('export-skill-library')));
+    await tester.pumpAndSettle();
+    expect(find.text('Export skill library'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('copy-skill-library-json')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('import-skill-library')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-library-json-input')),
+      '{"version":1,"overrides":{},"custom":[]}',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('confirm-skill-library-import')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Imported as a draft. Save to publish it.'),
+      findsOneWidget,
     );
   });
 
@@ -176,7 +213,7 @@ void main() {
     await tester.tap(find.text('Custom'));
     await tester.pumpAndSettle();
     expect(find.text('Heavy Pistol'), findsOneWidget);
-    await tester.tap(find.text('Save for everyone'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(result, isNotNull);

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 
@@ -123,6 +125,33 @@ class SkillDefinition {
       targeting != null &&
       delivery != null &&
       effectType != null;
+
+  int get estimatedMayhemLoad {
+    if (!isComposed) return 0;
+    final targets = targeting == SkillTargeting.allOpponents ? 7 : 1;
+    final activations = repeatCount.clamp(1, 10);
+    final projectiles = delivery == SkillDelivery.projectile
+        ? (projectileCount ?? 1).clamp(1, 100)
+        : 1;
+    final ticks = effectType == SkillEffectType.damageOverTime
+        ? (((durationSeconds ?? 2) / tickIntervalSeconds).ceil()).clamp(1, 600)
+        : 1;
+    return targets * activations * projectiles * ticks;
+  }
+
+  List<String> get performanceIssues {
+    if (!isComposed) return const [];
+    final issues = <String>[];
+    if (estimatedMayhemLoad > 120) {
+      issues.add(
+        'Estimated Mayhem load is $estimatedMayhemLoad effects per activation; runtime will cap concurrent custom effects.',
+      );
+    }
+    if (targeting == SkillTargeting.allOpponents && repeatCount > 5) {
+      issues.add('Mayhem caps all-opponent repeat chains at 5 activations.');
+    }
+    return List.unmodifiable(issues);
+  }
 
   SkillDefinition copyWith({
     String? id,
@@ -378,6 +407,9 @@ class SkillLibrary {
   final List<SkillDefinition> custom;
 
   static const SkillLibrary defaults = SkillLibrary();
+  static const int currentVersion = 1;
+  static const int maxImportCharacters = 1000000;
+  static const int maxImportedDefinitions = 512;
 
   bool get isDefault => overrides.isEmpty && custom.isEmpty;
 
@@ -595,6 +627,66 @@ class SkillLibrary {
     );
   }
 
+  static SkillLibrary importJson(String source) {
+    if (source.trim().isEmpty) throw const FormatException('Paste JSON first.');
+    if (source.length > maxImportCharacters) {
+      throw const FormatException('Skill library JSON is too large.');
+    }
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(source);
+    } catch (_) {
+      throw const FormatException('This is not valid JSON.');
+    }
+    if (decoded is! Map) {
+      throw const FormatException('The JSON root must be an object.');
+    }
+    final version = decoded['version'];
+    if (version is! num || version.toInt() != currentVersion) {
+      throw FormatException(
+        'Unsupported skill-library version. Expected $currentVersion.',
+      );
+    }
+    final overrides = decoded['overrides'];
+    final custom = decoded['custom'];
+    if (overrides is! Map || custom is! List) {
+      throw const FormatException('JSON must contain overrides and custom.');
+    }
+    if (overrides.length + custom.length > maxImportedDefinitions) {
+      throw const FormatException(
+        'The skill library contains too many skills.',
+      );
+    }
+    for (final entry in overrides.entries) {
+      final skill = SkillDefinition.fromJson(entry.value);
+      if (entry.key is! String || skill == null || skill.custom) {
+        throw const FormatException('An override definition is invalid.');
+      }
+    }
+    for (final value in custom) {
+      final skill = SkillDefinition.fromJson(value);
+      if (skill == null || !skill.custom) {
+        throw const FormatException('A custom skill definition is invalid.');
+      }
+    }
+    final library = SkillLibrary.fromJson(decoded);
+    final ids = <String>{};
+    for (final skill in [...library.overrides.values, ...library.custom]) {
+      if (!ids.add(skill.id)) {
+        throw FormatException('Duplicate skill ID: ${skill.id}.');
+      }
+    }
+    for (final kind in PowerUpKind.values) {
+      if (library.custom.where((s) => s.baseKind == kind && s.enabled).length >
+          1) {
+        throw FormatException(
+          'Only one active custom skill may use ${kind.label}.',
+        );
+      }
+    }
+    return library;
+  }
+
   static SkillDefinition _defaultFor(PowerUpKind kind, PowerUpConfig tuning) {
     final damaging = PowerUpConfig.damageKinds.contains(kind);
     final duration = switch (kind) {
@@ -644,6 +736,9 @@ class SkillLibrary {
           : SkillVisualMode.sprite,
       soundCue: _defaultSoundFor(kind),
       yell: _defaultYellFor(kind),
+      calloutStyle: kind.isTrap
+          ? SkillCalloutStyle.special
+          : SkillCalloutStyle.values[tuning.rarityOf(kind)!.index],
       bubbleType: kind == PowerUpKind.apple
           ? SkillBubbleType.speech
           : SkillBubbleType.shout,

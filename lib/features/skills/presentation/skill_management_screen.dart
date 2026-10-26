@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
@@ -29,7 +31,97 @@ class SkillManagementScreen extends StatefulWidget {
 
 class _SkillManagementScreenState extends State<SkillManagementScreen> {
   late SkillLibrary _library = widget.initial;
+  final TextEditingController _searchController = TextEditingController();
   String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exportLibrary() async {
+    final source = const JsonEncoder.withIndent(
+      '  ',
+    ).convert(_library.toJson());
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export skill library'),
+        content: SizedBox(
+          width: 620,
+          child: SingleChildScrollView(child: SelectableText(source)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            key: const ValueKey('copy-skill-library-json'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: source));
+              if (context.mounted) Navigator.pop(context);
+            },
+            icon: const Icon(Icons.copy),
+            label: const Text('Copy JSON'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _importLibrary() async {
+    final controller = TextEditingController();
+    String? error;
+    final imported = await showDialog<SkillLibrary>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: const Text('Import skill library'),
+          content: SizedBox(
+            width: 620,
+            child: TextField(
+              key: const ValueKey('skill-library-json-input'),
+              controller: controller,
+              minLines: 10,
+              maxLines: 18,
+              decoration: InputDecoration(
+                hintText: 'Paste versioned skill-library JSON',
+                errorText: error,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const ValueKey('confirm-skill-library-import'),
+              onPressed: () {
+                try {
+                  Navigator.pop(
+                    context,
+                    SkillLibrary.importJson(controller.text),
+                  );
+                } on FormatException catch (exception) {
+                  refresh(() => error = exception.message);
+                }
+              },
+              child: const Text('Import draft'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (imported == null || !mounted) return;
+    setState(() => _library = imported);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Imported as a draft. Save to publish it.')),
+    );
+  }
 
   Future<void> _edit(SkillDefinition skill) async {
     final edited = await showModalBottomSheet<SkillDefinition>(
@@ -268,6 +360,20 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Skill Management'),
+          actions: [
+            IconButton(
+              key: const ValueKey('import-skill-library'),
+              tooltip: 'Import versioned JSON',
+              onPressed: _importLibrary,
+              icon: const Icon(Icons.file_upload_outlined),
+            ),
+            IconButton(
+              key: const ValueKey('export-skill-library'),
+              tooltip: 'Export versioned JSON',
+              onPressed: _exportLibrary,
+              icon: const Icon(Icons.file_download_outlined),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Built-in'),
@@ -280,9 +386,21 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: TextField(
-                decoration: const InputDecoration(
+                controller: _searchController,
+                decoration: InputDecoration(
                   labelText: 'Search skills',
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const ValueKey('clear-skill-search'),
+                          tooltip: 'Clear search',
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
                 ),
                 onChanged: (value) => setState(() => _query = value),
               ),
@@ -329,7 +447,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 Expanded(
                   child: FilledButton(
                     onPressed: () => Navigator.pop(context, _library),
-                    child: const Text('Save for everyone'),
+                    child: const Text('Save'),
                   ),
                 ),
               ],
@@ -647,6 +765,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   Widget build(BuildContext context) {
     final result = _result;
     final compatibilityIssues = result?.compatibilityIssues ?? const <String>[];
+    final performanceIssues = result?.performanceIssues ?? const <String>[];
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
@@ -948,6 +1067,27 @@ class _SkillEditorState extends State<_SkillEditor> {
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
                           for (final issue in compatibilityIssues)
+                            Text('• $issue'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                if (performanceIssues.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    key: const ValueKey('skill-performance-warnings'),
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mayhem safety limit',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          for (final issue in performanceIssues)
                             Text('• $issue'),
                         ],
                       ),

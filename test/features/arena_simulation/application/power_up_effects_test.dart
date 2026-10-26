@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
+import 'package:ballwars/features/arena_simulation/application/power_up_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/particle_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
@@ -208,6 +209,35 @@ void main() {
     _give(c, owner, PowerUpKind.apple);
     _run(c, 6);
     expect(target.life, _life - 16);
+  });
+
+  test('custom effect scheduling is capped under pickup spam', () {
+    final delayed = SkillLibrary.defaults
+        .create('Delayed Storm', PowerUpKind.apple)
+        .copyWith(
+          enabled: true,
+          trigger: SkillTrigger.pickup,
+          targeting: SkillTargeting.allOpponents,
+          delivery: SkillDelivery.area,
+          effectType: SkillEffectType.damage,
+          startDelaySeconds: 30,
+          repeatCount: 10,
+        );
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        delayed,
+        PowerUpConfig.defaults,
+      ),
+    );
+    c.powerUps!.automaticSpawning = false;
+    for (var i = 0; i < 80; i++) {
+      _give(c, c.state.balls.first, PowerUpKind.apple);
+    }
+
+    expect(
+      c.powerUps!.activeCustomEffectCount,
+      PowerUpSystem.maxScheduledCustomEffects,
+    );
   });
 
   test('advanced composed effects execute in live simulation', () {

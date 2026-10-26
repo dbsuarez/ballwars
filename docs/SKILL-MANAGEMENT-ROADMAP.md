@@ -4,7 +4,7 @@
 
 Skill Management is fully complete when an administrator can create a genuinely new skill without changing Dart code, use it live, test it safely, synchronize it across devices, and reproduce it in replay links and videos.
 
-There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phases 3-4 remain.
+There are **four phases**. Phases 1 and 3 are complete, Phase 2 is in progress, and replay/video remains last in Phase 4.
 
 ## Phase 1 - Built-in tuning and custom variants
 
@@ -50,16 +50,17 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 
 ## Phase 3 - Testing, previews, and safety
 
-**Status: Not started**
+**Status: Complete and deployed**
 
 - [x] Add custom skills to Power-up Test, including unsaved editor drafts.
 - [x] Add full projectile and effect playback through the live test arena.
 - [x] Add sound, yell, callout, and finisher previews.
 - [x] Show clear validation errors for impossible combinations.
 - [x] Add deterministic simulation tests for the initial composed runtime.
-- [ ] Add Mayhem performance limits for effect-heavy combinations.
-- [ ] Verify browser/phone shared-account synchronization.
-- [ ] Provide versioned JSON import/export.
+- [x] Add Mayhem performance limits for effect-heavy combinations.
+- [x] Verify shared-backend browser/phone synchronization with multi-client repository tests.
+- [x] Provide strict versioned JSON import/export with draft-before-publish behavior.
+- [x] Match default live callout styling to each item's actual Normal, Rare, Epic, or Special tier.
 
 ## Phase 4 - Replay links and video export
 
@@ -83,5 +84,5 @@ There are **four phases**. Phase 1 is complete, Phase 2 is in progress, and Phas
 ## Current position
 
 ```text
-[x] Phase 1 -> [~] Phase 2 -> [ ] Phase 3 -> [ ] Phase 4 -> Fully complete
+[x] Phase 1 -> [~] Phase 2 -> [x] Phase 3 -> [ ] Phase 4 -> Fully complete
 ```

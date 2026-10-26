@@ -52,6 +52,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasMinimumArenaScaleColumn = false;
   bool _hasSkillLibraryColumn = false;
   bool _hasArenaDecorationColumn = false;
+  bool _hasEffectRenderModesColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
     : _writer = writer ?? _client;
@@ -95,6 +96,10 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasMinimumArenaScaleColumn = row.containsKey('minimum_arena_scale');
     _hasSkillLibraryColumn = row.containsKey('skill_library');
     _hasArenaDecorationColumn = row.containsKey('arena_decoration');
+    _hasEffectRenderModesColumn =
+        row.containsKey('projectile_render_mode') &&
+        row.containsKey('explosion_render_mode') &&
+        row.containsKey('freeze_render_mode');
     final legacyPowerUps = PowerUpConfig.fromJson(row['power_ups']);
     final skillLibrary = SkillLibrary.fromJson(row['skill_library']);
     return AppSettings(
@@ -117,6 +122,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         (value) => value.name == row!['arena_decoration'],
         orElse: () => ArenaDecoration.defaultArena,
       ),
+      projectileRenderMode: _renderMode(row['projectile_render_mode']),
+      explosionRenderMode: _renderMode(row['explosion_render_mode']),
+      freezeRenderMode: _renderMode(row['freeze_render_mode']),
       watermarkText:
           row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
@@ -157,6 +165,14 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         'Arena decoration was not saved: apply migration 017_arena_decoration.sql and reload settings.',
       );
     }
+    if (!_hasEffectRenderModesColumn &&
+        (settings.projectileRenderMode != EffectRenderMode.sprite ||
+            settings.explosionRenderMode != EffectRenderMode.sprite ||
+            settings.freezeRenderMode != EffectRenderMode.sprite)) {
+      throw StateError(
+        'Effect rendering was not saved: apply migration 018_effect_render_modes.sql and reload settings.',
+      );
+    }
     final updated = await _writer
         .from('app_settings')
         .update({
@@ -185,6 +201,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
             'minimum_arena_scale': settings.minimumArenaScale,
           if (_hasArenaDecorationColumn)
             'arena_decoration': settings.arenaDecoration.name,
+          if (_hasEffectRenderModesColumn)
+            'projectile_render_mode': settings.projectileRenderMode.name,
+          if (_hasEffectRenderModesColumn)
+            'explosion_render_mode': settings.explosionRenderMode.name,
+          if (_hasEffectRenderModesColumn)
+            'freeze_render_mode': settings.freezeRenderMode.name,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         })
         .eq('id', 1)
@@ -218,6 +240,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       // The server save succeeded; report cache failure separately on next load.
     }
   }
+
+  static EffectRenderMode _renderMode(Object? value) =>
+      EffectRenderMode.values.firstWhere(
+        (mode) => mode.name == value,
+        orElse: () => EffectRenderMode.sprite,
+      );
 }
 
 /// The admin signs in on a second, separate Supabase client. The app's main

@@ -29,6 +29,9 @@ class ArenaPainter extends CustomPainter {
   final ArenaDecoration arenaDecoration;
   final bool handsOnPictures;
   final bool whitePickupBackgrounds;
+  final EffectRenderMode projectileRenderMode;
+  final EffectRenderMode explosionRenderMode;
+  final EffectRenderMode freezeRenderMode;
 
   /// The theme's background (inside the arena) and text color (the rim).
   final Color background;
@@ -51,6 +54,9 @@ class ArenaPainter extends CustomPainter {
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.handsOnPictures = false,
     this.whitePickupBackgrounds = true,
+    this.projectileRenderMode = EffectRenderMode.sprite,
+    this.explosionRenderMode = EffectRenderMode.sprite,
+    this.freezeRenderMode = EffectRenderMode.sprite,
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
@@ -83,6 +89,9 @@ class ArenaPainter extends CustomPainter {
       arenaRadius,
       showEffects: showEffects,
       whitePickupBackgrounds: whitePickupBackgrounds,
+      projectileRenderMode: projectileRenderMode,
+      explosionRenderMode: explosionRenderMode,
+      freezeRenderMode: freezeRenderMode,
     );
     if (showEffects) _paintParticles(canvas);
     // Depth order: sort balls by distance from center (farthest drawn first = behind)

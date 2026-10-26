@@ -100,6 +100,7 @@ void main() {
       final shots = c.powerUps!.projectiles;
       expect(shots.length, 1);
       expect(c.powerUps!.shots, 1);
+      expect(c.powerUps!.shellCasings, hasLength(1));
       final toTarget = b.position - a.position;
       expect(
         _heading(shots.single),
@@ -108,6 +109,12 @@ void main() {
       expect(a.held, PowerUpKind.pistol);
       _run(c, PowerUpSystem.firedWeaponHoldSteps);
       expect(a.held, isNull);
+      _run(c, 180);
+      expect(c.powerUps!.shellCasings.single.settled, isTrue);
+      expect(
+        c.powerUps!.shellCasings.length,
+        lessThanOrEqualTo(PowerUpSystem.maxShellCasings),
+      );
     },
   );
 

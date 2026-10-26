@@ -942,6 +942,88 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         if (_settingsTab == 2)
                           _Section(
+                            title: 'EFFECT RENDERING',
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Choose generated sprite artwork or the lightweight vector fallback for each effect family.',
+                                  style: AppText.ui(
+                                    13,
+                                    FontWeight.w500,
+                                    color: c.muted,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                for (final entry
+                                    in <
+                                      (
+                                        String,
+                                        EffectRenderMode,
+                                        AppSettings Function(EffectRenderMode),
+                                      )
+                                    >[
+                                      (
+                                        'Projectiles',
+                                        settings.projectileRenderMode,
+                                        (mode) => settings.copyWith(
+                                          projectileRenderMode: mode,
+                                        ),
+                                      ),
+                                      (
+                                        'Explosions',
+                                        settings.explosionRenderMode,
+                                        (mode) => settings.copyWith(
+                                          explosionRenderMode: mode,
+                                        ),
+                                      ),
+                                      (
+                                        'Freeze effects',
+                                        settings.freezeRenderMode,
+                                        (mode) => settings.copyWith(
+                                          freezeRenderMode: mode,
+                                        ),
+                                      ),
+                                    ])
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child:
+                                        DropdownButtonFormField<
+                                          EffectRenderMode
+                                        >(
+                                          key: ValueKey(
+                                            'effect-render-${entry.$1}',
+                                          ),
+                                          initialValue: entry.$2,
+                                          decoration: InputDecoration(
+                                            labelText: entry.$1,
+                                          ),
+                                          items: [
+                                            for (final mode
+                                                in EffectRenderMode.values)
+                                              DropdownMenuItem(
+                                                value: mode,
+                                                child: Text(mode.label),
+                                              ),
+                                          ],
+                                          onChanged: _busy
+                                              ? null
+                                              : (mode) {
+                                                  if (mode != null) {
+                                                    _save(
+                                                      entry.$3(mode),
+                                                      done:
+                                                          '${entry.$1} rendering saved.',
+                                                    );
+                                                  }
+                                                },
+                                        ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        if (_settingsTab == 2)
+                          _Section(
                             title: 'BRANDING',
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,

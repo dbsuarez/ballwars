@@ -694,6 +694,15 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               handsOnPictures: widget.config.handsOnPictures,
                               whitePickupBackgrounds:
                                   widget.config.whitePickupBackgrounds,
+                              projectileRenderMode: AppSettingsScope.of(
+                                context,
+                              ).projectileRenderMode,
+                              explosionRenderMode: AppSettingsScope.of(
+                                context,
+                              ).explosionRenderMode,
+                              freezeRenderMode: AppSettingsScope.of(
+                                context,
+                              ).freezeRenderMode,
                             ),
                           ),
                         ),

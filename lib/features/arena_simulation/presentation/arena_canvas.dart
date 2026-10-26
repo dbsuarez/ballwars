@@ -19,6 +19,9 @@ class ArenaCanvas extends StatelessWidget {
   final ArenaDecoration arenaDecoration;
   final bool handsOnPictures;
   final bool whitePickupBackgrounds;
+  final EffectRenderMode projectileRenderMode;
+  final EffectRenderMode explosionRenderMode;
+  final EffectRenderMode freezeRenderMode;
 
   /// Repaints the arena when it notifies, without rebuilding any widgets.
   final Listenable? repaint;
@@ -40,6 +43,9 @@ class ArenaCanvas extends StatelessWidget {
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.handsOnPictures = false,
     this.whitePickupBackgrounds = true,
+    this.projectileRenderMode = EffectRenderMode.sprite,
+    this.explosionRenderMode = EffectRenderMode.sprite,
+    this.freezeRenderMode = EffectRenderMode.sprite,
     this.repaint,
     this.look = BallLook.pictures,
   });
@@ -64,6 +70,9 @@ class ArenaCanvas extends StatelessWidget {
           arenaDecoration: arenaDecoration,
           handsOnPictures: handsOnPictures,
           whitePickupBackgrounds: whitePickupBackgrounds,
+          projectileRenderMode: projectileRenderMode,
+          explosionRenderMode: explosionRenderMode,
+          freezeRenderMode: freezeRenderMode,
           background: c.background,
           rimColor: c.text,
           repaint: repaint,

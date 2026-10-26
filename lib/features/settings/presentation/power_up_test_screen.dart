@@ -565,6 +565,15 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         arenaDecoration: AppSettingsScope.of(
                           context,
                         ).arenaDecoration,
+                        projectileRenderMode: AppSettingsScope.of(
+                          context,
+                        ).projectileRenderMode,
+                        explosionRenderMode: AppSettingsScope.of(
+                          context,
+                        ).explosionRenderMode,
+                        freezeRenderMode: AppSettingsScope.of(
+                          context,
+                        ).freezeRenderMode,
                       ),
                     ),
                   ),

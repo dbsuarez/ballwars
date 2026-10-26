@@ -261,6 +261,22 @@ class Projectile {
   bool spent = false;
 }
 
+/// A spent firearm casing that falls under gravity and remains at the arena
+/// floor. The simulation keeps only a capped number so long Mayhem matches do
+/// not grow painting or update work without bound.
+class ShellCasing {
+  ShellCasing({
+    required this.position,
+    required this.velocity,
+    required this.angle,
+  });
+
+  Offset position;
+  Offset velocity;
+  double angle;
+  bool settled = false;
+}
+
 /// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
 class Explosion {
   Explosion({required this.position, required this.radius, this.kind});
@@ -298,10 +314,11 @@ class BurningZone {
 /// A short-lived pair of rings marking where a portal took a ball from and
 /// where it reappeared.
 class PortalFlash {
-  PortalFlash({required this.from, required this.to});
+  PortalFlash({required this.from, required this.to, this.swap = false});
 
   final Offset from;
   final Offset to;
+  final bool swap;
   int age = 0;
 }
 

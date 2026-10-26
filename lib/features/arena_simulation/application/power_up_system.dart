@@ -33,6 +33,7 @@ class PowerUpSystem {
   static const int maxCustomDamageOverTimeEffects = 64;
   static const int maxComposedProjectiles = 96;
   static const int maxMayhemAllOpponentRepeats = 5;
+  static const int maxShellCasings = 80;
 
   PowerUpSystem(this.match, this.rng) {
     for (final ball in match.state.balls) {
@@ -55,6 +56,7 @@ class PowerUpSystem {
 
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
+  final List<ShellCasing> shellCasings = [];
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
   final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
   final List<_CustomDamageOverTime> _customDamageOverTime = [];
@@ -291,6 +293,7 @@ class PowerUpSystem {
     energyWaves.removeWhere((wave) => wave.age >= wave.durationSteps);
     _updateEnergyWaveAttacks();
     _updateFlameCones();
+    _updateShellCasings();
     _countDown();
     _burn();
     _updateFireWallsAndDamageOverTime();
@@ -2402,6 +2405,15 @@ class PowerUpSystem {
         turn +
         (firesBackward ? math.pi : 0);
     final direction = Offset(math.cos(angle), math.sin(angle));
+    final ejectsCasing = const {
+      PowerUpKind.pistol,
+      PowerUpKind.shotgun,
+      PowerUpKind.gatling,
+      PowerUpKind.freeze,
+    }.contains(kind);
+    if (ejectsCasing && (kind != PowerUpKind.shotgun || turn.abs() < 0.001)) {
+      _ejectShellCasing(ball, direction);
+    }
     projectiles.add(
       Projectile(
         owner: ball,
@@ -2416,6 +2428,39 @@ class PowerUpSystem {
     );
     _skillSound(kind);
     shots++;
+  }
+
+  void _ejectShellCasing(SimulationBall ball, Offset shotDirection) {
+    final side = Offset(-shotDirection.dy, shotDirection.dx);
+    shellCasings.add(
+      ShellCasing(
+        position: ball.position + side * ball.radius * 0.55,
+        velocity: side * ball.radius * 1.8 - Offset(0, ball.radius * 1.4),
+        angle: math.atan2(side.dy, side.dx),
+      ),
+    );
+    if (shellCasings.length > maxShellCasings) {
+      shellCasings.removeRange(0, shellCasings.length - maxShellCasings);
+    }
+  }
+
+  void _updateShellCasings() {
+    const dt = 1 / 60.0;
+    final radius = match.arenaRadius;
+    for (final casing in shellCasings) {
+      if (casing.settled) continue;
+      casing.velocity += Offset(0, radius * 1.8 * dt);
+      casing.position += casing.velocity * dt;
+      casing.angle += 7.5 * dt;
+      final x = casing.position.dx.clamp(-radius + 2, radius - 2);
+      final floorY = math.sqrt(math.max(0, radius * radius - x * x)) - 2;
+      if (casing.position.dy >= floorY) {
+        casing
+          ..position = Offset(x.toDouble(), floorY)
+          ..velocity = Offset.zero
+          ..settled = true;
+      }
+    }
   }
 
   /// Moves every projectile one step. A projectile strikes the first ball (not its owner, not out, not a
@@ -2715,7 +2760,9 @@ class PowerUpSystem {
       target
         ..position = oldPosition
         ..velocity = oldVelocity;
-      portalFlashes.add(PortalFlash(from: oldPosition, to: from.position));
+      portalFlashes.add(
+        PortalFlash(from: oldPosition, to: from.position, swap: true),
+      );
       _sound('warp');
       _yell(from, 'SWITCHEROO!');
       _yell(target, 'SWAPPED!');

@@ -241,6 +241,13 @@ void main() {
     expect(repo.saved.last.ballGlowEnabled, isFalse);
     expect(settings.value.ballGlowEnabled, isFalse);
 
+    await tester.tap(find.byKey(const ValueKey('effect-render-Projectiles')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Vector fallback').last);
+    await tester.pumpAndSettle();
+    expect(repo.saved.last.projectileRenderMode, EffectRenderMode.vector);
+    expect(settings.value.projectileRenderMode, EffectRenderMode.vector);
+
     const purple = Color(0xFF8E44AD);
     await tester.tap(find.byKey(ValueKey('blood-${purple.toARGB32()}')));
     await tester.pumpAndSettle();

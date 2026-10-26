@@ -129,18 +129,18 @@ Replay and video remain last, by agreement.
 
 ## Phase 7 - Sprite, effects, and audio asset system
 
-**Status: Not started**
+**Status: Complete**
 
-- [ ] Document and enforce fixed cell size, safe area, centering, transparency, animation frames, naming, and atlas rules.
-- [ ] Support manually added sprites through the same validated asset pipeline.
-- [ ] Produce an external-generation prompt for a proper lightning sprite that follows the sprite standard.
-- [ ] Let admins choose sprite or vector/fallback rendering for projectiles and explosion/freeze effects.
-- [ ] Add capped persistent shell casings that fall and collect at the arena bottom.
-- [ ] Replace Swap Cannon's effect with a dramatic Goku-style teleport treatment.
-- [ ] Match Thread Harpoon and Hook projectile size to their held weapon.
-- [ ] Replace Tornado rotation with a purpose-built animated sprite.
-- [ ] Show fire on both hands while Firewall is equipped instead of displaying its pickup icon.
-- [ ] Keep effect bounds transparent so rectangular containers never appear.
+- [x] Document and enforce fixed cell size, safe area, centering, transparency, animation frames, naming, and atlas rules.
+- [x] Support manually added sprites through the same validated asset pipeline.
+- [x] Produce an external-generation prompt for a proper lightning sprite that follows the sprite standard.
+- [x] Let admins choose sprite or vector/fallback rendering for projectiles and explosion/freeze effects.
+- [x] Add capped persistent shell casings that fall and collect at the arena bottom.
+- [x] Replace Swap Cannon's effect with a dramatic Goku-style teleport treatment.
+- [x] Match Thread Harpoon and Hook projectile size to their held weapon.
+- [x] Replace Tornado rotation with a purpose-built animated sprite.
+- [x] Show fire on both hands while Firewall is equipped instead of displaying its pickup icon.
+- [x] Keep effect bounds transparent so rectangular containers never appear.
 
 ## Phase 8 - New content, Mayhem, ranking, and experiments
 
@@ -184,5 +184,5 @@ Replay and video remain last, by agreement.
 ## Current position
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [ ] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [ ] Phase 8 -> [ ] Phase 9 -> Fully complete
 ```

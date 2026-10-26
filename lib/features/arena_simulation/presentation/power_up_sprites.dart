@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../domain/power_up.dart';
 import 'power_up_pixel_art.dart';
+import 'sprite_asset_pipeline.dart';
 
 enum EffectSprite {
   flame,
@@ -42,6 +43,7 @@ enum AnimatedEffect {
   blood,
   maximumPower,
   campfire,
+  tornado,
 }
 
 /// The power-up icons ([pixelIcons], 16 x 16 pixel art) turned into small images once, so painting a frame
@@ -117,12 +119,12 @@ class PowerUpSprites {
       if (kind == PowerUpKind.vampire || kind == PowerUpKind.repulsor) {
         paintIcon(Canvas(recorder), kind, const Rect.fromLTWH(0, 0, 64, 64));
       } else {
-      Canvas(recorder).drawImageRect(
-        sheet,
-        source,
-        destination,
-        Paint()..filterQuality = FilterQuality.none,
-      );
+        Canvas(recorder).drawImageRect(
+          sheet,
+          source,
+          destination,
+          Paint()..filterQuality = FilterQuality.none,
+        );
       }
       final picture = recorder.endRecording();
       _images[kind] = await picture.toImage(64, 64);
@@ -207,7 +209,8 @@ class PowerUpSprites {
     for (final kind in AnimatedEffect.values.where(
       (kind) =>
           kind != AnimatedEffect.maximumPower &&
-          kind != AnimatedEffect.campfire,
+          kind != AnimatedEffect.campfire &&
+          kind != AnimatedEffect.tornado,
     )) {
       final frames = <ui.Image>[];
       for (var frame = 0; frame < 4; frame++) {
@@ -220,23 +223,24 @@ class PowerUpSprites {
           ),
           const Size.square(86),
         );
-        if (kind == AnimatedEffect.explosion || kind == AnimatedEffect.iceImpact) {
+        if (kind == AnimatedEffect.explosion ||
+            kind == AnimatedEffect.iceImpact) {
           _paintIsolatedEffect(Canvas(recorder), kind, frame);
         } else {
-        Canvas(recorder).drawImageRect(
-          animatedSheet,
-          Rect.fromLTWH(
-            frame * animatedWidth + animatedInset,
-            kind.index * animatedHeight + animatedInset,
-            animatedWidth - animatedInset * 2,
-            animatedHeight - animatedInset * 2,
-          ),
-          Alignment.center.inscribe(
-            fitted.destination,
-            const Rect.fromLTWH(5, 5, 86, 86),
-          ),
-          Paint()..filterQuality = FilterQuality.none,
-        );
+          Canvas(recorder).drawImageRect(
+            animatedSheet,
+            Rect.fromLTWH(
+              frame * animatedWidth + animatedInset,
+              kind.index * animatedHeight + animatedInset,
+              animatedWidth - animatedInset * 2,
+              animatedHeight - animatedInset * 2,
+            ),
+            Alignment.center.inscribe(
+              fitted.destination,
+              const Rect.fromLTWH(5, 5, 86, 86),
+            ),
+            Paint()..filterQuality = FilterQuality.none,
+          );
         }
         final picture = recorder.endRecording();
         frames.add(await picture.toImage(96, 96));
@@ -355,6 +359,18 @@ class PowerUpSprites {
     }
     _animatedEffects[AnimatedEffect.maximumPower] = maximumFrames;
     maximumSheet.dispose();
+
+    _animatedEffects[AnimatedEffect.tornado] = await SpriteAssetPipeline.load(
+      const SpriteSheetSpec(
+        name: 'Tornado',
+        asset: 'assets/sprites/tornado-animated-v2.png',
+        columns: 4,
+        rows: 2,
+        cellWidth: 440,
+        cellHeight: 440,
+        safeInset: 12,
+      ),
+    );
 
     final rocketData = await rootBundle.load(
       'assets/sprites/rocket-launcher.png',
@@ -575,9 +591,15 @@ class PowerUpSprites {
       _images[kind] = fitted;
       if (!identical(original, fitted)) original.dispose();
     }
-    if (_rocketLauncher != null) _rocketLauncher = await fitVisibleArtwork(_rocketLauncher!);
-    if (_omegaTendrilsIcon != null) _omegaTendrilsIcon = await fitVisibleArtwork(_omegaTendrilsIcon!);
-    if (_boomerangIcon != null) _boomerangIcon = await fitVisibleArtwork(_boomerangIcon!);
+    if (_rocketLauncher != null) {
+      _rocketLauncher = await fitVisibleArtwork(_rocketLauncher!);
+    }
+    if (_omegaTendrilsIcon != null) {
+      _omegaTendrilsIcon = await fitVisibleArtwork(_omegaTendrilsIcon!);
+    }
+    if (_boomerangIcon != null) {
+      _boomerangIcon = await fitVisibleArtwork(_boomerangIcon!);
+    }
   }
 
   /// Returns a fitted copy; the caller retains ownership of the input image.
@@ -588,18 +610,34 @@ class PowerUpSprites {
     for (var y = 0; y < image.height; y++) {
       for (var x = 0; x < image.width; x++) {
         if (bytes.getUint8((y * image.width + x) * 4 + 3) < 16) continue;
-        left = math.min(left, x); right = math.max(right, x);
-        top = math.min(top, y); bottom = math.max(bottom, y);
+        left = math.min(left, x);
+        right = math.max(right, x);
+        top = math.min(top, y);
+        bottom = math.max(bottom, y);
       }
     }
     if (right < left) return image;
-    final source = Rect.fromLTRB(left.toDouble(), top.toDouble(),
-        (right + 1).toDouble(), (bottom + 1).toDouble());
-    final fitted = applyBoxFit(BoxFit.contain, source.size, const Size.square(60));
+    final source = Rect.fromLTRB(
+      left.toDouble(),
+      top.toDouble(),
+      (right + 1).toDouble(),
+      (bottom + 1).toDouble(),
+    );
+    final fitted = applyBoxFit(
+      BoxFit.contain,
+      source.size,
+      const Size.square(60),
+    );
     final recorder = ui.PictureRecorder();
-    Canvas(recorder).drawImageRect(image, source,
-      Alignment.center.inscribe(fitted.destination, const Rect.fromLTWH(2, 2, 60, 60)),
-      Paint()..filterQuality = FilterQuality.none);
+    Canvas(recorder).drawImageRect(
+      image,
+      source,
+      Alignment.center.inscribe(
+        fitted.destination,
+        const Rect.fromLTWH(2, 2, 60, 60),
+      ),
+      Paint()..filterQuality = FilterQuality.none,
+    );
     final picture = recorder.endRecording();
     final result = await picture.toImage(64, 64);
     picture.dispose();
@@ -645,29 +683,50 @@ class PowerUpSprites {
   };
 
   /// Independent frames cannot include pixels from neighboring atlas cells.
-  static void _paintIsolatedEffect(Canvas canvas, AnimatedEffect kind, int frame) {
+  static void _paintIsolatedEffect(
+    Canvas canvas,
+    AnimatedEffect kind,
+    int frame,
+  ) {
     const center = Offset(48, 48);
     final radius = 18.0 + frame * 7;
     final ice = kind == AnimatedEffect.iceImpact;
     final color = ice ? const Color(0xFF7FDBFF) : const Color(0xFFFF7722);
-    canvas.drawCircle(center, radius, Paint()
-      ..shader = ui.Gradient.radial(center, radius, [
-        const Color(0xFFFFF8DA), color.withValues(alpha: 0.85),
-        color.withValues(alpha: 0),
-      ], const [0.0, 0.55, 1.0]));
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          center,
+          radius,
+          [
+            const Color(0xFFFFF8DA),
+            color.withValues(alpha: 0.85),
+            color.withValues(alpha: 0),
+          ],
+          const [0.0, 0.55, 1.0],
+        ),
+    );
     for (var i = 0; i < 8; i++) {
       final angle = i * math.pi / 4;
       final direction = Offset(math.cos(angle), math.sin(angle));
-      canvas.drawLine(center + direction * radius * 0.35,
-          center + direction * radius, Paint()
-            ..strokeWidth = ice ? 2 : 5
-            ..strokeCap = StrokeCap.round
-            ..color = ice ? const Color(0xFFE7FAFF) : const Color(0xFFFFCB55));
+      canvas.drawLine(
+        center + direction * radius * 0.35,
+        center + direction * radius,
+        Paint()
+          ..strokeWidth = ice ? 2 : 5
+          ..strokeCap = StrokeCap.round
+          ..color = ice ? const Color(0xFFE7FAFF) : const Color(0xFFFFCB55),
+      );
     }
-    canvas.drawCircle(center, radius * 0.7, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = color);
+    canvas.drawCircle(
+      center,
+      radius * 0.7,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = color,
+    );
   }
 
   /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).
@@ -681,15 +740,23 @@ class PowerUpSprites {
     for (var y = 0; y < rows.length; y++) {
       for (var x = 0; x < rows[y].length; x++) {
         if (pixelPalette[rows[y][x]] == null) continue;
-        left = math.min(left, x); right = math.max(right, x);
-        top = math.min(top, y); bottom = math.max(bottom, y);
+        left = math.min(left, x);
+        right = math.max(right, x);
+        top = math.min(top, y);
+        bottom = math.max(bottom, y);
       }
     }
     if (right < left) return;
-    final scale = math.min(rect.width / (right - left + 1), rect.height / (bottom - top + 1)) * 0.94;
+    final scale =
+        math.min(
+          rect.width / (right - left + 1),
+          rect.height / (bottom - top + 1),
+        ) *
+        0.94;
     final cell = Size.square(scale);
-    final origin = rect.center - Offset((right - left + 1) * scale / 2,
-        (bottom - top + 1) * scale / 2);
+    final origin =
+        rect.center -
+        Offset((right - left + 1) * scale / 2, (bottom - top + 1) * scale / 2);
     final paint = Paint()..isAntiAlias = false;
     for (var y = 0; y < rows.length; y++) {
       final row = rows[y];

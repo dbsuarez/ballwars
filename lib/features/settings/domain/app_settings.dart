@@ -14,6 +14,14 @@ enum ArenaDecoration {
   final String label;
 }
 
+enum EffectRenderMode {
+  sprite('Sprite'),
+  vector('Vector fallback');
+
+  const EffectRenderMode(this.label);
+  final String label;
+}
+
 /// App-wide settings, set by the admin and shown to everyone
 /// (Supabase table `app_settings`, see supabase/migrations/002, 003, 005, 006, 009 and 011).
 class AppSettings {
@@ -31,6 +39,9 @@ class AppSettings {
   final String arenaSubtitle;
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
+  final EffectRenderMode projectileRenderMode;
+  final EffectRenderMode explosionRenderMode;
+  final EffectRenderMode freezeRenderMode;
   final String watermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
@@ -61,6 +72,9 @@ class AppSettings {
     this.arenaSubtitle = defaultArenaSubtitle,
     this.minimumArenaScale = defaultMinimumArenaScale,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.projectileRenderMode = EffectRenderMode.sprite,
+    this.explosionRenderMode = EffectRenderMode.sprite,
+    this.freezeRenderMode = EffectRenderMode.sprite,
     this.watermarkText = defaultWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
@@ -92,6 +106,9 @@ class AppSettings {
     String? arenaSubtitle,
     double? minimumArenaScale,
     ArenaDecoration? arenaDecoration,
+    EffectRenderMode? projectileRenderMode,
+    EffectRenderMode? explosionRenderMode,
+    EffectRenderMode? freezeRenderMode,
     String? watermarkText,
     String? musicId,
     String? menuMusicId,
@@ -109,6 +126,9 @@ class AppSettings {
     arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,
     minimumArenaScale: minimumArenaScale ?? this.minimumArenaScale,
     arenaDecoration: arenaDecoration ?? this.arenaDecoration,
+    projectileRenderMode: projectileRenderMode ?? this.projectileRenderMode,
+    explosionRenderMode: explosionRenderMode ?? this.explosionRenderMode,
+    freezeRenderMode: freezeRenderMode ?? this.freezeRenderMode,
     watermarkText: watermarkText ?? this.watermarkText,
     musicId: musicId ?? this.musicId,
     menuMusicId: menuMusicId ?? this.menuMusicId,

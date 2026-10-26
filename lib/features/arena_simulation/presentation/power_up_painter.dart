@@ -7,6 +7,7 @@ import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import 'power_up_sprites.dart';
 import 'arena_effect_library.dart';
+import '../../settings/domain/app_settings.dart';
 
 /// Draws the power-up layer of an Arsenal / All-Out match in the arena's coordinates (center at 0, 0):
 /// pulsing field power-ups, armed mines, aim lines, bullets, blasts and knife slashes ([paint]), plus the
@@ -75,6 +76,9 @@ class PowerUpPainter {
     double arenaRadius, {
     bool showEffects = true,
     bool whitePickupBackgrounds = true,
+    EffectRenderMode projectileRenderMode = EffectRenderMode.sprite,
+    EffectRenderMode explosionRenderMode = EffectRenderMode.sprite,
+    EffectRenderMode freezeRenderMode = EffectRenderMode.sprite,
   }) {
     final p = state.powerUps;
     if (p == null) return;
@@ -264,22 +268,26 @@ class PowerUpPainter {
       }
     }
     for (final tornado in p.tornadoes) {
-      final icon = PowerUpSprites.of(PowerUpKind.tornado);
-      if (icon != null) {
-        _drawSprite(canvas, icon, tornado.position, r * 2.2, state.step * 0.08);
-      }
-      for (var i = 0; i < 3; i++) {
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: tornado.position + Offset(0, (i - 1) * r * 0.45),
-            width: r * (3.2 - i * 0.55),
-            height: r * 0.55,
-          ),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2, r * 0.12)
-            ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.75),
-        );
+      final frame = PowerUpSprites.effectFrame(
+        AnimatedEffect.tornado,
+        (state.step ~/ 3) % 8,
+      );
+      if (frame != null) {
+        _drawEffect(canvas, frame, tornado.position, r * 2.2, 0);
+      } else {
+        for (var i = 0; i < 3; i++) {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: tornado.position + Offset(0, (i - 1) * r * 0.45),
+              width: r * (3.2 - i * 0.55),
+              height: r * 0.55,
+            ),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(2, r * 0.12)
+              ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.75),
+          );
+        }
       }
     }
     for (final attack in p.energyWaveAttacks) {
@@ -464,7 +472,9 @@ class PowerUpPainter {
             ),
         );
       }
-      if (showEffects && (e.kind == null || p.usesEffectSprite(e.kind!))) {
+      if (showEffects &&
+          explosionRenderMode == EffectRenderMode.sprite &&
+          (e.kind == null || p.usesEffectSprite(e.kind!))) {
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.explosion,
           (t * 4).floor().clamp(0, 3),
@@ -498,6 +508,34 @@ class PowerUpPainter {
         ..strokeWidth = math.max(2, r * 0.18)
         ..color = colorOf(PowerUpKind.portal).withValues(alpha: fade);
       for (final spot in [flash.from, flash.to]) {
+        if (flash.swap) {
+          final burst = Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, r * 0.15)
+            ..color = const Color(0xFF7DF9FF).withValues(alpha: fade);
+          for (var i = 0; i < 5; i++) {
+            final angle = i * math.pi * 2 / 5 + state.step * 0.08;
+            final direction = Offset.fromDirection(angle);
+            canvas.drawLine(
+              spot + direction * r * 0.25,
+              spot + direction * r * (1.6 + t * 1.4),
+              burst
+                ..color =
+                    (i.isEven
+                            ? const Color(0xFF7DF9FF)
+                            : const Color(0xFFFF55DD))
+                        .withValues(alpha: fade),
+            );
+          }
+          canvas.drawCircle(
+            spot,
+            r * (0.45 + t * 1.25),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(3, r * 0.22)
+              ..color = Colors.white.withValues(alpha: fade),
+          );
+        }
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.portal,
           (state.step ~/ 4) % 4,
@@ -546,6 +584,29 @@ class PowerUpPainter {
           whiteBackground: whitePickupBackgrounds,
         );
       }
+    }
+
+    for (final casing in p.shellCasings) {
+      canvas.save();
+      canvas.translate(casing.position.dx, casing.position.dy);
+      canvas.rotate(casing.angle);
+      final body = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: math.max(2.5, r * 0.2),
+          height: math.max(1.5, r * 0.1),
+        ),
+        const Radius.circular(1),
+      );
+      canvas.drawRRect(body, Paint()..color = const Color(0xFFD8A63A));
+      canvas.drawLine(
+        Offset(body.right - 0.7, body.top),
+        Offset(body.right - 0.7, body.bottom),
+        Paint()
+          ..strokeWidth = 0.8
+          ..color = const Color(0xFFFFE09A),
+      );
+      canvas.restore();
     }
 
     for (final portal in p.portals) {
@@ -701,7 +762,9 @@ class PowerUpPainter {
         if (shot.kind == PowerUpKind.hook) {
           // The hook flying out on its chain.
           _paintChain(canvas, shot.owner.position, shot.position);
-          final sprite = p.usesSprite(shot.kind)
+          final sprite =
+              projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind)
               ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
               : null;
           final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
@@ -712,7 +775,7 @@ class PowerUpPainter {
               canvas,
               sprite,
               shot.position,
-              r * 0.8,
+              r * 0.9 * p.weaponDisplayScale(shot.kind),
               angle,
               flip: shot.velocity.dx < 0,
             );
@@ -721,7 +784,9 @@ class PowerUpPainter {
         }
         if (shot.landAt != null) {
           // A thrown explosive in flight: its own icon, tumbling.
-          final sprite = p.usesSprite(shot.kind)
+          final sprite =
+              projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind)
               ? PowerUpSprites.of(shot.kind)
               : null;
           if (sprite == null) {
@@ -738,18 +803,40 @@ class PowerUpPainter {
           continue;
         }
         if (shot.kind == PowerUpKind.freeze) {
-          _paintIceWave(canvas, shot, r);
+          final sprite = freezeRenderMode == EffectRenderMode.sprite
+              ? PowerUpSprites.effect(EffectSprite.iceWave)
+              : null;
+          if (sprite == null) {
+            _paintIceWave(canvas, shot, r);
+          } else {
+            _drawEffect(
+              canvas,
+              sprite,
+              shot.position,
+              r * 1.45 * shot.renderScale,
+              math.atan2(shot.velocity.dy, shot.velocity.dx),
+            );
+          }
           continue;
         }
         if (shot.kind == PowerUpKind.bow) {
-          _paintArrow(canvas, shot, r, useSprite: p.usesSprite(shot.kind));
+          _paintArrow(
+            canvas,
+            shot,
+            r,
+            useSprite:
+                projectileRenderMode == EffectRenderMode.sprite &&
+                p.usesSprite(shot.kind),
+          );
           continue;
         }
         final speed = shot.velocity.distance;
         if (speed == 0) continue;
         final dir = shot.velocity / speed;
         if (shot.kind == PowerUpKind.rocketLauncher) {
-          final missile = p.usesSprite(shot.kind)
+          final missile =
+              projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind)
               ? PowerUpSprites.rocketMissile
               : null;
           if (missile != null) {
@@ -767,7 +854,9 @@ class PowerUpPainter {
           continue;
         }
         if (shot.kind == PowerUpKind.boomerang) {
-          final sprite = p.usesSprite(shot.kind)
+          final sprite =
+              projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind)
               ? PowerUpSprites.boomerangProjectile
               : null;
           if (sprite != null) {
@@ -813,8 +902,69 @@ class PowerUpPainter {
           );
           continue;
         }
+        if (shot.kind == PowerUpKind.swapCannon) {
+          final angle = math.atan2(dir.dy, dir.dx);
+          final normal = Offset(-dir.dy, dir.dx);
+          for (var i = 4; i >= 1; i--) {
+            final center = shot.position - dir * r * i.toDouble() * 0.48;
+            canvas.drawOval(
+              Rect.fromCenter(
+                center:
+                    center + normal * math.sin(state.step * 0.5 + i) * r * 0.15,
+                width: r * (0.35 + i * 0.08),
+                height: r * (0.9 + i * 0.12),
+              ),
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = math.max(1.5, r * 0.09)
+                ..color =
+                    (i.isEven
+                            ? const Color(0xFF7DF9FF)
+                            : const Color(0xFFFF55DD))
+                        .withValues(alpha: 0.18 + (4 - i) * 0.13),
+            );
+          }
+          final sprite =
+              projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind)
+              ? PowerUpSprites.projectile(ProjectileSprite.swapCannon)
+              : null;
+          if (sprite != null) {
+            _drawSprite(canvas, sprite, shot.position, r * 0.72, angle);
+          } else {
+            canvas.drawCircle(
+              shot.position,
+              r * 0.28,
+              Paint()..color = Colors.white,
+            );
+          }
+          continue;
+        }
+        if (shot.kind == PowerUpKind.threadHarpoon) {
+          final sprite =
+              projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind)
+              ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
+              : null;
+          if (sprite == null) {
+            drawGlyph(canvas, shot.kind, shot.position, r * 0.6);
+          } else {
+            _drawSprite(
+              canvas,
+              sprite,
+              shot.position,
+              r * 0.9 * p.weaponDisplayScale(shot.kind),
+              math.atan2(dir.dy, dir.dx),
+              flip: dir.dx < 0,
+            );
+          }
+          continue;
+        }
         final projectileKind = _projectileSpriteFor(shot.kind);
-        final projectile = projectileKind == null || !p.usesSprite(shot.kind)
+        final projectile =
+            projectileKind == null ||
+                projectileRenderMode != EffectRenderMode.sprite ||
+                !p.usesSprite(shot.kind)
             ? null
             : PowerUpSprites.projectile(projectileKind);
         if (projectile != null) {
@@ -1930,6 +2080,31 @@ class PowerUpPainter {
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
     if (held == PowerUpKind.energyWave && firedHoldLeft > 0) return;
+    if (held == PowerUpKind.fireWall) {
+      for (final side in const [-1.0, 1.0]) {
+        final hand = ball.position + Offset(side * ball.radius * 0.82, 0);
+        final flame = PowerUpSprites.effectFrame(
+          AnimatedEffect.flame,
+          (firedHoldLeft ~/ 3 + (side > 0 ? 2 : 0)) % 4,
+        );
+        if (flame != null) {
+          _drawEffect(
+            canvas,
+            flame,
+            hand - Offset(0, ball.radius * 0.2),
+            ball.radius * 0.62,
+            0,
+          );
+        } else {
+          canvas.drawCircle(
+            hand,
+            ball.radius * 0.2,
+            Paint()..color = const Color(0xFFFF6422),
+          );
+        }
+      }
+      return;
+    }
     final sprite = PowerUpSprites.of(held);
     if (held == PowerUpKind.shield) {
       final angle = heldAngle(ball, weapon: held, slot: slot);

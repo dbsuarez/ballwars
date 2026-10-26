@@ -15,6 +15,46 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() {
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
 
+  test('effect render modes round-trip through shared settings', () async {
+    final row = <String, dynamic>{
+      'id': 1,
+      'headline': 'WHO WINS?',
+      'theme': 'midnight',
+      'projectile_render_mode': 'sprite',
+      'explosion_render_mode': 'sprite',
+      'freeze_render_mode': 'sprite',
+    };
+    final client = SupabaseClient(
+      'https://example.supabase.co',
+      'test-key',
+      httpClient: MockClient((request) async {
+        if (request.method == 'PATCH') {
+          row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
+        }
+        return http.Response(
+          jsonEncode([row]),
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+    final repository = SupabaseAppSettingsRepository(client);
+    final loaded = await repository.load();
+    await repository.save(
+      loaded.copyWith(
+        projectileRenderMode: EffectRenderMode.vector,
+        explosionRenderMode: EffectRenderMode.vector,
+        freezeRenderMode: EffectRenderMode.vector,
+      ),
+    );
+    final reopened = await repository.load();
+    expect(reopened.projectileRenderMode, EffectRenderMode.vector);
+    expect(reopened.explosionRenderMode, EffectRenderMode.vector);
+    expect(reopened.freezeRenderMode, EffectRenderMode.vector);
+  });
+
   test(
     'successful power-up save refreshes the offline settings backup',
     () async {

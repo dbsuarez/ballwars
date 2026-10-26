@@ -6,14 +6,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _balls = [
-  CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.red),
-  CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.blue),
+  CustomBall(
+    id: 'a',
+    name: 'A',
+    primaryColor: Colors.red,
+    glowColor: Colors.red,
+  ),
+  CustomBall(
+    id: 'b',
+    name: 'B',
+    primaryColor: Colors.blue,
+    glowColor: Colors.blue,
+  ),
 ];
 
 MatchSimulationController _match() {
   final match = MatchSimulationController(
-    _balls, arenaRadius: 200, seed: 42,
-    mode: MatchMode.arsenal, lookAhead: false, slowMotionLines: 0,
+    _balls,
+    arenaRadius: 200,
+    seed: 42,
+    mode: MatchMode.arsenal,
+    lookAhead: false,
+    slowMotionLines: 0,
   );
   match.powerUps!.automaticSpawning = false;
   match.state.balls[0].position = const Offset(-75, 0);
@@ -49,9 +63,14 @@ void main() {
       match.setTestBallPinned(ball, true);
     }
     final life = b.life;
-    match.powerUps!.pickUp(a, FieldPowerUp(
-      kind: PowerUpKind.pistol, position: a.position, spawnStep: 0,
-    ));
+    match.powerUps!.pickUp(
+      a,
+      FieldPowerUp(
+        kind: PowerUpKind.pistol,
+        position: a.position,
+        spawnStep: 0,
+      ),
+    );
     for (var i = 0; i < 180; i++) {
       match.tick(MatchSimulationController.fixedTimestep);
     }
@@ -71,10 +90,14 @@ void main() {
   test('tornado DoT hurts without marking the target as burning', () {
     final match = _match();
     final target = match.state.balls[1];
-    match.powerUps!.damageOverTime.add(DamageOverTime(
-      target: target, kind: PowerUpKind.tornado,
-      owner: match.state.balls[0], stepsLeft: PowerUpTuning.damageOverTimeSteps,
-    ));
+    match.powerUps!.damageOverTime.add(
+      DamageOverTime(
+        target: target,
+        kind: PowerUpKind.tornado,
+        owner: match.state.balls[0],
+        stepsLeft: PowerUpTuning.damageOverTimeSteps,
+      ),
+    );
     final life = target.life;
     match.tick(MatchSimulationController.fixedTimestep);
     expect(target.life, lessThan(life));
@@ -85,10 +108,14 @@ void main() {
   test('fire DoT retains the burning visual', () {
     final match = _match();
     final target = match.state.balls[1];
-    match.powerUps!.damageOverTime.add(DamageOverTime(
-      target: target, kind: PowerUpKind.fireWall,
-      owner: match.state.balls[0], stepsLeft: PowerUpTuning.damageOverTimeSteps,
-    ));
+    match.powerUps!.damageOverTime.add(
+      DamageOverTime(
+        target: target,
+        kind: PowerUpKind.fireWall,
+        owner: match.state.balls[0],
+        stepsLeft: PowerUpTuning.damageOverTimeSteps,
+      ),
+    );
     match.tick(MatchSimulationController.fixedTimestep);
     expect(target.burningLeft, greaterThan(0));
   });
@@ -101,17 +128,20 @@ void main() {
     b.velocity = Offset.zero;
     final from = a.position;
     final to = b.position;
-    match.powerUps!.projectiles.add(Projectile(
-      owner: a, kind: PowerUpKind.swapCannon,
-      position: b.position - Offset(b.radius, 0),
-      velocity: const Offset(100, 0),
-    ));
+    match.powerUps!.projectiles.add(
+      Projectile(
+        owner: a,
+        kind: PowerUpKind.swapCannon,
+        position: b.position - Offset(b.radius, 0),
+        velocity: const Offset(100, 0),
+      ),
+    );
     match.tick(MatchSimulationController.fixedTimestep);
     expect(a.position, to);
     expect(b.position, from);
     expect(match.powerUps!.portalFlashes, isNotEmpty);
     expect(match.powerUps!.portalFlashes.last.from, from);
     expect(match.powerUps!.portalFlashes.last.to, to);
+    expect(match.powerUps!.portalFlashes.last.swap, isTrue);
   });
-
 }

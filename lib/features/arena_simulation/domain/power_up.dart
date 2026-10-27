@@ -484,11 +484,18 @@ class EarthquakePulse {
 }
 
 class Tornado {
-  Tornado({required this.owner, required this.target, required this.position});
+  Tornado({
+    required this.owner,
+    required this.target,
+    required this.position,
+    this.aimSteps = 30,
+  });
   final SimulationBall owner;
   final SimulationBall target;
   Offset position;
   int age = 0;
+  final int aimSteps;
+  bool get isAiming => age <= aimSteps;
 }
 
 class EnergyWave {

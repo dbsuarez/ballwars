@@ -729,6 +729,12 @@ class _SkillEditorState extends State<_SkillEditor> {
     'bubbleDuration': TextEditingController(
       text: '${widget.skill.bubbleDurationSeconds}',
     ),
+    'handEffectScale': TextEditingController(
+      text: '${widget.skill.handEffectScale}',
+    ),
+    'handEffectDuration': TextEditingController(
+      text: '${widget.skill.handEffectDurationSeconds}',
+    ),
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
@@ -877,6 +883,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('screenShake', defaults.screenShake);
       number('triggerInterval', defaults.triggerIntervalSeconds);
       number('bubbleDuration', defaults.bubbleDurationSeconds);
+      number('handEffectScale', defaults.handEffectScale);
+      number('handEffectDuration', defaults.handEffectDurationSeconds);
     });
   }
 
@@ -1033,6 +1041,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       calloutStyle: _calloutStyle,
       bubbleType: _bubbleType,
       bubbleDurationSeconds: _double('bubbleDuration'),
+      handEffectScale: _double('handEffectScale'),
+      handEffectColor: _colorValue,
+      handEffectDurationSeconds: _double('handEffectDuration'),
       explodesOnImpact: _explodesOnImpact,
       effectColor: _colorValue,
       screenShake: _double('screenShake'),
@@ -1532,6 +1543,15 @@ class _SkillEditorState extends State<_SkillEditor> {
                   ),
                 ),
               _number('knockback', 'Knockback strength', suffix: 'x'),
+              if (widget.skill.baseKind == PowerUpKind.fireWall ||
+                  widget.skill.baseKind == PowerUpKind.tornado) ...[
+                _number('handEffectScale', 'Hand effect scale', suffix: 'x'),
+                _number(
+                  'handEffectDuration',
+                  'Hand effect duration',
+                  suffix: 's',
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [

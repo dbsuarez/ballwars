@@ -1,3 +1,5 @@
+import 'package:flutter/painting.dart';
+
 import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
@@ -79,6 +81,8 @@ class MatchConfig {
 
   /// Show sparks and particles (cosmetic; the match is the same either way).
   final bool showEffects;
+  final double ballGlowWidth;
+  final Color bloodColor;
   final WallSparkSize wallSparkSize;
 
   /// Round wins needed to take the series: 1 is a single round, 2 or 3 play
@@ -130,6 +134,8 @@ class MatchConfig {
     this.speedMultiplier = 1.0,
     this.automaticSpeedUp = true,
     this.showEffects = true,
+    this.ballGlowWidth = 4,
+    this.bloodColor = const Color(0xFFD9152B),
     this.wallSparkSize = WallSparkSize.normal,
     this.winsNeeded = 1,
     this.winCondition = WinCondition.domination,

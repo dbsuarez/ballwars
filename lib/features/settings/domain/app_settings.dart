@@ -35,6 +35,7 @@ class AppSettings {
   /// The tiled watermark behind the winner card.
   final bool watermarkEnabled;
   final bool ballGlowEnabled;
+  final double ballGlowWidth;
   final Color bloodColor;
   final String arenaTitle;
   final String arenaSubtitle;
@@ -68,6 +69,7 @@ class AppSettings {
     this.themeId = 'midnight',
     this.watermarkEnabled = true,
     this.ballGlowEnabled = true,
+    this.ballGlowWidth = 4,
     this.bloodColor = defaultBloodColor,
     this.arenaTitle = defaultArenaTitle,
     this.arenaSubtitle = defaultArenaSubtitle,
@@ -102,6 +104,7 @@ class AppSettings {
     String? themeId,
     bool? watermarkEnabled,
     bool? ballGlowEnabled,
+    double? ballGlowWidth,
     Color? bloodColor,
     String? arenaTitle,
     String? arenaSubtitle,
@@ -122,6 +125,7 @@ class AppSettings {
     themeId: themeId ?? this.themeId,
     watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
     ballGlowEnabled: ballGlowEnabled ?? this.ballGlowEnabled,
+    ballGlowWidth: ballGlowWidth ?? this.ballGlowWidth,
     bloodColor: bloodColor ?? this.bloodColor,
     arenaTitle: arenaTitle ?? this.arenaTitle,
     arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,

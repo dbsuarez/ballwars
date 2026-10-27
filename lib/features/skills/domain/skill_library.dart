@@ -121,6 +121,9 @@ class SkillDefinition {
     this.bubbleType = SkillBubbleType.shout,
     this.bubbleDurationSeconds = 1.2,
     this.explodesOnImpact = false,
+    this.handEffectScale = 1,
+    this.handEffectColor = 0xFFFFFFFF,
+    this.handEffectDurationSeconds = 0.5,
   });
 
   final String id;
@@ -174,6 +177,9 @@ class SkillDefinition {
   final SkillBubbleType bubbleType;
   final double bubbleDurationSeconds;
   final bool explodesOnImpact;
+  final double handEffectScale;
+  final int handEffectColor;
+  final double handEffectDurationSeconds;
   SkillCategory get resolvedCategory => category ?? _legacyCategory(baseKind);
   bool get canDamage =>
       (arsenalDamage ?? 0) > 0 ||
@@ -287,6 +293,9 @@ class SkillDefinition {
     SkillBubbleType? bubbleType,
     double? bubbleDurationSeconds,
     bool? explodesOnImpact,
+    double? handEffectScale,
+    int? handEffectColor,
+    double? handEffectDurationSeconds,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -343,6 +352,10 @@ class SkillDefinition {
     bubbleType: bubbleType ?? this.bubbleType,
     bubbleDurationSeconds: bubbleDurationSeconds ?? this.bubbleDurationSeconds,
     explodesOnImpact: explodesOnImpact ?? this.explodesOnImpact,
+    handEffectScale: handEffectScale ?? this.handEffectScale,
+    handEffectColor: handEffectColor ?? this.handEffectColor,
+    handEffectDurationSeconds:
+        handEffectDurationSeconds ?? this.handEffectDurationSeconds,
   );
 
   Map<String, Object?> toJson() => {
@@ -398,6 +411,9 @@ class SkillDefinition {
     'bubble_type': bubbleType.name,
     'bubble_duration_seconds': bubbleDurationSeconds,
     'explodes_on_impact': explodesOnImpact,
+    'hand_effect_scale': handEffectScale,
+    'hand_effect_color': handEffectColor,
+    'hand_effect_duration_seconds': handEffectDurationSeconds,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -495,6 +511,9 @@ class SkillDefinition {
       ),
       bubbleDurationSeconds: decimal('bubble_duration_seconds') ?? 1.2,
       explodesOnImpact: value['explodes_on_impact'] as bool? ?? false,
+      handEffectScale: decimal('hand_effect_scale') ?? 1,
+      handEffectColor: integer('hand_effect_color') ?? 0xFFFFFFFF,
+      handEffectDurationSeconds: decimal('hand_effect_duration_seconds') ?? 0.5,
     ).validated();
   }
 
@@ -529,6 +548,9 @@ class SkillDefinition {
     triggerIntervalSeconds: triggerIntervalSeconds.clamp(0.5, 120),
     effectColor: effectColor.clamp(0, 0xFFFFFFFF),
     screenShake: screenShake.clamp(0, 1),
+    handEffectScale: handEffectScale.clamp(0.1, 4),
+    handEffectColor: handEffectColor.clamp(0, 0xFFFFFFFF),
+    handEffectDurationSeconds: handEffectDurationSeconds.clamp(0.1, 10),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
   );
@@ -993,6 +1015,13 @@ class SkillLibrary {
         PowerUpKind.repulsor => tuning.repulsorForce,
         _ => 1,
       },
+      handEffectScale: kind == PowerUpKind.tornado ? 1.15 : 1,
+      handEffectColor: kind == PowerUpKind.tornado
+          ? 0xFFD8F8FF
+          : kind == PowerUpKind.fireWall
+          ? 0xFFFF6422
+          : 0xFFFFFFFF,
+      handEffectDurationSeconds: kind == PowerUpKind.tornado ? 0.5 : 0.65,
       healing: kind == PowerUpKind.apple ? tuning.arenaAppleHeal : 10,
       shieldHits: kind == PowerUpKind.goldenArmor ? 2 : 1,
       frozenDamageMultiplier: tuning.frozenDamageMultiplier,

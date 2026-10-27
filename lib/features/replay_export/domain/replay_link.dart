@@ -29,6 +29,8 @@ class ReplayLink {
   final double speedMultiplier;
   final bool automaticSpeedUp;
   final bool showEffects;
+  final double ballGlowWidth;
+  final Color bloodColor;
   final List<CustomBall> contestants;
 
   /// Changes the match, so it travels in the link (`size=`, left out for
@@ -62,6 +64,8 @@ class ReplayLink {
     this.automaticSpeedUp = true,
     required this.contestants,
     this.showEffects = true,
+    this.ballGlowWidth = 4,
+    this.bloodColor = const Color(0xFFD9152B),
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
     this.question,
@@ -145,8 +149,14 @@ class ReplayLink {
         : '&arena=${arenaDecoration.name}';
     final skillSnapshot = skillLibrary.encodeReplay();
     final skills = skillSnapshot == null ? '' : '&skills=$skillSnapshot';
+    final glow = ballGlowWidth == 4
+        ? ''
+        : '&glow=${ballGlowWidth.toStringAsFixed(1)}';
+    final blood = bloodColor.toARGB32() == 0xFFD9152B
+        ? ''
+        : '&blood=${bloodColor.toARGB32().toRadixString(16)}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -250,6 +260,17 @@ class ReplayLink {
               .where((value) => value.name == params['arena'])
               .firstOrNull;
     if (arenaDecoration == null) return null;
+    final ballGlowWidth = double.tryParse(params['glow'] ?? '4');
+    if (ballGlowWidth == null ||
+        !ballGlowWidth.isFinite ||
+        ballGlowWidth < 1 ||
+        ballGlowWidth > 12) {
+      return null;
+    }
+    final bloodValue = params['blood'] == null
+        ? 0xFFD9152B
+        : int.tryParse(params['blood']!, radix: 16);
+    if (bloodValue == null) return null;
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
@@ -281,6 +302,8 @@ class ReplayLink {
       automaticSpeedUp: automaticSpeedUp,
       contestants: contestants,
       showEffects: params['fx'] != '0',
+      ballGlowWidth: ballGlowWidth,
+      bloodColor: Color(bloodValue),
       ballSize: ballSize,
       mode: mode,
       question: cleanQuestion(params['q']),

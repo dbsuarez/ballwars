@@ -13,6 +13,7 @@ class ArenaCanvas extends StatelessWidget {
   final double rimAngle;
   final bool showEffects;
   final bool showBallGlow;
+  final double ballGlowWidth;
   final String arenaTitle;
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
@@ -37,6 +38,7 @@ class ArenaCanvas extends StatelessWidget {
     required this.rimAngle,
     this.showEffects = true,
     this.showBallGlow = true,
+    this.ballGlowWidth = 4,
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
@@ -64,6 +66,7 @@ class ArenaCanvas extends StatelessWidget {
           rimAngle: rimAngle,
           showEffects: showEffects,
           showBallGlow: showBallGlow,
+          ballGlowWidth: ballGlowWidth,
           arenaTitle: arenaTitle,
           arenaSubtitle: arenaSubtitle,
           wallSparkSize: wallSparkSize,

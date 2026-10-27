@@ -53,6 +53,7 @@ class ReplayFramePainter {
         rimAngle: 0,
         showEffects: showEffects,
         showBallGlow: _style.ballGlowEnabled,
+        ballGlowWidth: _style.ballGlowWidth,
         arenaTitle: _style.arenaTitle,
         arenaSubtitle: _style.arenaSubtitle,
         arenaDecoration: _style.arenaDecoration,
@@ -447,6 +448,7 @@ class ReplayStyle {
   final Color text;
   final Color muted;
   final bool ballGlowEnabled;
+  final double ballGlowWidth;
   final Color bloodColor;
   final String arenaTitle;
   final String arenaSubtitle;
@@ -461,6 +463,7 @@ class ReplayStyle {
     this.text = const Color(0xFFF2F2F0),
     this.muted = const Color(0xFF959596),
     this.ballGlowEnabled = true,
+    this.ballGlowWidth = 4,
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',

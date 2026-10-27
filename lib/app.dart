@@ -20,6 +20,8 @@ import 'features/match_setup/domain/match_config.dart';
 import 'features/match_setup/presentation/match_setup_screen.dart';
 import 'features/replay_export/data/short_link_repository.dart';
 import 'features/replay_export/domain/replay_link.dart';
+import 'features/replay_export/data/saved_replay_store.dart';
+import 'features/replay_export/presentation/saved_replays_screen.dart';
 import 'features/settings/data/app_settings_repository.dart';
 import 'features/settings/domain/app_settings.dart';
 import 'features/settings/presentation/app_settings_scope.dart';
@@ -277,6 +279,7 @@ class _HomeScreenState extends State<_HomeScreen> {
   BallPackRepository get _packs => widget.packs;
   String _version = '1.14.11';
   String? _savedReplay;
+  int _savedReplayCount = 0;
 
   @override
   void initState() {
@@ -295,6 +298,9 @@ class _HomeScreenState extends State<_HomeScreen> {
       if (mounted && value != null && value.isNotEmpty) {
         setState(() => _savedReplay = value);
       }
+    });
+    SavedReplayStore.load().then((entries) {
+      if (mounted) setState(() => _savedReplayCount = entries.length);
     });
     // Or from a group share link: offer to add that group.
     _openGroupLink(Uri.base);
@@ -458,6 +464,8 @@ class _HomeScreenState extends State<_HomeScreen> {
             minimumArenaScale: link.minimumArenaScale,
             arenaDecoration: link.arenaDecoration,
             showEffects: link.showEffects,
+            ballGlowWidth: link.ballGlowWidth,
+            bloodColor: link.bloodColor,
             look: look,
             handsOnPictures: handsOnPictures,
             whitePickupBackgrounds: whitePickupBackgrounds,
@@ -643,12 +651,18 @@ class _HomeScreenState extends State<_HomeScreen> {
                       ),
                     ],
                   ),
-                  if (_savedReplay != null) ...[
+                  if (_savedReplay != null || _savedReplayCount > 0) ...[
                     const SizedBox(height: 12),
                     _HomeTile(
-                      title: 'Saved replay',
-                      subtitle: 'Watch the last replay saved on this device',
-                      onTap: () => _openReplayLink(Uri.parse(_savedReplay!)),
+                      title: 'Saved replays',
+                      subtitle:
+                          'Watch or delete $_savedReplayCount saved replay${_savedReplayCount == 1 ? "" : "s"}',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              SavedReplaysScreen(onOpen: _openReplayLink),
+                        ),
+                      ),
                     ),
                   ],
                   if (!kIsWeb &&

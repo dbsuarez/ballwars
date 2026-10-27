@@ -148,6 +148,8 @@ void main() {
     await openSettings(tester);
     await tester.tap(find.text('1 round'));
     await tester.tap(find.text('1×'));
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('setting-Effects')));
     await tester.tap(find.byKey(const ValueKey('setting-Effects')));
     await tester.pump();
@@ -220,6 +222,8 @@ void main() {
   ) async {
     await pumpSetup(tester);
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('setting-Size')));
     await tester.tap(find.byKey(const ValueKey('setting-Size')));
     await tester.pump();
@@ -233,6 +237,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     expect(find.text('Large'), findsOneWidget);
   });
 
@@ -259,6 +265,8 @@ void main() {
   ) async {
     await pumpSetup(tester);
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Ball look: pictures'));
     await tester.tap(find.byTooltip('Ball look: pictures'));
     await tester.pump();
@@ -271,6 +279,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     expect(find.byTooltip('Ball look: faces'), findsOneWidget);
   });
 
@@ -433,9 +443,13 @@ void main() {
     await tester.tap(find.text('Arsenal'));
     await tester.pump();
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('setting-Arena')));
     await tester.pump();
     expect(find.text('Space'), findsOneWidget);
+    await tester.tap(find.text('Gameplay').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Pickups: All'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Traps'));
@@ -499,6 +513,8 @@ void main() {
   ) async {
     await pumpSetup(tester);
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     final finishers = find.byKey(const ValueKey('setting-Finishers'));
     await tester.ensureVisible(finishers);
     await tester.tap(finishers);
@@ -507,6 +523,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pumpSetup(tester);
     await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('setting-Finishers')),
@@ -518,6 +536,8 @@ void main() {
     await tester.tap(find.text('Arsenal'));
     await tester.pumpAndSettle();
     await openSettings(tester);
+    await tester.tap(find.text('Gameplay').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Pickups: All'));
     await tester.pumpAndSettle();
     expect(find.byType(TabBar), findsOneWidget);

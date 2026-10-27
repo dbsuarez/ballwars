@@ -47,6 +47,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasMenuMusicColumn = false;
   bool _hasPowerUpsColumn = false;
   bool _hasBallGlowColumn = false;
+  bool _hasBallGlowWidthColumn = false;
   bool _hasBloodColorColumn = false;
   bool _hasArenaTextColumns = false;
   bool _hasMinimumArenaScaleColumn = false;
@@ -90,6 +91,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasMenuMusicColumn = row.containsKey('menu_music');
     _hasPowerUpsColumn = row.containsKey('power_ups');
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
+    _hasBallGlowWidthColumn = row.containsKey('ball_glow_width');
     _hasBloodColorColumn = row.containsKey('blood_color');
     _hasArenaTextColumns =
         row.containsKey('arena_title') && row.containsKey('arena_subtitle');
@@ -107,6 +109,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       themeId: row['theme'] as String,
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
       ballGlowEnabled: row['ball_glow_enabled'] as bool? ?? true,
+      ballGlowWidth: (row['ball_glow_width'] as num?)?.toDouble() ?? 4,
       bloodColor: Color(
         (row['blood_color'] as num?)?.toInt() ??
             AppSettings.defaultBloodColor.toARGB32(),
@@ -192,6 +195,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasSkillLibraryColumn)
             'skill_library': settings.skillLibrary.toJson(),
           if (_hasBallGlowColumn) 'ball_glow_enabled': settings.ballGlowEnabled,
+          if (_hasBallGlowWidthColumn)
+            'ball_glow_width': settings.ballGlowWidth,
           if (_hasBloodColorColumn)
             'blood_color': settings.bloodColor.toARGB32(),
           if (_hasArenaTextColumns) 'arena_title': settings.arenaTitle.trim(),

@@ -1125,6 +1125,34 @@ class PowerUpPainter {
     for (final tornado in p.tornadoes) {
       final target = tornado.target;
       if (target.isEliminated) continue;
+      if (tornado.isAiming) {
+        final owner = tornado.owner;
+        final scale = p.handEffectScale(PowerUpKind.tornado);
+        final wind = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = math.max(2, owner.radius * 0.1)
+          ..color = p
+              .handEffectColor(PowerUpKind.tornado)
+              .withValues(alpha: 0.85);
+        for (final side in const [-1.0, 1.0]) {
+          final hand = owner.position + Offset(side * owner.radius * 0.82, 0);
+          for (var ring = 0; ring < 3; ring++) {
+            final phase = (state.step * 0.18 + ring * 0.7) % 2;
+            canvas.drawArc(
+              Rect.fromCircle(
+                center: hand,
+                radius: owner.radius * (0.2 + phase * 0.16) * scale,
+              ),
+              -math.pi * 0.8,
+              math.pi * 1.6,
+              false,
+              wind,
+            );
+          }
+        }
+        continue;
+      }
       final center = tornadoVisualCenter(target);
       final half = target.radius * 1.65;
       final frame = PowerUpSprites.effectFrame(
@@ -1231,20 +1259,39 @@ class PowerUpPainter {
         );
         final from = direction * -arenaRadius;
         final to = direction * arenaRadius;
+        final flicker = 0.55 + 0.45 * math.sin(step * 0.32).abs();
         canvas.drawLine(
           from,
           to,
           Paint()
-            ..color = const Color(0xFFFF2BD6).withValues(alpha: 0.22)
-            ..strokeWidth = itemRadius * 0.8,
+            ..color = const Color(
+              0xFFFF2BD6,
+            ).withValues(alpha: 0.18 + flicker * 0.2)
+            ..strokeWidth = itemRadius * (0.7 + flicker * 0.35),
         );
         canvas.drawLine(
           from,
           to,
           Paint()
-            ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.9)
-            ..strokeWidth = math.max(2, itemRadius * 0.12),
+            ..color = Color.lerp(
+              const Color(0xFFFFFFFF),
+              const Color(0xFF00E5FF),
+              flicker,
+            )!
+            ..strokeWidth = math.max(2, itemRadius * (0.1 + flicker * 0.08)),
         );
+        for (final emitter in [from, to]) {
+          canvas.drawCircle(
+            emitter,
+            itemRadius * 0.72,
+            Paint()..color = const Color(0xFF02030A),
+          );
+          canvas.drawCircle(
+            emitter,
+            itemRadius * (0.38 + flicker * 0.08),
+            Paint()..color = const Color(0xFFFF2BD6).withValues(alpha: 0.9),
+          );
+        }
     }
   }
 
@@ -1831,6 +1878,8 @@ class PowerUpPainter {
     double Function(PowerUpKind kind)? weaponDisplayScale,
     double Function(PowerUpKind kind)? weaponGripInset,
     double Function(PowerUpKind kind)? skillRange,
+    double Function(PowerUpKind kind)? handEffectScale,
+    Color Function(PowerUpKind kind)? handEffectColor,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       final angle = flailOrbitAngle(step);
@@ -2134,6 +2183,8 @@ class PowerUpPainter {
           firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
           displayScale: weaponDisplayScale?.call(weapon) ?? 1,
           gripInset: weaponGripInset?.call(weapon),
+          handEffectScale: handEffectScale?.call(weapon) ?? 1,
+          handEffectColor: handEffectColor?.call(weapon),
         );
       }
     }
@@ -2187,6 +2238,8 @@ class PowerUpPainter {
     int firedHoldLeft = 0,
     double displayScale = 1,
     double? gripInset,
+    double handEffectScale = 1,
+    Color? handEffectColor,
   }) {
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
@@ -2203,14 +2256,14 @@ class PowerUpPainter {
             canvas,
             flame,
             hand - Offset(0, ball.radius * 0.2),
-            ball.radius * 0.62,
+            ball.radius * 0.62 * handEffectScale,
             0,
           );
         } else {
           canvas.drawCircle(
             hand,
             ball.radius * 0.2,
-            Paint()..color = const Color(0xFFFF6422),
+            Paint()..color = handEffectColor ?? const Color(0xFFFF6422),
           );
         }
       }

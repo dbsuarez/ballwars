@@ -23,6 +23,7 @@ class ArenaPainter extends CustomPainter {
   /// so the match plays out the same either way.
   final bool showEffects;
   final bool showBallGlow;
+  final double ballGlowWidth;
   final String arenaTitle;
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
@@ -48,6 +49,7 @@ class ArenaPainter extends CustomPainter {
     required this.rimAngle,
     this.showEffects = true,
     this.showBallGlow = true,
+    this.ballGlowWidth = 4,
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
@@ -557,12 +559,12 @@ class ArenaPainter extends CustomPainter {
     if (showBallGlow) {
       canvas.drawCircle(
         ball.position,
-        ball.radius + 4,
+        ball.radius + ballGlowWidth,
         Paint()..color = ball.config.glowColor.withValues(alpha: 0.18),
       );
       canvas.drawCircle(
         ball.position,
-        ball.radius + 2,
+        ball.radius + ballGlowWidth * 0.5,
         Paint()..color = ball.config.glowColor.withValues(alpha: 0.28),
       );
     }
@@ -599,6 +601,9 @@ class ArenaPainter extends CustomPainter {
       weaponGripInset: (kind) =>
           state.powerUps?.weaponGripInset(kind) ?? (kind.isBlade ? 0.2 : 0),
       skillRange: (kind) => state.powerUps?.skillRange(kind) ?? 1,
+      handEffectScale: (kind) => state.powerUps?.handEffectScale(kind) ?? 1,
+      handEffectColor: (kind) =>
+          state.powerUps?.handEffectColor(kind) ?? const Color(0xFFFFFFFF),
     );
     if (look != BallLook.pictures || handsOnPictures) {
       paintHands(

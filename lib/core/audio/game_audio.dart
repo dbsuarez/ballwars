@@ -369,7 +369,12 @@ class GameAudio with WidgetsBindingObserver {
       case 'repel':
         shield();
       case 'trap':
+      case 'laser':
         hit();
+      case 'countdown':
+        pickup();
+      case 'countdown-go':
+        whistle();
       case 'cut':
         slash();
       case 'out':

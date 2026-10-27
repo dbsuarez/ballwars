@@ -197,6 +197,34 @@ void main() {
     );
   });
 
+  test('every composed projectile honours impact explosion and knockback', () {
+    final boom = SkillLibrary.defaults
+        .create('Boom Impact', PowerUpKind.boomerang)
+        .copyWith(
+          enabled: true,
+          returnsToOrigin: false,
+          explodesOnImpact: true,
+          range: 0.35,
+          arsenalDamage: 7,
+          knockback: 0.8,
+        );
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        boom,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final [owner, target] = c.state.balls;
+    _give(c, owner, PowerUpKind.boomerang);
+    owner.aimLeft = 1;
+
+    _run(c, 50);
+
+    expect(target.life, lessThan(_life));
+    expect(target.velocity.dx, greaterThan(0));
+    expect(c.powerUps!.explosions, isNotEmpty);
+  });
+
   test('a composed skill chains effects and repeats deterministically', () {
     final draft = SkillLibrary.defaults
         .create('Stunning Pulse', PowerUpKind.apple)

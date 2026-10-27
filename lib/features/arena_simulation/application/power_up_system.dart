@@ -149,6 +149,10 @@ class PowerUpSystem {
 
   double weaponDisplayScale(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).weaponDisplayScale;
+  double handEffectScale(PowerUpKind kind) =>
+      match.skillLibrary.activeFor(kind, _t).handEffectScale;
+  Color handEffectColor(PowerUpKind kind) =>
+      Color(match.skillLibrary.activeFor(kind, _t).handEffectColor);
 
   double weaponGripInset(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).weaponGripInset;
@@ -395,6 +399,19 @@ class PowerUpSystem {
     for (final hazard in arenaThemeHazards.toList()) {
       hazard.age++;
       if (hazard.age >= _t.arenaTrapDurationSteps) {
+        if (hazard.kind == ArenaThemeHazardKind.quicksand) {
+          for (final ball in hazard.affected) {
+            if (!_alive(ball)) continue;
+            final away = ball.position - hazard.position;
+            final direction = away.distance == 0
+                ? Offset.fromDirection(rng.nextDoubleRange(0, math.pi * 2))
+                : away / away.distance;
+            ball.velocity =
+                direction *
+                math.max(ball.velocity.distance, match.arenaRadius * 0.42);
+            _yell(ball, 'FREE!');
+          }
+        }
         arenaThemeHazards.remove(hazard);
         continue;
       }
@@ -412,6 +429,7 @@ class PowerUpSystem {
             }
           case ArenaThemeHazardKind.quicksand:
             if (offset.distance < radius) {
+              hazard.affected.add(ball);
               ball.velocity *= _t.quicksandVelocityMultiplier;
               if (hazard.age % 60 == 0) {
                 _damageArenaHazard(
@@ -450,6 +468,7 @@ class PowerUpSystem {
                 weaponImpacts.add(
                   WeaponImpact(position: ball.position, strength: 0.35),
                 );
+                _sound('laser');
               }
             } else {
               hazard.affected.remove(ball);
@@ -649,7 +668,17 @@ class PowerUpSystem {
         final target = _nearestTarget(ball);
         if (target != null) {
           tornadoes.add(
-            Tornado(owner: ball, target: target, position: target.position),
+            Tornado(
+              owner: ball,
+              target: target,
+              position: ball.position,
+              aimSteps:
+                  (match.skillLibrary
+                              .activeFor(PowerUpKind.tornado, _t)
+                              .handEffectDurationSeconds *
+                          60)
+                      .round(),
+            ),
           );
           _skillYell(ball, p.kind, 'TWIST AND SHOUT!');
         }
@@ -907,6 +936,10 @@ class PowerUpSystem {
       if (tornado.age >= PowerUpTuning.molotovBurnSteps ||
           !_alive(tornado.owner)) {
         tornadoes.remove(tornado);
+        continue;
+      }
+      if (tornado.isAiming) {
+        tornado.position = tornado.owner.position;
         continue;
       }
       final toward = tornado.target.position - tornado.position;
@@ -1949,6 +1982,18 @@ class PowerUpSystem {
       _applyComposedEffect(owner, target, skill, skill.effectType);
       if (skill.secondaryEffectType != null) {
         _applyComposedEffect(owner, target, skill, skill.secondaryEffectType);
+      }
+      // Knockback is an impact parameter, not a standalone effect requirement.
+      // Custom/composed skills (including duplicates of built-ins) must honour a
+      // configured value even when their primary effect is damage.
+      if (skill.knockback > 0 &&
+          (skill.effectType == SkillEffectType.damage ||
+              skill.effectType == SkillEffectType.damageOverTime ||
+              skill.secondaryEffectType == SkillEffectType.damage ||
+              skill.secondaryEffectType == SkillEffectType.damageOverTime) &&
+          skill.effectType != SkillEffectType.knockback &&
+          skill.secondaryEffectType != SkillEffectType.knockback) {
+        _applyComposedEffect(owner, target, skill, SkillEffectType.knockback);
       }
       match.state.particles.spawnImpact(
         origin: target.position,

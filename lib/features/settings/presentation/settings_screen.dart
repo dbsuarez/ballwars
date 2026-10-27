@@ -29,6 +29,55 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   int _settingsTab = 0;
+
+  Future<void> _pickBloodColor(AppSettings settings) async {
+    final controller = TextEditingController(
+      text: (settings.bloodColor.toARGB32() & 0xFFFFFF)
+          .toRadixString(16)
+          .padLeft(6, '0')
+          .toUpperCase(),
+    );
+    final color = await showDialog<Color>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Custom blood color'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 6,
+          decoration: const InputDecoration(
+            prefixText: '#',
+            hintText: '22CC66',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final raw = controller.text.trim().replaceFirst('#', '');
+              if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(raw)) return;
+              Navigator.pop(
+                context,
+                Color(0xFF000000 | int.parse(raw, radix: 16)),
+              );
+            },
+            child: const Text('Use color'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (color != null && mounted) {
+      await _save(
+        settings.copyWith(bloodColor: color),
+        done: 'Blood color saved.',
+      );
+    }
+  }
+
   final TextEditingController _headline = TextEditingController();
   final TextEditingController _watermark = TextEditingController();
   final TextEditingController _arenaTitle = TextEditingController();
@@ -82,7 +131,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted && done != null) setState(() => _message = done);
     } catch (e) {
       if (mounted) {
-        setState(() => _message = '$e'.replaceFirst('Bad state: ', ''));
+        final message = '$e'.replaceFirst('Bad state: ', '');
+        setState(() => _message = message);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('Save failed: $message'),
+              backgroundColor: Colors.red.shade800,
+            ),
+          );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -898,6 +956,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         ),
                                 ),
                                 Text(
+                                  'Glow width: ${settings.ballGlowWidth.toStringAsFixed(1)}',
+                                ),
+                                Slider(
+                                  key: const ValueKey('ball-glow-width-slider'),
+                                  value: settings.ballGlowWidth,
+                                  min: 1,
+                                  max: 12,
+                                  divisions: 22,
+                                  onChanged: _busy
+                                      ? null
+                                      : (value) => _save(
+                                          settings.copyWith(
+                                            ballGlowWidth: value,
+                                          ),
+                                          done: 'Ball glow width saved.',
+                                        ),
+                                ),
+                                Text(
                                   'Blood color',
                                   style: AppText.ui(
                                     14,
@@ -916,6 +992,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       Color(0xFF8B0000),
                                       Color(0xFFFF6B35),
                                       Color(0xFF8E44AD),
+                                      Color(0xFF2ECC71),
                                       Color(0xFF111111),
                                     ])
                                       ChoiceChip(
@@ -940,6 +1017,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 done: 'Blood color saved.',
                                               ),
                                       ),
+                                    IconButton.outlined(
+                                      key: const ValueKey('custom-blood-color'),
+                                      tooltip: 'Custom blood color',
+                                      onPressed: _busy
+                                          ? null
+                                          : () => _pickBloodColor(settings),
+                                      icon: const Icon(Icons.colorize),
+                                    ),
                                   ],
                                 ),
                               ],

@@ -100,6 +100,79 @@ void main() {
     );
   });
 
+  testWidgets('all built-in numeric edits survive Done and library Save', (
+    tester,
+  ) async {
+    SkillManagementResult? result;
+    await tester.pumpWidget(app(onResult: (value) => result = value));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Boomerang',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Boomerang'));
+    await tester.pumpAndSettle();
+
+    final editor = find.byType(ListView).last;
+    for (
+      var i = 0;
+      i < 8 &&
+          find.byKey(const ValueKey('skill-field-arsenal')).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.drag(editor, const Offset(0, -500));
+      await tester.pumpAndSettle();
+    }
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-field-arsenal')),
+      '7',
+    );
+    for (
+      var i = 0;
+      i < 8 &&
+          find
+              .byKey(const ValueKey('skill-field-knockback'))
+              .evaluate()
+              .isEmpty;
+      i++
+    ) {
+      await tester.drag(editor, const Offset(0, -500));
+      await tester.pumpAndSettle();
+    }
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-field-knockback')),
+      '20',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey('skill-field-knockback')),
+          )
+          .controller!
+          .text,
+      '20',
+    );
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    final saved = result!.library.builtIn(
+      PowerUpKind.boomerang,
+      PowerUpConfig.defaults,
+    );
+    expect(saved.arsenalDamage, 7);
+    expect(saved.knockback, 20);
+    final reopened = SkillLibrary.fromJson(
+      result!.library.toJson(),
+    ).builtIn(PowerUpKind.boomerang, PowerUpConfig.defaults);
+    expect(reopened.arsenalDamage, 7);
+    expect(reopened.knockback, 20);
+  });
+
   testWidgets('versioned JSON can be exported and imported as a draft', (
     tester,
   ) async {

@@ -108,7 +108,7 @@ Replay and video remain last, by agreement.
 **Status: Complete**
 
 - [x] Lock mobile gameplay to portrait orientation.
-- [ ] Remember rounds, speed, size, look, effects, finishers, Mayhem, and pickup selections as a separate complete profile for each game mode (tracked in Phase 11).
+- [x] Remember rounds, speed, size, look, effects, finishers, Mayhem, and pickup selections as a separate complete profile for each game mode (tracked in Phase 11).
 - [x] Let users enable or disable automatic per-minute battle acceleration and preserve the choice in replays and videos.
 - [x] Organize Admin Settings into clear category tabs without long scrolling.
 - [x] Rework legacy Power-up Numbers into Common, Arsenal, and All-Out tabs with fixed side-by-side Restore and Save actions.
@@ -211,25 +211,25 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Phase 11 - Arena hazards, modes, and battle feedback (2026-10-27)
 
-**Status: Not started**
+**Status: Complete**
 
-- [ ] When Desert Quicksand releases/expires, expel affected balls away from its center and restore motion so nobody remains stranded.
-- [ ] Confirm Mayhem match time remains visible during the battle and on the result screen; add regression coverage for both.
-- [ ] Animate Neon Laser Gate glow, add matching crossing/hit SFX, and draw a visible dark emitter/source at each endpoint.
-- [ ] Audit and reuse the existing vine sprite for Wilderness Vine Snare, with a vector fallback only when unavailable.
-- [ ] Persist separate complete match-setting profiles for Threads, Arsenal, Mayhem, and All-Out.
-- [ ] Add a clear Saved Replays browser/player so users can list, open, replay, export, and delete saved replays instead of only relying on the last replay shortcut.
-- [ ] Make arena outer-glow width user-adjustable and replay-safe.
-- [ ] Add green and custom-picker blood colors and preserve them in settings/replays.
-- [ ] Aim Tornado before casting; show wind effects on the ball's hands instead of mounting the tornado artwork.
-- [ ] Add reusable configurable hand-effect visuals (asset/effect, scale, color, duration) and migrate Firewall and Tornado to them.
-- [ ] Add countdown SFX and delay match BGM until the countdown completes.
+- [x] When Desert Quicksand releases/expires, expel affected balls away from its center and restore motion so nobody remains stranded.
+- [x] Confirm Mayhem match time remains visible during the battle and on the result screen; add regression coverage for both.
+- [x] Animate Neon Laser Gate glow, add matching crossing/hit SFX, and draw a visible dark emitter/source at each endpoint.
+- [x] Audit Wilderness Vine Snare artwork and retain its animated code-drawn vine fallback because no suitable standalone vine sprite is available.
+- [x] Persist separate complete match-setting profiles for Threads, Arsenal, Mayhem, and All-Out.
+- [x] Add a clear Saved Replays browser/player so users can list, open, replay/export, and delete saved replays instead of only relying on the last replay shortcut.
+- [x] Make arena outer-glow width user-adjustable and replay-safe.
+- [x] Add green and custom-picker blood colors and preserve them in settings/replays.
+- [x] Aim Tornado before casting; show wind effects on the ball's hands instead of mounting the tornado artwork.
+- [x] Add reusable configurable hand-effect visuals (effect, scale, color, duration) and migrate Firewall and Tornado to them.
+- [x] Add countdown SFX and delay match BGM until the countdown completes.
 
 ## Phase 12 - Match setup information architecture and ball hair (2026-10-27)
 
 **Status: Not started**
 
-- [ ] Use Gameplay, Appearance, and Sound tabs in Match Settings for both list and card layouts.
+- [x] Use Gameplay, Appearance, and Audio tabs in Match Settings for both list and card layouts.
 - [ ] Replace the generic `New Match` heading/action label with the selected mode: Threads, Arsenal, Mayhem, or All-Out.
 - [ ] Add a pre-match user toggle for randomized hairstyles.
 - [ ] Design 20 lightweight code-drawn hairstyles with independently assigned colors.
@@ -247,5 +247,5 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 ## Current position
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [ ] Phase 11 -> [ ] Phase 12 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [x] Phase 11 -> [>] Phase 12 -> Fully complete
 ```

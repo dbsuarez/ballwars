@@ -1,5 +1,4 @@
 import '../../../core/widgets/screen_awake.dart';
-import '../../../core/offline/device_prefs.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -26,6 +25,7 @@ import '../../ball_management/data/local_ball_repository.dart';
 import '../../replay_export/data/video_encoder.dart';
 import '../../replay_export/data/video_export_backend.dart';
 import '../../replay_export/domain/replay_link.dart';
+import '../../replay_export/data/saved_replay_store.dart';
 import '../../replay_export/presentation/export_video_dialog.dart';
 import '../../replay_export/presentation/replay_frame_painter.dart';
 import '../../../core/audio/game_audio.dart';
@@ -141,6 +141,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
   bool _started = false;
   double _startCountdown = 3;
+  int _countdownBeat = 3;
 
   @override
   void didChangeDependencies() {
@@ -181,12 +182,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       mayhemSeconds: widget.config.mayhemSeconds,
       shrinkingArena: widget.config.shrinkingArena,
       minimumArenaScale: widget.config.minimumArenaScale,
-      bloodColor: AppSettingsScope.of(context).bloodColor,
+      bloodColor: widget.config.bloodColor,
       arenaDecoration: widget.config.arenaDecoration,
       automaticSpeedUp: widget.config.automaticSpeedUp,
     );
     _roundCounted = replaySeed != null;
     _startCountdown = 3;
+    _countdownBeat = 3;
     _state = _controller.state;
     _rimAngle = 0.0;
     _lastElapsed = Duration.zero;
@@ -205,7 +207,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _heardKnockouts = 0;
     _heardGatling = 0;
     _audio.resetEffects();
-    _audio.startMusic();
+    _audio.interaction('countdown');
     _matchGeneration++;
     if (widget.config.mode != MatchMode.threads) {
       PowerUpSprites.load().then((_) {
@@ -231,8 +233,15 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     if (_startCountdown > 0) {
       final before = _startCountdown;
       _startCountdown = math.max(0, _startCountdown - dt);
+      final beat = _startCountdown.ceil();
+      if (beat > 0 && beat < _countdownBeat) {
+        _countdownBeat = beat;
+        _audio.interaction('countdown');
+      }
       _frame.value++;
       if (_startCountdown > 0) return;
+      _audio.interaction('countdown-go');
+      _audio.startMusic();
       dt = math.max(0, dt - before);
       if (dt == 0) return;
     }
@@ -457,6 +466,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     speedMultiplier: widget.config.speedMultiplier,
     automaticSpeedUp: widget.config.automaticSpeedUp,
     showEffects: _showEffects,
+    ballGlowWidth: widget.config.ballGlowWidth,
+    bloodColor: widget.config.bloodColor,
     contestants: widget.config.contestants,
     ballSize: widget.config.ballSize,
     mode: widget.config.mode,
@@ -474,7 +485,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
 
   Future<void> _saveReplay() async {
-    await DevicePrefs.write('saved-replay', _replayUri().toString());
+    await SavedReplayStore.add(_replayUri());
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Replay saved on this device.')),
@@ -704,6 +715,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               showBallGlow: AppSettingsScope.of(
                                 context,
                               ).ballGlowEnabled,
+                              ballGlowWidth: widget.config.ballGlowWidth,
                               arenaTitle: AppSettingsScope.of(
                                 context,
                               ).arenaTitle,
@@ -928,9 +940,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 ballGlowEnabled: AppSettingsScope.of(
                                   context,
                                 ).ballGlowEnabled,
-                                bloodColor: AppSettingsScope.of(
-                                  context,
-                                ).bloodColor,
+                                ballGlowWidth: widget.config.ballGlowWidth,
+                                bloodColor: widget.config.bloodColor,
                                 arenaTitle: AppSettingsScope.of(
                                   context,
                                 ).arenaTitle,

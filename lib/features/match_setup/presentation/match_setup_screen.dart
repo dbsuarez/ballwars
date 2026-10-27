@@ -80,6 +80,20 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     _refreshDrawer?.call();
   }
 
+  String _profileKey(MatchMode mode, String setting) =>
+      'match-${mode.id}-$setting';
+
+  Future<String?> _readProfile(
+    MatchMode mode,
+    String setting, {
+    String? legacyKey,
+  }) async =>
+      await DevicePrefs.read(_profileKey(mode, setting)) ??
+      await DevicePrefs.read(legacyKey ?? setting);
+
+  void _writeProfile(String setting, Object value) =>
+      DevicePrefs.write(_profileKey(_mode, setting), value);
+
   bool _dualWield = false;
   bool _endlessBattle = false;
   bool _mayhem = false;
@@ -88,6 +102,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   ArenaDecoration? _arenaDecoration;
   bool _finishersOn = true;
   bool _settingCards = true;
+  int _settingsTab = 0;
 
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
@@ -110,30 +125,54 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   /// Rounds, speed and effects start the way this device last left them.
   Future<void> _loadPrefs() async {
-    final effects = await EffectsPrefs.effectsOn();
-    final finishers = await EffectsPrefs.finishersOn();
+    final rememberedMode = MatchMode.byId(await DevicePrefs.read('mode'));
+    final profileMode =
+        widget.initialMode ?? rememberedMode ?? MatchMode.threads;
+    final effects =
+        await _readProfile(profileMode, 'effects') ??
+        ((await EffectsPrefs.effectsOn()) ? '1' : '0');
+    final finishers =
+        await _readProfile(profileMode, 'finishers') ??
+        ((await EffectsPrefs.finishersOn()) ? '1' : '0');
     final settingCards =
         await DevicePrefs.read('match-settings-layout') != 'list';
     final wallSparkSize = WallSparkSize.byId(
-      await DevicePrefs.read('wall-spark-size'),
+      await _readProfile(profileMode, 'wall-spark-size'),
     );
-    final rounds = int.tryParse(await DevicePrefs.read('rounds') ?? '');
-    final speed = double.tryParse(await DevicePrefs.read('speed') ?? '');
-    final automaticSpeedUp = await DevicePrefs.read('automatic-speed-up');
-    final size = BallSize.byId(await DevicePrefs.read('size'));
-    final mode = MatchMode.byId(await DevicePrefs.read('mode'));
-    final look = BallLook.byName(await DevicePrefs.read('look'));
-    final handsOnPictures = await DevicePrefs.read('hands-on-pictures');
-    final whitePickupBackgrounds = await DevicePrefs.read(
+    final rounds = int.tryParse(
+      await _readProfile(profileMode, 'rounds') ?? '',
+    );
+    final speed = double.tryParse(
+      await _readProfile(profileMode, 'speed') ?? '',
+    );
+    final automaticSpeedUp = await _readProfile(
+      profileMode,
+      'automatic-speed-up',
+    );
+    final size = BallSize.byId(await _readProfile(profileMode, 'size'));
+    final mode = profileMode;
+    final look = BallLook.byName(await _readProfile(profileMode, 'look'));
+    final handsOnPictures = await _readProfile(
+      profileMode,
+      'hands-on-pictures',
+    );
+    final whitePickupBackgrounds = await _readProfile(
+      profileMode,
       'white-pickup-backgrounds',
     );
-    final dualWield = await DevicePrefs.read('dual-wield');
-    final endlessBattle = await DevicePrefs.read('endless-battle');
-    final mayhem = await DevicePrefs.read('mayhem');
+    final dualWield = await _readProfile(profileMode, 'dual-wield');
+    final endlessBattle = await _readProfile(profileMode, 'endless-battle');
+    final mayhem = await _readProfile(profileMode, 'mayhem');
     final duration =
-        int.tryParse(await DevicePrefs.read('mayhem-seconds') ?? '120') ?? 120;
-    final shrinkingArena = await DevicePrefs.read('shrinking-arena');
-    final arenaDecoration = await DevicePrefs.read('arena-decoration-user');
+        int.tryParse(
+          await _readProfile(profileMode, 'mayhem-seconds') ?? '120',
+        ) ??
+        120;
+    final shrinkingArena = await _readProfile(profileMode, 'shrinking-arena');
+    final arenaDecoration = await _readProfile(
+      profileMode,
+      'arena-decoration-user',
+    );
     final legacy = await DevicePrefs.read('power-ups');
     for (final gameMode in MatchMode.values) {
       final saved =
@@ -160,7 +199,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         _category = _shown.firstOrNull?.id;
       }
       if (size != null) _ballSize = size;
-      _mode = widget.initialMode ?? mode ?? MatchMode.threads;
+      _mode = mode;
       if (look != null) _look = look;
       _handsOnPictures = handsOnPictures == '1';
       _whitePickupBackgrounds = whitePickupBackgrounds != '0';
@@ -177,8 +216,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           .where((value) => value.name == arenaDecoration)
           .firstOrNull;
       _powerUps = _modePowerUps[_mode];
-      _showEffects = effects;
-      _finishersOn = finishers;
+      _showEffects = effects != '0';
+      _finishersOn = finishers != '0';
       _settingCards = settingCards;
       if (wallSparkSize != null) _wallSparkSize = wallSparkSize;
       if (rounds != null && const [1, 2, 3].contains(rounds)) {
@@ -392,6 +431,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
         showEffects: _showEffects,
+        ballGlowWidth: AppSettingsScope.of(context).ballGlowWidth,
+        bloodColor: AppSettingsScope.of(context).bloodColor,
         wallSparkSize: _wallSparkSize,
         winsNeeded: _winsNeeded,
         ballSize: _mayhem ? BallSize.small : _ballSize,
@@ -759,9 +800,40 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: SegmentedButton<int>(
+                      key: const ValueKey('match-settings-tabs'),
+                      segments: const [
+                        ButtonSegment(
+                          value: 0,
+                          icon: Icon(Icons.sports_esports),
+                          label: Text('Gameplay'),
+                        ),
+                        ButtonSegment(
+                          value: 1,
+                          icon: Icon(Icons.palette_outlined),
+                          label: Text('Appearance'),
+                        ),
+                        ButtonSegment(
+                          value: 2,
+                          icon: Icon(Icons.volume_up_outlined),
+                          label: Text('Audio'),
+                        ),
+                      ],
+                      selected: {_settingsTab},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (selected) {
+                        _update(() => _settingsTab = selected.first);
+                      },
+                    ),
+                  ),
                   Flexible(
                     child: SingleChildScrollView(
-                      child: _settingsPanel(BallWarsColors.of(context)),
+                      child: _settingsPanel(
+                        BallWarsColors.of(context),
+                        _settingsTab,
+                      ),
                     ),
                   ),
                   SafeArea(
@@ -813,7 +885,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               selected: {_mode},
               showSelectedIcon: false,
               style: const ButtonStyle(visualDensity: VisualDensity.compact),
-              onSelectionChanged: (v) {
+              onSelectionChanged: (v) async {
                 GameAudio.instance.click();
                 _update(() {
                   _modePowerUps[_mode] = _powerUps;
@@ -828,6 +900,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   }
                 });
                 DevicePrefs.write('mode', v.first.id);
+                await _loadPrefs();
               },
             ),
           Card(
@@ -1087,262 +1160,265 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     );
   }
 
-  Widget _settingsPanel(BallWarsColors c) => Column(
+  Widget _settingsPanel(BallWarsColors c, int tab) => Column(
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      _settingsGroup('Gameplay', [
-        _choice(
-          Icons.emoji_events_outlined,
-          'Rounds',
-          const [1, 2, 3],
-          _winsNeeded,
-          (v) => v == 1 ? '1 round' : 'First to $v',
-          (v) {
-            _update(() => _winsNeeded = v);
-            DevicePrefs.write('rounds', v);
-          },
-        ),
-        _choice(
-          Icons.speed,
-          'Speed',
-          _speeds,
-          _speedMultiplier,
-          (v) => '${v == v.roundToDouble() ? v.toInt() : v}×',
-          (v) {
-            _update(() => _speedMultiplier = v);
-            DevicePrefs.write('speed', v);
-          },
-        ),
-        _choice(
-          Icons.trending_up,
-          'Automatic speed-up',
-          const [true, false],
-          _automaticSpeedUp,
-          (v) => v ? 'On' : 'Off',
-          (v) {
-            _update(() => _automaticSpeedUp = v);
-            DevicePrefs.write('automatic-speed-up', v ? '1' : '0');
-          },
-        ),
-        if (_mode != MatchMode.threads) ...[
-          ListTile(
-            leading: const Icon(Icons.auto_awesome),
-            title: Text(
-              _powerUps == null
-                  ? 'Pickups: All'
-                  : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of ${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _chooseWeapons,
-          ),
+      if (tab == 0)
+        _settingsGroup('Gameplay', [
           _choice(
-            Icons.pan_tool_alt,
-            'Dual wield',
-            const [false, true],
-            _dualWield,
-            (v) => v ? 'On' : 'Off',
+            Icons.emoji_events_outlined,
+            'Rounds',
+            const [1, 2, 3],
+            _winsNeeded,
+            (v) => v == 1 ? '1 round' : 'First to $v',
             (v) {
-              _update(() => _dualWield = v);
-              DevicePrefs.write('dual-wield', v ? '1' : '0');
+              _update(() => _winsNeeded = v);
+              _writeProfile('rounds', v);
             },
           ),
-          if (_mode == MatchMode.arsenal) ...[
-            if (widget.initialMode == null)
-              _choice(
-                Icons.whatshot,
-                'Mayhem',
-                const [false, true],
-                _mayhem,
-                (v) => v ? 'On' : 'Off',
-                (v) {
-                  _update(() {
-                    _mayhem = v;
-                    if (v &&
-                        !_shown.any((category) => category.id == _category)) {
-                      _selected.clear();
-                      final first = _shown.firstOrNull;
-                      _category = first?.id;
-                      _categoryText.text = first?.name ?? '';
-                    }
-                    if (!v && _selected.length > 4) {
-                      final keep = _selected.entries.take(4).toList();
-                      _selected
-                        ..clear()
-                        ..addEntries(keep);
-                    }
-                  });
-                  DevicePrefs.write('mayhem', v ? '1' : '0');
-                },
+          _choice(
+            Icons.speed,
+            'Speed',
+            _speeds,
+            _speedMultiplier,
+            (v) => '${v == v.roundToDouble() ? v.toInt() : v}×',
+            (v) {
+              _update(() => _speedMultiplier = v);
+              _writeProfile('speed', v);
+            },
+          ),
+          _choice(
+            Icons.trending_up,
+            'Automatic speed-up',
+            const [true, false],
+            _automaticSpeedUp,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _automaticSpeedUp = v);
+              _writeProfile('automatic-speed-up', v ? '1' : '0');
+            },
+          ),
+          if (_mode != MatchMode.threads) ...[
+            ListTile(
+              leading: const Icon(Icons.auto_awesome),
+              title: Text(
+                _powerUps == null
+                    ? 'Pickups: All'
+                    : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of ${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
               ),
-            if (_mayhem)
-              _choice(
-                Icons.timer,
-                'Match time',
-                const [30, 60, 120, 180, 300, 600],
-                _mayhemSeconds,
-                (v) => v < 60 ? '${v}s' : '${v ~/ 60} min',
-                (v) {
-                  _update(() => _mayhemSeconds = v);
-                  DevicePrefs.write('mayhem-seconds', v);
-                },
-              ),
-            if (!_mayhem)
-              _choice(
-                Icons.all_inclusive,
-                'Endless Battle',
-                const [false, true],
-                _endlessBattle,
-                (v) => v ? 'On' : 'Off',
-                (v) {
-                  _update(() => _endlessBattle = v);
-                  DevicePrefs.write('endless-battle', v ? '1' : '0');
-                },
-              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _chooseWeapons,
+            ),
+            _choice(
+              Icons.pan_tool_alt,
+              'Dual wield',
+              const [false, true],
+              _dualWield,
+              (v) => v ? 'On' : 'Off',
+              (v) {
+                _update(() => _dualWield = v);
+                _writeProfile('dual-wield', v ? '1' : '0');
+              },
+            ),
+            if (_mode == MatchMode.arsenal) ...[
+              if (widget.initialMode == null)
+                _choice(
+                  Icons.whatshot,
+                  'Mayhem',
+                  const [false, true],
+                  _mayhem,
+                  (v) => v ? 'On' : 'Off',
+                  (v) {
+                    _update(() {
+                      _mayhem = v;
+                      if (v &&
+                          !_shown.any((category) => category.id == _category)) {
+                        _selected.clear();
+                        final first = _shown.firstOrNull;
+                        _category = first?.id;
+                        _categoryText.text = first?.name ?? '';
+                      }
+                      if (!v && _selected.length > 4) {
+                        final keep = _selected.entries.take(4).toList();
+                        _selected
+                          ..clear()
+                          ..addEntries(keep);
+                      }
+                    });
+                    _writeProfile('mayhem', v ? '1' : '0');
+                  },
+                ),
+              if (_mayhem)
+                _choice(
+                  Icons.timer,
+                  'Match time',
+                  const [30, 60, 120, 180, 300, 600],
+                  _mayhemSeconds,
+                  (v) => v < 60 ? '${v}s' : '${v ~/ 60} min',
+                  (v) {
+                    _update(() => _mayhemSeconds = v);
+                    _writeProfile('mayhem-seconds', v);
+                  },
+                ),
+              if (!_mayhem)
+                _choice(
+                  Icons.all_inclusive,
+                  'Endless Battle',
+                  const [false, true],
+                  _endlessBattle,
+                  (v) => v ? 'On' : 'Off',
+                  (v) {
+                    _update(() => _endlessBattle = v);
+                    _writeProfile('endless-battle', v ? '1' : '0');
+                  },
+                ),
+            ],
           ],
-        ],
-        _choice(
-          Icons.zoom_in_map,
-          'Shrinking arena',
-          const [false, true],
-          _shrinkingArena,
-          (v) => v ? 'On' : 'Off',
-          (v) {
-            _update(() => _shrinkingArena = v);
-            DevicePrefs.write('shrinking-arena', v ? '1' : '0');
-          },
-        ),
-      ]),
-      _settingsGroup('Appearance', [
-        _choice(
-          Icons.stadium_outlined,
-          'Arena',
-          ArenaDecoration.values,
-          _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
-          (v) => v.label,
-          (v) {
-            _update(() => _arenaDecoration = v);
-            DevicePrefs.write('arena-decoration-user', v.name);
-          },
-        ),
-        _choice(
-          Icons.auto_fix_high,
-          'Effects',
-          const [true, false],
-          _showEffects,
-          (v) => v ? 'On' : 'Off',
-          (v) {
-            _update(() => _showEffects = v);
-            EffectsPrefs.setEffectsOn(v);
-          },
-        ),
-        _choice(
-          Icons.circle_outlined,
-          'Size',
-          BallSize.values,
-          _ballSize,
-          (v) => v.label,
-          (v) {
-            _update(() => _ballSize = v);
-            DevicePrefs.write('size', v.id);
-          },
-        ),
-        _choice(
-          Icons.flare,
-          'Wall sparks',
-          WallSparkSize.values,
-          _wallSparkSize,
-          (v) => v.label,
-          (v) {
-            _update(() => _wallSparkSize = v);
-            DevicePrefs.write('wall-spark-size', v.id);
-          },
-        ),
-        _choice(
-          Icons.face,
-          'Ball look',
-          BallLook.values,
-          _look,
-          (v) => v.name,
-          (v) {
-            _update(() => _look = v);
-            DevicePrefs.write('look', v.name);
-          },
-          tooltip: 'Ball look: ${_look.name}',
-        ),
-        _choice(
-          Icons.back_hand_outlined,
-          'Hands on pictures',
-          const [true, false],
-          _handsOnPictures,
-          (v) => v ? 'On' : 'Off',
-          (v) {
-            _update(() => _handsOnPictures = v);
-            DevicePrefs.write('hands-on-pictures', v ? '1' : '0');
-          },
-        ),
-        _choice(
-          Icons.circle,
-          'White pickup backgrounds',
-          const [true, false],
-          _whitePickupBackgrounds,
-          (v) => v ? 'On' : 'Off',
-          (v) {
-            _update(() => _whitePickupBackgrounds = v);
-            DevicePrefs.write('white-pickup-backgrounds', v ? '1' : '0');
-          },
-        ),
-        _choice(
-          Icons.movie_outlined,
-          'Finishers',
-          const [true, false],
-          _finishersOn,
-          (v) => v ? 'On' : 'Off',
-          (v) {
-            _update(() => _finishersOn = v);
-            EffectsPrefs.setFinishersOn(v);
-          },
-        ),
-      ]),
-      _settingsGroup('Audio', [
-        _choice(
-          Icons.music_note,
-          'Music',
-          const [false, true],
-          GameAudio.instance.musicOn,
-          (v) => v ? 'On' : 'Off',
-          (v) async {
-            final saved = GameAudio.instance.setMusicOn(v);
-            await saved;
-            if (mounted) _update(() {});
-          },
-        ),
-        _choice(
-          Icons.volume_up,
-          'Sound effects',
-          const [false, true],
-          GameAudio.instance.effectsOn,
-          (v) => v ? 'On' : 'Off',
-          (v) async {
-            final saved = GameAudio.instance.setEffectsOn(v);
-            if (v) GameAudio.instance.click();
-            await saved;
-            if (mounted) _update(() {});
-          },
-        ),
-        _choice(
-          Icons.touch_app,
-          'UX sounds',
-          const [false, true],
-          GameAudio.instance.uxOn,
-          (v) => v ? 'On' : 'Off',
-          (v) async {
-            final saved = GameAudio.instance.setUxOn(v);
-            await saved;
-            if (mounted) _update(() {});
-          },
-        ),
-      ]),
+          _choice(
+            Icons.zoom_in_map,
+            'Shrinking arena',
+            const [false, true],
+            _shrinkingArena,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _shrinkingArena = v);
+              _writeProfile('shrinking-arena', v ? '1' : '0');
+            },
+          ),
+        ]),
+      if (tab == 1)
+        _settingsGroup('Appearance', [
+          _choice(
+            Icons.stadium_outlined,
+            'Arena',
+            ArenaDecoration.values,
+            _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+            (v) => v.label,
+            (v) {
+              _update(() => _arenaDecoration = v);
+              _writeProfile('arena-decoration-user', v.name);
+            },
+          ),
+          _choice(
+            Icons.auto_fix_high,
+            'Effects',
+            const [true, false],
+            _showEffects,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _showEffects = v);
+              _writeProfile('effects', v ? '1' : '0');
+            },
+          ),
+          _choice(
+            Icons.circle_outlined,
+            'Size',
+            BallSize.values,
+            _ballSize,
+            (v) => v.label,
+            (v) {
+              _update(() => _ballSize = v);
+              _writeProfile('size', v.id);
+            },
+          ),
+          _choice(
+            Icons.flare,
+            'Wall sparks',
+            WallSparkSize.values,
+            _wallSparkSize,
+            (v) => v.label,
+            (v) {
+              _update(() => _wallSparkSize = v);
+              _writeProfile('wall-spark-size', v.id);
+            },
+          ),
+          _choice(
+            Icons.face,
+            'Ball look',
+            BallLook.values,
+            _look,
+            (v) => v.name,
+            (v) {
+              _update(() => _look = v);
+              _writeProfile('look', v.name);
+            },
+            tooltip: 'Ball look: ${_look.name}',
+          ),
+          _choice(
+            Icons.back_hand_outlined,
+            'Hands on pictures',
+            const [true, false],
+            _handsOnPictures,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _handsOnPictures = v);
+              _writeProfile('hands-on-pictures', v ? '1' : '0');
+            },
+          ),
+          _choice(
+            Icons.circle,
+            'White pickup backgrounds',
+            const [true, false],
+            _whitePickupBackgrounds,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _whitePickupBackgrounds = v);
+              _writeProfile('white-pickup-backgrounds', v ? '1' : '0');
+            },
+          ),
+          _choice(
+            Icons.movie_outlined,
+            'Finishers',
+            const [true, false],
+            _finishersOn,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _finishersOn = v);
+              _writeProfile('finishers', v ? '1' : '0');
+            },
+          ),
+        ]),
+      if (tab == 2)
+        _settingsGroup('Audio', [
+          _choice(
+            Icons.music_note,
+            'Music',
+            const [false, true],
+            GameAudio.instance.musicOn,
+            (v) => v ? 'On' : 'Off',
+            (v) async {
+              final saved = GameAudio.instance.setMusicOn(v);
+              await saved;
+              if (mounted) _update(() {});
+            },
+          ),
+          _choice(
+            Icons.volume_up,
+            'Sound effects',
+            const [false, true],
+            GameAudio.instance.effectsOn,
+            (v) => v ? 'On' : 'Off',
+            (v) async {
+              final saved = GameAudio.instance.setEffectsOn(v);
+              if (v) GameAudio.instance.click();
+              await saved;
+              if (mounted) _update(() {});
+            },
+          ),
+          _choice(
+            Icons.touch_app,
+            'UX sounds',
+            const [false, true],
+            GameAudio.instance.uxOn,
+            (v) => v ? 'On' : 'Off',
+            (v) async {
+              final saved = GameAudio.instance.setUxOn(v);
+              await saved;
+              if (mounted) _update(() {});
+            },
+          ),
+        ]),
     ],
   );
 }

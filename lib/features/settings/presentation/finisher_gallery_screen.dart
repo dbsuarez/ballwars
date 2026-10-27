@@ -64,6 +64,13 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                     winner: _winner,
                     loser: _loser,
                     move: move,
+                    artworkTint:
+                        AppSettingsScope.of(context).skillLibrary
+                            .all(AppSettingsScope.of(context).powerUps)
+                            .where((skill) => skill.name == move)
+                            .firstOrNull
+                            ?.spriteTint ??
+                        0xFFFFFFFF,
                     onHookFired: () => _launchSound(profile),
                     onImpact: () => _impactSound(profile),
                     onFinished: () {

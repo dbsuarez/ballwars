@@ -116,6 +116,7 @@ class SkillDefinition {
     this.cooldownSeconds = 0,
     this.triggerIntervalSeconds = 5,
     this.effectColor = 0xFFFF6B6B,
+    this.spriteTint = 0xFFFFFFFF,
     this.screenShake = 0,
     this.handedness = SkillHandedness.carrierDefault,
     this.yell = '',
@@ -174,6 +175,9 @@ class SkillDefinition {
   final double cooldownSeconds;
   final double triggerIntervalSeconds;
   final int effectColor;
+
+  /// White keeps original artwork; other colors recolor luminance, preserving alpha.
+  final int spriteTint;
   final double screenShake;
   final SkillHandedness handedness;
   final String yell;
@@ -293,6 +297,7 @@ class SkillDefinition {
     double? cooldownSeconds,
     double? triggerIntervalSeconds,
     int? effectColor,
+    int? spriteTint,
     double? screenShake,
     SkillHandedness? handedness,
     String? yell,
@@ -354,6 +359,7 @@ class SkillDefinition {
     triggerIntervalSeconds:
         triggerIntervalSeconds ?? this.triggerIntervalSeconds,
     effectColor: effectColor ?? this.effectColor,
+    spriteTint: spriteTint ?? this.spriteTint,
     screenShake: screenShake ?? this.screenShake,
     handedness: handedness ?? this.handedness,
     yell: yell ?? this.yell,
@@ -415,6 +421,7 @@ class SkillDefinition {
     'cooldown_seconds': cooldownSeconds,
     'trigger_interval_seconds': triggerIntervalSeconds,
     'effect_color': effectColor,
+    'sprite_tint': spriteTint,
     'screen_shake': screenShake,
     'handedness': handedness.name,
     if (yell.isNotEmpty) 'yell': yell,
@@ -505,6 +512,7 @@ class SkillDefinition {
       cooldownSeconds: decimal('cooldown_seconds') ?? 0,
       triggerIntervalSeconds: decimal('trigger_interval_seconds') ?? 5,
       effectColor: integer('effect_color') ?? 0xFFFF6B6B,
+      spriteTint: integer('sprite_tint') ?? 0xFFFFFFFF,
       screenShake: decimal('screen_shake') ?? 0,
       handedness: enumValue(
         'handedness',
@@ -562,6 +570,7 @@ class SkillDefinition {
     cooldownSeconds: cooldownSeconds.clamp(0, 60),
     triggerIntervalSeconds: triggerIntervalSeconds.clamp(0.5, 120),
     effectColor: effectColor.clamp(0, 0xFFFFFFFF),
+    spriteTint: spriteTint.clamp(0, 0xFFFFFFFF),
     screenShake: screenShake.clamp(0, 1),
     handEffectScale: handEffectScale.clamp(0.1, 4),
     handEffectColor: handEffectColor.clamp(0, 0xFFFFFFFF),

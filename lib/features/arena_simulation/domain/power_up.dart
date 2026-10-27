@@ -616,7 +616,14 @@ class HookPull {
 
 /// A knife slash, kept for [PowerUpTuning.slashShowSteps] steps so it can be drawn.
 class SlashMark {
-  SlashMark({required this.position, required this.angle});
+  SlashMark({
+    required this.position,
+    required this.angle,
+    this.kind = PowerUpKind.knife,
+    this.skillId,
+  });
+  final PowerUpKind kind;
+  final String? skillId;
 
   final Offset position;
 

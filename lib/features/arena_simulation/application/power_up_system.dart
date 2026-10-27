@@ -159,6 +159,18 @@ class PowerUpSystem {
               : _composedProjectiles[projectile] ?? visualSkill(kind))
           .spriteMode ==
       SkillVisualMode.sprite;
+
+  int artworkTint(
+    PowerUpKind kind, {
+    String? skillId,
+    Projectile? projectile,
+    SimulationBall? ball,
+  }) =>
+      (projectile == null
+              ? visualSkill(kind, skillId: skillId, ball: ball)
+              : _composedProjectiles[projectile] ?? visualSkill(kind))
+          .spriteTint;
+
   bool usesEffectSprite(
     PowerUpKind kind, {
     SimulationBall? ball,
@@ -855,6 +867,7 @@ class PowerUpSystem {
           SlashMark(
             position: attack.target.position,
             angle: attack.hitsShown * math.pi / 4,
+            kind: PowerUpKind.busterSword,
           ),
         );
       }
@@ -1218,6 +1231,7 @@ class PowerUpSystem {
       SlashMark(
         position: at,
         angle: math.atan2(inward.dy, inward.dx) + math.pi / 2,
+        kind: PowerUpKind.spikeWall,
       ),
     );
     if (match.mode == MatchMode.arsenal) {
@@ -1338,6 +1352,8 @@ class PowerUpSystem {
         SlashMark(
           position: at,
           angle: math.atan2(toAttacker.dy, toAttacker.dx) + math.pi / 2,
+          kind: kind,
+          skillId: skillId,
         ),
       );
     }
@@ -2481,7 +2497,9 @@ class PowerUpSystem {
           ? target.position + toOwner * (target.radius / distance)
           : target.position;
       _yell(owner, 'UPPERCUT!');
-      slashMarks.add(SlashMark(position: at, angle: -math.pi / 2));
+      slashMarks.add(
+        SlashMark(position: at, angle: -math.pi / 2, kind: PowerUpKind.hook),
+      );
       _hit(target, PowerUpKind.hook, at: at, from: owner);
       final angle = rng.nextDoubleRange(0, 2 * math.pi);
       final speed = h.speed > 0 ? h.speed : match.arenaRadius * 0.5;

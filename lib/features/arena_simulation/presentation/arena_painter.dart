@@ -10,6 +10,7 @@ import '../domain/particle_system.dart';
 import 'ball_face_painter.dart';
 import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
+import '../../skills/presentation/skill_artwork_tint.dart';
 import 'ball_face_expression.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../settings/domain/app_settings.dart';
@@ -556,6 +557,10 @@ class ArenaPainter extends CustomPainter {
       );
     }
 
+    SkillArtworkTint.begin(
+      canvas,
+      state.powerUps?.artworkTint(PowerUpKind.speed, ball: ball) ?? 0xFFFFFFFF,
+    );
     PowerUpPainter.paintSpeedTrail(
       canvas,
       ball,
@@ -566,6 +571,7 @@ class ArenaPainter extends CustomPainter {
           1,
     );
 
+    SkillArtworkTint.end(canvas);
     if (showBallGlow) {
       canvas.drawCircle(
         ball.position,
@@ -604,6 +610,17 @@ class ArenaPainter extends CustomPainter {
       canvas,
       ball,
       step: state.step,
+      artworkTint: (kind, slot) =>
+          state.powerUps?.artworkTint(
+            kind,
+            ball: ball,
+            skillId: slot < 0
+                ? null
+                : slot == 0
+                ? ball.heldSkillId
+                : ball.heldSecondarySkillId,
+          ) ??
+          0xFFFFFFFF,
       useWeaponSprite: (kind, slot) =>
           state.powerUps?.usesSprite(
             kind,

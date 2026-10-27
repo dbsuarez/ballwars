@@ -17,6 +17,7 @@ import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../settings/presentation/power_up_test_screen.dart';
 import '../domain/skill_library.dart';
+import 'skill_artwork_tint.dart';
 
 class SkillManagementScreen extends StatefulWidget {
   const SkillManagementScreen({
@@ -342,7 +343,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         return Card(
           child: ListTile(
             minVerticalPadding: 12,
-            leading: PowerUpIcon(skill.baseKind, size: 38),
+            leading: PowerUpIcon(
+              skill.baseKind,
+              size: 38,
+              tint: skill.spriteTint,
+            ),
             title: Text(
               skill.name,
               key: ValueKey('skill-name-${skill.id}'),
@@ -889,6 +894,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late final _yell = TextEditingController(text: widget.skill.yell);
   late final _sound = TextEditingController(text: widget.skill.soundCue);
   late int _handColor = widget.skill.handEffectColor;
+  late int _spriteTint = widget.skill.spriteTint;
   int _resetGeneration = 0;
 
   @override
@@ -982,6 +988,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     setState(() {
       _resetGeneration++;
       _handColor = defaults.handEffectColor;
+      _spriteTint = defaults.spriteTint;
       _rarity = PowerUpConfig.defaults.rarityOf(widget.skill.baseKind);
       _name.text = defaults.name;
       _enabled = defaults.enabled;
@@ -1069,6 +1076,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     loser: loser,
                     move: skill.name,
                     visualMove: skill.baseKind.label,
+                    artworkTint: skill.spriteTint,
                     onHookFired: () =>
                         GameAudio.instance.skillCue(skill.soundCue),
                     onImpact: GameAudio.instance.hit,
@@ -1202,6 +1210,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       handEffectDurationSeconds: _double('handEffectDuration'),
       explodesOnImpact: _explodesOnImpact,
       effectColor: _colorValue,
+      spriteTint: _spriteTint,
       screenShake: _double('screenShake'),
       handedness: _handedness,
     );
@@ -1303,8 +1312,13 @@ class _SkillEditorState extends State<_SkillEditor> {
         width: 28,
         height: 28,
         child: mode == SkillVisualMode.sprite
-            ? PowerUpIcon(widget.skill.baseKind, size: 24)
-            : CustomPaint(painter: _VectorSkillPreview(widget.skill.baseKind)),
+            ? PowerUpIcon(widget.skill.baseKind, size: 24, tint: _spriteTint)
+            : SkillArtworkTint.widget(
+                _spriteTint,
+                CustomPaint(
+                  painter: _VectorSkillPreview(widget.skill.baseKind),
+                ),
+              ),
       ),
       const SizedBox(width: 8),
       Expanded(
@@ -2039,6 +2053,49 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'Appearance',
                         'Preview equipped artwork and projectiles at a shared reference size.',
                       ),
+                      _fixedRow(
+                        'Artwork tint',
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              key: const ValueKey('skill-sprite-tint'),
+                              icon: Icon(
+                                Icons.palette_outlined,
+                                color: Color(_spriteTint),
+                              ),
+                              label: Text(
+                                _spriteTint == 0xFFFFFFFF
+                                    ? 'Original'
+                                    : 'Choose color',
+                              ),
+                              onPressed: () async {
+                                final color = await showColorPicker(
+                                  context,
+                                  initialColor: Color(_spriteTint),
+                                  title: 'Artwork tint',
+                                );
+                                if (color != null && mounted) {
+                                  setState(
+                                    () => _spriteTint = color.toARGB32(),
+                                  );
+                                }
+                              },
+                            ),
+                            if (_spriteTint != 0xFFFFFFFF)
+                              IconButton(
+                                tooltip: 'Remove tint',
+                                onPressed: () =>
+                                    setState(() => _spriteTint = 0xFFFFFFFF),
+                                icon: const Icon(Icons.restart_alt),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const Text(
+                        'Recolors this skill’s artwork, projectiles and effects. Original keeps the source colors.',
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -2083,6 +2140,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           Expanded(
                             child: _VisualModePreview(
                               label: 'Equipped item',
+                              tint: _spriteTint,
                               kind: widget.skill.baseKind,
                               mode: _sprite,
                               scale: _double('weaponDisplayScale') ?? 1,
@@ -2091,6 +2149,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: _VisualModePreview(
+                              tint: _spriteTint,
                               label: _usesProjectileDelivery
                                   ? 'Projectile'
                                   : 'Impact',
@@ -2380,7 +2439,11 @@ class _SkillPreviewDialogState extends State<_SkillPreviewDialog> {
               ],
             ),
             alignment: Alignment.center,
-            child: PowerUpIcon(widget.skill.baseKind, size: 64),
+            child: PowerUpIcon(
+              widget.skill.baseKind,
+              size: 64,
+              tint: widget.skill.spriteTint,
+            ),
           ),
         ),
         const SizedBox(height: 18),
@@ -2583,6 +2646,7 @@ class _VisualModePreview extends StatelessWidget {
     required this.mode,
     this.impact = false,
     this.scale = 1,
+    this.tint = 0xFFFFFFFF,
   });
 
   final String label;
@@ -2590,6 +2654,7 @@ class _VisualModePreview extends StatelessWidget {
   final SkillVisualMode mode;
   final bool impact;
   final double scale;
+  final int tint;
 
   @override
   Widget build(BuildContext context) {
@@ -2626,10 +2691,18 @@ class _VisualModePreview extends StatelessWidget {
                     color: PowerUpPainter.colorOf(kind).withValues(alpha: 0.3),
                   ),
                 mode == SkillVisualMode.sprite
-                    ? PowerUpIcon(kind, size: visualSize, projectile: impact)
-                    : CustomPaint(
-                        size: Size.square(visualSize),
-                        painter: _VectorSkillPreview(kind),
+                    ? PowerUpIcon(
+                        kind,
+                        size: visualSize,
+                        projectile: impact,
+                        tint: tint,
+                      )
+                    : SkillArtworkTint.widget(
+                        tint,
+                        CustomPaint(
+                          size: Size.square(visualSize),
+                          painter: _VectorSkillPreview(kind),
+                        ),
                       ),
               ],
             ),

@@ -75,6 +75,22 @@ void main() {
         '17',
       );
       await tester.pump();
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-sprite-tint')),
+      );
+      await tester.tap(find.byKey(const ValueKey('skill-sprite-tint')));
+      await tester.pumpAndSettle();
+      final goldSwatch = find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).color ==
+                const Color(0xFFFFD700),
+      );
+      await tester.tap(goldSwatch);
+      await tester.tap(find.text('Use color'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('save-skill')));
       await tester.pumpAndSettle();
       expect(saved, isNull);
@@ -88,6 +104,10 @@ void main() {
         17,
       );
       expect(find.text('Skill saved.'), findsOneWidget);
+      expect(
+        saved!.library.builtIn(PowerUpKind.pistol, saved!.tuning).spriteTint,
+        0xFFFFD700,
+      );
       expect(find.byKey(const ValueKey('save-skill')), findsOneWidget);
     },
   );

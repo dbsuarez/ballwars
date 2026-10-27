@@ -9,6 +9,7 @@ import 'power_up_sprites.dart';
 import 'lightning_strike_painter.dart';
 import 'arena_effect_library.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../skills/presentation/skill_artwork_tint.dart';
 
 /// Draws the power-up layer of an Arsenal / All-Out match in the arena's coordinates (center at 0, 0):
 /// pulsing field power-ups, armed mines, aim lines, bullets, blasts and knife slashes ([paint]), plus the
@@ -96,25 +97,33 @@ class PowerUpPainter {
         Paint()..color = const Color(0xFF050006).withValues(alpha: 0.82),
       );
       for (final attack in p.ragingDemonAttacks) {
-        final pulse = 0.65 + 0.35 * math.sin(attack.age * 1.7).abs();
-        canvas.drawCircle(
-          attack.target.position,
-          r * (1.2 + pulse * 0.6),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(3, r * 0.22)
-            ..color = const Color(0xFFFF1738).withValues(alpha: pulse),
+        SkillArtworkTint.begin(
+          canvas,
+          p.artworkTint(PowerUpKind.ragingDemon, ball: attack.owner),
         );
-        for (var i = 0; i < 6; i++) {
-          final angle = attack.age * 0.31 + i * math.pi / 3;
-          final direction = Offset.fromDirection(angle);
-          canvas.drawLine(
-            attack.target.position - direction * r * 0.35,
-            attack.target.position + direction * r * 1.45,
+        try {
+          final pulse = 0.65 + 0.35 * math.sin(attack.age * 1.7).abs();
+          canvas.drawCircle(
+            attack.target.position,
+            r * (1.2 + pulse * 0.6),
             Paint()
-              ..strokeWidth = math.max(2, r * 0.13)
-              ..color = Colors.white.withValues(alpha: pulse * 0.85),
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(3, r * 0.22)
+              ..color = const Color(0xFFFF1738).withValues(alpha: pulse),
           );
+          for (var i = 0; i < 6; i++) {
+            final angle = attack.age * 0.31 + i * math.pi / 3;
+            final direction = Offset.fromDirection(angle);
+            canvas.drawLine(
+              attack.target.position - direction * r * 0.35,
+              attack.target.position + direction * r * 1.45,
+              Paint()
+                ..strokeWidth = math.max(2, r * 0.13)
+                ..color = Colors.white.withValues(alpha: pulse * 0.85),
+            );
+          }
+        } finally {
+          SkillArtworkTint.end(canvas);
         }
       }
     }
@@ -126,52 +135,70 @@ class PowerUpPainter {
         Paint()..color = const Color(0xFF020818).withValues(alpha: 0.58),
       );
       for (final attack in p.omnislashAttacks) {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.busterSword).effectDisplayScale;
-        for (var i = 0; i < attack.hitsShown; i++) {
-          final angle = i * math.pi / 4 + attack.age * 0.035;
-          final direction = Offset.fromDirection(angle);
-          canvas.drawLine(
-            attack.target.position - direction * visualRadius * 1.6,
-            attack.target.position + direction * visualRadius * 1.6,
-            Paint()
-              ..strokeWidth = math.max(2, visualRadius * 0.16)
-              ..color =
-                  (i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFFFD54F))
-                      .withValues(alpha: 0.86),
-          );
+        SkillArtworkTint.begin(
+          canvas,
+          p.artworkTint(PowerUpKind.busterSword, ball: attack.owner),
+        );
+        try {
+          final visualRadius =
+              r * p.visualSkill(PowerUpKind.busterSword).effectDisplayScale;
+          for (var i = 0; i < attack.hitsShown; i++) {
+            final angle = i * math.pi / 4 + attack.age * 0.035;
+            final direction = Offset.fromDirection(angle);
+            canvas.drawLine(
+              attack.target.position - direction * visualRadius * 1.6,
+              attack.target.position + direction * visualRadius * 1.6,
+              Paint()
+                ..strokeWidth = math.max(2, visualRadius * 0.16)
+                ..color =
+                    (i.isEven
+                            ? const Color(0xFFFFFFFF)
+                            : const Color(0xFFFFD54F))
+                        .withValues(alpha: 0.86),
+            );
+          }
+        } finally {
+          SkillArtworkTint.end(canvas);
         }
       }
     }
 
     for (final flash in p.sniperFlashes) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.sniperRifle).effectDisplayScale;
-      final fade = (1 - flash.age / 24).clamp(0.0, 1.0);
-      final from = flash.owner.position;
-      final to = flash.target.position;
-      canvas.drawLine(
-        from,
-        to,
-        Paint()
-          ..strokeWidth = math.max(4, visualRadius * 0.3)
-          ..color = Colors.white.withValues(alpha: fade),
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.sniperRifle, ball: flash.owner),
       );
-      canvas.drawLine(
-        from,
-        to,
-        Paint()
-          ..strokeWidth = math.max(1.5, visualRadius * 0.1)
-          ..color = const Color(0xFFFFD54F).withValues(alpha: fade),
-      );
-      canvas.drawCircle(
-        to,
-        visualRadius * (0.55 + flash.age * 0.08),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(2, visualRadius * 0.16)
-          ..color = const Color(0xFFFFD54F).withValues(alpha: fade),
-      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.sniperRifle).effectDisplayScale;
+        final fade = (1 - flash.age / 24).clamp(0.0, 1.0);
+        final from = flash.owner.position;
+        final to = flash.target.position;
+        canvas.drawLine(
+          from,
+          to,
+          Paint()
+            ..strokeWidth = math.max(4, visualRadius * 0.3)
+            ..color = Colors.white.withValues(alpha: fade),
+        );
+        canvas.drawLine(
+          from,
+          to,
+          Paint()
+            ..strokeWidth = math.max(1.5, visualRadius * 0.1)
+            ..color = const Color(0xFFFFD54F).withValues(alpha: fade),
+        );
+        canvas.drawCircle(
+          to,
+          visualRadius * (0.55 + flash.age * 0.08),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, visualRadius * 0.16)
+            ..color = const Color(0xFFFFD54F).withValues(alpha: fade),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
 
     for (final hazard in p.arenaThemeHazards) {
@@ -179,516 +206,618 @@ class PowerUpPainter {
     }
 
     for (final tendril in p.omegaTendrils) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.omegaTendrils).effectDisplayScale;
-      final from = tendril.owner.position;
-      final to = tendril.target.position;
-      final delta = to - from;
-      final distance = math.max(1.0, delta.distance);
-      final normal = Offset(-delta.dy, delta.dx) / distance;
-      final progress = 1 - tendril.stepsLeft / 36.0;
-      final reach = Curves.easeOutCubic.transform(
-        (progress / 0.55).clamp(0.0, 1.0),
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.omegaTendrils, ball: tendril.owner),
       );
-      final end = Offset.lerp(from, to, reach)!;
-      final wave = math.sin(state.step * 0.55 + to.dx * 0.02);
-      final path = Path()
-        ..moveTo(from.dx, from.dy)
-        ..cubicTo(
-          from.dx + delta.dx * 0.3 + normal.dx * visualRadius * 0.8 * wave,
-          from.dy + delta.dy * 0.3 + normal.dy * visualRadius * 0.8 * wave,
-          from.dx + delta.dx * 0.7 - normal.dx * visualRadius * 0.65 * wave,
-          from.dy + delta.dy * 0.7 - normal.dy * visualRadius * 0.65 * wave,
-          end.dx,
-          end.dy,
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.omegaTendrils).effectDisplayScale;
+        final from = tendril.owner.position;
+        final to = tendril.target.position;
+        final delta = to - from;
+        final distance = math.max(1.0, delta.distance);
+        final normal = Offset(-delta.dy, delta.dx) / distance;
+        final progress = 1 - tendril.stepsLeft / 36.0;
+        final reach = Curves.easeOutCubic.transform(
+          (progress / 0.55).clamp(0.0, 1.0),
         );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(5, visualRadius * 0.42)
-          ..strokeCap = StrokeCap.round
-          ..color = const Color(0xFF5B0714),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(2, visualRadius * 0.18)
-          ..strokeCap = StrokeCap.round
-          ..color = const Color(0xFFFF304C),
-      );
-      final sprite = PowerUpSprites.omegaTendrilsAttack;
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
-          end,
-          visualRadius * (0.75 + 0.25 * math.sin(state.step * 0.4).abs()),
-          math.atan2(delta.dy, delta.dx),
-          opacity: reach,
-        );
-      }
-    }
-
-    for (final fire in p.burningZones) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.molotov).effectDisplayScale;
-      final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;
-      final pulse = 0.92 + 0.08 * math.sin(state.step * 0.35);
-      canvas.drawCircle(
-        fire.position,
-        fire.radius,
-        Paint()..color = const Color(0xFFFF5A20).withValues(alpha: 0.18 * life),
-      );
-      canvas.drawCircle(
-        fire.position,
-        fire.radius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(2, visualRadius * 0.14)
-          ..color = const Color(0xFFFFA126).withValues(alpha: 0.9 * life),
-      );
-      if (showEffects) {
-        const fireSpots = [
-          Offset(-0.46, -0.12),
-          Offset(0.38, -0.22),
-          Offset(-0.12, 0.3),
-          Offset(0.5, 0.2),
-          Offset(0.06, -0.42),
-          Offset(-0.5, 0.34),
-          Offset(0.22, 0.48),
-        ];
-        for (var i = 0; i < fireSpots.length; i++) {
-          final flame = PowerUpSprites.effectFrame(
-            AnimatedEffect.campfire,
-            (state.step ~/ 4 + i) % 4,
+        final end = Offset.lerp(from, to, reach)!;
+        final wave = math.sin(state.step * 0.55 + to.dx * 0.02);
+        final path = Path()
+          ..moveTo(from.dx, from.dy)
+          ..cubicTo(
+            from.dx + delta.dx * 0.3 + normal.dx * visualRadius * 0.8 * wave,
+            from.dy + delta.dy * 0.3 + normal.dy * visualRadius * 0.8 * wave,
+            from.dx + delta.dx * 0.7 - normal.dx * visualRadius * 0.65 * wave,
+            from.dy + delta.dy * 0.7 - normal.dy * visualRadius * 0.65 * wave,
+            end.dx,
+            end.dy,
           );
-          final flicker = 0.5 + 0.5 * math.sin(state.step * 0.48 + i * 1.73);
-          final base = fire.position + fireSpots[i] * fire.radius;
-          if (flame != null) {
-            _drawEffect(
-              canvas,
-              flame,
-              base,
-              fire.radius * (0.42 + (i % 3) * 0.08 + flicker * 0.1) * pulse,
-              0,
-              opacity: life,
-            );
-          }
-        }
-      }
-    }
-
-    for (final wall in p.fireWalls) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.fireWall).effectDisplayScale;
-      final tangent = Offset.fromDirection(wall.angle);
-      for (var i = 0; i < 4; i++) {
-        final flame = PowerUpSprites.effectFrame(
-          AnimatedEffect.campfire,
-          (state.step ~/ 4 + i) % 4,
-        );
-        final spot = wall.center + tangent * visualRadius * (i - 1.5) * 1.35;
-        if (flame != null) {
-          _drawEffect(
-            canvas,
-            flame,
-            spot,
-            visualRadius * (1.05 + 0.1 * math.sin(state.step * 0.4 + i).abs()),
-            0,
-          );
-        } else {
-          canvas.drawCircle(
-            spot,
-            visualRadius * 0.45,
-            Paint()..color = const Color(0xFFFF6A22),
-          );
-        }
-      }
-    }
-
-    for (final strike in p.lightningStrikes) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.lightningStrikes).effectDisplayScale;
-      if (strike.flashLeft <= 0) continue;
-      final target = strike.target.position;
-      if (p.usesEffectSprite(PowerUpKind.lightningStrikes) &&
-          LightningStrikePainter.paint(
-            canvas,
-            impact: target,
-            size: visualRadius * 5,
-            step: 8 - strike.flashLeft,
-          )) {
-        continue;
-      }
-      final top = Offset(target.dx, -arenaRadius - visualRadius * 1.5);
-      final path = Path()..moveTo(top.dx, top.dy);
-      const bends = 7;
-      for (var i = 1; i <= bends; i++) {
-        final t = i / bends;
-        final jitter = i == bends
-            ? 0.0
-            : math.sin(i * 12.7 + state.step * 1.9) * visualRadius * 0.7;
-        path.lineTo(
-          top.dx + (target.dx - top.dx) * t + jitter,
-          top.dy + (target.dy - top.dy) * t,
-        );
-      }
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = math.max(7, visualRadius * 0.5)
-          ..color = const Color(0xFF4BAEFF).withValues(alpha: 0.45),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = math.max(2, visualRadius * 0.16)
-          ..color = const Color(0xFFFFFFB0),
-      );
-      canvas.drawCircle(
-        target,
-        visualRadius * (1.2 + strike.flashLeft * 0.05),
-        Paint()..color = const Color(0xFFFFFF8A).withValues(alpha: 0.3),
-      );
-    }
-
-    for (final quake in p.earthquakes) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.earthquake).effectDisplayScale;
-      if (quake.flashLeft <= 0) continue;
-      final progress = 1 - quake.flashLeft / 10.0;
-      for (var i = 0; i < 3; i++) {
-        canvas.drawCircle(
-          Offset.zero,
-          arenaRadius * (0.3 + progress * 0.65 - i * 0.08),
+        canvas.drawPath(
+          path,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(3, visualRadius * 0.16)
-            ..color = const Color(
-              0xFFFFB23F,
-            ).withValues(alpha: 0.65 - i * 0.16),
+            ..strokeWidth = math.max(5, visualRadius * 0.42)
+            ..strokeCap = StrokeCap.round
+            ..color = const Color(0xFF5B0714),
         );
-      }
-    }
-    for (final attack in p.energyWaveAttacks) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
-      final charge = (attack.age / EnergyWaveAttack.chargeSteps).clamp(
-        0.0,
-        1.0,
-      );
-      final pulse = 0.86 + 0.14 * math.sin(state.step * 0.65).abs();
-      // Keep the caster's face visible: the energy gathers in front of it,
-      // rather than replacing the ball with a glowing circle.
-      final beamDirection = attack.age < EnergyWaveAttack.chargeSteps
-          ? attack.direction
-          : Offset.fromDirection(
-              attack.startAngle +
-                  EnergyWaveAttack.sweepProgress(
-                        attack.age - EnergyWaveAttack.chargeSteps,
-                      ) *
-                      (attack.endAngle - attack.startAngle),
-            );
-      final orb =
-          attack.owner.position + beamDirection * attack.owner.radius * 1.75;
-      canvas.drawCircle(
-        orb,
-        visualRadius * (0.38 + charge * 0.52) * pulse,
-        Paint()
-          ..shader = ui.Gradient.radial(
-            orb,
-            visualRadius,
-            [
-              Colors.white.withValues(alpha: 0.96),
-              const Color(0xFF2DE7FF).withValues(alpha: 0.88),
-              const Color(0x002468FF),
-            ],
-            const [0.0, 0.55, 1.0],
-          ),
-      );
-      for (var ring = 0; ring < 3; ring++) {
-        canvas.drawCircle(
-          orb,
-          visualRadius * (0.72 + ring * 0.23 + charge * 0.18),
+        canvas.drawPath(
+          path,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2, visualRadius * 0.1)
-            ..color = const Color(
-              0xFF8EF5FF,
-            ).withValues(alpha: (0.7 - ring * 0.18) * pulse),
+            ..strokeWidth = math.max(2, visualRadius * 0.18)
+            ..strokeCap = StrokeCap.round
+            ..color = const Color(0xFFFF304C),
         );
-      }
-      for (final target in attack.targets) {
-        canvas.drawCircle(
-          target.position,
-          target.radius * (1.18 + 0.06 * pulse),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2, visualRadius * 0.1)
-            ..color = const Color(0xFF48DFFF).withValues(alpha: 0.62),
-        );
-      }
-    }
-    for (final wave in p.energyWaves) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
-      final initial = wave.end - wave.start;
-      final progress = EnergyWaveAttack.sweepProgress(wave.age);
-      final startAngle =
-          wave.sweepStartAngle ?? math.atan2(initial.dy, initial.dx);
-      final endAngle = wave.sweepEndAngle ?? startAngle;
-      final angle = startAngle + progress * (endAngle - startAngle);
-      final direction = Offset.fromDirection(angle);
-      final start = wave.owner.position + direction * wave.owner.radius;
-      final end = start + direction * arenaRadius * 2.4;
-      // The translucent fan records the area already swept by the beam.
-      canvas.save();
-      canvas.clipPath(
-        Path()
-          ..addOval(Rect.fromCircle(center: Offset.zero, radius: arenaRadius)),
-      );
-      canvas.drawArc(
-        Rect.fromCircle(center: wave.owner.position, radius: arenaRadius * 2.4),
-        startAngle,
-        progress * (endAngle - startAngle),
-        true,
-        Paint()..color = const Color(0xFF32E4FF).withValues(alpha: 0.07),
-      );
-      final fade = ((wave.durationSteps - wave.age) / 12).clamp(0.0, 1.0);
-      final beamWidth =
-          visualRadius * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());
-      canvas.drawLine(
-        start,
-        end,
-        Paint()
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = beamWidth * 1.7
-          ..color = const Color(0xFF167DFF).withValues(alpha: fade * 0.35),
-      );
-      canvas.drawLine(
-        start,
-        end,
-        Paint()
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = beamWidth
-          ..color = const Color(0xFF32E4FF).withValues(alpha: fade * 0.9),
-      );
-      canvas.drawLine(
-        start,
-        end,
-        Paint()
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = beamWidth * 0.38
-          ..color = Colors.white.withValues(alpha: fade),
-      );
-      for (var i = 0; i < 3; i++) {
-        canvas.drawCircle(
-          start,
-          beamWidth * (0.7 + i * 0.3 + wave.age * 0.025),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2, visualRadius * 0.1)
-            ..color = const Color(
-              0xFFA7F7FF,
-            ).withValues(alpha: fade * (0.8 - i * 0.2)),
-        );
-      }
-      canvas.restore();
-    }
-    for (final cone in p.flameCones) {
-      final visualRadius =
-          r * p.visualSkill(PowerUpKind.flamethrower).effectDisplayScale;
-      final direction = Offset.fromDirection(cone.angle);
-      final normal = Offset(-direction.dy, direction.dx);
-      for (var i = 0; i < 7; i++) {
-        final distance = visualRadius * (1.35 + i * 0.78);
-        final spread = i * visualRadius * 0.16;
-        final flutter = math.sin(state.step * 0.7 + i * 1.9) * spread;
-        final center =
-            cone.owner.position + direction * distance + normal * flutter;
-        final flame = PowerUpSprites.effectFrame(
-          AnimatedEffect.flame,
-          (state.step ~/ 3 + i) % 4,
-        );
-        if (flame != null) {
-          _drawEffect(
-            canvas,
-            flame,
-            center,
-            visualRadius * (0.58 + i * 0.13),
-            cone.angle,
-            opacity: 0.94 - i * 0.045,
-          );
-        }
-      }
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: cone.owner.position,
-          radius: arenaRadius * 0.78,
-        ),
-        cone.angle - 0.48,
-        0.96,
-        true,
-        Paint()..color = const Color(0xFFFF5A1F).withValues(alpha: 0.08),
-      );
-    }
-
-    for (final e in p.explosions) {
-      final visualRadius =
-          e.radius *
-          (e.kind == null
-              ? 1
-              : p.visualSkill(e.kind!, skillId: e.skillId).effectDisplayScale);
-      final t = e.age / PowerUpTuning.explosionShowSteps;
-      final fade = (1 - t).clamp(0.0, 1.0);
-      if (e.kind == PowerUpKind.rocketLauncher &&
-          !p.usesEffectSprite(PowerUpKind.rocketLauncher, skillId: e.skillId)) {
-        _paintRocketExplosion(canvas, e.position, visualRadius, t, fade);
-        continue;
-      }
-      if (e.kind == PowerUpKind.grenade &&
-          !p.usesEffectSprite(PowerUpKind.grenade, skillId: e.skillId)) {
-        canvas.drawCircle(
-          e.position,
-          visualRadius * (0.35 + 0.65 * t),
-          Paint()
-            ..shader = ui.Gradient.radial(
-              e.position,
-              visualRadius,
-              [
-                const Color(0xFFFFF1A0).withValues(alpha: fade),
-                const Color(0xFFFF6B23).withValues(alpha: fade * 0.65),
-                const Color(0x00FF6B23),
-              ],
-              const [0.0, 0.55, 1.0],
-            ),
-        );
-      }
-      if (showEffects &&
-          explosionRenderMode == EffectRenderMode.sprite &&
-          (e.kind == null || p.usesEffectSprite(e.kind!, skillId: e.skillId))) {
-        final sprite = PowerUpSprites.effectFrame(
-          AnimatedEffect.explosion,
-          (t * 4).floor().clamp(0, 3),
-        );
+        final sprite = PowerUpSprites.omegaTendrilsAttack;
         if (sprite != null) {
           _drawEffect(
             canvas,
             sprite,
-            e.position,
-            visualRadius,
-            t * 0.2,
-            opacity: fade,
+            end,
+            visualRadius * (0.75 + 0.25 * math.sin(state.step * 0.4).abs()),
+            math.atan2(delta.dy, delta.dx),
+            opacity: reach,
           );
         }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
-      canvas.drawCircle(
-        e.position,
-        visualRadius * (0.6 + 0.4 * t),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = const Color(0xFFFF7A3D).withValues(alpha: fade),
+    }
+
+    for (final fire in p.burningZones) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.molotov, ball: fire.owner),
       );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.molotov).effectDisplayScale;
+        final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;
+        final pulse = 0.92 + 0.08 * math.sin(state.step * 0.35);
+        canvas.drawCircle(
+          fire.position,
+          fire.radius,
+          Paint()
+            ..color = const Color(0xFFFF5A20).withValues(alpha: 0.18 * life),
+        );
+        canvas.drawCircle(
+          fire.position,
+          fire.radius,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2, visualRadius * 0.14)
+            ..color = const Color(0xFFFFA126).withValues(alpha: 0.9 * life),
+        );
+        if (showEffects) {
+          const fireSpots = [
+            Offset(-0.46, -0.12),
+            Offset(0.38, -0.22),
+            Offset(-0.12, 0.3),
+            Offset(0.5, 0.2),
+            Offset(0.06, -0.42),
+            Offset(-0.5, 0.34),
+            Offset(0.22, 0.48),
+          ];
+          for (var i = 0; i < fireSpots.length; i++) {
+            final flame = PowerUpSprites.effectFrame(
+              AnimatedEffect.campfire,
+              (state.step ~/ 4 + i) % 4,
+            );
+            final flicker = 0.5 + 0.5 * math.sin(state.step * 0.48 + i * 1.73);
+            final base = fire.position + fireSpots[i] * fire.radius;
+            if (flame != null) {
+              _drawEffect(
+                canvas,
+                flame,
+                base,
+                fire.radius * (0.42 + (i % 3) * 0.08 + flicker * 0.1) * pulse,
+                0,
+                opacity: life,
+              );
+            }
+          }
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+
+    for (final wall in p.fireWalls) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.fireWall, ball: wall.owner),
+      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.fireWall).effectDisplayScale;
+        final tangent = Offset.fromDirection(wall.angle);
+        for (var i = 0; i < 4; i++) {
+          final flame = PowerUpSprites.effectFrame(
+            AnimatedEffect.campfire,
+            (state.step ~/ 4 + i) % 4,
+          );
+          final spot = wall.center + tangent * visualRadius * (i - 1.5) * 1.35;
+          if (flame != null) {
+            _drawEffect(
+              canvas,
+              flame,
+              spot,
+              visualRadius *
+                  (1.05 + 0.1 * math.sin(state.step * 0.4 + i).abs()),
+              0,
+            );
+          } else {
+            canvas.drawCircle(
+              spot,
+              visualRadius * 0.45,
+              Paint()..color = const Color(0xFFFF6A22),
+            );
+          }
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+
+    for (final strike in p.lightningStrikes) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.lightningStrikes, ball: strike.owner),
+      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.lightningStrikes).effectDisplayScale;
+        if (strike.flashLeft <= 0) continue;
+        final target = strike.target.position;
+        if (p.usesEffectSprite(PowerUpKind.lightningStrikes) &&
+            LightningStrikePainter.paint(
+              canvas,
+              impact: target,
+              size: visualRadius * 5,
+              step: 8 - strike.flashLeft,
+            )) {
+          continue;
+        }
+        final top = Offset(target.dx, -arenaRadius - visualRadius * 1.5);
+        final path = Path()..moveTo(top.dx, top.dy);
+        const bends = 7;
+        for (var i = 1; i <= bends; i++) {
+          final t = i / bends;
+          final jitter = i == bends
+              ? 0.0
+              : math.sin(i * 12.7 + state.step * 1.9) * visualRadius * 0.7;
+          path.lineTo(
+            top.dx + (target.dx - top.dx) * t + jitter,
+            top.dy + (target.dy - top.dy) * t,
+          );
+        }
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = math.max(7, visualRadius * 0.5)
+            ..color = const Color(0xFF4BAEFF).withValues(alpha: 0.45),
+        );
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = math.max(2, visualRadius * 0.16)
+            ..color = const Color(0xFFFFFFB0),
+        );
+        canvas.drawCircle(
+          target,
+          visualRadius * (1.2 + strike.flashLeft * 0.05),
+          Paint()..color = const Color(0xFFFFFF8A).withValues(alpha: 0.3),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+
+    for (final quake in p.earthquakes) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.earthquake, ball: quake.owner),
+      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.earthquake).effectDisplayScale;
+        if (quake.flashLeft <= 0) continue;
+        final progress = 1 - quake.flashLeft / 10.0;
+        for (var i = 0; i < 3; i++) {
+          canvas.drawCircle(
+            Offset.zero,
+            arenaRadius * (0.3 + progress * 0.65 - i * 0.08),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(3, visualRadius * 0.16)
+              ..color = const Color(
+                0xFFFFB23F,
+              ).withValues(alpha: 0.65 - i * 0.16),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+    for (final attack in p.energyWaveAttacks) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.energyWave, ball: attack.owner),
+      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
+        final charge = (attack.age / EnergyWaveAttack.chargeSteps).clamp(
+          0.0,
+          1.0,
+        );
+        final pulse = 0.86 + 0.14 * math.sin(state.step * 0.65).abs();
+        // Keep the caster's face visible: the energy gathers in front of it,
+        // rather than replacing the ball with a glowing circle.
+        final beamDirection = attack.age < EnergyWaveAttack.chargeSteps
+            ? attack.direction
+            : Offset.fromDirection(
+                attack.startAngle +
+                    EnergyWaveAttack.sweepProgress(
+                          attack.age - EnergyWaveAttack.chargeSteps,
+                        ) *
+                        (attack.endAngle - attack.startAngle),
+              );
+        final orb =
+            attack.owner.position + beamDirection * attack.owner.radius * 1.75;
+        canvas.drawCircle(
+          orb,
+          visualRadius * (0.38 + charge * 0.52) * pulse,
+          Paint()
+            ..shader = ui.Gradient.radial(
+              orb,
+              visualRadius,
+              [
+                Colors.white.withValues(alpha: 0.96),
+                const Color(0xFF2DE7FF).withValues(alpha: 0.88),
+                const Color(0x002468FF),
+              ],
+              const [0.0, 0.55, 1.0],
+            ),
+        );
+        for (var ring = 0; ring < 3; ring++) {
+          canvas.drawCircle(
+            orb,
+            visualRadius * (0.72 + ring * 0.23 + charge * 0.18),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(2, visualRadius * 0.1)
+              ..color = const Color(
+                0xFF8EF5FF,
+              ).withValues(alpha: (0.7 - ring * 0.18) * pulse),
+          );
+        }
+        for (final target in attack.targets) {
+          canvas.drawCircle(
+            target.position,
+            target.radius * (1.18 + 0.06 * pulse),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(2, visualRadius * 0.1)
+              ..color = const Color(0xFF48DFFF).withValues(alpha: 0.62),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+    for (final wave in p.energyWaves) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.energyWave, ball: wave.owner),
+      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
+        final initial = wave.end - wave.start;
+        final progress = EnergyWaveAttack.sweepProgress(wave.age);
+        final startAngle =
+            wave.sweepStartAngle ?? math.atan2(initial.dy, initial.dx);
+        final endAngle = wave.sweepEndAngle ?? startAngle;
+        final angle = startAngle + progress * (endAngle - startAngle);
+        final direction = Offset.fromDirection(angle);
+        final start = wave.owner.position + direction * wave.owner.radius;
+        final end = start + direction * arenaRadius * 2.4;
+        // The translucent fan records the area already swept by the beam.
+        canvas.save();
+        canvas.clipPath(
+          Path()..addOval(
+            Rect.fromCircle(center: Offset.zero, radius: arenaRadius),
+          ),
+        );
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: wave.owner.position,
+            radius: arenaRadius * 2.4,
+          ),
+          startAngle,
+          progress * (endAngle - startAngle),
+          true,
+          Paint()..color = const Color(0xFF32E4FF).withValues(alpha: 0.07),
+        );
+        final fade = ((wave.durationSteps - wave.age) / 12).clamp(0.0, 1.0);
+        final beamWidth =
+            visualRadius * (2.1 + 0.3 * math.sin(state.step * 0.7).abs());
+        canvas.drawLine(
+          start,
+          end,
+          Paint()
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = beamWidth * 1.7
+            ..color = const Color(0xFF167DFF).withValues(alpha: fade * 0.35),
+        );
+        canvas.drawLine(
+          start,
+          end,
+          Paint()
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = beamWidth
+            ..color = const Color(0xFF32E4FF).withValues(alpha: fade * 0.9),
+        );
+        canvas.drawLine(
+          start,
+          end,
+          Paint()
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = beamWidth * 0.38
+            ..color = Colors.white.withValues(alpha: fade),
+        );
+        for (var i = 0; i < 3; i++) {
+          canvas.drawCircle(
+            start,
+            beamWidth * (0.7 + i * 0.3 + wave.age * 0.025),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(2, visualRadius * 0.1)
+              ..color = const Color(
+                0xFFA7F7FF,
+              ).withValues(alpha: fade * (0.8 - i * 0.2)),
+          );
+        }
+        canvas.restore();
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+    for (final cone in p.flameCones) {
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.flamethrower, ball: cone.owner),
+      );
+      try {
+        final visualRadius =
+            r * p.visualSkill(PowerUpKind.flamethrower).effectDisplayScale;
+        final direction = Offset.fromDirection(cone.angle);
+        final normal = Offset(-direction.dy, direction.dx);
+        for (var i = 0; i < 7; i++) {
+          final distance = visualRadius * (1.35 + i * 0.78);
+          final spread = i * visualRadius * 0.16;
+          final flutter = math.sin(state.step * 0.7 + i * 1.9) * spread;
+          final center =
+              cone.owner.position + direction * distance + normal * flutter;
+          final flame = PowerUpSprites.effectFrame(
+            AnimatedEffect.flame,
+            (state.step ~/ 3 + i) % 4,
+          );
+          if (flame != null) {
+            _drawEffect(
+              canvas,
+              flame,
+              center,
+              visualRadius * (0.58 + i * 0.13),
+              cone.angle,
+              opacity: 0.94 - i * 0.045,
+            );
+          }
+        }
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: cone.owner.position,
+            radius: arenaRadius * 0.78,
+          ),
+          cone.angle - 0.48,
+          0.96,
+          true,
+          Paint()..color = const Color(0xFFFF5A1F).withValues(alpha: 0.08),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+
+    for (final e in p.explosions) {
+      SkillArtworkTint.begin(
+        canvas,
+        e.kind == null
+            ? 0xFFFFFFFF
+            : p.artworkTint(e.kind!, skillId: e.skillId),
+      );
+      try {
+        final visualRadius =
+            e.radius *
+            (e.kind == null
+                ? 1
+                : p
+                      .visualSkill(e.kind!, skillId: e.skillId)
+                      .effectDisplayScale);
+        final t = e.age / PowerUpTuning.explosionShowSteps;
+        final fade = (1 - t).clamp(0.0, 1.0);
+        if (e.kind == PowerUpKind.rocketLauncher &&
+            !p.usesEffectSprite(
+              PowerUpKind.rocketLauncher,
+              skillId: e.skillId,
+            )) {
+          _paintRocketExplosion(canvas, e.position, visualRadius, t, fade);
+          continue;
+        }
+        if (e.kind == PowerUpKind.grenade &&
+            !p.usesEffectSprite(PowerUpKind.grenade, skillId: e.skillId)) {
+          canvas.drawCircle(
+            e.position,
+            visualRadius * (0.35 + 0.65 * t),
+            Paint()
+              ..shader = ui.Gradient.radial(
+                e.position,
+                visualRadius,
+                [
+                  const Color(0xFFFFF1A0).withValues(alpha: fade),
+                  const Color(0xFFFF6B23).withValues(alpha: fade * 0.65),
+                  const Color(0x00FF6B23),
+                ],
+                const [0.0, 0.55, 1.0],
+              ),
+          );
+        }
+        if (showEffects &&
+            explosionRenderMode == EffectRenderMode.sprite &&
+            (e.kind == null ||
+                p.usesEffectSprite(e.kind!, skillId: e.skillId))) {
+          final sprite = PowerUpSprites.effectFrame(
+            AnimatedEffect.explosion,
+            (t * 4).floor().clamp(0, 3),
+          );
+          if (sprite != null) {
+            _drawEffect(
+              canvas,
+              sprite,
+              e.position,
+              visualRadius,
+              t * 0.2,
+              opacity: fade,
+            );
+          }
+        }
+        canvas.drawCircle(
+          e.position,
+          visualRadius * (0.6 + 0.4 * t),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..color = const Color(0xFFFF7A3D).withValues(alpha: fade),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
 
     for (final flash in p.portalFlashes) {
-      final t = flash.age / PowerUpTuning.explosionShowSteps;
-      final fade = (1 - t).clamp(0.0, 1.0);
-      final portalPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(2, r * 0.18)
-        ..color = colorOf(PowerUpKind.portal).withValues(alpha: fade);
-      for (final spot in [flash.from, flash.to]) {
-        if (flash.swap) {
-          final burst = Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2, r * 0.15)
-            ..color = const Color(0xFF7DF9FF).withValues(alpha: fade);
-          for (var i = 0; i < 5; i++) {
-            final angle = i * math.pi * 2 / 5 + state.step * 0.08;
-            final direction = Offset.fromDirection(angle);
-            canvas.drawLine(
-              spot + direction * r * 0.25,
-              spot + direction * r * (1.6 + t * 1.4),
-              burst
-                ..color =
-                    (i.isEven
-                            ? const Color(0xFF7DF9FF)
-                            : const Color(0xFFFF55DD))
-                        .withValues(alpha: fade),
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(flash.swap ? PowerUpKind.swapCannon : PowerUpKind.portal),
+      );
+      try {
+        final t = flash.age / PowerUpTuning.explosionShowSteps;
+        final fade = (1 - t).clamp(0.0, 1.0);
+        final portalPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2, r * 0.18)
+          ..color = colorOf(PowerUpKind.portal).withValues(alpha: fade);
+        for (final spot in [flash.from, flash.to]) {
+          if (flash.swap) {
+            final burst = Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(2, r * 0.15)
+              ..color = const Color(0xFF7DF9FF).withValues(alpha: fade);
+            for (var i = 0; i < 5; i++) {
+              final angle = i * math.pi * 2 / 5 + state.step * 0.08;
+              final direction = Offset.fromDirection(angle);
+              canvas.drawLine(
+                spot + direction * r * 0.25,
+                spot + direction * r * (1.6 + t * 1.4),
+                burst
+                  ..color =
+                      (i.isEven
+                              ? const Color(0xFF7DF9FF)
+                              : const Color(0xFFFF55DD))
+                          .withValues(alpha: fade),
+              );
+            }
+            canvas.drawCircle(
+              spot,
+              r * (0.45 + t * 1.25),
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = math.max(3, r * 0.22)
+                ..color = Colors.white.withValues(alpha: fade),
             );
           }
-          canvas.drawCircle(
-            spot,
-            r * (0.45 + t * 1.25),
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = math.max(3, r * 0.22)
-              ..color = Colors.white.withValues(alpha: fade),
+          final sprite = PowerUpSprites.effectFrame(
+            AnimatedEffect.portal,
+            (state.step ~/ 4) % 4,
+          );
+          if (sprite != null) {
+            _drawEffect(canvas, sprite, spot, r * (1.1 + t), t, opacity: fade);
+          }
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: spot,
+              width: r * (1.2 + t),
+              height: r * (2.2 + t * 0.5),
+            ),
+            portalPaint,
           );
         }
-        final sprite = PowerUpSprites.effectFrame(
-          AnimatedEffect.portal,
-          (state.step ~/ 4) % 4,
+        canvas.drawLine(
+          flash.from,
+          flash.to,
+          portalPaint..color = portalPaint.color.withValues(alpha: fade * 0.25),
         );
-        if (sprite != null) {
-          _drawEffect(canvas, sprite, spot, r * (1.1 + t), t, opacity: fade);
-        }
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: spot,
-            width: r * (1.2 + t),
-            height: r * (2.2 + t * 0.5),
-          ),
-          portalPaint,
-        );
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
-      canvas.drawLine(
-        flash.from,
-        flash.to,
-        portalPaint..color = portalPaint.color.withValues(alpha: fade * 0.25),
-      );
     }
 
     for (final item in p.field) {
-      // Subtle pulse: the token breathes about once a second.
-      final pulse =
-          0.5 +
-          0.5 * math.sin((state.step - item.spawnStep) * 2 * math.pi / 60);
-      if (item.kind.isTrap) {
-        _paintTrap(
-          canvas,
-          item.kind,
-          item.position,
-          r *
-              (0.96 + 0.08 * pulse) *
-              p
-                  .visualSkill(item.kind, skillId: item.skillId)
-                  .pickupDisplayScale,
-          useSprite: p.usesSprite(item.kind, skillId: item.skillId),
-        );
-      } else {
-        _paintToken(
-          canvas,
-          item.kind,
-          item.position,
-          r *
-              (0.90 + 0.20 * pulse) *
-              p
-                  .visualSkill(item.kind, skillId: item.skillId)
-                  .pickupDisplayScale,
-          0.35 + 0.65 * pulse,
-          ring: p.match.tuning.rarityOf(item.kind)?.color,
-          useSprite: p.usesSprite(item.kind, skillId: item.skillId),
-          whiteBackground: whitePickupBackgrounds,
-        );
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(item.kind, skillId: item.skillId),
+      );
+      try {
+        // Subtle pulse: the token breathes about once a second.
+        final pulse =
+            0.5 +
+            0.5 * math.sin((state.step - item.spawnStep) * 2 * math.pi / 60);
+        if (item.kind.isTrap) {
+          _paintTrap(
+            canvas,
+            item.kind,
+            item.position,
+            r *
+                (0.96 + 0.08 * pulse) *
+                p
+                    .visualSkill(item.kind, skillId: item.skillId)
+                    .pickupDisplayScale,
+            useSprite: p.usesSprite(item.kind, skillId: item.skillId),
+          );
+        } else {
+          _paintToken(
+            canvas,
+            item.kind,
+            item.position,
+            r *
+                (0.90 + 0.20 * pulse) *
+                p
+                    .visualSkill(item.kind, skillId: item.skillId)
+                    .pickupDisplayScale,
+            0.35 + 0.65 * pulse,
+            ring: p.match.tuning.rarityOf(item.kind)?.color,
+            useSprite: p.usesSprite(item.kind, skillId: item.skillId),
+            whiteBackground: whitePickupBackgrounds,
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
 
@@ -716,163 +845,203 @@ class PowerUpPainter {
     }
 
     for (final portal in p.portals) {
-      final trapRadius =
-          r * p.visualSkill(PowerUpKind.portal).effectDisplayScale;
-      final pulse =
-          0.5 +
-          0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
-      final anchor = portal.position.distance == 0
-          ? portal.position
-          : portal.position / portal.position.distance * arenaRadius;
-      canvas.save();
-      canvas.translate(anchor.dx, anchor.dy);
-      canvas.rotate(portalRotationFor(portal.position));
-      final sprite = PowerUpSprites.effectFrame(
-        AnimatedEffect.portal,
-        (state.step ~/ 4) % 4,
-      );
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
-          Offset.zero,
-          trapRadius * (1.42 + pulse * 0.08),
-          0,
+      SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.portal));
+      try {
+        final trapRadius =
+            r * p.visualSkill(PowerUpKind.portal).effectDisplayScale;
+        final pulse =
+            0.5 +
+            0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
+        final anchor = portal.position.distance == 0
+            ? portal.position
+            : portal.position / portal.position.distance * arenaRadius;
+        canvas.save();
+        canvas.translate(anchor.dx, anchor.dy);
+        canvas.rotate(portalRotationFor(portal.position));
+        final sprite = PowerUpSprites.effectFrame(
+          AnimatedEffect.portal,
+          (state.step ~/ 4) % 4,
         );
-      } else {
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: Offset.zero,
-            width: trapRadius * (1.25 + pulse * 0.08),
-            height: trapRadius * (2.5 + pulse * 0.12),
-          ),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(1.5, trapRadius * 0.13)
-            ..color = colorOf(PowerUpKind.portal),
-        );
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            Offset.zero,
+            trapRadius * (1.42 + pulse * 0.08),
+            0,
+          );
+        } else {
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: trapRadius * (1.25 + pulse * 0.08),
+              height: trapRadius * (2.5 + pulse * 0.12),
+            ),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(1.5, trapRadius * 0.13)
+              ..color = colorOf(PowerUpKind.portal),
+          );
+        }
+        canvas.restore();
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
-      canvas.restore();
     }
 
     for (final wall in p.spikeWalls) {
-      final trapRadius =
-          r * p.visualSkill(PowerUpKind.spikeWall).effectDisplayScale;
-      final spacing = trapRadius * 0.96;
-      for (final rawBase in wall.spikePositions(spacing)) {
-        // Old/replayed walls may have been spawned slightly farther inward.
-        // Project every visual base to the rim so the wooden rail touches it.
-        final base = rawBase.distance == 0
-            ? rawBase
-            : rawBase /
-                  rawBase.distance *
-                  spikeBaseRadius(arenaRadius, trapRadius);
-        final angle = math.atan2(base.dy, base.dx);
-        final radial = Offset(math.cos(angle), math.sin(angle));
-        final tangent = Offset(-radial.dy, radial.dx);
-        _paintBoundarySpike(canvas, base, radial, tangent, trapRadius);
+      SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.spikeWall));
+      try {
+        final trapRadius =
+            r * p.visualSkill(PowerUpKind.spikeWall).effectDisplayScale;
+        final spacing = trapRadius * 0.96;
+        for (final rawBase in wall.spikePositions(spacing)) {
+          // Old/replayed walls may have been spawned slightly farther inward.
+          // Project every visual base to the rim so the wooden rail touches it.
+          final base = rawBase.distance == 0
+              ? rawBase
+              : rawBase /
+                    rawBase.distance *
+                    spikeBaseRadius(arenaRadius, trapRadius);
+          final angle = math.atan2(base.dy, base.dx);
+          final radial = Offset(math.cos(angle), math.sin(angle));
+          final tangent = Offset(-radial.dy, radial.dx);
+          _paintBoundarySpike(canvas, base, radial, tangent, trapRadius);
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
 
     for (final goo in p.stickyGoo) {
-      final trapRadius =
-          r * p.visualSkill(PowerUpKind.stickyGoo).effectDisplayScale;
-      final pulse = 0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
-      _paintCurvedGooStrip(canvas, goo, arenaRadius, trapRadius, pulse);
+      SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.stickyGoo));
+      try {
+        final trapRadius =
+            r * p.visualSkill(PowerUpKind.stickyGoo).effectDisplayScale;
+        final pulse =
+            0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
+        _paintCurvedGooStrip(canvas, goo, arenaRadius, trapRadius, pulse);
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
     for (final swamp in p.poisonSwamps) {
-      final trapRadius =
-          r * p.visualSkill(PowerUpKind.poisonSwamp).effectDisplayScale;
-      final pulse =
-          0.92 + 0.06 * math.sin((state.step - swamp.spawnStep) * 0.1);
-      _paintCurvedGooStrip(
-        canvas,
-        StickyGoo(position: swamp.position, spawnStep: swamp.spawnStep),
-        arenaRadius,
-        trapRadius,
-        pulse,
-        tint: const Color(0xFF669B22),
-      );
-      for (var i = 0; i < 5; i++) {
-        final angle =
-            math.atan2(swamp.position.dy, swamp.position.dx) +
-            (i - 2) * trapRadius * 0.82 / arenaRadius;
-        final spot = Offset.fromDirection(
-          angle,
-          arenaRadius - trapRadius * 0.7,
+      SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.poisonSwamp));
+      try {
+        final trapRadius =
+            r * p.visualSkill(PowerUpKind.poisonSwamp).effectDisplayScale;
+        final pulse =
+            0.92 + 0.06 * math.sin((state.step - swamp.spawnStep) * 0.1);
+        _paintCurvedGooStrip(
+          canvas,
+          StickyGoo(position: swamp.position, spawnStep: swamp.spawnStep),
+          arenaRadius,
+          trapRadius,
+          pulse,
+          tint: const Color(0xFF669B22),
         );
-        canvas.drawCircle(
-          spot + Offset(0, math.sin(state.step * 0.12 + i) * trapRadius * 0.12),
-          trapRadius * (0.08 + (i % 2) * 0.04),
-          Paint()..color = const Color(0xFFCAFF54).withValues(alpha: 0.8),
-        );
+        for (var i = 0; i < 5; i++) {
+          final angle =
+              math.atan2(swamp.position.dy, swamp.position.dx) +
+              (i - 2) * trapRadius * 0.82 / arenaRadius;
+          final spot = Offset.fromDirection(
+            angle,
+            arenaRadius - trapRadius * 0.7,
+          );
+          canvas.drawCircle(
+            spot +
+                Offset(0, math.sin(state.step * 0.12 + i) * trapRadius * 0.12),
+            trapRadius * (0.08 + (i % 2) * 0.04),
+            Paint()..color = const Color(0xFFCAFF54).withValues(alpha: 0.8),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
 
     for (final bomb in p.mines) {
-      final trapRadius = r * p.visualSkill(bomb.kind).effectDisplayScale;
-      // Armed traps sit directly on the arena instead of looking like pickup
-      // balls. The short owner-colored footing preserves ownership feedback.
-      final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
-      _paintTrap(
+      SkillArtworkTint.begin(
         canvas,
-        bomb.kind,
-        bomb.position,
-        trapRadius,
-        useSprite: p.usesSprite(bomb.kind),
+        p.artworkTint(bomb.kind, ball: bomb.owner),
       );
-      canvas.drawLine(
-        bomb.position + Offset(-trapRadius * 0.65, trapRadius * 0.78),
-        bomb.position + Offset(trapRadius * 0.65, trapRadius * 0.78),
-        Paint()
-          ..strokeWidth = math.max(2, trapRadius * 0.14)
-          ..strokeCap = StrokeCap.round
-          ..color = bomb.owner.config.primaryColor.withValues(
-            alpha: bomb.kind == PowerUpKind.phaseMine ? 0.35 : 0.9,
-          ),
-      );
-      canvas.drawCircle(
-        bomb.position + Offset(trapRadius * 0.62, -trapRadius * 0.62),
-        math.max(2.5, trapRadius * 0.18),
-        Paint()
-          ..color = blink ? const Color(0xFFFF3B30) : const Color(0xFF5A1A16),
-      );
+      try {
+        final trapRadius = r * p.visualSkill(bomb.kind).effectDisplayScale;
+        // Armed traps sit directly on the arena instead of looking like pickup
+        // balls. The short owner-colored footing preserves ownership feedback.
+        final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
+        _paintTrap(
+          canvas,
+          bomb.kind,
+          bomb.position,
+          trapRadius,
+          useSprite: p.usesSprite(bomb.kind),
+        );
+        canvas.drawLine(
+          bomb.position + Offset(-trapRadius * 0.65, trapRadius * 0.78),
+          bomb.position + Offset(trapRadius * 0.65, trapRadius * 0.78),
+          Paint()
+            ..strokeWidth = math.max(2, trapRadius * 0.14)
+            ..strokeCap = StrokeCap.round
+            ..color = bomb.owner.config.primaryColor.withValues(
+              alpha: bomb.kind == PowerUpKind.phaseMine ? 0.35 : 0.9,
+            ),
+        );
+        canvas.drawCircle(
+          bomb.position + Offset(trapRadius * 0.62, -trapRadius * 0.62),
+          math.max(2.5, trapRadius * 0.18),
+          Paint()
+            ..color = blink ? const Color(0xFFFF3B30) : const Color(0xFF5A1A16),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
 
     for (final ball in state.balls) {
-      final target = ball.aimTarget;
-      if (ball.isEliminated || target == null || ball.aimLeft <= 0) continue;
-      canvas.drawLine(
-        ball.position,
-        target.position,
-        Paint()
-          ..strokeWidth = 1
-          ..color = colorOf(
-            ball.held ?? PowerUpKind.pistol,
-          ).withValues(alpha: 0.45),
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(ball.held ?? PowerUpKind.pistol, ball: ball),
       );
-      if (ball.equippedWeapons.contains(PowerUpKind.energyWave)) {
-        final toTarget = target.position - ball.position;
-        if (toTarget.distance > 0) {
-          final charge = 1 - ball.aimLeft / math.max(1, PowerUpTuning.aimSteps);
-          final orb =
-              ball.position + toTarget / toTarget.distance * ball.radius * 1.3;
-          canvas.drawCircle(
-            orb,
-            r * (0.35 + charge * 0.75),
-            Paint()
-              ..shader = ui.Gradient.radial(
-                orb,
-                r * 1.2,
-                [
-                  Colors.white,
-                  const Color(0xFF27E5FF),
-                  const Color(0x00216CFF),
-                ],
-                const [0.0, 0.55, 1.0],
-              ),
-          );
+      try {
+        final target = ball.aimTarget;
+        if (ball.isEliminated || target == null || ball.aimLeft <= 0) continue;
+        canvas.drawLine(
+          ball.position,
+          target.position,
+          Paint()
+            ..strokeWidth = 1
+            ..color = colorOf(
+              ball.held ?? PowerUpKind.pistol,
+            ).withValues(alpha: 0.45),
+        );
+        if (ball.equippedWeapons.contains(PowerUpKind.energyWave)) {
+          final toTarget = target.position - ball.position;
+          if (toTarget.distance > 0) {
+            final charge =
+                1 - ball.aimLeft / math.max(1, PowerUpTuning.aimSteps);
+            final orb =
+                ball.position +
+                toTarget / toTarget.distance * ball.radius * 1.3;
+            canvas.drawCircle(
+              orb,
+              r * (0.35 + charge * 0.75),
+              Paint()
+                ..shader = ui.Gradient.radial(
+                  orb,
+                  r * 1.2,
+                  [
+                    Colors.white,
+                    const Color(0xFF27E5FF),
+                    const Color(0x00216CFF),
+                  ],
+                  const [0.0, 0.55, 1.0],
+                ),
+            );
+          }
         }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
 
@@ -880,282 +1049,307 @@ class PowerUpPainter {
       // Vector fallback keeps each projectile's configured dimensions.
       final len = math.max(6.0, r * 0.6);
       for (final shot in p.projectiles) {
-        final shotRadius = r * shot.renderScale;
-        if (shot.kind == PowerUpKind.hook) {
-          // The hook flying out on its chain.
-          _paintChain(canvas, shot.owner.position, shot.position);
-          final sprite =
-              projectileRenderMode == EffectRenderMode.sprite &&
-                  p.usesSprite(shot.kind, projectile: shot)
-              ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
-              : null;
-          final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
-          if (sprite == null) {
-            drawGlyph(
-              canvas,
-              PowerUpKind.hook,
-              shot.position,
-              shotRadius * 0.6,
-            );
-          } else {
-            _drawSprite(
-              canvas,
-              sprite,
-              shot.position,
-              shotRadius * 0.9,
-              angle,
-              flip: shot.velocity.dx < 0,
-            );
-          }
-          continue;
-        }
-        if (shot.landAt != null) {
-          // A thrown explosive in flight: its own icon, tumbling.
-          final sprite =
-              projectileRenderMode == EffectRenderMode.sprite &&
-                  p.usesSprite(shot.kind, projectile: shot)
-              ? PowerUpSprites.of(shot.kind)
-              : null;
-          if (sprite == null) {
-            drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.5);
-          } else {
-            _drawSprite(
-              canvas,
-              sprite,
-              shot.position,
-              shotRadius * 0.6,
-              state.step * 0.3,
-            );
-          }
-          continue;
-        }
-        if (shot.kind == PowerUpKind.freeze) {
-          final sprite =
-              freezeRenderMode == EffectRenderMode.sprite &&
-                  p.usesEffectSprite(shot.kind)
-              ? PowerUpSprites.effect(EffectSprite.iceWave)
-              : null;
-          if (sprite == null) {
-            _paintIceWave(canvas, shot, shotRadius);
-          } else {
-            _drawEffect(
-              canvas,
-              sprite,
-              shot.position,
-              shotRadius * 1.45,
-              math.atan2(shot.velocity.dy, shot.velocity.dx),
-            );
-          }
-          continue;
-        }
-        if (shot.kind == PowerUpKind.bow) {
-          _paintArrow(
-            canvas,
-            shot,
-            shotRadius,
-            useSprite:
+        SkillArtworkTint.begin(
+          canvas,
+          p.artworkTint(shot.kind, projectile: shot),
+        );
+        try {
+          final shotRadius = r * shot.renderScale;
+          if (shot.kind == PowerUpKind.hook) {
+            // The hook flying out on its chain.
+            _paintChain(canvas, shot.owner.position, shot.position);
+            final sprite =
                 projectileRenderMode == EffectRenderMode.sprite &&
-                p.usesSprite(shot.kind, projectile: shot),
-          );
-          continue;
-        }
-        final speed = shot.velocity.distance;
-        if (speed == 0) continue;
-        final dir = shot.velocity / speed;
-        if (shot.kind == PowerUpKind.rocketLauncher) {
-          final missile =
-              projectileRenderMode == EffectRenderMode.sprite &&
-                  p.usesSprite(shot.kind, projectile: shot)
-              ? PowerUpSprites.rocketMissile
-              : null;
-          if (missile != null) {
-            final thrust = 0.88 + 0.12 * math.sin(state.step * 0.7).abs();
-            _drawSprite(
-              canvas,
-              missile,
-              shot.position - dir * shotRadius * 0.45,
-              shotRadius * 1.05 * thrust,
-              math.atan2(dir.dy, dir.dx),
-            );
-          } else {
-            drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.6);
+                    p.usesSprite(shot.kind, projectile: shot)
+                ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
+                : null;
+            final angle = math.atan2(shot.velocity.dy, shot.velocity.dx);
+            if (sprite == null) {
+              drawGlyph(
+                canvas,
+                PowerUpKind.hook,
+                shot.position,
+                shotRadius * 0.6,
+              );
+            } else {
+              _drawSprite(
+                canvas,
+                sprite,
+                shot.position,
+                shotRadius * 0.9,
+                angle,
+                flip: shot.velocity.dx < 0,
+              );
+            }
+            continue;
           }
-          continue;
-        }
-        if (shot.kind == PowerUpKind.boomerang) {
-          final sprite =
-              projectileRenderMode == EffectRenderMode.sprite &&
-                  p.usesSprite(shot.kind, projectile: shot)
-              ? PowerUpSprites.boomerangProjectile
-              : null;
-          if (sprite != null) {
-            _drawSprite(
-              canvas,
-              sprite,
-              shot.position,
-              shotRadius * 1.6,
-              state.step * shot.spinDegreesPerSecond * math.pi / 10800,
-            );
-          } else {
-            drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.65);
+          if (shot.landAt != null) {
+            // A thrown explosive in flight: its own icon, tumbling.
+            final sprite =
+                projectileRenderMode == EffectRenderMode.sprite &&
+                    p.usesSprite(shot.kind, projectile: shot)
+                ? PowerUpSprites.of(shot.kind)
+                : null;
+            if (sprite == null) {
+              drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.5);
+            } else {
+              _drawSprite(
+                canvas,
+                sprite,
+                shot.position,
+                shotRadius * 0.6,
+                state.step * 0.3,
+              );
+            }
+            continue;
           }
-          continue;
-        }
-        if (shot.kind == PowerUpKind.waterGun) {
-          final wave = math.sin(state.step * 0.8) * shotRadius * 0.14;
-          final normal = Offset(-dir.dy, dir.dx);
-          final tail = shot.position - dir * shotRadius * 2.2;
-          final path = Path()
-            ..moveTo(tail.dx, tail.dy)
-            ..quadraticBezierTo(
-              (tail.dx + shot.position.dx) / 2 + normal.dx * wave,
-              (tail.dy + shot.position.dy) / 2 + normal.dy * wave,
-              shot.position.dx,
-              shot.position.dy,
+          if (shot.kind == PowerUpKind.freeze) {
+            final sprite =
+                freezeRenderMode == EffectRenderMode.sprite &&
+                    p.usesEffectSprite(shot.kind)
+                ? PowerUpSprites.effect(EffectSprite.iceWave)
+                : null;
+            if (sprite == null) {
+              _paintIceWave(canvas, shot, shotRadius);
+            } else {
+              _drawEffect(
+                canvas,
+                sprite,
+                shot.position,
+                shotRadius * 1.45,
+                math.atan2(shot.velocity.dy, shot.velocity.dx),
+              );
+            }
+            continue;
+          }
+          if (shot.kind == PowerUpKind.bow) {
+            _paintArrow(
+              canvas,
+              shot,
+              shotRadius,
+              useSprite:
+                  projectileRenderMode == EffectRenderMode.sprite &&
+                  p.usesSprite(shot.kind, projectile: shot),
             );
-          canvas.drawPath(
-            path,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeCap = StrokeCap.round
-              ..strokeWidth = math.max(3, shotRadius * 0.34)
-              ..color = const Color(0xFF48CFFF),
-          );
-          canvas.drawCircle(
-            shot.position,
-            shotRadius * 0.26,
-            Paint()..color = const Color(0xFFC9F7FF),
-          );
-          continue;
-        }
-        if (shot.kind == PowerUpKind.swapCannon) {
-          final angle = math.atan2(dir.dy, dir.dx);
-          final normal = Offset(-dir.dy, dir.dx);
-          for (var i = 4; i >= 1; i--) {
-            final center =
-                shot.position - dir * shotRadius * i.toDouble() * 0.48;
-            canvas.drawOval(
-              Rect.fromCenter(
-                center:
-                    center +
-                    normal * math.sin(state.step * 0.5 + i) * shotRadius * 0.15,
-                width: shotRadius * (0.35 + i * 0.08),
-                height: shotRadius * (0.9 + i * 0.12),
-              ),
+            continue;
+          }
+          final speed = shot.velocity.distance;
+          if (speed == 0) continue;
+          final dir = shot.velocity / speed;
+          if (shot.kind == PowerUpKind.rocketLauncher) {
+            final missile =
+                projectileRenderMode == EffectRenderMode.sprite &&
+                    p.usesSprite(shot.kind, projectile: shot)
+                ? PowerUpSprites.rocketMissile
+                : null;
+            if (missile != null) {
+              final thrust = 0.88 + 0.12 * math.sin(state.step * 0.7).abs();
+              _drawSprite(
+                canvas,
+                missile,
+                shot.position - dir * shotRadius * 0.45,
+                shotRadius * 1.05 * thrust,
+                math.atan2(dir.dy, dir.dx),
+              );
+            } else {
+              drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.6);
+            }
+            continue;
+          }
+          if (shot.kind == PowerUpKind.boomerang) {
+            final sprite =
+                projectileRenderMode == EffectRenderMode.sprite &&
+                    p.usesSprite(shot.kind, projectile: shot)
+                ? PowerUpSprites.boomerangProjectile
+                : null;
+            if (sprite != null) {
+              _drawSprite(
+                canvas,
+                sprite,
+                shot.position,
+                shotRadius * 1.6,
+                state.step * shot.spinDegreesPerSecond * math.pi / 10800,
+              );
+            } else {
+              drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.65);
+            }
+            continue;
+          }
+          if (shot.kind == PowerUpKind.waterGun) {
+            final wave = math.sin(state.step * 0.8) * shotRadius * 0.14;
+            final normal = Offset(-dir.dy, dir.dx);
+            final tail = shot.position - dir * shotRadius * 2.2;
+            final path = Path()
+              ..moveTo(tail.dx, tail.dy)
+              ..quadraticBezierTo(
+                (tail.dx + shot.position.dx) / 2 + normal.dx * wave,
+                (tail.dy + shot.position.dy) / 2 + normal.dy * wave,
+                shot.position.dx,
+                shot.position.dy,
+              );
+            canvas.drawPath(
+              path,
               Paint()
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = math.max(1.5, shotRadius * 0.09)
-                ..color =
-                    (i.isEven
-                            ? const Color(0xFF7DF9FF)
-                            : const Color(0xFFFF55DD))
-                        .withValues(alpha: 0.18 + (4 - i) * 0.13),
+                ..strokeCap = StrokeCap.round
+                ..strokeWidth = math.max(3, shotRadius * 0.34)
+                ..color = const Color(0xFF48CFFF),
             );
-          }
-          final sprite =
-              projectileRenderMode == EffectRenderMode.sprite &&
-                  p.usesSprite(shot.kind, projectile: shot)
-              ? PowerUpSprites.projectile(ProjectileSprite.swapCannon)
-              : null;
-          if (sprite != null) {
-            _drawSprite(
-              canvas,
-              sprite,
-              shot.position,
-              shotRadius * 0.72,
-              angle,
-            );
-          } else {
             canvas.drawCircle(
               shot.position,
-              shotRadius * 0.28,
-              Paint()..color = Colors.white,
+              shotRadius * 0.26,
+              Paint()..color = const Color(0xFFC9F7FF),
             );
+            continue;
           }
-          continue;
-        }
-        if (shot.kind == PowerUpKind.threadHarpoon) {
-          final sprite =
-              projectileRenderMode == EffectRenderMode.sprite &&
-                  p.usesSprite(shot.kind, projectile: shot)
-              ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
-              : null;
-          if (sprite == null) {
-            drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.6);
-          } else {
+          if (shot.kind == PowerUpKind.swapCannon) {
+            final angle = math.atan2(dir.dy, dir.dx);
+            final normal = Offset(-dir.dy, dir.dx);
+            for (var i = 4; i >= 1; i--) {
+              final center =
+                  shot.position - dir * shotRadius * i.toDouble() * 0.48;
+              canvas.drawOval(
+                Rect.fromCenter(
+                  center:
+                      center +
+                      normal *
+                          math.sin(state.step * 0.5 + i) *
+                          shotRadius *
+                          0.15,
+                  width: shotRadius * (0.35 + i * 0.08),
+                  height: shotRadius * (0.9 + i * 0.12),
+                ),
+                Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = math.max(1.5, shotRadius * 0.09)
+                  ..color =
+                      (i.isEven
+                              ? const Color(0xFF7DF9FF)
+                              : const Color(0xFFFF55DD))
+                          .withValues(alpha: 0.18 + (4 - i) * 0.13),
+              );
+            }
+            final sprite =
+                projectileRenderMode == EffectRenderMode.sprite &&
+                    p.usesSprite(shot.kind, projectile: shot)
+                ? PowerUpSprites.projectile(ProjectileSprite.swapCannon)
+                : null;
+            if (sprite != null) {
+              _drawSprite(
+                canvas,
+                sprite,
+                shot.position,
+                shotRadius * 0.72,
+                angle,
+              );
+            } else {
+              canvas.drawCircle(
+                shot.position,
+                shotRadius * 0.28,
+                Paint()..color = Colors.white,
+              );
+            }
+            continue;
+          }
+          if (shot.kind == PowerUpKind.threadHarpoon) {
+            final sprite =
+                projectileRenderMode == EffectRenderMode.sprite &&
+                    p.usesSprite(shot.kind, projectile: shot)
+                ? PowerUpSprites.projectile(ProjectileSprite.harpoon)
+                : null;
+            if (sprite == null) {
+              drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.6);
+            } else {
+              _drawSprite(
+                canvas,
+                sprite,
+                shot.position,
+                shotRadius * 0.9,
+                math.atan2(dir.dy, dir.dx),
+                flip: dir.dx < 0,
+              );
+            }
+            continue;
+          }
+          final projectileKind = _projectileSpriteFor(shot.kind);
+          final projectile =
+              projectileKind == null ||
+                  projectileRenderMode != EffectRenderMode.sprite ||
+                  !p.usesSprite(shot.kind, projectile: shot)
+              ? null
+              : PowerUpSprites.projectile(projectileKind);
+          if (projectile != null) {
             _drawSprite(
               canvas,
-              sprite,
+              projectile,
               shot.position,
-              shotRadius * 0.9,
-              math.atan2(dir.dy, dir.dx),
-              flip: dir.dx < 0,
+              shotRadius *
+                  (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62),
+              math.atan2(dir.dy, dir.dx) +
+                  state.step * shot.spinDegreesPerSecond * math.pi / 10800,
             );
+            continue;
           }
-          continue;
+          final length = len * shot.renderScale;
+          final front = shot.position;
+          final mid = front - dir * (length * 0.45);
+          final back = front - dir * length;
+          final tail = front - dir * (length * 3.5);
+          canvas.drawLine(tail, back, _trailPaint..strokeWidth = length * 0.35);
+          canvas.drawLine(back, mid, _casingPaint..strokeWidth = length * 0.5);
+          canvas.drawLine(mid, front, _tipPaint..strokeWidth = length * 0.5);
+        } finally {
+          SkillArtworkTint.end(canvas);
         }
-        final projectileKind = _projectileSpriteFor(shot.kind);
-        final projectile =
-            projectileKind == null ||
-                projectileRenderMode != EffectRenderMode.sprite ||
-                !p.usesSprite(shot.kind, projectile: shot)
-            ? null
-            : PowerUpSprites.projectile(projectileKind);
-        if (projectile != null) {
-          _drawSprite(
-            canvas,
-            projectile,
-            shot.position,
-            shotRadius * (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62),
-            math.atan2(dir.dy, dir.dx) +
-                state.step * shot.spinDegreesPerSecond * math.pi / 10800,
-          );
-          continue;
-        }
-        final length = len * shot.renderScale;
-        final front = shot.position;
-        final mid = front - dir * (length * 0.45);
-        final back = front - dir * length;
-        final tail = front - dir * (length * 3.5);
-        canvas.drawLine(tail, back, _trailPaint..strokeWidth = length * 0.35);
-        canvas.drawLine(back, mid, _casingPaint..strokeWidth = length * 0.5);
-        canvas.drawLine(mid, front, _tipPaint..strokeWidth = length * 0.5);
       }
     }
 
     // Hooked balls on their chain, being reeled in.
     for (final h in p.pulls) {
-      _paintChain(canvas, h.owner.position, h.target.position);
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.hook, ball: h.owner),
+      );
+      try {
+        _paintChain(canvas, h.owner.position, h.target.position);
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
 
     for (final m in p.slashMarks) {
-      // Two quick strokes across the cut, fading out.
-      final fade = (1 - m.age / PowerUpTuning.slashShowSteps).clamp(0.0, 1.0);
-      final sprite = PowerUpSprites.effectFrame(
-        AnimatedEffect.slash,
-        ((m.age / PowerUpTuning.slashShowSteps) * 4).floor().clamp(0, 3),
-      );
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
-          m.position,
-          r * 1.8,
-          m.angle,
-          opacity: fade,
+      SkillArtworkTint.begin(canvas, p.artworkTint(m.kind, skillId: m.skillId));
+      try {
+        // Two quick strokes across the cut, fading out.
+        final fade = (1 - m.age / PowerUpTuning.slashShowSteps).clamp(0.0, 1.0);
+        final sprite = PowerUpSprites.effectFrame(
+          AnimatedEffect.slash,
+          ((m.age / PowerUpTuning.slashShowSteps) * 4).floor().clamp(0, 3),
         );
-        continue;
-      }
-      final along = Offset(math.cos(m.angle), math.sin(m.angle)) * (r * 1.6);
-      final across = Offset(-along.dy, along.dx) * 0.18;
-      final paint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round
-        ..color = Colors.white.withValues(alpha: fade);
-      for (final shift in [-1.0, 1.0]) {
-        final o = m.position + across * shift;
-        canvas.drawLine(o - along, o + along, paint);
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            m.position,
+            r * 1.8,
+            m.angle,
+            opacity: fade,
+          );
+          continue;
+        }
+        final along = Offset(math.cos(m.angle), math.sin(m.angle)) * (r * 1.6);
+        final across = Offset(-along.dy, along.dx) * 0.18;
+        final paint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round
+          ..color = Colors.white.withValues(alpha: fade);
+        for (final shift in [-1.0, 1.0]) {
+          final o = m.position + across * shift;
+          canvas.drawLine(o - along, o + along, paint);
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
   }
@@ -1168,61 +1362,69 @@ class PowerUpPainter {
     final p = state.powerUps;
     if (p == null) return;
     for (final tornado in p.tornadoes) {
-      final target = tornado.target;
-      if (target.isEliminated) continue;
-      if (tornado.isAiming) {
-        final owner = tornado.owner;
-        final scale = p.handEffectScale(PowerUpKind.tornado);
-        final wind = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = math.max(2, owner.radius * 0.1)
-          ..color = p
-              .handEffectColor(PowerUpKind.tornado)
-              .withValues(alpha: 0.85);
-        for (final side in const [-1.0, 1.0]) {
-          final hand = owner.position + Offset(side * owner.radius * 0.82, 0);
-          for (var ring = 0; ring < 3; ring++) {
-            final phase = (state.step * 0.18 + ring * 0.7) % 2;
-            canvas.drawArc(
-              Rect.fromCircle(
-                center: hand,
-                radius: owner.radius * (0.2 + phase * 0.16) * scale,
+      SkillArtworkTint.begin(
+        canvas,
+        p.artworkTint(PowerUpKind.tornado, ball: tornado.owner),
+      );
+      try {
+        final target = tornado.target;
+        if (target.isEliminated) continue;
+        if (tornado.isAiming) {
+          final owner = tornado.owner;
+          final scale = p.handEffectScale(PowerUpKind.tornado);
+          final wind = Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth = math.max(2, owner.radius * 0.1)
+            ..color = p
+                .handEffectColor(PowerUpKind.tornado)
+                .withValues(alpha: 0.85);
+          for (final side in const [-1.0, 1.0]) {
+            final hand = owner.position + Offset(side * owner.radius * 0.82, 0);
+            for (var ring = 0; ring < 3; ring++) {
+              final phase = (state.step * 0.18 + ring * 0.7) % 2;
+              canvas.drawArc(
+                Rect.fromCircle(
+                  center: hand,
+                  radius: owner.radius * (0.2 + phase * 0.16) * scale,
+                ),
+                -math.pi * 0.8,
+                math.pi * 1.6,
+                false,
+                wind,
+              );
+            }
+          }
+          continue;
+        }
+        final center = tornadoVisualCenter(target);
+        final half =
+            target.radius *
+            1.65 *
+            p.visualSkill(PowerUpKind.tornado).effectDisplayScale;
+        final frame = PowerUpSprites.effectFrame(
+          AnimatedEffect.tornado,
+          (state.step ~/ 3) % 8,
+        );
+        if (frame != null) {
+          _drawEffect(canvas, frame, center, half, 0);
+        } else {
+          for (var i = 0; i < 3; i++) {
+            canvas.drawOval(
+              Rect.fromCenter(
+                center: center + Offset(0, (i - 1) * target.radius * 0.38),
+                width: target.radius * (2.8 - i * 0.5),
+                height: target.radius * 0.5,
               ),
-              -math.pi * 0.8,
-              math.pi * 1.6,
-              false,
-              wind,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = math.max(2, target.radius * 0.12)
+                ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.8),
             );
           }
         }
-        continue;
-      }
-      final center = tornadoVisualCenter(target);
-      final half =
-          target.radius *
-          1.65 *
-          p.visualSkill(PowerUpKind.tornado).effectDisplayScale;
-      final frame = PowerUpSprites.effectFrame(
-        AnimatedEffect.tornado,
-        (state.step ~/ 3) % 8,
-      );
-      if (frame != null) {
-        _drawEffect(canvas, frame, center, half, 0);
-      } else {
-        for (var i = 0; i < 3; i++) {
-          canvas.drawOval(
-            Rect.fromCenter(
-              center: center + Offset(0, (i - 1) * target.radius * 0.38),
-              width: target.radius * (2.8 - i * 0.5),
-              height: target.radius * 0.5,
-            ),
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = math.max(2, target.radius * 0.12)
-              ..color = const Color(0xFFD8F8FF).withValues(alpha: 0.8),
-          );
-        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
   }
@@ -1926,6 +2128,7 @@ class PowerUpPainter {
     SimulationBall ball, {
     int step = 0,
     bool Function(PowerUpKind kind, int slot)? useWeaponSprite,
+    int Function(PowerUpKind kind, int slot)? artworkTint,
     double? incomingAttackAngle,
     int Function(PowerUpKind kind)? firedWeaponHoldLeft,
     double Function(PowerUpKind kind, int slot)? weaponDisplayScale,
@@ -1936,464 +2139,583 @@ class PowerUpPainter {
     Color Function(PowerUpKind kind)? handEffectColor,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
-      final angle = flailOrbitAngle(step);
-      final direction = Offset(math.cos(angle), math.sin(angle));
-      final flail = orbitingFlailCenter(ball.position, ball.radius, step);
-      for (var trail = 3; trail >= 1; trail--) {
-        final oldAngle = flailOrbitAngle(step - trail * 2);
-        final oldCenter =
-            ball.position +
-            Offset(math.cos(oldAngle), math.sin(oldAngle)) * ball.radius * 2.25;
-        canvas.drawCircle(
-          oldCenter,
-          ball.radius * (0.18 + trail * 0.035),
-          Paint()
-            ..color = const Color(
-              0xFFB8C2CC,
-            ).withValues(alpha: 0.22 - trail * 0.045),
-        );
-      }
-      canvas.drawLine(
-        ball.position + direction * ball.radius * 0.72,
-        flail,
-        Paint()
-          ..color = const Color(0xFFB8C2CC)
-          ..strokeWidth = math.max(2, ball.radius * 0.1),
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.orbitingFlail, -1) ?? 0xFFFFFFFF,
       );
-      final sprite =
-          (useWeaponSprite?.call(
-                PowerUpKind.orbitingFlail,
-                ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
-              ) ??
-              true)
-          ? PowerUpSprites.of(PowerUpKind.orbitingFlail)
-          : null;
-      if (sprite == null) {
-        drawGlyph(
-          canvas,
-          PowerUpKind.orbitingFlail,
+      try {
+        final angle = flailOrbitAngle(step);
+        final direction = Offset(math.cos(angle), math.sin(angle));
+        final flail = orbitingFlailCenter(ball.position, ball.radius, step);
+        for (var trail = 3; trail >= 1; trail--) {
+          final oldAngle = flailOrbitAngle(step - trail * 2);
+          final oldCenter =
+              ball.position +
+              Offset(math.cos(oldAngle), math.sin(oldAngle)) *
+                  ball.radius *
+                  2.25;
+          canvas.drawCircle(
+            oldCenter,
+            ball.radius * (0.18 + trail * 0.035),
+            Paint()
+              ..color = const Color(
+                0xFFB8C2CC,
+              ).withValues(alpha: 0.22 - trail * 0.045),
+          );
+        }
+        canvas.drawLine(
+          ball.position + direction * ball.radius * 0.72,
           flail,
-          ball.radius *
-              0.42 *
-              (weaponDisplayScale?.call(
-                    PowerUpKind.orbitingFlail,
-                    ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
-                  ) ??
-                  1),
+          Paint()
+            ..color = const Color(0xFFB8C2CC)
+            ..strokeWidth = math.max(2, ball.radius * 0.1),
         );
-      } else {
-        // Spin the head independently while its center orbits the ball.
-        _drawSprite(
-          canvas,
-          sprite,
-          flail,
-          ball.radius *
-              0.9 *
-              (weaponDisplayScale?.call(
-                    PowerUpKind.orbitingFlail,
-                    ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
-                  ) ??
-                  1),
-          -step * 0.34,
-        );
+        final sprite =
+            (useWeaponSprite?.call(
+                  PowerUpKind.orbitingFlail,
+                  ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+                ) ??
+                true)
+            ? PowerUpSprites.of(PowerUpKind.orbitingFlail)
+            : null;
+        if (sprite == null) {
+          drawGlyph(
+            canvas,
+            PowerUpKind.orbitingFlail,
+            flail,
+            ball.radius *
+                0.42 *
+                (weaponDisplayScale?.call(
+                      PowerUpKind.orbitingFlail,
+                      ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+                    ) ??
+                    1),
+          );
+        } else {
+          // Spin the head independently while its center orbits the ball.
+          _drawSprite(
+            canvas,
+            sprite,
+            flail,
+            ball.radius *
+                0.9 *
+                (weaponDisplayScale?.call(
+                      PowerUpKind.orbitingFlail,
+                      ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+                    ) ??
+                    1),
+            -step * 0.34,
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
     if (ball.burningLeft > 0) {
-      for (var i = 0; i < 3; i++) {
-        final flame = PowerUpSprites.effectFrame(
-          AnimatedEffect.flame,
-          (step ~/ 4 + i) % 4,
-        );
-        final flicker = 0.5 + 0.5 * math.sin(step * 0.52 + i * 1.61);
-        final base =
-            ball.position +
-            Offset(
-              (i - 1) *
-                  (ball.radius *
-                      (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
-                  0.58,
-              0,
-            );
-        if (flame != null) {
-          _drawEffect(
-            canvas,
-            flame,
-            base,
-            (ball.radius *
-                    (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
-                (0.72 + flicker * 0.16),
-            0,
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.molotov, -1) ?? 0xFFFFFFFF,
+      );
+      try {
+        for (var i = 0; i < 3; i++) {
+          final flame = PowerUpSprites.effectFrame(
+            AnimatedEffect.flame,
+            (step ~/ 4 + i) % 4,
           );
-          continue;
-        }
-        final fallbackFlicker = 0.22 + 0.08 * math.sin(step * 0.5 + i).abs();
-        final tip =
-            base -
-            Offset(
-              0,
+          final flicker = 0.5 + 0.5 * math.sin(step * 0.52 + i * 1.61);
+          final base =
+              ball.position +
+              Offset(
+                (i - 1) *
+                    (ball.radius *
+                        (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
+                    0.58,
+                0,
+              );
+          if (flame != null) {
+            _drawEffect(
+              canvas,
+              flame,
+              base,
               (ball.radius *
                       (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
-                  fallbackFlicker,
+                  (0.72 + flicker * 0.16),
+              0,
             );
-        final side =
-            (ball.radius *
-                (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
-            0.12;
-        canvas.drawPath(
-          Path()
-            ..moveTo(base.dx - side, base.dy)
-            ..quadraticBezierTo(tip.dx, tip.dy, base.dx + side, base.dy)
-            ..close(),
-          Paint()
-            ..color =
-                (i.isEven ? const Color(0xFFFF4B20) : const Color(0xFFFFD23F))
-                    .withValues(alpha: 0.9),
-        );
+            continue;
+          }
+          final fallbackFlicker = 0.22 + 0.08 * math.sin(step * 0.5 + i).abs();
+          final tip =
+              base -
+              Offset(
+                0,
+                (ball.radius *
+                        (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
+                    fallbackFlicker,
+              );
+          final side =
+              (ball.radius *
+                  (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
+              0.12;
+          canvas.drawPath(
+            Path()
+              ..moveTo(base.dx - side, base.dy)
+              ..quadraticBezierTo(tip.dx, tip.dy, base.dx + side, base.dy)
+              ..close(),
+            Paint()
+              ..color =
+                  (i.isEven ? const Color(0xFFFF4B20) : const Color(0xFFFFD23F))
+                      .withValues(alpha: 0.9),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
     if (ball.poisonLeft > 0) {
-      final pulse = 0.45 + 0.18 * math.sin(step * 0.32);
-      canvas.drawCircle(
-        ball.position,
-        (ball.radius *
-                (effectDisplayScale?.call(PowerUpKind.poisonSwamp) ?? 1)) *
-            1.08,
-        Paint()..color = const Color(0xFF79B928).withValues(alpha: pulse),
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.poisonSwamp, -1) ?? 0xFFFFFFFF,
       );
-      for (var i = 0; i < 4; i++) {
-        final angle = step * 0.035 + i * math.pi / 2;
+      try {
+        final pulse = 0.45 + 0.18 * math.sin(step * 0.32);
         canvas.drawCircle(
-          ball.position +
-              Offset.fromDirection(
-                angle,
-                (ball.radius *
-                        (effectDisplayScale?.call(PowerUpKind.poisonSwamp) ??
-                            1)) *
-                    1.12,
-              ),
+          ball.position,
           (ball.radius *
                   (effectDisplayScale?.call(PowerUpKind.poisonSwamp) ?? 1)) *
-              0.1,
-          Paint()..color = const Color(0xFFCAFF54),
+              1.08,
+          Paint()..color = const Color(0xFF79B928).withValues(alpha: pulse),
         );
+        for (var i = 0; i < 4; i++) {
+          final angle = step * 0.035 + i * math.pi / 2;
+          canvas.drawCircle(
+            ball.position +
+                Offset.fromDirection(
+                  angle,
+                  (ball.radius *
+                          (effectDisplayScale?.call(PowerUpKind.poisonSwamp) ??
+                              1)) *
+                      1.12,
+                ),
+            (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.poisonSwamp) ?? 1)) *
+                0.1,
+            Paint()..color = const Color(0xFFCAFF54),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
     if (ball.timeBubbleLeft > 0) {
-      final range = skillRange?.call(PowerUpKind.timeBubble) ?? 3;
-      final sprite = PowerUpSprites.effect(EffectSprite.timeBubble);
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.timeBubble, -1) ?? 0xFFFFFFFF,
+      );
+      try {
+        final range = skillRange?.call(PowerUpKind.timeBubble) ?? 3;
+        final sprite = PowerUpSprites.effect(EffectSprite.timeBubble);
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            ball.position,
+            (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.timeBubble) ?? 1)) *
+                range,
+            step * 0.012,
+            opacity: 0.72,
+          );
+        }
+        canvas.drawCircle(
           ball.position,
           (ball.radius *
                   (effectDisplayScale?.call(PowerUpKind.timeBubble) ?? 1)) *
               range,
-          step * 0.012,
-          opacity: 0.72,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..color = const Color(0xFF58A6FF).withValues(alpha: 0.55),
         );
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
-      canvas.drawCircle(
-        ball.position,
-        (ball.radius *
-                (effectDisplayScale?.call(PowerUpKind.timeBubble) ?? 1)) *
-            range,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = const Color(0xFF58A6FF).withValues(alpha: 0.55),
-      );
     }
     if (ball.repulsorLeft > 0) {
-      canvas.drawCircle(
-        ball.position,
-        (ball.radius * (effectDisplayScale?.call(PowerUpKind.repulsor) ?? 1)) *
-            1.25,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = const Color(0xFFFF6B35).withValues(alpha: 0.75),
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.repulsor, -1) ?? 0xFFFFFFFF,
       );
-    }
-    if (ball.vampireLeft > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: ball.position,
-          radius:
-              (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.vampire) ?? 1)) *
-              1.18,
-        ),
-        -math.pi / 2,
-        math.pi * 1.5,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = const Color(0xFFB1123B),
-      );
-    }
-    if (ball.mirrorCharges > 0) {
-      final angle = incomingAttackAngle ?? 0;
-      final direction = Offset(math.cos(angle), math.sin(angle));
-      final sprite = PowerUpSprites.of(PowerUpKind.mirror);
-      if (sprite != null) {
-        _drawSprite(
-          canvas,
-          sprite,
-          ball.position +
-              direction *
-                  (ball.radius *
-                      (effectDisplayScale?.call(PowerUpKind.mirror) ?? 1)) *
-                  1.16,
-          (ball.radius * (effectDisplayScale?.call(PowerUpKind.mirror) ?? 1)) *
-              0.72,
-          angle + math.pi / 2,
-          iconAngle: -math.pi / 4,
-        );
-      }
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: ball.position,
-          radius:
-              (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.mirror) ?? 1)) *
-              1.35,
-        ),
-        angle - 1.1,
-        2.2,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 4
-          ..color = const Color(0xFFC7F5FF),
-      );
-    }
-    if (ball.overchargeLeft > 0) {
-      final maximumPower = ArenaEffectLibrary.frame(
-        ArenaEffectKind.maximumPower,
-        step,
-      );
-      if (maximumPower != null) {
-        _drawEffect(
-          canvas,
-          maximumPower,
+      try {
+        canvas.drawCircle(
           ball.position,
           (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.overcharge) ?? 1)) *
-              2.5,
-          0,
-          opacity: 0.92,
+                  (effectDisplayScale?.call(PowerUpKind.repulsor) ?? 1)) *
+              1.25,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..color = const Color(0xFFFF6B35).withValues(alpha: 0.75),
         );
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
-      canvas.drawCircle(
-        ball.position,
-        (ball.radius * (effectDisplayScale?.call(PowerUpKind.overcharge) ?? 1)),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(
-            1.5,
+    }
+    if (ball.vampireLeft > 0) {
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.vampire, -1) ?? 0xFFFFFFFF,
+      );
+      try {
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: ball.position,
+            radius:
+                (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.vampire) ?? 1)) *
+                1.18,
+          ),
+          -math.pi / 2,
+          math.pi * 1.5,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..color = const Color(0xFFB1123B),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+    if (ball.mirrorCharges > 0) {
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.mirror, -1) ?? 0xFFFFFFFF,
+      );
+      try {
+        final angle = incomingAttackAngle ?? 0;
+        final direction = Offset(math.cos(angle), math.sin(angle));
+        final sprite = PowerUpSprites.of(PowerUpKind.mirror);
+        if (sprite != null) {
+          _drawSprite(
+            canvas,
+            sprite,
+            ball.position +
+                direction *
+                    (ball.radius *
+                        (effectDisplayScale?.call(PowerUpKind.mirror) ?? 1)) *
+                    1.16,
+            (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.mirror) ?? 1)) *
+                0.72,
+            angle + math.pi / 2,
+            iconAngle: -math.pi / 4,
+          );
+        }
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: ball.position,
+            radius:
+                (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.mirror) ?? 1)) *
+                1.35,
+          ),
+          angle - 1.1,
+          2.2,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4
+            ..color = const Color(0xFFC7F5FF),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+    if (ball.overchargeLeft > 0) {
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.overcharge, -1) ?? 0xFFFFFFFF,
+      );
+      try {
+        final maximumPower = ArenaEffectLibrary.frame(
+          ArenaEffectKind.maximumPower,
+          step,
+        );
+        if (maximumPower != null) {
+          _drawEffect(
+            canvas,
+            maximumPower,
+            ball.position,
             (ball.radius *
                     (effectDisplayScale?.call(PowerUpKind.overcharge) ?? 1)) *
-                0.1,
-          )
-          ..color = const Color(0xFFFFD000).withValues(alpha: 0.85),
-      );
-      for (var i = 0; i < 4; i++) {
-        final a = i * math.pi / 2 + ball.overchargeLeft * 0.1;
+                2.5,
+            0,
+            opacity: 0.92,
+          );
+        }
         canvas.drawCircle(
-          ball.position +
-              Offset(math.cos(a), math.sin(a)) *
-                  (ball.radius *
+          ball.position,
+          (ball.radius *
+              (effectDisplayScale?.call(PowerUpKind.overcharge) ?? 1)),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(
+              1.5,
+              (ball.radius *
                       (effectDisplayScale?.call(PowerUpKind.overcharge) ?? 1)) *
-                  1.35,
-          2.5,
-          Paint()..color = const Color(0xFFFFD000),
+                  0.1,
+            )
+            ..color = const Color(0xFFFFD000).withValues(alpha: 0.85),
         );
+        for (var i = 0; i < 4; i++) {
+          final a = i * math.pi / 2 + ball.overchargeLeft * 0.1;
+          canvas.drawCircle(
+            ball.position +
+                Offset(math.cos(a), math.sin(a)) *
+                    (ball.radius *
+                        (effectDisplayScale?.call(PowerUpKind.overcharge) ??
+                            1)) *
+                    1.35,
+            2.5,
+            Paint()..color = const Color(0xFFFFD000),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
     if (ball.gremlinShots > 0) {
-      canvas.drawCircle(
-        ball.position,
-        (ball.radius * (effectDisplayScale?.call(PowerUpKind.gremlin) ?? 1)) *
-            1.12,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = const Color(0xFF7ED957),
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.gremlin, -1) ?? 0xFFFFFFFF,
       );
+      try {
+        canvas.drawCircle(
+          ball.position,
+          (ball.radius * (effectDisplayScale?.call(PowerUpKind.gremlin) ?? 1)) *
+              1.12,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..color = const Color(0xFF7ED957),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
     if (ball.magneticFieldLeft > 0) {
-      final pulse = 0.72 + 0.18 * math.sin(ball.magneticFieldLeft * 0.35);
-      final radius =
-          (ball.radius *
-              (effectDisplayScale?.call(PowerUpKind.magneticField) ?? 1)) *
-          2;
-      final sprite = PowerUpSprites.effect(EffectSprite.magneticField);
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.magneticField, -1) ?? 0xFFFFFFFF,
+      );
+      try {
+        final pulse = 0.72 + 0.18 * math.sin(ball.magneticFieldLeft * 0.35);
+        final radius =
+            (ball.radius *
+                (effectDisplayScale?.call(PowerUpKind.magneticField) ?? 1)) *
+            2;
+        final sprite = PowerUpSprites.effect(EffectSprite.magneticField);
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            ball.position,
+            radius,
+            -step * 0.025,
+            opacity: pulse,
+          );
+        }
+        canvas.drawCircle(
           ball.position,
           radius,
-          -step * 0.025,
-          opacity: pulse,
+          Paint()
+            ..color = const Color(0xFF7B2CBF).withValues(alpha: 0.18 * pulse),
         );
-      }
-      canvas.drawCircle(
-        ball.position,
-        radius,
-        Paint()
-          ..color = const Color(0xFF7B2CBF).withValues(alpha: 0.18 * pulse),
-      );
-      canvas.drawCircle(
-        ball.position,
-        radius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(
-            2,
-            (ball.radius *
-                    (effectDisplayScale?.call(PowerUpKind.magneticField) ??
-                        1)) *
-                0.12,
-          )
-          ..color = const Color(0xFFD66BFF).withValues(alpha: pulse),
-      );
-      for (var i = 0; i < 6; i++) {
-        final angle = i * math.pi / 3 + ball.magneticFieldLeft * 0.08;
-        final point =
-            ball.position + Offset(math.cos(angle), math.sin(angle)) * radius;
         canvas.drawCircle(
-          point,
-          math.max(
-            1.5,
-            (ball.radius *
-                    (effectDisplayScale?.call(PowerUpKind.magneticField) ??
-                        1)) *
-                0.09,
-          ),
-          Paint()..color = const Color(0xFFFF8CFF),
+          ball.position,
+          radius,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(
+              2,
+              (ball.radius *
+                      (effectDisplayScale?.call(PowerUpKind.magneticField) ??
+                          1)) *
+                  0.12,
+            )
+            ..color = const Color(0xFFD66BFF).withValues(alpha: pulse),
         );
+        for (var i = 0; i < 6; i++) {
+          final angle = i * math.pi / 3 + ball.magneticFieldLeft * 0.08;
+          final point =
+              ball.position + Offset(math.cos(angle), math.sin(angle)) * radius;
+          canvas.drawCircle(
+            point,
+            math.max(
+              1.5,
+              (ball.radius *
+                      (effectDisplayScale?.call(PowerUpKind.magneticField) ??
+                          1)) *
+                  0.09,
+            ),
+            Paint()..color = const Color(0xFFFF8CFF),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
     if (ball.goldenArmorHits > 0) {
-      final sprite = PowerUpSprites.effect(EffectSprite.goldenArmorHit);
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
-          ball.position,
-          (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.goldenArmor) ?? 1)) *
-              1.45,
-          step * 0.018,
-          opacity: 0.68,
-        );
-      }
-      final armor = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(
-          3,
-          (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.goldenArmor) ?? 1)) *
-              0.16,
-        )
-        ..color = const Color(0xFFFFD54F);
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: ball.position,
-          radius:
-              (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.goldenArmor) ?? 1)) *
-              1.18,
-        ),
-        math.pi * 0.9,
-        math.pi * 1.2,
-        false,
-        armor,
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.goldenArmor, -1) ?? 0xFFFFFFFF,
       );
-      for (var i = 0; i < ball.goldenArmorHits; i++) {
-        canvas.drawCircle(
-          ball.position +
-              Offset(
-                (i * 2 - 1) *
-                    (ball.radius *
-                        (effectDisplayScale?.call(PowerUpKind.goldenArmor) ??
-                            1)) *
-                    0.35,
-                -(ball.radius *
-                        (effectDisplayScale?.call(PowerUpKind.goldenArmor) ??
-                            1)) *
-                    1.3,
-              ),
-          math.max(
-            2,
+      try {
+        final sprite = PowerUpSprites.effect(EffectSprite.goldenArmorHit);
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            ball.position,
             (ball.radius *
                     (effectDisplayScale?.call(PowerUpKind.goldenArmor) ?? 1)) *
-                0.1,
+                1.45,
+            step * 0.018,
+            opacity: 0.68,
+          );
+        }
+        final armor = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(
+            3,
+            (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.goldenArmor) ?? 1)) *
+                0.16,
+          )
+          ..color = const Color(0xFFFFD54F);
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: ball.position,
+            radius:
+                (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.goldenArmor) ?? 1)) *
+                1.18,
           ),
-          Paint()..color = const Color(0xFFFFF3A0),
+          math.pi * 0.9,
+          math.pi * 1.2,
+          false,
+          armor,
         );
+        for (var i = 0; i < ball.goldenArmorHits; i++) {
+          canvas.drawCircle(
+            ball.position +
+                Offset(
+                  (i * 2 - 1) *
+                      (ball.radius *
+                          (effectDisplayScale?.call(PowerUpKind.goldenArmor) ??
+                              1)) *
+                      0.35,
+                  -(ball.radius *
+                          (effectDisplayScale?.call(PowerUpKind.goldenArmor) ??
+                              1)) *
+                      1.3,
+                ),
+            math.max(
+              2,
+              (ball.radius *
+                      (effectDisplayScale?.call(PowerUpKind.goldenArmor) ??
+                          1)) *
+                  0.1,
+            ),
+            Paint()..color = const Color(0xFFFFF3A0),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
     if (ball.frozenLeft > 0) {
-      canvas.drawCircle(
-        ball.position,
-        (ball.radius * (effectDisplayScale?.call(PowerUpKind.freeze) ?? 1)),
-        Paint()..color = const Color(0xFF9FE3FF).withValues(alpha: 0.45),
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.freeze, -1) ?? 0xFFFFFFFF,
       );
+      try {
+        canvas.drawCircle(
+          ball.position,
+          (ball.radius * (effectDisplayScale?.call(PowerUpKind.freeze) ?? 1)),
+          Paint()..color = const Color(0xFF9FE3FF).withValues(alpha: 0.45),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
     if (ball.stickyGooLeft > 0) {
-      final sprite = PowerUpSprites.effect(EffectSprite.stickyGoo);
-      if (sprite != null) {
-        _drawEffect(
-          canvas,
-          sprite,
-          ball.position +
-              Offset(
-                0,
-                (ball.radius *
-                        (effectDisplayScale?.call(PowerUpKind.stickyGoo) ??
-                            1)) *
-                    0.65,
-              ),
-          (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.stickyGoo) ?? 1)) *
-              1.1,
-          0,
-          opacity: 0.9,
-        );
-      }
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: ball.position,
-          radius:
-              (ball.radius *
-                  (effectDisplayScale?.call(PowerUpKind.stickyGoo) ?? 1)) *
-              1.05,
-        ),
-        0,
-        math.pi,
-        true,
-        Paint()..color = const Color(0xFF65E34F).withValues(alpha: 0.8),
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(PowerUpKind.stickyGoo, -1) ?? 0xFFFFFFFF,
       );
+      try {
+        final sprite = PowerUpSprites.effect(EffectSprite.stickyGoo);
+        if (sprite != null) {
+          _drawEffect(
+            canvas,
+            sprite,
+            ball.position +
+                Offset(
+                  0,
+                  (ball.radius *
+                          (effectDisplayScale?.call(PowerUpKind.stickyGoo) ??
+                              1)) *
+                      0.65,
+                ),
+            (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.stickyGoo) ?? 1)) *
+                1.1,
+            0,
+            opacity: 0.9,
+          );
+        }
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: ball.position,
+            radius:
+                (ball.radius *
+                    (effectDisplayScale?.call(PowerUpKind.stickyGoo) ?? 1)) *
+                1.05,
+          ),
+          0,
+          math.pi,
+          true,
+          Paint()..color = const Color(0xFF65E34F).withValues(alpha: 0.8),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
     }
     for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
-      final weapon = ball.equippedWeapons[slot];
-      if (weapon != PowerUpKind.orbitingFlail) {
-        _paintHeldWeapon(
-          canvas,
-          ball,
-          weapon,
-          slot,
-          firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
-          useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
-          displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
-          gripInset: weaponGripInset?.call(weapon, slot),
-          handEffectScale: handEffectScale?.call(weapon) ?? 1,
-          handEffectColor: handEffectColor?.call(weapon),
-        );
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(ball.equippedWeapons[slot], slot) ?? 0xFFFFFFFF,
+      );
+      try {
+        final weapon = ball.equippedWeapons[slot];
+        if (weapon != PowerUpKind.orbitingFlail) {
+          _paintHeldWeapon(
+            canvas,
+            ball,
+            weapon,
+            slot,
+            firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
+            useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
+            displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
+            gripInset: weaponGripInset?.call(weapon, slot),
+            handEffectScale: handEffectScale?.call(weapon) ?? 1,
+            handEffectColor: handEffectColor?.call(weapon),
+          );
+        }
+      } finally {
+        SkillArtworkTint.end(canvas);
       }
     }
   }

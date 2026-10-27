@@ -20,6 +20,7 @@ class ScoreboardOverlay extends StatelessWidget {
   final MatchMode mode;
   final bool compact;
   final PowerUpConfig tuning;
+  final int Function(SimulationBall ball, PowerUpKind kind)? artworkTint;
 
   const ScoreboardOverlay({
     super.key,
@@ -30,6 +31,7 @@ class ScoreboardOverlay extends StatelessWidget {
     this.mode = MatchMode.threads,
     this.compact = false,
     this.tuning = PowerUpConfig.defaults,
+    this.artworkTint,
   });
 
   Widget _compactCards(BuildContext context) {
@@ -121,7 +123,13 @@ class ScoreboardOverlay extends StatelessWidget {
                                   padding: const EdgeInsets.only(right: 4),
                                   child: Tooltip(
                                     message: item.label,
-                                    child: PowerUpIcon(item, size: 16),
+                                    child: PowerUpIcon(
+                                      item,
+                                      size: 16,
+                                      tint:
+                                          artworkTint?.call(ball, item) ??
+                                          0xFFFFFFFF,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -235,7 +243,13 @@ class ScoreboardOverlay extends StatelessWidget {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      PowerUpIcon(kind, size: 20),
+                                      PowerUpIcon(
+                                        kind,
+                                        size: 20,
+                                        tint:
+                                            artworkTint?.call(ball, kind) ??
+                                            0xFFFFFFFF,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         kind.label,

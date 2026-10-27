@@ -11,6 +11,7 @@ import 'arena_effect_library.dart';
 import 'power_up_sprites.dart';
 import 'lightning_strike_painter.dart';
 import 'power_up_painter.dart';
+import '../../skills/presentation/skill_artwork_tint.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
 class HarpoonCinematic extends StatefulWidget {
@@ -23,12 +24,14 @@ class HarpoonCinematic extends StatefulWidget {
     this.onHookFired,
     this.onImpact,
     this.visualMove,
+    this.artworkTint = 0xFFFFFFFF,
   });
 
   final CustomBall winner;
   final CustomBall loser;
   final String move;
   final String? visualMove;
+  final int artworkTint;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -159,6 +162,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                           uppercutProgress: uppercut,
                           impactProgress: impact,
                           profile: profile,
+                          artworkTint: widget.artworkTint,
                         ),
                       ),
                     ),
@@ -287,6 +291,7 @@ class _FinisherPainter extends CustomPainter {
     required this.uppercutProgress,
     required this.impactProgress,
     required this.profile,
+    this.artworkTint = 0xFFFFFFFF,
   });
 
   final CustomBall winner;
@@ -299,12 +304,15 @@ class _FinisherPainter extends CustomPainter {
   final double uppercutProgress;
   final double impactProgress;
   final FinisherProfile profile;
+  final int artworkTint;
 
   @override
   void paint(Canvas canvas, Size size) {
     _paintSpeedLines(canvas);
     if (impactProgress > 0 && impactProgress < 1) {
+      SkillArtworkTint.begin(canvas, artworkTint);
       _paintImpact(canvas, loserCenter, impactProgress);
+      SkillArtworkTint.end(canvas);
     }
     _paintSmiley(
       canvas,
@@ -315,7 +323,9 @@ class _FinisherPainter extends CustomPainter {
     );
     // Weapons and hazards sit over the characters so large cutscene balls do
     // not hide mines, spikes, blades, or projectiles.
+    SkillArtworkTint.begin(canvas, artworkTint);
     _paintMoveEffect(canvas);
+    SkillArtworkTint.end(canvas);
     _paintWinner(canvas);
   }
 
@@ -1255,11 +1265,13 @@ class _FinisherPainter extends CustomPainter {
       final thrown =
           profile.style == FinisherStyle.blast && hookProgress > 0.08;
       if (!thrown) {
+        SkillArtworkTint.begin(canvas, artworkTint);
         _paintItem(
           canvas,
           raisedGlove + Offset(radius * 0.38, -radius * 0.18),
           radius * 1.35,
         );
+        SkillArtworkTint.end(canvas);
       }
     }
     _paintGlove(

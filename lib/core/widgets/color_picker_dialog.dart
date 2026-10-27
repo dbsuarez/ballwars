@@ -41,6 +41,7 @@ Future<Color?> showColorPicker(
                       Colors.white,
                       Colors.grey,
                       Colors.black,
+                      Color(0xFFFFD700), // Gold
                     ])
                       Semantics(
                         label: 'Color swatch',

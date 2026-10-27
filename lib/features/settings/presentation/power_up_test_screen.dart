@@ -479,6 +479,13 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                       winner: _balls[index],
                       loser: _balls[1 - index],
                       move: kind.label,
+                      artworkTint: widget.initialSkill?.baseKind == kind
+                          ? widget.initialSkill!.spriteTint
+                          : _match?.state.powerUps?.artworkTint(
+                                  kind,
+                                  ball: _match!.state.balls[index],
+                                ) ??
+                                0xFFFFFFFF,
                       onHookFired: () => _launchSound(profile),
                       onImpact: () => _impactSound(profile),
                       onFinished: () {
@@ -574,7 +581,17 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                 ? const Icon(Icons.remove, size: 16, color: Colors.white24)
                 : Opacity(
                     opacity: enabled ? 1 : 0.35,
-                    child: PowerUpIcon(item, size: compact ? 27 : 32),
+                    child: PowerUpIcon(
+                      item,
+                      size: compact ? 27 : 32,
+                      tint: widget.initialSkill?.baseKind == item
+                          ? widget.initialSkill!.spriteTint
+                          : _match?.state.powerUps?.artworkTint(
+                                  item,
+                                  ball: _match!.state.balls[ballIndex],
+                                ) ??
+                                0xFFFFFFFF,
+                    ),
                   ),
           ),
         ),
@@ -955,7 +972,13 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
           ),
           child: item != null
-              ? PowerUpIcon(item, size: 30)
+              ? PowerUpIcon(
+                  item,
+                  size: 30,
+                  tint: widget.initialSkill?.baseKind == item
+                      ? widget.initialSkill!.spriteTint
+                      : _match?.state.powerUps?.artworkTint(item) ?? 0xFFFFFFFF,
+                )
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

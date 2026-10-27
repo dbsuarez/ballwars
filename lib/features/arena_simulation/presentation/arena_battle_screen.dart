@@ -677,6 +677,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final scoreboard = ListenableBuilder(
       listenable: _frame,
       builder: (context, _) => ScoreboardOverlay(
+        artworkTint: (ball, kind) =>
+            _state.powerUps?.artworkTint(kind, ball: ball) ?? 0xFFFFFFFF,
         tuning: widget.config.tuning,
         mode: widget.config.mode,
         compact:
@@ -880,6 +882,16 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       winner: _winnerBall!,
                       loser: _loserBall!,
                       move: _controller.winningMove ?? 'Collision',
+                      artworkTint:
+                          _controller.skillLibrary
+                              .all(_controller.tuning)
+                              .where(
+                                (skill) =>
+                                    skill.name == _controller.winningMove,
+                              )
+                              .firstOrNull
+                              ?.spriteTint ??
+                          0xFFFFFFFF,
                       visualMove: _controller.skillLibrary
                           .all(_controller.tuning)
                           .where(

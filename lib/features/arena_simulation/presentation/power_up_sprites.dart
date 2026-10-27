@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import '../domain/power_up.dart';
 import 'power_up_pixel_art.dart';
 import 'sprite_asset_pipeline.dart';
+import '../../skills/presentation/skill_artwork_tint.dart';
+import '../../settings/presentation/app_settings_scope.dart';
 
 enum EffectSprite {
   flame,
@@ -878,24 +880,32 @@ class PowerUpIcon extends StatelessWidget {
   final PowerUpKind kind;
   final double size;
   final bool projectile;
+  final int? tint;
 
   const PowerUpIcon(
     this.kind, {
     super.key,
     this.size = 32,
     this.projectile = false,
+    this.tint,
   });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: PowerUpSprites.load(),
-    builder: (_, _) => CustomPaint(
-      size: Size.square(size),
-      painter: _IconPainter(
-        kind,
-        projectile
-            ? PowerUpSprites.projectileArtwork(kind)
-            : PowerUpSprites.of(kind),
+    builder: (_, _) => SkillArtworkTint.widget(
+      tint ??
+          AppSettingsScope.of(context).skillLibrary
+              .builtIn(kind, AppSettingsScope.of(context).powerUps)
+              .spriteTint,
+      CustomPaint(
+        size: Size.square(size),
+        painter: _IconPainter(
+          kind,
+          projectile
+              ? PowerUpSprites.projectileArtwork(kind)
+              : PowerUpSprites.of(kind),
+        ),
       ),
     ),
   );

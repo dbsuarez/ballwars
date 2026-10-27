@@ -476,6 +476,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         winsNeeded: _winsNeeded,
         ballSize: _mayhem ? BallSize.small : _ballSize,
         mode: _mayhem ? MatchMode.arsenal : _mode,
+        finishersEnabled: _finishersOn,
         look: _look,
         handsOnPictures: _handsOnPictures,
         whitePickupBackgrounds: _whitePickupBackgrounds,

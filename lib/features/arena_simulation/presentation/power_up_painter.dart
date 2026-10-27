@@ -170,7 +170,7 @@ class PowerUpPainter {
     }
 
     for (final hazard in p.arenaThemeHazards) {
-      _paintArenaThemeHazard(canvas, hazard, arenaRadius, r, state.step);
+      paintArenaThemeHazard(canvas, hazard, arenaRadius, r, state.step);
     }
 
     for (final tendril in p.omegaTendrils) {
@@ -1179,7 +1179,7 @@ class PowerUpPainter {
     }
   }
 
-  static void _paintArenaThemeHazard(
+  static void paintArenaThemeHazard(
     Canvas canvas,
     ArenaThemeHazard hazard,
     double arenaRadius,

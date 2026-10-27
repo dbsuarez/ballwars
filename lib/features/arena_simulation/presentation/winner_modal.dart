@@ -28,6 +28,7 @@ class WinnerModal extends StatefulWidget {
 
   /// Final Mayhem knockouts for every contestant, including zero scores.
   final List<(CustomBall, int, int, double)>? mayhemTally;
+  final bool tallyIsHealth;
 
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
@@ -71,6 +72,7 @@ class WinnerModal extends StatefulWidget {
     this.durationSeconds,
     this.winningMove,
     this.mayhemTally,
+    this.tallyIsHealth = true,
     this.question,
     required this.onReplay,
     this.onReplayFinisher,
@@ -215,9 +217,13 @@ class _WinnerModalState extends State<WinnerModal>
     return '$m:${(seconds - m * 60).toStringAsFixed(1).padLeft(4, '0')}';
   }
 
-  Widget _mayhemResults(BuildContext context) {
+  Widget _mayhemResults(
+    BuildContext context, {
+    List<(CustomBall, int, int, double)>? entries,
+    String title = 'MATCH TALLY',
+  }) {
     final c = BallWarsColors.of(context);
-    final original = widget.mayhemTally!;
+    final original = entries ?? widget.mayhemTally!;
     final rows = [...original]
       ..sort((a, b) {
         final score = b.$2.compareTo(a.$2);
@@ -230,16 +236,18 @@ class _WinnerModalState extends State<WinnerModal>
       });
 
     return Card(
-      key: const ValueKey('mayhem-final-tally'),
+      key: ValueKey(
+        entries == null ? 'mayhem-final-tally' : 'series-final-tally',
+      ),
       margin: const EdgeInsets.only(top: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('MAYHEM TALLY', style: AppText.mono(12, color: c.muted)),
+            Text(title, style: AppText.mono(12, color: c.muted)),
             Text(
-              'Wins / fewer eliminations / remaining health',
+              'Wins / fewer eliminations / remaining ${widget.tallyIsHealth ? "health" : "threads"}',
               style: AppText.ui(11, FontWeight.w500, color: c.muted),
             ),
             const SizedBox(height: 6),
@@ -319,7 +327,9 @@ class _WinnerModalState extends State<WinnerModal>
                         SizedBox(
                           width: 72,
                           child: Text(
-                            '${life.toStringAsFixed(1)} HP',
+                            widget.tallyIsHealth
+                                ? '${life.toStringAsFixed(1)} HP'
+                                : '${life.toInt()} threads',
                             textAlign: TextAlign.right,
                             style: AppText.mono(12, color: c.muted),
                           ),
@@ -497,31 +507,15 @@ class _WinnerModalState extends State<WinnerModal>
                           label: const Text('Save replay'),
                         ),
                       ],
-                      if (score != null) ...[
-                        const SizedBox(height: 20),
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: c.border),
-                            ),
-                            child: Text(
-                              rankSeriesStandings(score)
-                                  .map(
-                                    (entry) =>
-                                        '${entry.ball.name}  ${entry.wins}W-${entry.losses}L  ${entry.hp.toStringAsFixed(0)} HP',
-                                  )
-                                  .join('   ·   '),
-                              textAlign: TextAlign.center,
-                              style: AppText.mono(14, color: c.text),
-                            ),
-                          ),
+                      if (score != null)
+                        _mayhemResults(
+                          context,
+                          title: 'SERIES TALLY',
+                          entries: [
+                            for (final entry in score)
+                              (entry.ball, entry.wins, entry.losses, entry.hp),
+                          ],
                         ),
-                      ],
                       if (widget.mayhemTally != null) _mayhemResults(context),
                       if (widget.durationSeconds != null) ...[
                         const SizedBox(height: 12),

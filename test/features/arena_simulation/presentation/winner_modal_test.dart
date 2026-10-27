@@ -167,7 +167,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('MAYHEM TALLY'), findsOneWidget);
+    expect(find.text('MATCH TALLY'), findsOneWidget);
     expect(find.text('4 W'), findsNWidgets(2));
     expect(find.text('3 L'), findsOneWidget);
     expect(find.text('1 L'), findsOneWidget);

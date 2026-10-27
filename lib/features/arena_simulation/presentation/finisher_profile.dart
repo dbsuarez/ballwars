@@ -37,6 +37,24 @@ class FinisherProfile {
       );
 
   static const Map<String, FinisherProfile> profiles = {
+    'Laser Gate': FinisherProfile(
+      move: 'Laser Gate',
+      yell: 'CROSS THE LINE!',
+      impactYell: 'ZAPPED!',
+      color: Color(0xFFFF2BD6),
+      accent: Color(0xFF00E5FF),
+      style: FinisherStyle.projectile,
+      symbol: '',
+    ),
+    'Quicksand': FinisherProfile(
+      move: 'Quicksand',
+      yell: 'SINKING FEELING!',
+      impactYell: 'SWALLOWED!',
+      color: Color(0xFF7A4828),
+      accent: Color(0xFFF0C276),
+      style: FinisherStyle.trap,
+      symbol: '',
+    ),
     'Pistol': FinisherProfile(
       move: 'Pistol',
       yell: 'DRAW!',

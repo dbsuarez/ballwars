@@ -9,6 +9,7 @@ import '../../ball_management/domain/custom_ball.dart';
 import 'finisher_profile.dart';
 import 'arena_effect_library.dart';
 import 'power_up_sprites.dart';
+import 'power_up_painter.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
 class HarpoonCinematic extends StatefulWidget {
@@ -20,11 +21,13 @@ class HarpoonCinematic extends StatefulWidget {
     required this.onFinished,
     this.onHookFired,
     this.onImpact,
+    this.visualMove,
   });
 
   final CustomBall winner;
   final CustomBall loser;
   final String move;
+  final String? visualMove;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -79,9 +82,9 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
   @override
   Widget build(BuildContext context) {
     final colors = BallWarsColors.of(context);
-    final profile = FinisherProfile.forMove(widget.move);
+    final profile = FinisherProfile.forMove(widget.visualMove ?? widget.move);
     return Semantics(
-      label: 'Hook finishing move cinematic',
+      label: '${widget.move} finishing move cinematic',
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
@@ -319,6 +322,30 @@ class _FinisherPainter extends CustomPainter {
     final from = winnerCenter + Offset(radius * 0.65, -radius * 0.05);
     final to = Offset.lerp(from, loserCenter, hookProgress)!;
     final kind = _kind;
+    final arenaTrap = switch (profile.move) {
+      'Laser Gate' => ArenaThemeHazardKind.laserGate,
+      'Quicksand' => ArenaThemeHazardKind.quicksand,
+      _ => null,
+    };
+    if (arenaTrap != null) {
+      if (hookProgress > 0) {
+        canvas.save();
+        canvas.translate(loserCenter.dx, loserCenter.dy);
+        PowerUpPainter.paintArenaThemeHazard(
+          canvas,
+          ArenaThemeHazard(
+            kind: arenaTrap,
+            position: Offset.zero,
+            spawnStep: 0,
+          ),
+          radius * 7,
+          radius * 0.7,
+          (hookProgress * 120).toInt(),
+        );
+        canvas.restore();
+      }
+      return;
+    }
     if (kind != null && _paintSignatureMove(canvas, kind, from, to)) return;
     switch (profile.style) {
       case FinisherStyle.hook:
@@ -331,12 +358,7 @@ class _FinisherPainter extends CustomPainter {
           final shots = profile.style == FinisherStyle.barrage ? 7 : 1;
           for (var i = 0; i < shots; i++) {
             final spread = (i - (shots - 1) / 2) * radius * 0.13;
-            _paintSymbol(
-              canvas,
-              to + Offset(0, spread),
-              profile.symbol,
-              radius * (profile.style == FinisherStyle.barrage ? 0.72 : 0.9),
-            );
+            _paintItem(canvas, to + Offset(0, spread), radius * 1.3);
           }
         }
       case FinisherStyle.melee:
@@ -571,6 +593,7 @@ class _FinisherPainter extends CustomPainter {
           );
         }
       case PowerUpKind.sword:
+      case PowerUpKind.busterSword:
         if (uppercutProgress > 0) {
           final rect = Rect.fromCenter(
             center: loserCenter,
@@ -928,6 +951,88 @@ class _FinisherPainter extends CustomPainter {
         }
         if (impactProgress > 0) {
           _paintExplosion(canvas, loserCenter, impactProgress);
+        }
+      case PowerUpKind.fireWall:
+      case PowerUpKind.flamethrower:
+        if (hookProgress > 0) {
+          final sprite = ArenaEffectLibrary.frame(
+            ArenaEffectKind.campfire,
+            (hookProgress * 100).toInt(),
+          );
+          for (var i = 0; i < 4; i++) {
+            final point = kind == PowerUpKind.fireWall
+                ? loserCenter + Offset((i - 1.5) * radius * 0.65, radius * 0.3)
+                : Offset.lerp(from, loserCenter, (i + 1) / 4 * hookProgress)!;
+            if (sprite != null) {
+              _paintRaster(canvas, sprite, point, radius * 1.2);
+            }
+          }
+        }
+      case PowerUpKind.tornado:
+        if (hookProgress > 0) {
+          final sprite = PowerUpSprites.effectFrame(
+            AnimatedEffect.tornado,
+            (hookProgress * 24).toInt() % 4,
+          );
+          if (sprite != null) {
+            _paintRaster(canvas, sprite, loserCenter, radius * 1.8);
+          }
+        }
+      case PowerUpKind.freeze:
+        if (hookProgress > 0) {
+          final sprite = ArenaEffectLibrary.frame(
+            ArenaEffectKind.iceImpact,
+            (hookProgress * 7).toInt(),
+          );
+          if (sprite != null) {
+            _paintRaster(canvas, sprite, to, radius * 1.5);
+          }
+        }
+      case PowerUpKind.poisonSwamp:
+        if (hookProgress > 0) {
+          final sprite = ArenaEffectLibrary.frame(ArenaEffectKind.stickyGoo, 0);
+          if (sprite != null) {
+            _paintRaster(
+              canvas,
+              sprite,
+              loserCenter + Offset(0, radius * 0.75),
+              radius * 1.8,
+            );
+          }
+        }
+      case PowerUpKind.waterGun:
+        if (hookProgress > 0) {
+          for (var i = 0; i < 18; i++) {
+            final p = (hookProgress * 2 + i / 18) % 1;
+            final point =
+                Offset.lerp(from, loserCenter, p)! +
+                Offset(0, math.sin(p * math.pi * 3 + i) * radius * 0.13);
+            canvas.drawCircle(
+              point,
+              radius * (0.04 + p * 0.06),
+              Paint()..color = const Color(0xFF39BFFF),
+            );
+          }
+        }
+      case PowerUpKind.earthquake:
+        if (hookProgress > 0) {
+          final path = Path()
+            ..moveTo(loserCenter.dx - radius * 2, loserCenter.dy + radius);
+          for (var i = 0; i < 9; i++) {
+            path.lineTo(
+              loserCenter.dx + (i / 2 - 2) * radius,
+              loserCenter.dy +
+                  radius +
+                  (i.isEven ? -1 : 1) * radius * hookProgress * 0.3,
+            );
+          }
+          canvas.drawPath(
+            path,
+            Paint()
+              ..color = profile.accent
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = radius * 0.08,
+          );
         }
       default:
         return false;

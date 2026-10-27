@@ -181,6 +181,17 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                   damaging.where((item) => item.isPowerUp).toList(),
                 ),
                 _group('TRAPS', damaging.where((item) => item.isTrap).toList()),
+                _GalleryGroup(
+                  title: 'ARENA TRAPS',
+                  children: [
+                    for (final move in ['Quicksand', 'Laser Gate'])
+                      _FinisherCard(
+                        profile: FinisherProfile.forMove(move),
+                        icon: const Icon(Icons.warning_amber_rounded, size: 36),
+                        onPlay: () => _play(move),
+                      ),
+                  ],
+                ),
                 _coreGroup(),
               ],
             ),

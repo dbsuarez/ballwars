@@ -1,4 +1,6 @@
 import 'package:ballwars/core/theme/app_theme.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
 import 'package:ballwars/features/arena_simulation/presentation/finisher_profile.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
@@ -6,6 +8,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('all damaging items and arena traps render launch and impact', (
+    tester,
+  ) async {
+    final moves = [
+      for (final kind in PowerUpKind.values)
+        if (kind.dealsDamage(PowerUpConfig.defaults)) kind.label,
+      'Laser Gate',
+      'Quicksand',
+    ];
+    for (final move in moves) {
+      expect(FinisherProfile.profiles.containsKey(move), isTrue, reason: move);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HarpoonCinematic(
+            key: ValueKey(move),
+            winner: const CustomBall(
+              id: 'a',
+              name: 'A',
+              primaryColor: Colors.red,
+              glowColor: Colors.red,
+            ),
+            loser: const CustomBall(
+              id: 'b',
+              name: 'B',
+              primaryColor: Colors.blue,
+              glowColor: Colors.blue,
+            ),
+            move: move,
+            onFinished: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1800));
+      expect(tester.takeException(), isNull, reason: '$move launch');
+      await tester.pump(const Duration(milliseconds: 1600));
+      expect(tester.takeException(), isNull, reason: '$move impact');
+    }
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets(
     'harpoon cinematic shows smiley effects and timed action sounds',
     (tester) async {
@@ -93,15 +135,29 @@ void main() {
   });
   testWidgets('Skip completes a finisher exactly once', (tester) async {
     var finished = 0;
-    await tester.pumpWidget(MaterialApp(home: HarpoonCinematic(
-      winner: const CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.red),
-      loser: const CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.blue),
-      move: 'Hook', onFinished: () => finished++,
-    )));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HarpoonCinematic(
+          winner: const CustomBall(
+            id: 'a',
+            name: 'A',
+            primaryColor: Colors.red,
+            glowColor: Colors.red,
+          ),
+          loser: const CustomBall(
+            id: 'b',
+            name: 'B',
+            primaryColor: Colors.blue,
+            glowColor: Colors.blue,
+          ),
+          move: 'Hook',
+          onFinished: () => finished++,
+        ),
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.byKey(const ValueKey('skip-finisher')));
     await tester.pump(const Duration(seconds: 5));
     expect(finished, 1);
   });
-
 }

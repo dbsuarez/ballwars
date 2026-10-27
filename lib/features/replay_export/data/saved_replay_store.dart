@@ -7,15 +7,18 @@ class SavedReplay {
     required this.id,
     required this.savedAt,
     required this.uri,
+    this.name,
   });
   final String id;
   final DateTime savedAt;
   final String uri;
+  final String? name;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'saved_at': savedAt.toUtc().toIso8601String(),
     'uri': uri,
+    if (name != null) 'name': name,
   };
 
   static SavedReplay? fromJson(Object? value) {
@@ -24,7 +27,12 @@ class SavedReplay {
     final uri = value['uri'];
     final savedAt = DateTime.tryParse('${value['saved_at'] ?? ''}');
     if (id is! String || uri is! String || savedAt == null) return null;
-    return SavedReplay(id: id, savedAt: savedAt, uri: uri);
+    return SavedReplay(
+      id: id,
+      savedAt: savedAt,
+      uri: uri,
+      name: value['name'] is String ? value['name'] as String : null,
+    );
   }
 }
 
@@ -78,5 +86,25 @@ class SavedReplayStore {
       jsonEncode([for (final entry in next) entry.toJson()]),
     );
     await DevicePrefs.write('saved-replay', next.firstOrNull?.uri ?? '');
+  }
+
+  static Future<void> rename(String id, String name) async {
+    final entries = await load();
+    final trimmed = name.trim();
+    await DevicePrefs.write(
+      _key,
+      jsonEncode([
+        for (final entry in entries)
+          (entry.id == id
+                  ? SavedReplay(
+                      id: entry.id,
+                      savedAt: entry.savedAt,
+                      uri: entry.uri,
+                      name: trimmed.isEmpty ? null : trimmed,
+                    )
+                  : entry)
+              .toJson(),
+      ]),
+    );
   }
 }

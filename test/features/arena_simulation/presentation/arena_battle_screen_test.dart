@@ -222,10 +222,8 @@ void main() {
 
     await _playUntilWinnerCard(tester);
     expect(find.text('wins round 1'), findsOneWidget);
-    expect(
-      find.textContaining('A  '),
-      findsOneWidget,
-    ); // score line, e.g. "A  1   ·   B  0"
+    expect(find.text('SERIES TALLY'), findsOneWidget);
+    expect(find.byKey(const ValueKey('series-final-tally')), findsOneWidget);
 
     await tester.tap(find.text('Next round'));
     await tester.pump();

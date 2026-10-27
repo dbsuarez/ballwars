@@ -951,6 +951,19 @@ class MatchSimulationController {
       activeBalls = [survivor];
     }
     final knockedOut = eliminatedNow.where((b) => b.isEliminated);
+    if (!endlessBattle) {
+      for (final ball in knockedOut) {
+        deaths.update(ball.config.id, (count) => count + 1, ifAbsent: () => 1);
+        final attacker = _lastDamageBy[ball];
+        if (attacker != null && attacker != ball) {
+          eliminations.update(
+            attacker.config.id,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+        }
+      }
+    }
     if (knockedOut.isNotEmpty) {
       final last = knockedOut.last;
       _lastEliminatedId = last.config.id;

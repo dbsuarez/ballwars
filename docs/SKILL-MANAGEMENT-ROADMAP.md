@@ -238,7 +238,16 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Final completion checks
 
-- [x] Final static analysis and automated tests pass (441 tests; 2026-10-27).
+### Follow-up polish (2026-10-27)
+
+- [x] Pass each mode's finisher choice into the live battle rather than reading a stale global setting.
+- [x] Add Laser Gate and Quicksand finisher profiles and gallery previews using their arena hazard renderer. Gravity Well and Vine Snare do not directly damage balls and remain excluded.
+- [x] Reuse existing fire, ice, tornado, slash, explosion and projectile artwork in finishers; add missing elemental presentations and preserve custom-skill carrier artwork.
+- [x] Use the Mayhem table layout for match and series results in every mode, with health or remaining threads and elimination counts.
+- [x] Add Rename to saved replay options and persist the name without changing playback data.
+- [x] Replace hex-only Effect color entry with a visual picker for all skills, with swatches, hue, saturation and brightness controls.
+
+- [x] Final static analysis and automated tests pass (444-test full suite plus all-damaging-finisher render regression; 2026-10-27). Release web build passed.
 - [ ] Browser verification passes.
 - [ ] Android phone verification passes.
 - [ ] Cross-device synchronization passes.

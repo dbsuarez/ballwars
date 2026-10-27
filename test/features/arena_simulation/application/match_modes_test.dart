@@ -90,6 +90,15 @@ MatchSimulationController _arsenal({int count = 2, int seed = 1}) =>
     );
 
 void main() {
+  test('Arsenal arena-trap kill retains move and counts elimination', () {
+    final match = _arsenal();
+    final target = _ball(match, 'b');
+    match.damage(target, 1000, move: 'Laser Gate');
+    match.tick(1 / 60);
+    expect(match.winningMove, 'Laser Gate');
+    expect(match.deaths['b'], 1);
+    expect(match.state.winnerId, 'a');
+  });
   test('Mayhem ends after two minutes and chooses the knockout leader', () {
     final contestants = List.generate(
       6,

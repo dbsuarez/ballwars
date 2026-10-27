@@ -113,9 +113,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       duration: _loserShowDuration,
       vsync: this,
     );
-    EffectsPrefs.finishersOn().then((on) {
-      if (mounted) setState(() => _finishersOn = on);
-    });
+    _finishersOn = widget.config.finishersEnabled ?? true;
+    if (widget.config.finishersEnabled == null) {
+      EffectsPrefs.finishersOn().then((on) {
+        if (mounted) setState(() => _finishersOn = on);
+      });
+    }
     EffectsPrefs.askWhenSlow().then((ask) {
       if (mounted) setState(() => _askSlow = ask);
     });
@@ -874,6 +877,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       winner: _winnerBall!,
                       loser: _loserBall!,
                       move: _controller.winningMove ?? 'Collision',
+                      visualMove: _controller.skillLibrary
+                          .all(_controller.tuning)
+                          .where((skill) => skill.name == _controller.winningMove)
+                          .firstOrNull?.baseKind.label,
                       onHookFired: _playFinisherLaunch,
                       onImpact: _playFinisherImpact,
                       onFinished: () {
@@ -889,17 +896,18 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                   Positioned.fill(
                     child: WinnerModal(
                       winner: _winnerBall!,
-                      mayhemTally: widget.config.mayhem
-                          ? [
-                              for (final ball in _state.balls)
-                                (
-                                  ball.config,
-                                  _controller.eliminations[ball.config.id] ?? 0,
-                                  _controller.deaths[ball.config.id] ?? 0,
-                                  ball.life,
-                                ),
-                            ]
-                          : null,
+                      mayhemTally: [
+                        for (final ball in _state.balls)
+                          (
+                            ball.config,
+                            _controller.eliminations[ball.config.id] ?? 0,
+                            _controller.deaths[ball.config.id] ?? 0,
+                            widget.config.mode == MatchMode.arsenal
+                                ? ball.life
+                                : ball.fanLines.length.toDouble(),
+                          ),
+                      ],
+                      tallyIsHealth: widget.config.mode == MatchMode.arsenal,
                       question: widget.config.question,
                       durationSeconds: _controller.elapsedSeconds,
                       winningMove: _controller.winningMove,

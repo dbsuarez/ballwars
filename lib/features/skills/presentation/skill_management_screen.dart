@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../core/widgets/color_picker_dialog.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/audio/game_audio.dart';
@@ -1408,37 +1409,43 @@ class _SkillEditorState extends State<_SkillEditor> {
                 const SizedBox(height: 12),
                 _number('tickInterval', 'DoT tick interval', suffix: 's'),
                 const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        key: const ValueKey('skill-effect-color'),
-                        controller: _effectColor,
-                        maxLength: 7,
-                        decoration: InputDecoration(
-                          labelText: 'Effect color',
-                          prefixText: '#',
-                          helperText: _colorValue == null
-                              ? 'Enter a 6-digit hex color.'
-                              : 'Generated impact particle color.',
-                          errorText: _colorValue == null
-                              ? 'Use a color like FF6B6B.'
-                              : null,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
+              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ListTile(
+                      key: const ValueKey('skill-effect-color'),
+                      title: const Text('Effect color'),
+                      subtitle: const Text('Tap to choose a color'),
+                      trailing: const Icon(Icons.palette_outlined),
+                      onTap: () async {
+                        final color = await showColorPicker(
+                          context,
+                          initialColor: Color(_colorValue ?? 0xFFFF6B6B),
+                          title: 'Effect color',
+                        );
+                        if (color != null && mounted) {
+                          setState(() {
+                            _effectColor.text = (color.toARGB32() & 0xFFFFFF)
+                                .toRadixString(16)
+                                .padLeft(6, '0');
+                          });
+                        }
+                      },
                     ),
-                    const SizedBox(width: 12),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: CircleAvatar(
-                        key: const ValueKey('skill-effect-color-preview'),
-                        backgroundColor: Color(_colorValue ?? 0xFF000000),
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: CircleAvatar(
+                      key: const ValueKey('skill-effect-color-preview'),
+                      backgroundColor: Color(_colorValue ?? 0xFF000000),
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+              if (widget.skill.isComposed) ...[
                 _number('screenShake', 'Screen shake', suffix: '0-1'),
                 if (_category == SkillCategory.weapon) ...[
                   const SizedBox(height: 12),

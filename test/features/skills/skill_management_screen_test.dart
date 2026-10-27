@@ -40,6 +40,42 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets('Global: switching off "Let each skill set its own" disables the callout field in every skill', (
+    tester,
+  ) async {
+    const tuning = PowerUpConfig.defaults;
+    SkillManagementResult? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: SkillManagementScreen(
+          initial: SkillLibrary.defaults,
+          tuning: tuning,
+          onSave: (result) async => saved = result,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Global'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('global-callout-seconds')), '2.5');
+    await tester.tap(find.byKey(const ValueKey('skills-set-callout')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Every skill uses this duration'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(Tab, 'Weapons'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Search skills'), 'Pistol');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('skill-field-bubbleDuration'));
+    await _revealEditor(tester, field);
+    expect(tester.widget<TextField>(field).enabled, isFalse);
+    expect(find.textContaining('Using the global callout duration (2.5 s)'), findsOneWidget);
+    expect(saved, isNull);
+  });
+
   testWidgets('Combine: pick a look and a fired skill; a broken reference blocks Save and says why', (
     tester,
   ) async {

@@ -577,13 +577,153 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     ),
   );
 
+  late final TextEditingController _calloutText = TextEditingController(
+    text: _formatSeconds(_library.calloutSeconds),
+  );
+  late final TextEditingController _shakeText = TextEditingController(
+    text: _formatSeconds(_library.screenShake),
+  );
+
+  /// One global setting: a number for every skill, and "Let each skill set its own".
+  Widget _globalCard({
+    required String label,
+    required Key fieldKey,
+    required Key switchKey,
+    required TextEditingController controller,
+    required String suffix,
+    required double min,
+    required double max,
+    required bool skillsSetOwn,
+    required String ownNote,
+    required String globalNote,
+    required void Function(double value) onValue,
+    required void Function(bool value) onSkillsSetOwn,
+  }) {
+    final c = BallWarsColors.of(context);
+    final typed = double.tryParse(controller.text.trim());
+    final error = typed == null || typed < min || typed > max
+        ? 'Enter ${_formatSeconds(min)} to ${_formatSeconds(max)}'
+        : null;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Text(
+                    label,
+                    style: AppText.ui(14, FontWeight.w600, color: c.text),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: TextField(
+                    key: fieldKey,
+                    controller: controller,
+                    textAlign: TextAlign.right,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      suffixText: suffix,
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      errorText: error,
+                    ),
+                    onChanged: (text) {
+                      final value = double.tryParse(text.trim());
+                      setState(() {
+                        if (value != null && value >= min && value <= max) {
+                          onValue(value);
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            SwitchListTile(
+              key: switchKey,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Let each skill set its own'),
+              subtitle: Text(skillsSetOwn ? ownNote : globalNote),
+              value: skillsSetOwn,
+              onChanged: (value) => setState(() => onSkillsSetOwn(value)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatSeconds(double seconds) =>
+      seconds.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+
+  /// Settings for every skill at once. Saved with the library (Save library).
+  Widget _globalSettings() {
+    final c = BallWarsColors.of(context);
+    return ListView(
+      key: const ValueKey('skill-global-settings'),
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Settings for every skill. Saved with Save library.',
+          style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.35),
+        ),
+        const SizedBox(height: 12),
+        _globalCard(
+          label: 'Callout duration',
+          fieldKey: const ValueKey('global-callout-seconds'),
+          switchKey: const ValueKey('skills-set-callout'),
+          controller: _calloutText,
+          suffix: 's',
+          min: 0.25,
+          max: 10,
+          skillsSetOwn: _library.skillsSetCallout,
+          ownNote:
+              'Each skill uses its own callout duration (Callouts & Sounds). This value is not used.',
+          globalNote:
+              'Every skill uses this duration. The callout duration in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(calloutSeconds: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetCallout: v),
+        ),
+        _globalCard(
+          label: 'Screen shake',
+          fieldKey: const ValueKey('global-screen-shake'),
+          switchKey: const ValueKey('skills-set-screen-shake'),
+          controller: _shakeText,
+          suffix: '0-1',
+          min: 0,
+          max: 1,
+          skillsSetOwn: _library.skillsSetScreenShake,
+          ownNote:
+              'Each skill uses its own impact shake (Appearance). This value is not used.',
+          globalNote:
+              'Every skill uses this shake. The screen shake in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(screenShake: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetScreenShake: v),
+        ),
+      ],
+    );
+  }
+
   Widget _builtInSkills() => DefaultTabController(
-    length: 3,
+    length: 4,
+    // Opens on Weapons; Global sits first, one tap away.
+    initialIndex: 1,
     child: Column(
       children: [
         const TabBar(
           key: ValueKey('built-in-skill-tabs'),
           tabs: [
+            Tab(text: 'Global'),
             Tab(text: 'Weapons'),
             Tab(text: 'Power-ups'),
             Tab(text: 'Traps'),
@@ -592,6 +732,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         Expanded(
           child: TabBarView(
             children: [
+              _globalSettings(),
               _list(false, category: 'Weapons'),
               _list(false, category: 'Power-ups'),
               _list(
@@ -1459,7 +1600,13 @@ class _SkillEditorState extends State<_SkillEditor> {
     ],
   );
 
-  Widget _number(String key, String label, {String? suffix}) {
+  Widget _number(
+    String key,
+    String label, {
+    String? suffix,
+    bool enabled = true,
+    String? disabledNote,
+  }) {
     final wholeNumber = _wholeNumberKeys.contains(key);
     final limits = _limits[key];
     final value = _double(key);
@@ -1477,6 +1624,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                   final value = double.tryParse(editingValue.text);
                   return TextField(
                     key: ValueKey('skill-field-$key'),
+                    enabled: enabled,
                     controller: _numbers[key],
                     textAlign: TextAlign.right,
                     keyboardType: TextInputType.numberWithOptions(
@@ -1529,6 +1677,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                       isDense: true,
                       border: const OutlineInputBorder(),
                       errorText: _numberError(key),
+                      helperText: enabled ? null : disabledNote,
+                      helperMaxLines: 3,
                     ),
                     onChanged: (_) => setState(() {}),
                   );
@@ -1973,7 +2123,15 @@ class _SkillEditorState extends State<_SkillEditor> {
                         const SizedBox(height: 12),
                       ],
                       if (widget.skill.isComposed) ...[
-                        _number('screenShake', 'Screen shake', suffix: '0-1'),
+                        _number(
+                          'screenShake',
+                          'Screen shake',
+                          suffix: '0-1',
+                          enabled: widget.library.skillsSetScreenShake,
+                          disabledNote:
+                              'Using the global screen shake (${widget.library.screenShake}). '
+                              'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
+                        ),
                         if (_category == SkillCategory.weapon) ...[
                           const SizedBox(height: 12),
                           _fixedRow(
@@ -2501,6 +2659,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'bubbleDuration',
                         'Speech bubble duration',
                         suffix: 's',
+                        enabled: widget.library.skillsSetCallout,
+                        disabledNote:
+                            'Using the global callout duration (${widget.library.calloutSeconds} s). '
+                            'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                       ),
                       const SizedBox(height: 12),
                       Row(

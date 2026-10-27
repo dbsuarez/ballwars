@@ -146,7 +146,7 @@ class PowerUpSystem {
       skill.yell.trim(),
       calloutStyle: CalloutStyle.values[skill.calloutStyle.index],
       calloutBubble: CalloutBubble.values[skill.bubbleType.index],
-      durationSeconds: skill.bubbleDurationSeconds,
+      durationSeconds: match.skillLibrary.calloutSecondsFor(skill),
     );
   }
 
@@ -218,7 +218,7 @@ class PowerUpSystem {
       custom.isEmpty ? fallback : custom,
       calloutStyle: CalloutStyle.values[skill.calloutStyle.index],
       calloutBubble: CalloutBubble.values[skill.bubbleType.index],
-      durationSeconds: skill.bubbleDurationSeconds,
+      durationSeconds: match.skillLibrary.calloutSecondsFor(skill),
     );
   }
 
@@ -2116,12 +2116,12 @@ class PowerUpSystem {
         rng: rng,
         color: Color(skill.effectColor),
         accent: const Color(0xFFFFFFFF),
-        count: 7 + (skill.screenShake * 10).round(),
+        count: 7 + (match.skillLibrary.screenShakeFor(skill) * 10).round(),
         displayScale: skill.effectDisplayScale,
       );
-      if (skill.screenShake > 0) {
+      if (match.skillLibrary.screenShakeFor(skill) > 0) {
         weaponImpacts.add(
-          WeaponImpact(position: target.position, strength: skill.screenShake),
+          WeaponImpact(position: target.position, strength: match.skillLibrary.screenShakeFor(skill)),
         );
       }
     }
@@ -3099,9 +3099,9 @@ class PowerUpSystem {
                 ),
                 composed,
               );
-              if (composed.screenShake > 0) {
+              if (match.skillLibrary.screenShakeFor(composed) > 0) {
                 weaponImpacts.add(
-                  WeaponImpact(position: end, strength: composed.screenShake),
+                  WeaponImpact(position: end, strength: match.skillLibrary.screenShakeFor(composed)),
                 );
               }
             } else {
@@ -3229,7 +3229,7 @@ class PowerUpSystem {
       displayScale: impactSkill.effectDisplayScale,
     );
     weaponImpacts.add(
-      WeaponImpact(position: impact, strength: impactSkill.screenShake),
+      WeaponImpact(position: impact, strength: match.skillLibrary.screenShakeFor(impactSkill)),
     );
     var share = 1.0;
     final shielded = match.mode == MatchMode.arsenal

@@ -676,11 +676,55 @@ class SkillLibrary {
     this.version = currentVersion,
     this.overrides = const {},
     this.custom = const [],
+    this.calloutSeconds = defaultCalloutSeconds,
+    this.skillsSetCallout = true,
+    this.screenShake = defaultScreenShake,
+    this.skillsSetScreenShake = true,
   });
 
   final int version;
   final Map<String, SkillDefinition> overrides;
   final List<SkillDefinition> custom;
+
+  /// Global: how long a callout (speech bubble) stays up, in seconds. Used for every skill while
+  /// [skillsSetCallout] is off.
+  final double calloutSeconds;
+
+  /// Global: "Let each skill set its own" callout duration ([SkillDefinition.bubbleDurationSeconds]).
+  /// Off: every skill uses [calloutSeconds], and the per-skill field is disabled in the editor.
+  final bool skillsSetCallout;
+
+  static const double defaultCalloutSeconds = 1.2;
+
+  /// Global: impact screen shake (0 none to 1 most), used for every skill while [skillsSetScreenShake]
+  /// is off; on, each skill's own [SkillDefinition.screenShake] applies.
+  final double screenShake;
+  final bool skillsSetScreenShake;
+  static const double defaultScreenShake = 0.3;
+
+  /// [skill]'s impact screen shake.
+  double screenShakeFor(SkillDefinition skill) =>
+      skillsSetScreenShake ? skill.screenShake : screenShake;
+
+  /// How long [skill]'s callout stays up.
+  double calloutSecondsFor(SkillDefinition skill) =>
+      skillsSetCallout ? skill.bubbleDurationSeconds : calloutSeconds;
+
+  /// A copy with the global settings changed.
+  SkillLibrary withGlobal({
+    double? calloutSeconds,
+    bool? skillsSetCallout,
+    double? screenShake,
+    bool? skillsSetScreenShake,
+  }) => SkillLibrary(
+    version: version,
+    overrides: overrides,
+    custom: custom,
+    calloutSeconds: (calloutSeconds ?? this.calloutSeconds).clamp(0.25, 10),
+    skillsSetCallout: skillsSetCallout ?? this.skillsSetCallout,
+    screenShake: (screenShake ?? this.screenShake).clamp(0, 1),
+    skillsSetScreenShake: skillsSetScreenShake ?? this.skillsSetScreenShake,
+  );
 
   static const SkillLibrary defaults = SkillLibrary();
   static const int currentVersion = 2;
@@ -688,7 +732,13 @@ class SkillLibrary {
   static const int maxImportedDefinitions = 512;
   static const int maxReplayCharacters = 48000;
 
-  bool get isDefault => overrides.isEmpty && custom.isEmpty;
+  bool get isDefault =>
+      overrides.isEmpty &&
+      custom.isEmpty &&
+      calloutSeconds == defaultCalloutSeconds &&
+      skillsSetCallout &&
+      screenShake == defaultScreenShake &&
+      skillsSetScreenShake;
 
   SkillDefinition builtIn(PowerUpKind kind, PowerUpConfig tuning) =>
       overrides['builtin.${kind.name}'] ?? _defaultFor(kind, tuning);
@@ -731,6 +781,10 @@ class SkillLibrary {
         version: version,
         overrides: overrides,
         custom: List.unmodifiable(next),
+        calloutSeconds: calloutSeconds,
+        skillsSetCallout: skillsSetCallout,
+        screenShake: screenShake,
+        skillsSetScreenShake: skillsSetScreenShake,
       );
     }
     final next = Map<String, SkillDefinition>.of(overrides);
@@ -747,6 +801,10 @@ class SkillLibrary {
       version: version,
       overrides: Map.unmodifiable(next),
       custom: custom,
+      calloutSeconds: calloutSeconds,
+      skillsSetCallout: skillsSetCallout,
+      screenShake: screenShake,
+      skillsSetScreenShake: skillsSetScreenShake,
     );
   }
 
@@ -830,6 +888,10 @@ class SkillLibrary {
     version: version,
     overrides: overrides,
     custom: List.unmodifiable(custom.where((item) => item.id != id)),
+    calloutSeconds: calloutSeconds,
+    skillsSetCallout: skillsSetCallout,
+    screenShake: screenShake,
+    skillsSetScreenShake: skillsSetScreenShake,
   );
 
   SkillDefinition duplicate(SkillDefinition source, String name) {
@@ -1016,6 +1078,10 @@ class SkillLibrary {
       for (final entry in overrides.entries) entry.key: entry.value.toJson(),
     },
     'custom': [for (final item in custom) item.toJson()],
+    if (calloutSeconds != defaultCalloutSeconds) 'callout_seconds': calloutSeconds,
+    if (!skillsSetCallout) 'skills_set_callout': false,
+    if (screenShake != defaultScreenShake) 'screen_shake': screenShake,
+    if (!skillsSetScreenShake) 'skills_set_screen_shake': false,
   };
 
   /// Immutable skill snapshot embedded in replay links. The replay keeps the
@@ -1075,10 +1141,20 @@ class SkillLibrary {
         }
       }
     }
+    final callout = value['callout_seconds'];
+    final shake = value['screen_shake'];
     return SkillLibrary(
       version: currentVersion,
       overrides: Map.unmodifiable(overrides),
       custom: List.unmodifiable(custom),
+      calloutSeconds: callout is num && callout.isFinite
+          ? callout.toDouble().clamp(0.25, 10)
+          : defaultCalloutSeconds,
+      skillsSetCallout: value['skills_set_callout'] as bool? ?? true,
+      screenShake: shake is num && shake.isFinite
+          ? shake.toDouble().clamp(0, 1)
+          : defaultScreenShake,
+      skillsSetScreenShake: value['skills_set_screen_shake'] as bool? ?? true,
     );
   }
 

@@ -247,11 +247,14 @@ void main() {
       expect(image.height, 96, reason: '$kind');
     }
     for (final kind in AnimatedEffect.values) {
-      for (var frame = 0; frame < 4; frame++) {
+      // Lightning uses the supplied eight-frame, higher-resolution artwork.
+      final frameCount = kind == AnimatedEffect.lightning ? 8 : 4;
+      final frameSize = kind == AnimatedEffect.lightning ? 192 : 96;
+      for (var frame = 0; frame < frameCount; frame++) {
         final image = PowerUpSprites.effectFrame(kind, frame);
         expect(image, isNotNull, reason: '$kind frame $frame is missing');
-        expect(image!.width, 96, reason: '$kind frame $frame');
-        expect(image.height, 96, reason: '$kind frame $frame');
+        expect(image!.width, frameSize, reason: '$kind frame $frame');
+        expect(image.height, frameSize, reason: '$kind frame $frame');
       }
     }
   });

@@ -242,7 +242,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 - [x] Implement the [Skill Management audit](SKILL-MANAGEMENT-AUDIT.md): grouped fixed-label controls, visible validation, aligned sprite/projectile previews, and runtime sizing/parameter corrections.
 - [x] Add opt-in replay server upload and cached short-link sharing while retaining local offline playback.
-- [ ] Apply production migration `020_replay_documents.sql` to enable full replay documents on the server.
+- [x] Apply production migration `020_replay_documents.sql` to enable full replay documents on the server. User confirmed applied in production on 2026-10-27; end-to-end replay sharing verification remains part of the checks below.
 
 - [x] Pass each mode's finisher choice into the live battle rather than reading a stale global setting.
 - [x] Add Laser Gate and Quicksand finisher profiles and gallery previews using their arena hazard renderer. Gravity Well and Vine Snare do not directly damage balls and remain excluded.

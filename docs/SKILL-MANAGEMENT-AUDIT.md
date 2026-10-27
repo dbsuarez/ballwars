@@ -58,6 +58,6 @@ Native skills retain their specialist sequences. The editor distinguishes their 
 - [x] Versioned `.bw` JSON payload preserves all replay query options, including skill snapshots, Mayhem, arena and appearance settings.
 - [x] Old server short links still resolve through their existing columns.
 - [x] Invalid/oversized replay documents are rejected.
-- [ ] Apply `supabase/migrations/020_replay_documents.sql` to the production database. This checkout does not provide a database administration connection. Until then the app reports the missing migration and keeps local replays.
+- [x] Apply `supabase/migrations/020_replay_documents.sql` to the production database. User confirmed applied in production on 2026-10-27. End-to-end replay upload and shared-link playback still require verification.
 
 The server stores the `.bw` document as JSON in the replay row behind `?r=CODE`. A standalone file download/import UI and Android file association are separate from the agreed opt-in server upload flow.

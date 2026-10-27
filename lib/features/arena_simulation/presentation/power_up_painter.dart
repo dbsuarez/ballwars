@@ -836,7 +836,7 @@ class PowerUpPainter {
         } else {
           _paintToken(
             canvas,
-            item.kind,
+            p.visualSkill(item.kind, skillId: item.skillId).displayKind,
             item.position,
             r *
                 (0.90 + 0.20 * pulse) *
@@ -2196,6 +2196,7 @@ class PowerUpPainter {
     double Function(PowerUpKind kind)? skillRange,
     double Function(PowerUpKind kind)? handEffectScale,
     Color Function(PowerUpKind kind)? handEffectColor,
+    PowerUpKind Function(PowerUpKind kind, int slot)? artworkKind,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       SkillArtworkTint.begin(
@@ -2786,6 +2787,7 @@ class PowerUpPainter {
             gripInset: weaponGripInset?.call(weapon, slot),
             handEffectScale: handEffectScale?.call(weapon) ?? 1,
             handEffectColor: handEffectColor?.call(weapon),
+            artwork: artworkKind?.call(weapon, slot) ?? weapon,
           );
         }
       } finally {
@@ -2845,7 +2847,11 @@ class PowerUpPainter {
     double? gripInset,
     double handEffectScale = 1,
     Color? handEffectColor,
+    PowerUpKind? artwork,
   }) {
+    // [artwork]: the weapon picture to show (a skill can look like another weapon); [held] keeps the
+    // behavior-specific drawing.
+    final art = artwork ?? held;
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
     if (held == PowerUpKind.energyWave && firedHoldLeft > 0) return;
@@ -2874,7 +2880,7 @@ class PowerUpPainter {
       }
       return;
     }
-    final sprite = useSprite ? PowerUpSprites.of(held) : null;
+    final sprite = useSprite ? PowerUpSprites.of(art) : null;
     if (held == PowerUpKind.shield) {
       final angle = heldAngle(ball, weapon: held, slot: slot);
       canvas.drawArc(
@@ -2921,7 +2927,7 @@ class PowerUpPainter {
         ball.radius * (held.isBlade ? 0.72 : 0.36) * displayScale,
       );
       canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
-      drawGlyph(canvas, held, badge, r * 0.62);
+      drawGlyph(canvas, art, badge, r * 0.62);
       return;
     }
     final baseAngle = heldAngle(ball, weapon: held, slot: slot);
@@ -2941,7 +2947,7 @@ class PowerUpPainter {
       center,
       ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
       angle,
-      iconAngle: _iconAngle[held] ?? 0,
+      iconAngle: _iconAngle[art] ?? 0,
       flip: dir.dx < 0,
       opacity: 1 - drop * drop,
     );

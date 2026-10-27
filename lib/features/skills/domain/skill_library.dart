@@ -128,6 +128,8 @@ class SkillDefinition {
     this.handEffectScale = 1,
     this.handEffectColor = 0xFFFFFFFF,
     this.handEffectDurationSeconds = 0.5,
+    this.artworkKind,
+    this.payloadSkillId,
   });
 
   final String id;
@@ -193,6 +195,19 @@ class SkillDefinition {
   final double handEffectScale;
   final int handEffectColor;
   final double handEffectDurationSeconds;
+
+  /// Composition: the weapon artwork this skill shows when held and lying in the arena (its own tint still
+  /// applies). Null: its own carrier's artwork. Only the look changes; [baseKind] keeps the equipment rules.
+  final PowerUpKind? artworkKind;
+
+  /// Composition: the stable id of the skill it fires (`builtin.<kind>` or `custom.<slug>`). Each shot is
+  /// that skill's projectile, with its damage, flight, return, explosion, knockback, size, tint and sound;
+  /// this skill keeps the trigger, aim, cooldown, callout and the number and spread of shots. Null: it
+  /// fires its own projectile. See [SkillLibrary.resolvePayload] and [SkillLibrary.payloadProblem].
+  final String? payloadSkillId;
+
+  /// Its held and arena artwork ([artworkKind], else its carrier).
+  PowerUpKind get displayKind => artworkKind ?? baseKind;
   SkillCategory get resolvedCategory => category ?? _legacyCategory(baseKind);
   bool get canDamage =>
       (!isComposed &&
@@ -314,6 +329,8 @@ class SkillDefinition {
     double? handEffectScale,
     int? handEffectColor,
     double? handEffectDurationSeconds,
+    Object? artworkKind = _unset,
+    Object? payloadSkillId = _unset,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -380,6 +397,12 @@ class SkillDefinition {
     handEffectColor: handEffectColor ?? this.handEffectColor,
     handEffectDurationSeconds:
         handEffectDurationSeconds ?? this.handEffectDurationSeconds,
+    artworkKind: identical(artworkKind, _unset)
+        ? this.artworkKind
+        : artworkKind as PowerUpKind?,
+    payloadSkillId: identical(payloadSkillId, _unset)
+        ? this.payloadSkillId
+        : payloadSkillId as String?,
   );
 
   Map<String, Object?> toJson() => {
@@ -442,6 +465,8 @@ class SkillDefinition {
     'hand_effect_scale': handEffectScale,
     'hand_effect_color': handEffectColor,
     'hand_effect_duration_seconds': handEffectDurationSeconds,
+    if (artworkKind != null) 'artwork': artworkKind!.name,
+    if (payloadSkillId != null) 'fires': payloadSkillId,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -548,6 +573,8 @@ class SkillDefinition {
       handEffectScale: decimal('hand_effect_scale') ?? 1,
       handEffectColor: integer('hand_effect_color') ?? 0xFFFFFFFF,
       handEffectDurationSeconds: decimal('hand_effect_duration_seconds') ?? 0.5,
+      artworkKind: nullableEnum('artwork', PowerUpKind.values),
+      payloadSkillId: value['fires'] as String?,
     ).validated();
   }
 
@@ -590,7 +617,14 @@ class SkillDefinition {
     handEffectDurationSeconds: handEffectDurationSeconds.clamp(0.1, 10),
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
+    payloadSkillId: _cleanReference(payloadSkillId),
   );
+
+  static String? _cleanReference(String? id) {
+    final trimmed = id?.trim() ?? '';
+    if (trimmed.isEmpty || trimmed.length > 80) return null;
+    return trimmed;
+  }
 
   List<String> get compatibilityIssues {
     if (!isComposed) return const [];
@@ -713,6 +747,82 @@ class SkillLibrary {
       version: version,
       overrides: Map.unmodifiable(next),
       custom: custom,
+    );
+  }
+
+  /// Built-in weapons that fire separate projectiles, so another skill can fire them. Beams, sprays and
+  /// walls are left out: their built-in effect isn't a projectile.
+  static bool isProjectileKind(PowerUpKind kind) =>
+      kind.isGun && !_nonProjectileGuns.contains(kind);
+
+  static const Set<PowerUpKind> _nonProjectileGuns = {
+    PowerUpKind.fireWall,
+    PowerUpKind.flamethrower,
+    PowerUpKind.prismLaser,
+    PowerUpKind.energyWave,
+    PowerUpKind.waterGun,
+    PowerUpKind.busterSword,
+  };
+
+  /// True when [skill] can be another skill's payload: a composed skill that delivers a projectile, or a
+  /// built-in projectile weapon.
+  static bool firesProjectiles(SkillDefinition skill) => skill.isComposed
+      ? skill.delivery == SkillDelivery.projectile
+      : isProjectileKind(skill.baseKind);
+
+  /// The skills [skill] could fire: every projectile skill but itself.
+  List<SkillDefinition> payloadCandidates(
+    SkillDefinition skill,
+    PowerUpConfig tuning,
+  ) => [
+    for (final candidate in all(tuning))
+      if (candidate.id != skill.id && firesProjectiles(candidate)) candidate,
+  ];
+
+  /// What's wrong with [skill]'s fired-skill reference, or null when it has none or it's fine: the skill
+  /// fires itself, the reference is missing or doesn't fire projectiles, it loops back, or [skill] can't
+  /// fire anything (only aimed weapons can).
+  String? payloadProblem(SkillDefinition skill, PowerUpConfig tuning) {
+    final first = skill.payloadSkillId;
+    if (first == null) return null;
+    final aimed = skill.isComposed
+        ? skill.trigger == SkillTrigger.aimedFire
+        : isProjectileKind(skill.baseKind);
+    if (!aimed) {
+      return 'Only an aimed weapon can fire another skill.';
+    }
+    if (first == skill.id) return "A skill can't fire itself.";
+    final path = [skill.name];
+    final seen = {skill.id};
+    String? id = first;
+    while (id != null) {
+      final next = byId(id, tuning);
+      if (next == null) return 'The skill it fires ("$id") no longer exists.';
+      path.add(next.name);
+      if (!seen.add(next.id)) return 'Loop: ${path.join(' → ')}.';
+      if (!firesProjectiles(next)) return '${next.name} does not fire projectiles.';
+      id = next.payloadSkillId;
+    }
+    return null;
+  }
+
+  /// The definition each of [skill]'s shots carries: its fired skill (following chains: if A fires B and B
+  /// fires C, A's shots are C), made a projectile definition if it's a built-in. Null when it fires its own
+  /// projectile or the reference is broken ([payloadProblem]); the match then uses [skill] itself.
+  SkillDefinition? resolvePayload(SkillDefinition skill, PowerUpConfig tuning) {
+    if (skill.payloadSkillId == null || payloadProblem(skill, tuning) != null) {
+      return null;
+    }
+    var current = skill;
+    while (current.payloadSkillId != null) {
+      current = byId(current.payloadSkillId!, tuning)!;
+    }
+    if (current.isComposed) return current;
+    return current.copyWith(
+      trigger: SkillTrigger.aimedFire,
+      targeting: SkillTargeting.nearestOpponent,
+      delivery: SkillDelivery.projectile,
+      effectType: SkillEffectType.damage,
     );
   }
 

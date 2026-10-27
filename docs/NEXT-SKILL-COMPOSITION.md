@@ -1,3 +1,17 @@
+# Skill composition (implemented 2026-10-27)
+
+Any skill can look like any weapon and fire any projectile skill (built-in or custom) as its shots, in any number. The Knife look firing three saved Boom-merangs is one example, not a special case.
+
+- Model: `SkillDefinition.artworkKind` (look; `displayKind`) and `payloadSkillId` (fired skill). Saved in JSON (`artwork`, `fires`), imports/exports and replay snapshots.
+- Rules: the firing skill keeps trigger, aim, cooldown, callout, number and spread of shots. Each shot is the fired skill's projectile: damage, flight, return, explosion, knockback, size, tint and sound. Hits credit the firing skill (winning move, finisher). Chains follow to the last skill. Originals are never modified.
+- Checks (`SkillLibrary.payloadProblem`): fires itself, missing, doesn't fire projectiles, loop, or the skill isn't an aimed weapon. The editor shows the message under Combine and disables Save; a match falls back to the skill's own projectile.
+- Editor: Skill > Identity > Combine: "Looks like" and "Fires" pickers with icons, plus a note on which values come from where.
+- Built-in payloads: guns and thrown weapons (`SkillLibrary.isProjectileKind`); beams, sprays and walls are excluded.
+- Tests: `test/features/skills/skill_composition_test.dart` (model, chains, checks, replays, live match, simultaneous combos, credit) and the Combine editor test in `skill_management_screen_test.dart`.
+- Not verified yet: real Android device and browser play; acceptance by the owner.
+
+## Earlier notes (before implementation)
+
 # Next Skill Management feature
 
 ## Resume checkpoint (2026-10-27)

@@ -639,6 +639,16 @@ class ArenaPainter extends CustomPainter {
                 : ball.heldSecondarySkillId,
           ) ??
           0xFFFFFFFF,
+      artworkKind: (kind, slot) =>
+          state.powerUps
+              ?.visualSkill(
+                kind,
+                skillId: slot == 0
+                    ? ball.heldSkillId
+                    : ball.heldSecondarySkillId,
+              )
+              .displayKind ??
+          kind,
       useWeaponSprite: (kind, slot) =>
           state.powerUps?.usesSprite(
             kind,

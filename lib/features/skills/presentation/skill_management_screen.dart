@@ -153,6 +153,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       useSafeArea: true,
       builder: (_) => _SkillEditor(
         skill: skill,
+        library: _library,
+        tuning: _tuning,
         rarity: _tuning.rarityOf(skill.baseKind),
         onSave: widget.onSave == null
             ? null
@@ -722,8 +724,18 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
 }
 
 class _SkillEditor extends StatefulWidget {
-  const _SkillEditor({required this.skill, required this.rarity, this.onSave});
+  const _SkillEditor({
+    required this.skill,
+    required this.rarity,
+    this.library = SkillLibrary.defaults,
+    this.tuning = PowerUpConfig.defaults,
+    this.onSave,
+  });
   final SkillDefinition skill;
+
+  /// The library the skill belongs to: the skills it can fire, and checks on that reference.
+  final SkillLibrary library;
+  final PowerUpConfig tuning;
   final PowerUpRarity? rarity;
   final Future<void> Function(_SkillEditResult)? onSave;
 
@@ -737,7 +749,10 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   Future<void> _saveEditedSkill() async {
     final result = _result;
-    if (_saving || result == null || result.compatibilityIssues.isNotEmpty) {
+    if (_saving ||
+        result == null ||
+        result.compatibilityIssues.isNotEmpty ||
+        _payloadProblem(result) != null) {
       return;
     }
     final edited = _SkillEditResult(result, _rarity);
@@ -768,6 +783,15 @@ class _SkillEditorState extends State<_SkillEditor> {
   }
 
   late final _name = TextEditingController(text: widget.skill.name);
+
+  /// Combine: the weapon it looks like (null: its own) and the skill it fires (null: its own projectile).
+  late PowerUpKind? _artwork = widget.skill.artworkKind;
+  late String? _payload = widget.skill.payloadSkillId;
+
+  /// What's wrong with the fired-skill choice, checked against the library with this edit in it.
+  String? _payloadProblem(SkillDefinition skill) => widget.library
+      .withDefinition(skill, widget.tuning)
+      .payloadProblem(skill.validated(), widget.tuning);
   late final Map<String, TextEditingController> _numbers = {
     if (widget.skill.isComposed || widget.skill.arsenalDamage != null)
       'arsenal': TextEditingController(
@@ -1079,7 +1103,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     winner: winner,
                     loser: loser,
                     move: skill.name,
-                    visualMove: skill.baseKind.label,
+                    visualMove: skill.displayKind.label,
                     artworkTint: skill.spriteTint,
                     effectSprites: skill.usesSpriteEffects(
                       globalSprite:
@@ -1223,6 +1247,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       spriteTint: _spriteTint,
       screenShake: _double('screenShake'),
       handedness: _handedness,
+      artworkKind: _artwork,
+      payloadSkillId: _payload,
     );
   }
 
@@ -1294,6 +1320,90 @@ class _SkillEditorState extends State<_SkillEditor> {
       return '${limits.$1} to ${limits.$2}';
     }
     return null;
+  }
+
+  /// Combine: look like any weapon, and fire any projectile skill (built-in or custom) as its shots.
+  List<Widget> _combineSection(SkillDefinition? result) {
+    final current = result ?? widget.skill;
+    final candidates = widget.library.payloadCandidates(current, widget.tuning);
+    final problem = result == null ? null : _payloadProblem(result);
+    final known = candidates.any((c) => c.id == _payload);
+    Widget option(PowerUpKind kind, String label) => Row(
+      children: [
+        PowerUpIcon(kind, size: 24),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
+      ],
+    );
+    return [
+      _section(
+        'Combine',
+        'Look like another weapon, and fire any projectile skill as this skill\'s shots.',
+      ),
+      _fixedRow(
+        'Looks like',
+        DropdownButtonFormField<PowerUpKind?>(
+          isExpanded: true,
+          key: const ValueKey('skill-looks-like'),
+          initialValue: _artwork,
+          items: [
+            DropdownMenuItem<PowerUpKind?>(
+              value: null,
+              child: option(widget.skill.baseKind, 'Own look (${widget.skill.baseKind.label})'),
+            ),
+            for (final kind in PowerUpKind.values.where((k) => k.isWeapon))
+              DropdownMenuItem<PowerUpKind?>(value: kind, child: option(kind, kind.label)),
+          ],
+          onChanged: (value) => setState(() => _artwork = value),
+        ),
+      ),
+      _fixedRow(
+        'Fires',
+        DropdownButtonFormField<String?>(
+          isExpanded: true,
+          key: const ValueKey('skill-fires'),
+          initialValue: _payload,
+          items: [
+            DropdownMenuItem<String?>(
+              value: null,
+              child: option(widget.skill.baseKind, 'Own projectile'),
+            ),
+            for (final candidate in candidates)
+              DropdownMenuItem<String?>(
+                value: candidate.id,
+                child: option(
+                  candidate.baseKind,
+                  candidate.custom ? candidate.name : '${candidate.name} (built-in)',
+                ),
+              ),
+            if (_payload != null && !known)
+              DropdownMenuItem<String?>(
+                value: _payload,
+                child: Text('Missing: $_payload', overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: (value) => setState(() => _payload = value),
+        ),
+      ),
+      if (_payload != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Number of shots and spread come from this skill (Damage & Timing). Damage, flight, return, '
+            'explosion, knockback, size, tint and sound come from the skill it fires.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      if (problem != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            problem,
+            key: const ValueKey('skill-fires-problem'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+    ];
   }
 
   Widget _fixedRow(String label, Widget control) => Padding(
@@ -1492,7 +1602,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                     onPressed:
                         _saving ||
                             result == null ||
-                            compatibilityIssues.isNotEmpty
+                            compatibilityIssues.isNotEmpty ||
+                            _payloadProblem(result) != null
                         ? null
                         : _saveEditedSkill,
                     child: Text(_saving ? 'Saving…' : 'Save'),
@@ -1667,6 +1778,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           onChanged: (value) =>
                               setState(() => _enabled = value),
                         ),
+                      ..._combineSection(result),
                       _section(
                         'Behavior',
                         'Choose when the skill activates and what it does.',

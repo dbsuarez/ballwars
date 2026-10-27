@@ -58,6 +58,20 @@ class PowerUpSystem {
   final List<Projectile> projectiles = [];
   final List<ShellCasing> shellCasings = [];
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
+
+  /// Shots fired by one skill as another skill's projectile ([SkillDefinition.payloadSkillId]): the skill
+  /// that fired them, credited for their hits (the winning move and its finisher name it).
+  final Map<Projectile, SkillDefinition> _composedIssuers = {};
+
+  /// While a payload shot lands: the firing skill's name, recorded as the move instead of the payload's.
+  String? _creditMove;
+
+  /// The definition a composed shot carries (its own skill, or the skill it was fired as), or null for a
+  /// built-in shot.
+  SkillDefinition? projectileSkill(Projectile p) => _composedProjectiles[p];
+
+  /// The skill that fired [p] as another skill's projectile, or null.
+  SkillDefinition? projectileIssuer(Projectile p) => _composedIssuers[p];
   final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
   final List<_CustomDamageOverTime> _customDamageOverTime = [];
   final Map<(SimulationBall, String), int> _composedCooldownUntil = {};
@@ -1944,12 +1958,17 @@ class PowerUpSystem {
     }
   }
 
+  /// Fires [skill]. With a [payload] (the skill it fires, from [SkillLibrary.resolvePayload]) every shot
+  /// is that skill's projectile: its damage, flight, return, explosion, knockback, size, tint and sound
+  /// travel with the shot ([_composedProjectiles]), while [skill] decides how many shots and their spread.
   void _launchComposed(
     SimulationBall owner,
     SimulationBall target,
-    SkillDefinition skill,
-  ) {
-    if (skill.delivery == SkillDelivery.projectile) {
+    SkillDefinition skill, {
+    SkillDefinition? payload,
+  }) {
+    if (payload != null || skill.delivery == SkillDelivery.projectile) {
+      final shotSkill = payload ?? skill;
       final delta = target.position - owner.position;
       final baseDirection = delta.distance == 0
           ? const Offset(1, 0)
@@ -1965,20 +1984,21 @@ class PowerUpSystem {
         final direction = Offset(math.cos(radians), math.sin(radians));
         final shot = Projectile(
           owner: owner,
-          kind: skill.baseKind,
+          kind: shotSkill.baseKind,
           position: owner.position + direction * owner.radius,
           velocity:
               direction *
               match.arenaRadius *
-              (skill.projectileSpeed ?? _t.bulletSpeedRatio),
-          target: skill.homing ? target : null,
-          homing: skill.homing,
-          returnTo: skill.returnsToOrigin ? owner.position : null,
-          renderScale: skill.projectileSize,
-          spinDegreesPerSecond: skill.projectileSpin,
+              (shotSkill.projectileSpeed ?? _t.bulletSpeedRatio),
+          target: shotSkill.homing ? target : null,
+          homing: shotSkill.homing,
+          returnTo: shotSkill.returnsToOrigin ? owner.position : null,
+          renderScale: shotSkill.projectileSize,
+          spinDegreesPerSecond: shotSkill.projectileSpin,
         );
         projectiles.add(shot);
-        _composedProjectiles[shot] = skill;
+        _composedProjectiles[shot] = shotSkill;
+        if (payload != null) _composedIssuers[shot] = skill;
         shots++;
       }
       _announceSkill(owner, skill);
@@ -2164,7 +2184,7 @@ class PowerUpSystem {
             dotTick
                 ? (skill.dotArsenalDamage ?? skill.arsenalDamage ?? 0)
                 : (skill.arsenalDamage ?? 0),
-            move: skill.name,
+            move: _creditMove ?? skill.name,
             attacker: owner,
           );
           _showDamage(target, target.position, dealt, 0);
@@ -2175,7 +2195,7 @@ class PowerUpSystem {
                 ? (skill.dotAllOutDamage ?? skill.allOutDamage ?? 0)
                 : (skill.allOutDamage ?? 0),
             near: target.position,
-            move: skill.name,
+            move: _creditMove ?? skill.name,
             attacker: owner,
           );
           _showDamage(target, target.position, cut, 0);
@@ -2352,9 +2372,12 @@ class PowerUpSystem {
           final kind = entry.kind;
           _holdFiredWeapon(ball, kind);
           final composed = _skillForId(kind, entry.skillId);
-          if (composed.isComposed &&
-              composed.trigger == SkillTrigger.aimedFire) {
-            _launchComposed(ball, target, composed);
+          // A skill that fires another skill (any combination) or a composed aimed skill.
+          final payload = match.skillLibrary.resolvePayload(composed, _t);
+          if (payload != null ||
+              (composed.isComposed &&
+                  composed.trigger == SkillTrigger.aimedFire)) {
+            _launchComposed(ball, target, composed, payload: payload);
             continue;
           }
           switch (kind) {
@@ -3034,6 +3057,7 @@ class PowerUpSystem {
           continue;
         }
         final composed = _composedProjectiles[p];
+        _creditMove = _composedIssuers[p]?.name;
         p.spent = !returnsToOrigin;
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
@@ -3077,6 +3101,7 @@ class PowerUpSystem {
               p.spent = false;
             } else {
               _composedProjectiles.remove(p);
+              _composedIssuers.remove(p);
             }
           } else {
             if (visualSkill(p.kind).explodesOnImpact) {
@@ -3086,6 +3111,7 @@ class PowerUpSystem {
               _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
             }
           }
+          _creditMove = null;
           if (returnsToOrigin) {
             p.hitTargets.add(struck);
             p.position += p.velocity / p.velocity.distance * 2;
@@ -3145,6 +3171,7 @@ class PowerUpSystem {
     }
     projectiles.addAll(spawned);
     _composedProjectiles.removeWhere((projectile, _) => projectile.spent);
+    _composedIssuers.removeWhere((projectile, _) => projectile.spent);
     projectiles.removeWhere((p) => p.spent);
   }
 

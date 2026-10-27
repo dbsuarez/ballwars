@@ -921,7 +921,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                             (skill) => skill.name == _controller.winningMove,
                           )
                           .firstOrNull
-                          ?.baseKind
+                          ?.displayKind
                           .label,
                       onHookFired: _playFinisherLaunch,
                       onImpact: _playFinisherImpact,

@@ -40,6 +40,63 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets('Combine: pick a look and a fired skill; a broken reference blocks Save and says why', (
+    tester,
+  ) async {
+    const tuning = PowerUpConfig.defaults;
+    final boom = SkillLibrary.defaults
+        .create('Boom-merang', PowerUpKind.boomerang)
+        .copyWith(returnsToOrigin: true);
+    final combo = SkillLibrary.defaults
+        .create('Knife Volley', PowerUpKind.knife)
+        .copyWith(payloadSkillId: 'custom.gone', projectileCount: 3);
+    final library = SkillLibrary.defaults
+        .withDefinition(boom, tuning)
+        .withDefinition(combo, tuning);
+    SkillManagementResult? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: SkillManagementScreen(
+          initial: library,
+          tuning: tuning,
+          onSave: (result) async => saved = result,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Custom'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Knife Volley'));
+    await tester.pumpAndSettle();
+
+    final problem = find.byKey(const ValueKey('skill-fires-problem'));
+    await _revealEditor(tester, problem);
+    expect(tester.widget<Text>(problem).data, contains('no longer exists'));
+    expect(tester.widget<TextButton>(find.byKey(const ValueKey('save-skill'))).onPressed, isNull);
+
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-fires')));
+    await tester.tap(find.byKey(const ValueKey('skill-fires')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Boom-merang').last);
+    await tester.pumpAndSettle();
+    expect(problem, findsNothing);
+    expect(find.textContaining('come from the skill it fires'), findsOneWidget);
+
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-looks-like')));
+    await tester.tap(find.byKey(const ValueKey('skill-looks-like')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sword').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    final edited = saved!.library.byId(combo.id, saved!.tuning)!;
+    expect(edited.payloadSkillId, boom.id);
+    expect(edited.artworkKind, PowerUpKind.sword);
+    expect(saved!.library.byId(boom.id, saved!.tuning)!.toJson(), library.byId(boom.id, tuning)!.toJson());
+  });
+
   testWidgets(
     'editor saves directly, reports failures, and keeps edits for retry',
     (tester) async {

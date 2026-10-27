@@ -17,7 +17,8 @@ class SpriteDef {
   /// Frame rectangles in sheet pixels.
   final List<Rect> frames;
 
-  /// Anchor inside the output image, 0..1 on each axis.
+  /// The point of the output image (0..1 on each axis, from its top left)
+  /// that painters place on their target point. Defaults to the center.
   final Offset anchor;
 
   /// Width of the output image in pixels (its side when square).
@@ -70,7 +71,15 @@ class SpriteAtlas {
   final String sheet;
   final Map<String, SpriteDef> sprites;
 
-  const SpriteAtlas({required this.sheet, required this.sprites});
+  /// The sheet's size in pixels as the manifest expects it (`sheetSize`), or
+  /// null when the manifest does not say. [problems] reports a mismatch.
+  final Size? sheetSize;
+
+  const SpriteAtlas({
+    required this.sheet,
+    required this.sprites,
+    this.sheetSize,
+  });
 
   /// Reads a decoded JSON manifest. Throws [FormatException] for malformed
   /// input; messages name the sprite id.
@@ -86,11 +95,26 @@ class SpriteAtlas {
     if (raw is! Map) {
       throw const FormatException('Atlas manifest needs a "sprites" object');
     }
+    Size? sheetSize;
+    final sizeRaw = json['sheetSize'];
+    if (sizeRaw != null) {
+      if (sizeRaw is! List ||
+          sizeRaw.length != 2 ||
+          sizeRaw.any((n) => n is! int || n <= 0)) {
+        throw const FormatException(
+          'Atlas manifest "sheetSize" must be [width, height] in whole pixels',
+        );
+      }
+      sheetSize = Size(
+        (sizeRaw[0] as int).toDouble(),
+        (sizeRaw[1] as int).toDouble(),
+      );
+    }
     final sprites = <String, SpriteDef>{};
     raw.forEach((id, value) {
       sprites[id as String] = _parseSprite(id, value);
     });
-    return SpriteAtlas(sheet: sheet, sprites: sprites);
+    return SpriteAtlas(sheet: sheet, sprites: sprites, sheetSize: sheetSize);
   }
 
   static SpriteDef _parseSprite(String id, Object? v) {
@@ -192,6 +216,13 @@ class SpriteAtlas {
   List<String> problems({required Size sheetSize}) {
     final out = <String>[];
     final sheetText = '${sheetSize.width.round()}x${sheetSize.height.round()}';
+    final expected = this.sheetSize;
+    if (expected != null && expected != sheetSize) {
+      out.add(
+        '$sheet is $sheetText, the manifest expects '
+        '${expected.width.round()}x${expected.height.round()}',
+      );
+    }
     for (final def in sprites.values) {
       if (def.frames.isEmpty) out.add('${def.id} has no frames');
       for (var i = 0; i < def.frames.length; i++) {
@@ -235,6 +266,12 @@ class SpriteAtlas {
         out.add(
           '${def.id} trimCutPadding ${def.trimCutPadding} leaves no room in a '
           '${def.output}x${def.height} px output',
+        );
+      }
+      final a = def.anchor;
+      if (!(a.dx >= 0 && a.dx <= 1 && a.dy >= 0 && a.dy <= 1)) {
+        out.add(
+          '${def.id} anchor [${a.dx}, ${a.dy}] must be 0 to 1 on each axis',
         );
       }
       if (def.bleedOk && (def.bleedNote == null || def.bleedNote!.isEmpty)) {

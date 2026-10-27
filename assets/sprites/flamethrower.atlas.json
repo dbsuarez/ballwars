@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/flamethrower.png",
+  "sheetSize": [1536, 1024],
   "sprites": {
     "powerup.flamethrower": {
       "frames": [

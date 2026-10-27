@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/lightning-strike-8.png",
+  "sheetSize": [1776, 888],
   "sprites": {
     "anim.lightning": {
       "frames": [

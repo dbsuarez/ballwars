@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/projectiles-master.png",
+  "sheetSize": [1774, 887],
   "sprites": {
     "projectile.pistol": {
       "frames": [

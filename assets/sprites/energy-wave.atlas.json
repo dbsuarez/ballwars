@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/energy-wave.png",
+  "sheetSize": [1254, 1254],
   "sprites": {
     "powerup.energyWave": {
       "frames": [

@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/boomerang.png",
+  "sheetSize": [1774, 887],
   "sprites": {
     "powerup.boomerang": {
       "frames": [

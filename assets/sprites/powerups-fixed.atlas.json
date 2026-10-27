@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/powerups-fixed.png",
+  "sheetSize": [1024, 640],
   "sprites": {
     "powerup.pistol": {
       "frames": [

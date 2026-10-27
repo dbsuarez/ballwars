@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/effects-master.png",
+  "sheetSize": [1448, 1086],
   "sprites": {
     "effect.flame": {
       "frames": [

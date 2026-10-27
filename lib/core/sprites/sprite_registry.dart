@@ -19,11 +19,18 @@ class SpriteRegistry {
   static const String indexPath = 'assets/sprites/atlas-index.json';
   static const int _defaultStepsPerFrame = 4;
 
+  /// The default anchor: the center of the image.
+  static const Offset center = Offset(0.5, 0.5);
+
   static Future<void>? _loading;
   static final Map<String, _CutSprite> _sprites = {};
   static final Map<String, Set<String>> _customIds = {};
   static final Map<String, String> _owners = {};
   static final List<String> _problems = [];
+
+  /// Anchors of the frames whose sprite does not use [center], by image, so
+  /// a painter that only holds the image can place it ([anchorOf]).
+  static final Map<ui.Image, Offset> _imageAnchors = Map.identity();
   static int _generation = 0;
 
   static List<String> get loadProblems => List.unmodifiable(_problems);
@@ -41,6 +48,90 @@ class SpriteRegistry {
     return sprite.frames[index % sprite.frames.length];
   }
 
+  /// Looping playback: the frame shown at simulation [step]. Each frame is
+  /// held for the sprite's own `stepsPerFrame` and the frames wrap over its
+  /// frame count; [offset] shifts the cycle by whole frames (so several
+  /// copies of one effect do not flicker in step). The index is
+  /// `(step ~/ stepsPerFrame + offset) % frameCount`.
+  ///
+  /// [stepsPerFrame] and [frameCount] override the manifest for a call site
+  /// that plays the sprite at another rate or over fewer frames than the
+  /// rest of the game; leave them out otherwise. Null when the id is unknown.
+  static ui.Image? frameAt(
+    String id,
+    int step, {
+    int offset = 0,
+    int? stepsPerFrame,
+    int? frameCount,
+  }) {
+    final sprite = _sprites[id];
+    if (sprite == null || sprite.frames.isEmpty) return null;
+    final count = frameCount ?? sprite.frames.length;
+    final index = (step ~/ (stepsPerFrame ?? sprite.stepsPerFrame) + offset) %
+        count;
+    return sprite.frames[index % sprite.frames.length];
+  }
+
+  /// One-shot playback: the frame at progress [t] (0 = start, 1 = end) of an
+  /// effect that plays its frames once over its own duration. The index is
+  /// `(t * frameCount).floor().clamp(0, frameCount - 1)`, so values outside
+  /// 0..1 hold the first or last frame. Null when the id is unknown.
+  static ui.Image? frameAtProgress(String id, double t) {
+    final sprite = _sprites[id];
+    if (sprite == null || sprite.frames.isEmpty) return null;
+    final count = sprite.frames.length;
+    return sprite.frames[(t * count).floor().clamp(0, count - 1)];
+  }
+
+  /// [id]'s anchor: the point of its images (0..1 on each axis, from the top
+  /// left) that painters put on their target point. [center] for sprites
+  /// without one, drawn and custom sprites included, and for unknown ids.
+  static Offset anchor(String id) => _sprites[id]?.anchor ?? center;
+
+  /// The anchor of the sprite that [image] (a frame from this registry)
+  /// belongs to; [center] for any other image. For painters that only hold
+  /// the image.
+  static Offset anchorOf(ui.Image image) =>
+      _imageAnchors.isEmpty ? center : (_imageAnchors[image] ?? center);
+
+  /// Where a [width] x [height] image is drawn so that its [anchor] point
+  /// lands on [target]. With [center] it is exactly
+  /// `Rect.fromCenter(center: target, ...)`.
+  static Rect placeRect(
+    Offset target,
+    double width,
+    double height,
+    Offset anchor,
+  ) {
+    if (anchor == center) {
+      return Rect.fromCenter(center: target, width: width, height: height);
+    }
+    return Rect.fromLTWH(
+      target.dx - width * anchor.dx,
+      target.dy - height * anchor.dy,
+      width,
+      height,
+    );
+  }
+
+  static void _put(String id, _CutSprite sprite) {
+    _sprites[id] = sprite;
+    if (sprite.anchor != center) {
+      for (final f in sprite.frames) {
+        _imageAnchors[f] = sprite.anchor;
+      }
+    }
+  }
+
+  static void _remove(String id) {
+    final sprite = _sprites.remove(id);
+    if (sprite == null) return;
+    for (final f in sprite.frames) {
+      _imageAnchors.remove(f);
+    }
+    sprite.dispose();
+  }
+
   /// Loads every bundled manifest. Idempotent: later calls return the same
   /// future. Never throws.
   static Future<void> load({AssetBundle? bundle}) =>
@@ -55,6 +146,7 @@ class SpriteRegistry {
       s.dispose();
     }
     _sprites.clear();
+    _imageAnchors.clear();
     _customIds.clear();
     _owners.clear();
     _problems.clear();
@@ -63,6 +155,8 @@ class SpriteRegistry {
   /// Cuts an already decoded [sheet] (a user upload) under ids
   /// `<idPrefix>.<sprite id>`. Registering the same prefix again replaces its
   /// sprites. [idPrefix] must start with `custom.` so bundled ids stay safe.
+  /// Throws [ArgumentError] when the atlas has problems, including a
+  /// `sheetSize` that differs from [sheet]'s real size.
   static Future<void> register(
     SpriteAtlas atlas,
     ui.Image sheet, {
@@ -116,7 +210,7 @@ class SpriteRegistry {
     final added = <String>{};
     cut.forEach((id, sprite) {
       final full = '$idPrefix.$id';
-      _sprites[full] = sprite;
+      _put(full, sprite);
       added.add(full);
     });
     _customIds[idPrefix] = added;
@@ -127,7 +221,7 @@ class SpriteRegistry {
     final old = _customIds.remove(idPrefix);
     if (old == null) return;
     for (final id in old) {
-      _sprites.remove(id)?.dispose();
+      _remove(id);
     }
   }
 
@@ -137,7 +231,9 @@ class SpriteRegistry {
   /// [output] wide, [outputHeight] tall or square, [padding]) and is stored
   /// under [id] like a sprite from a bundled manifest: `frame(id)` returns it
   /// and a manifest that later names the same id is skipped with a load
-  /// problem.
+  /// problem. There is no `trimCutPadding`: with [SpriteFit.trim] the
+  /// measured first cut always fills the whole output (cut padding 0).
+  /// [anchor] works like a manifest's (default [center]).
   ///
   /// The registry stores its own copy: the caller keeps ownership of [image]
   /// and may dispose it once the future completes. Throws [ArgumentError] for
@@ -153,6 +249,7 @@ class SpriteRegistry {
     int? outputHeight,
     int padding = 2,
     int stepsPerFrame = _defaultStepsPerFrame,
+    Offset anchor = center,
   }) async {
     if (id.isEmpty || id.startsWith('custom.')) {
       throw ArgumentError.value(
@@ -174,6 +271,7 @@ class SpriteRegistry {
       fit: fit,
       padding: padding,
       stepsPerFrame: stepsPerFrame,
+      anchor: anchor,
     );
     final problems = SpriteAtlas(sheet: 'drawn', sprites: {id: def}).problems(
       sheetSize: Size(image.width.toDouble(), image.height.toDouble()),
@@ -186,7 +284,7 @@ class SpriteRegistry {
     }
     final gen = _generation;
     final frames = await _cutSprite(def, image);
-    final sprite = _CutSprite(frames, stepsPerFrame);
+    final sprite = _CutSprite(frames, stepsPerFrame, anchor);
     if (gen != _generation) {
       sprite.dispose();
       return;
@@ -196,7 +294,7 @@ class SpriteRegistry {
       throw ArgumentError.value(id, 'id', 'is already in use');
     }
     _owners[id] = 'drawn in code';
-    _sprites[id] = sprite;
+    _put(id, sprite);
   }
 
   static void _problem(String text) {
@@ -293,7 +391,7 @@ class SpriteRegistry {
           continue;
         }
         _owners[entry.key] = path;
-        _sprites[entry.key] = entry.value;
+        _put(entry.key, entry.value);
       }
     } catch (e) {
       if (gen != _generation) return;
@@ -314,6 +412,7 @@ class SpriteRegistry {
         out[def.id] = _CutSprite(
           await _cutSprite(def, sheet),
           def.stepsPerFrame,
+          def.anchor,
         );
       }
     } catch (_) {
@@ -486,7 +585,8 @@ class SpriteRegistry {
 class _CutSprite {
   final List<ui.Image> frames;
   final int stepsPerFrame;
-  _CutSprite(this.frames, this.stepsPerFrame);
+  final Offset anchor;
+  _CutSprite(this.frames, this.stepsPerFrame, this.anchor);
 
   void dispose() {
     for (final f in frames) {

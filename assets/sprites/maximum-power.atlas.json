@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/maximum-power.png",
+  "sheetSize": [1024, 256],
   "sprites": {
     "anim.maximumPower": {
       "frames": [

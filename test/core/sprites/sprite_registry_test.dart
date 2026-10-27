@@ -652,4 +652,247 @@ void main() {
       expect(SpriteRegistry.loadProblems, isEmpty);
     });
   });
+
+  group('playback helpers', () {
+    Future<void> registerFour({int steps = 3}) async {
+      final sheet = await makeSheet(4);
+      await SpriteRegistry.register(
+        SpriteAtlas.parse({
+          'sheet': 'ignored.png',
+          'sprites': {
+            'loop': {
+              'frames': [
+                for (var i = 0; i < 4; i++) [i * 16, 0, 16, 16],
+              ],
+              'output': 32,
+              'stepsPerFrame': steps,
+            },
+          },
+        }),
+        sheet,
+        idPrefix: 'custom.play',
+      );
+    }
+
+    test('frameAt holds each frame stepsPerFrame steps and wraps', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        await registerFour();
+        const id = 'custom.play.loop';
+        for (var step = 0; step < 40; step++) {
+          for (var offset = 0; offset < 4; offset++) {
+            expect(
+              SpriteRegistry.frameAt(id, step, offset: offset),
+              same(SpriteRegistry.frame(id, (step ~/ 3 + offset) % 4)),
+              reason: 'step $step offset $offset',
+            );
+          }
+          // Per-call overrides: another rate, or fewer frames.
+          expect(
+            SpriteRegistry.frameAt(id, step, stepsPerFrame: 4),
+            same(SpriteRegistry.frame(id, (step ~/ 4) % 4)),
+          );
+          expect(
+            SpriteRegistry.frameAt(id, step, stepsPerFrame: 1, frameCount: 2),
+            same(SpriteRegistry.frame(id, step % 2)),
+          );
+        }
+        expect(SpriteRegistry.frameAt('missing', 3), isNull);
+      });
+    });
+
+    test('frameAtProgress spreads the frames over 0..1 and clamps', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        await registerFour();
+        const id = 'custom.play.loop';
+        final cases = <double, int>{
+          -0.5: 0,
+          0.0: 0,
+          0.24: 0,
+          0.25: 1,
+          0.6: 2,
+          0.99: 3,
+          1.0: 3,
+          2.0: 3,
+        };
+        cases.forEach((t, index) {
+          expect(
+            SpriteRegistry.frameAtProgress(id, t),
+            same(SpriteRegistry.frame(id, index)),
+            reason: 't $t',
+          );
+        });
+        expect(SpriteRegistry.frameAtProgress('missing', 0.5), isNull);
+      });
+    });
+  });
+
+  group('anchor', () {
+    test('comes from the manifest, center by default', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final sheet = await makeSheet(2);
+        await SpriteRegistry.register(
+          SpriteAtlas.parse({
+            'sheet': 'ignored.png',
+            'sprites': {
+              'low': {
+                'frames': [
+                  [0, 0, 16, 16],
+                  [16, 0, 16, 16],
+                ],
+                'output': 32,
+                'anchor': [0.25, 1],
+              },
+              'mid': {
+                'frames': [
+                  [0, 0, 16, 16],
+                ],
+                'output': 32,
+              },
+            },
+          }),
+          sheet,
+          idPrefix: 'custom.anc',
+        );
+        expect(SpriteRegistry.anchor('custom.anc.low'), const Offset(0.25, 1));
+        expect(SpriteRegistry.anchor('custom.anc.mid'), SpriteRegistry.center);
+        expect(SpriteRegistry.anchor('missing'), SpriteRegistry.center);
+        for (var i = 0; i < 2; i++) {
+          expect(
+            SpriteRegistry.anchorOf(SpriteRegistry.frame('custom.anc.low', i)!),
+            const Offset(0.25, 1),
+          );
+        }
+        final mid = SpriteRegistry.frame('custom.anc.mid')!;
+        expect(SpriteRegistry.anchorOf(mid), SpriteRegistry.center);
+        expect(SpriteRegistry.anchorOf(sheet), SpriteRegistry.center);
+
+        final low = SpriteRegistry.frame('custom.anc.low')!;
+        SpriteRegistry.unregister('custom.anc');
+        expect(SpriteRegistry.anchorOf(low), SpriteRegistry.center);
+      });
+    });
+
+    test('registerDrawn takes an anchor and validates it', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final image = await makeSheet(1, cell: 32);
+        await SpriteRegistry.registerDrawn('effect.a', image);
+        expect(SpriteRegistry.anchor('effect.a'), SpriteRegistry.center);
+        await SpriteRegistry.registerDrawn(
+          'effect.b',
+          image,
+          anchor: const Offset(0, 0.5),
+        );
+        expect(SpriteRegistry.anchor('effect.b'), const Offset(0, 0.5));
+        final b = SpriteRegistry.frame('effect.b')!;
+        expect(SpriteRegistry.anchorOf(b), const Offset(0, 0.5));
+        await expectLater(
+          SpriteRegistry.registerDrawn(
+            'effect.c',
+            image,
+            anchor: const Offset(1.2, 0.5),
+          ),
+          throwsArgumentError,
+        );
+        SpriteRegistry.resetForTest();
+        expect(SpriteRegistry.anchorOf(b), SpriteRegistry.center);
+      });
+    });
+
+    test('placeRect puts the anchor point on the target', () {
+      const target = Offset(100, 50);
+      expect(
+        SpriteRegistry.placeRect(target, 40, 20, SpriteRegistry.center),
+        Rect.fromCenter(center: target, width: 40, height: 20),
+      );
+      expect(
+        SpriteRegistry.placeRect(target, 40, 20, Offset.zero),
+        const Rect.fromLTWH(100, 50, 40, 20),
+      );
+      expect(
+        SpriteRegistry.placeRect(target, 40, 20, const Offset(0.5, 1)),
+        const Rect.fromLTWH(80, 30, 40, 20),
+      );
+      expect(
+        SpriteRegistry.placeRect(target, 40, 20, const Offset(0.25, 0.75)),
+        const Rect.fromLTWH(90, 35, 40, 20),
+      );
+    });
+  });
+
+  group('sheetSize', () {
+    String sized(String sheet, List<int> size) => jsonEncode({
+      'sheet': sheet,
+      'sheetSize': size,
+      'sprites': {
+        'x.$sheet': {
+          'frames': [
+            [0, 0, 16, 16],
+          ],
+          'output': 32,
+        },
+      },
+    });
+
+    test('load skips a manifest whose sheet has another size', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final bundle = FakeAssetBundle();
+        bundle.putString(
+          SpriteRegistry.indexPath,
+          jsonEncode(['ok.atlas.json', 'bad.atlas.json']),
+        );
+        // makeSheet(2) is 32 x 16.
+        bundle.files['ok.png'] = await pngBytes(await makeSheet(2));
+        bundle.putString('ok.atlas.json', sized('ok.png', [32, 16]));
+        bundle.files['bad.png'] = await pngBytes(await makeSheet(2));
+        bundle.putString('bad.atlas.json', sized('bad.png', [32, 17]));
+
+        await SpriteRegistry.load(bundle: bundle);
+        expect(SpriteRegistry.has('x.ok.png'), isTrue);
+        expect(SpriteRegistry.has('x.bad.png'), isFalse);
+        expect(SpriteRegistry.loadProblems, hasLength(1));
+        expect(
+          SpriteRegistry.loadProblems.single,
+          allOf(
+            contains('bad.atlas.json'),
+            contains('bad.png is 32x16, the manifest expects 32x17'),
+          ),
+        );
+      });
+    });
+
+    test('register checks it when given', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final sheet = await makeSheet(2);
+        SpriteAtlas atlas(List<int> size) => SpriteAtlas.parse({
+          'sheet': 'up.png',
+          'sheetSize': size,
+          'sprites': {
+            'a': {
+              'frames': [
+                [0, 0, 16, 16],
+              ],
+              'output': 32,
+            },
+          },
+        });
+        await expectLater(
+          SpriteRegistry.register(atlas([64, 16]), sheet, idPrefix: 'custom.s'),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('up.png is 32x16, the manifest expects 64x16'),
+            ),
+          ),
+        );
+        expect(SpriteRegistry.has('custom.s.a'), isFalse);
+        await SpriteRegistry.register(
+          atlas([32, 16]),
+          sheet,
+          idPrefix: 'custom.s',
+        );
+        expect(SpriteRegistry.has('custom.s.a'), isTrue);
+      });
+    });
+  });
 }

@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/sticky-goo-rim.png",
+  "sheetSize": [2169, 725],
   "sprites": {
     "effect.stickyGooRim": {
       "frames": [

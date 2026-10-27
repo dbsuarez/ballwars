@@ -236,4 +236,72 @@ void main() {
       );
     });
   });
+
+  group('sheetSize', () {
+    Map<String, Object?> json({Object? size}) => {
+      'sheet': 'a.png',
+      'sheetSize': ?size,
+      'sprites': {
+        'x': {
+          'frames': [
+            [0, 0, 8, 8],
+          ],
+          'output': 32,
+        },
+      },
+    };
+
+    test('is optional and checked against the decoded sheet', () {
+      expect(SpriteAtlas.parse(json()).sheetSize, isNull);
+      expect(
+        SpriteAtlas.parse(json()).problems(sheetSize: const Size(20, 10)),
+        isEmpty,
+      );
+      final atlas = SpriteAtlas.parse(json(size: [20, 10]));
+      expect(atlas.sheetSize, const Size(20, 10));
+      expect(atlas.problems(sheetSize: const Size(20, 10)), isEmpty);
+      expect(atlas.problems(sheetSize: const Size(21, 10)), [
+        'a.png is 21x10, the manifest expects 20x10',
+      ]);
+    });
+
+    test('rejects anything but two positive whole numbers', () {
+      for (final bad in [
+        [20],
+        [20, 0],
+        [20, 10.5],
+        '20x10',
+        [20, 10, 1],
+      ]) {
+        expect(
+          () => SpriteAtlas.parse(json(size: bad)),
+          throwsFormatException,
+          reason: '$bad',
+        );
+      }
+    });
+  });
+
+  test('anchor must be 0 to 1 on each axis', () {
+    SpriteAtlas atlas(List<num> anchor) => SpriteAtlas.parse({
+      'sheet': 'a.png',
+      'sprites': {
+        'x': {
+          'frames': [
+            [0, 0, 8, 8],
+          ],
+          'output': 32,
+          'anchor': anchor,
+        },
+      },
+    });
+    const sheet = Size(8, 8);
+    expect(atlas([0, 1]).sprites['x']!.anchor, const Offset(0, 1));
+    expect(atlas([0, 1]).problems(sheetSize: sheet), isEmpty);
+    expect(atlas([0.25, 0.9]).problems(sheetSize: sheet), isEmpty);
+    expect(atlas([1.5, 0.5]).problems(sheetSize: sheet), [
+      'x anchor [1.5, 0.5] must be 0 to 1 on each axis',
+    ]);
+    expect(atlas([0.5, -0.1]).problems(sheetSize: sheet), hasLength(1));
+  });
 }

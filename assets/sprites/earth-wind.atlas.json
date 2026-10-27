@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/earth-wind.png",
+  "sheetSize": [1774, 887],
   "sprites": {
     "powerup.earthquake": {
       "frames": [

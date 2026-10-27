@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/elemental-powers.png",
+  "sheetSize": [2172, 724],
   "sprites": {
     "powerup.fireWall": {
       "frames": [

@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/tornado-animated-v2.png",
+  "sheetSize": [1760, 880],
   "sprites": {
     "anim.tornado": {
       "frames": [

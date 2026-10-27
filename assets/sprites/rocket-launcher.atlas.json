@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/rocket-launcher.png",
+  "sheetSize": [1774, 887],
   "sprites": {
     "powerup.rocketLauncher": {
       "frames": [

@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/omega-tendrils.png",
+  "sheetSize": [512, 256],
   "sprites": {
     "powerup.omegaTendrils": {
       "frames": [

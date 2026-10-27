@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/phase8-skills.png",
+  "sheetSize": [1760, 440],
   "sprites": {
     "powerup.friedChicken": {
       "frames": [

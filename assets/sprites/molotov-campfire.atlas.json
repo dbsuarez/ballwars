@@ -1,5 +1,6 @@
 {
   "sheet": "assets/sprites/molotov-campfire.png",
+  "sheetSize": [2172, 724],
   "sprites": {
     "anim.campfire": {
       "frames": [

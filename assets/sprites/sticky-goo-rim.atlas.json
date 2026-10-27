@@ -4,7 +4,7 @@
   "sprites": {
     "effect.stickyGooRim": {
       "frames": [
-        [0, 94.25, 2169, 406]
+        [0, 102.25, 2169, 406]
       ],
       "output": 768,
       "fit": "fill",
@@ -12,7 +12,7 @@
       "bleedOk": true,
       "padding": 0,
       "outputHeight": 160,
-      "bleedNote": "Cut as before atlases: rows 13% to 69% of the sheet (y 94.25 to 500.25), stretched to 768 x 160. The goo is a strip that wraps along the rim, so its art runs to the sheet's left and right edges (x 0 and 2168) on purpose; the drips below reach y 505, so the cut clips their last 5 rows (188 px). Kept so the rim looks the same as before."
+      "bleedNote": "The goo is a strip that wraps along the rim, so its art runs to the sheet's left and right edges (x 0 and 2168) on purpose: a 2 px clear border there would leave gaps where the 56 slices meet, so those edges stay. The cut is rows y 102.25 to 508.25 (406 rows, as before, moved 8 rows down from 94.25) so the drips, which end at y 505, are no longer clipped; its top and bottom 2 rows are clear."
     }
   }
 }

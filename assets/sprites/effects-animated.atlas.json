@@ -1,28 +1,27 @@
 {
-  "sheet": "assets/sprites/effects-animated.png",
-  "sheetSize": [1448, 1086],
+  "sheet": "assets/sprites/effects-animated-v2.png",
+  "sheetSize": [1520, 1122],
   "sprites": {
     "anim.flame": {
       "frames": [
-        [10, 10, 342, 161],
-        [372, 10, 342, 161],
-        [734, 10, 342, 161],
-        [1096, 10, 342, 161]
+        [19, 8, 342, 251],
+        [399, 8, 342, 251],
+        [779, 8, 342, 251],
+        [1159, 8, 342, 251]
       ],
       "output": 96,
       "fit": "contain",
       "sharedBand": false,
       "padding": 5,
       "stepsPerFrame": 3,
-      "bleedOk": true,
-      "bleedNote": "Cut as before atlases: the 362 x 181 grid cell inset by 10 px. The art of this row is taller than its cell (the rows of this sheet overlap): it runs past the bottom edge of every frame, so the cut clips it there; on frames 2 and 4 it also reaches the top edge (frame 2 touches it, frame 4 continues above it and is clipped). Kept so the animation looks the same as before."
+      "bleedOk": false
     },
     "anim.explosion": {
       "frames": [
-        [8, 215, 346, 183],
-        [370, 212, 346, 201],
-        [732, 213, 346, 200],
-        [1094, 215, 346, 197]
+        [17, 270, 346, 183],
+        [397, 267, 346, 201],
+        [777, 268, 346, 200],
+        [1157, 270, 346, 197]
       ],
       "output": 96,
       "fit": "contain",
@@ -33,48 +32,45 @@
     },
     "anim.iceImpact": {
       "frames": [
-        [8, 606, 346, 164],
-        [370, 603, 346, 178],
-        [732, 603, 346, 181],
-        [1094, 612, 346, 168]
+        [17, 476, 346, 188],
+        [397, 476, 346, 188],
+        [777, 476, 346, 188],
+        [1157, 476, 346, 188]
       ],
       "output": 96,
       "fit": "contain",
       "sharedBand": true,
       "padding": 3,
       "stepsPerFrame": 2,
-      "bleedOk": true,
-      "bleedNote": "Frames are the per-frame clean pixel rows the game used before atlases. Frame 3 starts at y 603 inside a 17 px tail of the portal art above (alpha > 24, x 904-920); the game has always shown that tail. The crystals of every frame also run down to the last cut row."
+      "bleedOk": false
     },
     "anim.slash": {
       "frames": [
-        [10, 734, 342, 161],
-        [372, 734, 342, 161],
-        [734, 734, 342, 161],
-        [1096, 734, 342, 161]
+        [19, 672, 342, 255],
+        [399, 672, 342, 255],
+        [779, 672, 342, 255],
+        [1159, 672, 342, 255]
       ],
       "output": 96,
       "fit": "contain",
       "sharedBand": false,
       "padding": 5,
       "stepsPerFrame": 2,
-      "bleedOk": true,
-      "bleedNote": "Cut as before atlases: the 362 x 181 grid cell inset by 10 px. The art of this row is taller than its cell and reaches past the top and bottom edge of every frame (the rows of this sheet overlap), so the cut clips it; kept so the animation looks the same as before."
+      "bleedOk": false
     },
     "anim.blood": {
       "frames": [
-        [10, 915, 342, 161],
-        [372, 915, 342, 161],
-        [734, 915, 342, 161],
-        [1096, 915, 342, 161]
+        [19, 935, 342, 179],
+        [399, 935, 342, 179],
+        [779, 935, 342, 179],
+        [1159, 935, 342, 179]
       ],
       "output": 96,
       "fit": "contain",
       "sharedBand": false,
       "padding": 5,
       "stepsPerFrame": 2,
-      "bleedOk": true,
-      "bleedNote": "Cut as before atlases: the 362 x 181 grid cell inset by 10 px. The art of this row is taller than its cell and reaches past the top (and on frames 2 and 3 the bottom) edge of every frame (the rows of this sheet overlap), so the cut clips it; kept so the animation looks the same as before."
+      "bleedOk": false
     }
   }
 }

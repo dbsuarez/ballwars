@@ -129,21 +129,24 @@ Rules for painters:
   inspection (Pillow in `make_atlas.py`, the tests) is fine.
 - A changed sheet gets a new file name (for example
   `tornado-animated-v2.png`). Never overwrite an original sheet; point the
-  manifest at the new file instead.
+  manifest at the new file instead. A replaced original moves (`git mv`) to
+  `art/sprites-original/<same name>`: it stays in the repo but is not bundled
+  (`pubspec.yaml` bundles only `assets/sprites/`). Today that folder holds
+  `effects-animated.png`, `effects-master.png` and `projectiles-master.png`.
 - No AI image generation. Art is drawn by hand or composed in PhotoCraft.
 
 ## Manifest fields
 
 ```json
 {
-  "sheet": "assets/sprites/effects-animated.png",
+  "sheet": "assets/sprites/effects-animated-v2.png",
   "sprites": {
     "anim.explosion": {
       "frames": [
-        [8, 215, 346, 183],
-        [370, 212, 346, 201],
-        [732, 213, 346, 200],
-        [1094, 215, 346, 197]
+        [17, 270, 346, 183],
+        [397, 267, 346, 201],
+        [777, 268, 346, 200],
+        [1157, 270, 346, 197]
       ],
       "output": 96,
       "fit": "contain",
@@ -374,22 +377,25 @@ initials badge) directly for widgets while the image is null, and
 
 ## Known issues
 
-- Some bundled sprites set `bleedOk`, all to keep the look from before the
-  atlases (the old cuts clipped art, and re-cutting them is a visual change for
-  later). Their `bleedNote` gives the details:
-  - `effects-animated`: `anim.flame`, `anim.slash`, `anim.blood` (the rows of
-    that sheet overlap, so the art runs past the 10 px inset cells) and
-    `anim.iceImpact` (frame 3 starts inside a 17 px tail of the portal art).
-  - `effects-master`: nine `effect.*` cells cut at the 362 px cell inset by
-    12 px, whose art reaches into the inset.
-  - `projectiles-master`: `projectile.shotgun` and `projectile.gatling`, whose
-    glow crosses their shared cell line (about 1 px clipped).
-  - `elemental-powers`: `powerup.waterGun` (its stream tip crosses into the
-    next cell) and `powerup.lightningStrikes` (shows that tip on its left
-    edge).
-  - `sticky-goo-rim`: `effect.stickyGooRim` is a strip that runs to the
-    sheet's left and right edges on purpose; the cut also clips the last 5
-    rows of the drips.
+- One bundled sprite sets `bleedOk`: `effect.stickyGooRim` (`sticky-goo-rim`).
+  It is a strip that wraps along the rim, so its art runs to the sheet's left
+  and right edges on purpose; a clear 2 px border there would leave gaps where
+  the painter's 56 slices meet. Its top and bottom are clear: the cut is rows
+  y 102.25 to 508.25, so the drips (they end at y 505) are whole.
+- Every other sprite has a clear 2 px border. The sheets whose art used to
+  run into the cut (`effects-animated`, `effects-master`,
+  `projectiles-master`) were rebuilt in PhotoCraft as `*-v2.png`: each frame
+  cropped from the original, the pixels of neighboring frames cleared, and the
+  frame placed on a new sheet with room around it; no pixel was scaled or
+  redrawn. The new frame rectangles keep each frame's center (for
+  `sharedBand`, the band's center) and, with `padding` adjusted where a
+  frame grew, the same scale, so the sprites sit where they did and only show
+  the art that used to be clipped. Two exceptions: the shotgun shot's cut
+  moved 2.5 sheet px right (about half an output pixel), because a 443.5 px
+  frame at padding 0 cannot grow; and the `elemental-powers` icons were only
+  re-cut (the water gun's stream tip at x 1629 to 1642 now belongs to the
+  water gun, not the lightning icon), so with fit `trim` the water gun icon
+  is about 3% smaller and the lightning icon is centered on its own art.
 - The goldens draw every sprite downsampled into an 88 px cell (a 96 px cell
   less 4 px on each side). Small cut changes on large sprites, such as a few
   rows of the 768 px goo rim or of the 192 px lightning frames, can fall below

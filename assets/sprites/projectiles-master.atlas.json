@@ -1,10 +1,10 @@
 {
-  "sheet": "assets/sprites/projectiles-master.png",
-  "sheetSize": [1774, 887],
+  "sheet": "assets/sprites/projectiles-master-v2.png",
+  "sheetSize": [1838, 919],
   "sprites": {
     "projectile.pistol": {
       "frames": [
-        [0.0, 0.0, 443.5, 443.5]
+        [8, 8, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
@@ -14,29 +14,27 @@
     },
     "projectile.shotgun": {
       "frames": [
-        [443.5, 0.0, 443.5, 443.5]
+        [470, 8, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
       "sharedBand": false,
       "padding": 0,
-      "bleedOk": true,
-      "bleedNote": "The shotgun cell is the 443.5 px grid cell as before atlases; the glow of the shotgun and gatling crosses their shared cell line (x 887), so each cut clips about 1 px of it. Kept so the sprite looks the same as before."
+      "bleedOk": false
     },
     "projectile.gatling": {
       "frames": [
-        [887.0, 0.0, 443.5, 443.5]
+        [927, 8, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
       "sharedBand": false,
       "padding": 0,
-      "bleedOk": true,
-      "bleedNote": "The gatling cell is the 443.5 px grid cell as before atlases; the glow of the shotgun and gatling crosses their shared cell line (x 887), so each cut clips about 1 px of it. Kept so the sprite looks the same as before."
+      "bleedOk": false
     },
     "projectile.bow": {
       "frames": [
-        [1330.5, 0.0, 443.5, 443.5]
+        [1386.5, 8, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
@@ -46,7 +44,7 @@
     },
     "projectile.prismLaser": {
       "frames": [
-        [0.0, 443.5, 443.5, 443.5]
+        [8, 467.5, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
@@ -56,7 +54,7 @@
     },
     "projectile.swapCannon": {
       "frames": [
-        [443.5, 443.5, 443.5, 443.5]
+        [467.5, 467.5, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
@@ -66,7 +64,7 @@
     },
     "projectile.harpoon": {
       "frames": [
-        [887.0, 443.5, 443.5, 443.5]
+        [927, 467.5, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",
@@ -76,7 +74,7 @@
     },
     "projectile.ricochetDisc": {
       "frames": [
-        [1330.5, 443.5, 443.5, 443.5]
+        [1386.5, 467.5, 443.5, 443.5]
       ],
       "output": 96,
       "fit": "contain",

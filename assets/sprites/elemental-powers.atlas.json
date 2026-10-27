@@ -24,25 +24,23 @@
     },
     "powerup.waterGun": {
       "frames": [
-        [1086, 0, 543, 724]
+        [1086, 0, 559, 724]
       ],
       "output": 64,
       "fit": "trim",
       "sharedBand": false,
-      "bleedOk": true,
-      "padding": 2,
-      "bleedNote": "Cut as before atlases: a quarter of the sheet (x 1086 to 1629). The water stream crosses the cell line into the next cell (x 1629 to 1642, y 309 to 362), so the cut clips its tip on the right edge; kept so the icon looks the same as before."
+      "bleedOk": false,
+      "padding": 2
     },
     "powerup.lightningStrikes": {
       "frames": [
-        [1629, 0, 543, 724]
+        [1645, 0, 527, 724]
       ],
       "output": 64,
       "fit": "trim",
       "sharedBand": false,
-      "bleedOk": true,
-      "padding": 2,
-      "bleedNote": "Cut as before atlases: a quarter of the sheet (x 1629 to 2172). Its left edge holds the tip of the water gun's stream from the cell before (x 1629 to 1642, y 309 to 362, 502 px); the icon has always shown it. Kept so the icon looks the same as before."
+      "bleedOk": false,
+      "padding": 2
     }
   }
 }

@@ -11,7 +11,7 @@ Design docs (read them before larger changes):
 - `docs/superpowers/specs/2026-09-21-ball-wars-mobile-sharing-design.md`: mobile/responsive layout, the **determinism** requirement, and the planned sharing/gallery feature.
 - `docs/superpowers/plans/2026-09-21-ball-wars-core-simulator.md`: the implementation plan.
 - `docs/psuedocode.txt`: reference pseudocode for the thread/line-cutting game loop that the current mechanics follow.
-- `docs/output_frames/` (gitignored) and `docs/fame_1597.jpg`: frames from the reference video, which is the source of truth for mechanics and look.
+- `docs/output_frames/` (gitignored): frames from the reference video, which is the source of truth for mechanics and look.
 - `docs/reference_video_analysis.md`: frame-by-frame findings from that video (core mechanic, physics gaps, effects still to build).
 
 ## Commands

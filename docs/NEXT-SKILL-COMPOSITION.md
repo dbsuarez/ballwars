@@ -25,7 +25,7 @@ Any skill can look like any weapon and fire any projectile skill (built-in or cu
 
 ## Working rules
 
-- Preserve user-owned deletion `docs/fame_1597.jpg` and untracked `docs/BALLWARS-HANDOFF.md`; inspect the checkout before touching other edits, particularly `settings_screen.dart`.
+- `docs/fame_1597.jpg` was deleted by the owner (2026-10-27) and `docs/BALLWARS-HANDOFF.md` is gitignored; inspect the checkout before touching other edits, particularly `settings_screen.dart`.
 - Deploy means push master. APK release requires explicit release instruction and a version tag. Do not monitor GitHub Actions or install on a device.
 - Group long editors into tabs, use fixed labels beside controls, right-aligned numeric values, visual pickers, and aligned artwork previews. Report save failures visibly.
 - No AI raster generation/editing. Use PhotoCraft CLI for raster processing, VectorCraft for local vector work, and SoundCraft for audio. Read `AGENTS.md`, `docs/PHOTOCRAFT-CLI-HANDOFF.md`, and the relevant notes in `D:\Development\artcraft-usage` first. Provide prompts for new illustrated art so the user can generate elsewhere.

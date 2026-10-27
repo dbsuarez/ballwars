@@ -787,6 +787,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                               .notifier!
                                                               .value
                                                               .copyWith(
+                                                                projectileRenderMode:
+                                                                    result
+                                                                        .effectVisuals,
+                                                                explosionRenderMode:
+                                                                    result
+                                                                        .effectVisuals,
+                                                                freezeRenderMode:
+                                                                    result
+                                                                        .effectVisuals,
                                                                 skillLibrary:
                                                                     result
                                                                         .library,
@@ -807,6 +816,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                         },
                                                         initial: settings
                                                             .skillLibrary,
+                                                        initialEffectVisuals:
+                                                            settings
+                                                                .explosionRenderMode,
                                                         tuning:
                                                             settings.powerUps,
                                                       ),
@@ -820,6 +832,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           );
                                           await _save(
                                             current.copyWith(
+                                              projectileRenderMode:
+                                                  result.effectVisuals,
+                                              explosionRenderMode:
+                                                  result.effectVisuals,
+                                              freezeRenderMode:
+                                                  result.effectVisuals,
                                               skillLibrary: result.library,
                                               powerUps: result.library.applyTo(
                                                 result.tuning,
@@ -1054,76 +1072,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        if (_settingsTab == 2)
-                          _Section(
-                            title: 'EFFECT RENDERING',
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Choose generated sprite artwork or the lightweight vector fallback for each effect family.',
-                                  style: AppText.ui(
-                                    13,
-                                    FontWeight.w500,
-                                    color: c.muted,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                for (final entry
-                                    in <
-                                      (
-                                        String,
-                                        EffectRenderMode,
-                                        AppSettings Function(EffectRenderMode),
-                                      )
-                                    >[
-                                      (
-                                        'Default effect visuals',
-                                        settings.explosionRenderMode,
-                                        (mode) => settings.copyWith(
-                                          projectileRenderMode: mode,
-                                          explosionRenderMode: mode,
-                                          freezeRenderMode: mode,
-                                        ),
-                                      ),
-                                    ])
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child:
-                                        DropdownButtonFormField<
-                                          EffectRenderMode
-                                        >(
-                                          key: ValueKey(
-                                            'effect-render-${entry.$1}',
-                                          ),
-                                          initialValue: entry.$2,
-                                          decoration: InputDecoration(
-                                            labelText: entry.$1,
-                                          ),
-                                          items: [
-                                            for (final mode
-                                                in EffectRenderMode.values)
-                                              DropdownMenuItem(
-                                                value: mode,
-                                                child: Text(mode.label),
-                                              ),
-                                          ],
-                                          onChanged: _busy
-                                              ? null
-                                              : (mode) {
-                                                  if (mode != null) {
-                                                    _save(
-                                                      entry.$3(mode),
-                                                      done:
-                                                          '${entry.$1} rendering saved.',
-                                                    );
-                                                  }
-                                                },
-                                        ),
-                                  ),
                               ],
                             ),
                           ),

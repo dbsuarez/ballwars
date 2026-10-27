@@ -268,7 +268,23 @@ class PowerUpSprites {
             Paint()..filterQuality = FilterQuality.none,
           );
         } else if (kind == AnimatedEffect.iceImpact) {
-          _paintIsolatedEffect(Canvas(recorder), kind, frame);
+          // The sheet's ice-crystal row. Its art reaches into the neighboring rows' cells, so each frame
+          // is cut along its own clean rows (_iceRows), placed on one shared origin so the crystals
+          // don't jump between frames.
+          final (top, bottom) = _iceRows[frame];
+          const scale = 90 / (animatedWidth - 16);
+          final left = frame * animatedWidth + 8;
+          Canvas(recorder).drawImageRect(
+            animatedSheet,
+            Rect.fromLTRB(left, top, left + animatedWidth - 16, bottom),
+            Rect.fromLTWH(
+              3,
+              48 - (_iceBandHeight / 2 - (top - _iceBandTop)) * scale,
+              90,
+              (bottom - top) * scale,
+            ),
+            Paint()..filterQuality = FilterQuality.none,
+          );
         } else {
           Canvas(recorder).drawImageRect(
             animatedSheet,
@@ -764,52 +780,17 @@ class PowerUpSprites {
   static const double _explosionTop = 218;
   static const double _explosionHeight = 196;
 
-  /// Independent frames cannot include pixels from neighboring atlas cells.
-  static void _paintIsolatedEffect(
-    Canvas canvas,
-    AnimatedEffect kind,
-    int frame,
-  ) {
-    const center = Offset(48, 48);
-    final radius = 18.0 + frame * 7;
-    final ice = kind == AnimatedEffect.iceImpact;
-    final color = ice ? const Color(0xFF7FDBFF) : const Color(0xFFFF7722);
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = ui.Gradient.radial(
-          center,
-          radius,
-          [
-            const Color(0xFFFFF8DA),
-            color.withValues(alpha: 0.85),
-            color.withValues(alpha: 0),
-          ],
-          const [0.0, 0.55, 1.0],
-        ),
-    );
-    for (var i = 0; i < 8; i++) {
-      final angle = i * math.pi / 4;
-      final direction = Offset(math.cos(angle), math.sin(angle));
-      canvas.drawLine(
-        center + direction * radius * 0.35,
-        center + direction * radius,
-        Paint()
-          ..strokeWidth = ice ? 2 : 5
-          ..strokeCap = StrokeCap.round
-          ..color = ice ? const Color(0xFFE7FAFF) : const Color(0xFFFFCB55),
-      );
-    }
-    canvas.drawCircle(
-      center,
-      radius * 0.7,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = color,
-    );
-  }
+  /// The ice-crystal row of effects-animated.png: per frame, the first and last pixel rows that hold
+  /// only its art (measured: the portal above and the slashes below touch the grid cell). The band
+  /// they share is centered in the frame image.
+  static const List<(double, double)> _iceRows = [
+    (606, 770),
+    (603, 781),
+    (603, 784),
+    (612, 780),
+  ];
+  static const double _iceBandTop = 603;
+  static const double _iceBandHeight = 181;
 
   /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).
   static void paintIcon(Canvas canvas, PowerUpKind kind, Rect rect) {

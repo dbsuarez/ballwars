@@ -4,6 +4,7 @@ import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/skills/presentation/skill_management_screen.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,6 +41,39 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets('Global: Default effect visuals comes back with Save Library', (tester) async {
+    SkillManagementResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => result = await Navigator.of(context).push<SkillManagementResult>(
+              MaterialPageRoute(
+                builder: (_) => const SkillManagementScreen(
+                  initial: SkillLibrary.defaults,
+                  tuning: PowerUpConfig.defaults,
+                ),
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Global'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('global-effect-visuals')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(EffectRenderMode.vector.label).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(result!.effectVisuals, EffectRenderMode.vector);
+  });
+
   testWidgets('Global: switching off "Let each skill set its own" disables the callout field in every skill', (
     tester,
   ) async {

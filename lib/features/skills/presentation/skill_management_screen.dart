@@ -27,10 +27,15 @@ class SkillManagementScreen extends StatefulWidget {
     required this.initial,
     required this.tuning,
     this.onSave,
+    this.initialEffectVisuals = EffectRenderMode.sprite,
   });
 
   final SkillLibrary initial;
   final PowerUpConfig tuning;
+
+  /// Global: the default effect visuals (Sprite or Vector) for skills set to "Use global setting".
+  /// Saved by the caller from [SkillManagementResult.effectVisuals].
+  final EffectRenderMode initialEffectVisuals;
   final Future<void> Function(SkillManagementResult)? onSave;
 
   @override
@@ -38,10 +43,17 @@ class SkillManagementScreen extends StatefulWidget {
 }
 
 class SkillManagementResult {
-  const SkillManagementResult({required this.library, required this.tuning});
+  const SkillManagementResult({
+    required this.library,
+    required this.tuning,
+    required this.effectVisuals,
+  });
 
   final SkillLibrary library;
   final PowerUpConfig tuning;
+
+  /// The default effect visuals chosen in Global (projectiles, explosions and freeze together).
+  final EffectRenderMode effectVisuals;
 }
 
 class _SkillEditResult {
@@ -164,7 +176,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                     : _tuning.withRarity(skill.baseKind, edited.rarity!);
                 final library = _library.withDefinition(edited.skill, tuning);
                 await widget.onSave!(
-                  SkillManagementResult(library: library, tuning: tuning),
+                  SkillManagementResult(
+                    library: library,
+                    tuning: tuning,
+                    effectVisuals: _effectVisuals,
+                  ),
                 );
                 if (mounted) {
                   setState(() {
@@ -577,6 +593,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     ),
   );
 
+  late EffectRenderMode _effectVisuals = widget.initialEffectVisuals;
+
   late final TextEditingController _calloutText = TextEditingController(
     text: _formatSeconds(_library.calloutSeconds),
   );
@@ -692,6 +710,54 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           onValue: (v) => _library = _library.withGlobal(calloutSeconds: v),
           onSkillsSetOwn: (v) =>
               _library = _library.withGlobal(skillsSetCallout: v),
+        ),
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Text(
+                        'Default effect visuals',
+                        style: AppText.ui(14, FontWeight.w600, color: c.text),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: DropdownButtonFormField<EffectRenderMode>(
+                        key: const ValueKey('global-effect-visuals'),
+                        isExpanded: true,
+                        initialValue: _effectVisuals,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          for (final mode in EffectRenderMode.values)
+                            DropdownMenuItem(value: mode, child: Text(mode.label)),
+                        ],
+                        onChanged: (mode) {
+                          if (mode != null) setState(() => _effectVisuals = mode);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sprite artwork or the lightweight vector look for projectiles, explosions and freeze. '
+                  'Used by skills whose Effect visuals is "Use global setting"; a skill set to Sprite or Vector '
+                  'keeps its own. Players can also pick their own in Match Setup > Appearance.',
+                  style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.35),
+                ),
+              ],
+            ),
+          ),
         ),
         _globalCard(
           label: 'Screen shake',
@@ -840,8 +906,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () =>
-                        setState(() => _library = SkillLibrary.defaults),
+                    onPressed: () => setState(() {
+                      _library = SkillLibrary.defaults;
+                      _effectVisuals = EffectRenderMode.sprite;
+                    }),
                     child: const Text('Restore defaults'),
                   ),
                 ),
@@ -850,7 +918,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   child: FilledButton(
                     onPressed: () => Navigator.pop(
                       context,
-                      SkillManagementResult(library: _library, tuning: _tuning),
+                      SkillManagementResult(
+                        library: _library,
+                        tuning: _tuning,
+                        effectVisuals: _effectVisuals,
+                      ),
                     ),
                     child: const Text('Save Library'),
                   ),

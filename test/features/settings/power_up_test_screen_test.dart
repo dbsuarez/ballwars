@@ -1,4 +1,7 @@
 import 'package:ballwars/core/audio/game_audio.dart';
+import 'package:ballwars/core/offline/device_prefs.dart';
+import 'package:ballwars/core/offline/offline_store.dart';
+import 'package:ballwars/features/arena_simulation/presentation/arena_preview.dart';
 import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/settings/data/app_settings_repository.dart';
@@ -375,5 +378,43 @@ void main() {
     final after = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
     expect(after.state.balls[0].position, const Offset(31, 47));
     expect(after.state.balls[1].position, const Offset(-62, 19));
+  });
+
+  testWidgets('change arena sheet previews arenas and applies the pick', (
+    tester,
+  ) async {
+    OfflineStore.instance = MemoryOfflineStore();
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('test-arena')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('test-arena')));
+    await tester.pumpAndSettle();
+    for (final d in ArenaDecoration.values) {
+      expect(find.byKey(ValueKey('test-arena-${d.name}')), findsOneWidget);
+    }
+    expect(find.byType(ArenaPreview), findsNWidgets(6));
+    await tester.tap(find.byKey(const ValueKey('test-arena-desert')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('test-arena-desert')), findsNothing);
+    final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+    expect(arena.arenaDecoration, ArenaDecoration.desert);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('test-arena')),
+        matching: find.text('Desert'),
+      ),
+      findsOneWidget,
+    );
+    expect(await DevicePrefs.read('power-test-arena'), 'desert');
+  });
+
+  testWidgets('bottom bar fits at 360 px', (tester) async {
+    OfflineStore.instance = MemoryOfflineStore();
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 }

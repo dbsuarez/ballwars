@@ -84,6 +84,8 @@ class MakeAtlasTest(unittest.TestCase):
             data = json.load(f)
         self.assertEqual(data['sheet'], path)
         self.assertEqual(data['sprites']['gem']['frames'], [[1, 2, 3, 4]])
+        with open(out) as f:
+            self.assertIn('[1, 2, 3, 4]', f.read())  # one rect per line
         self.assertEqual(sorted(os.listdir(self.dir)),
                          ['sheet.png', 'x.atlas.json'])
 

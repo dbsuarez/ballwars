@@ -32,6 +32,7 @@ and --steps-per-frame are written into every sprite when given.
 """
 import argparse
 import json
+import re
 import sys
 
 from PIL import Image
@@ -42,6 +43,13 @@ ALPHA_CLEAR = 24
 def num(value):
     """An int when the value is whole, so the JSON stays tidy."""
     return int(value) if float(value).is_integer() else value
+
+
+def to_json(atlas):
+    """The manifest as indented JSON with one [x, y, w, h] rect per line."""
+    text = json.dumps(atlas, indent=2)
+    return re.sub(r'\[\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+)\s*\]',
+                  r'[\1, \2, \3, \4]', text) + '\n'
 
 
 def clean_lines(alpha, box, vertical):
@@ -264,8 +272,7 @@ def main(argv=None):
     for w in warnings:
         print('warning:', w, file=sys.stderr)
     with open(a.out, 'w', encoding='utf-8') as f:
-        json.dump(atlas, f, indent=2)
-        f.write('\n')
+        f.write(to_json(atlas))
     return 0
 
 

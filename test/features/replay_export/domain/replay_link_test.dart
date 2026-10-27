@@ -645,4 +645,25 @@ void main() {
       isNull,
     );
   });
+
+  test('the ball look travels in the link, so a replay shows the faces it was played with', () {
+    final presetIds = {for (final b in _presets) b.id};
+    final faces = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      look: BallLook.faces,
+    ).toUri(presetIds: presetIds);
+    expect(faces.queryParameters['look'], 'faces');
+    expect(ReplayLink.fromUri(faces, presets: _presets)!.look, BallLook.faces);
+
+    // Older links have no look (the viewer's own setting applies); a garbled one is ignored, not fatal.
+    final old = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]]).toUri(presetIds: presetIds);
+    expect(old.queryParameters.containsKey('look'), isFalse);
+    expect(ReplayLink.fromUri(old, presets: _presets)!.look, isNull);
+    final garbled = old.replace(queryParameters: {...old.queryParameters, 'look': 'sparkles'});
+    final parsed = ReplayLink.fromUri(garbled, presets: _presets);
+    expect(parsed, isNotNull);
+    expect(parsed!.look, isNull);
+  });
 }

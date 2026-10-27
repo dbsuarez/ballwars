@@ -479,6 +479,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     ballSize: widget.config.ballSize,
     mode: widget.config.mode,
     question: widget.config.question,
+    look: widget.config.look,
     powerUps: widget.config.powerUps,
     tuning: widget.config.tuning,
     dualWield: widget.config.dualWield,

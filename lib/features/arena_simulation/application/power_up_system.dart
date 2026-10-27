@@ -115,6 +115,7 @@ class PowerUpSystem {
   final List<SniperFlash> sniperFlashes = [];
   final List<OmnislashAttack> omnislashAttacks = [];
   final List<RagingDemonAttack> ragingDemonAttacks = [];
+  final List<ShadowCloneAttack> shadowCloneAttacks = [];
   final List<ArenaThemeHazard> arenaThemeHazards = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
@@ -301,6 +302,11 @@ class PowerUpSystem {
       if (identical(attack.owner, ball) || attack.targets.contains(ball)) {
         _releaseEnergyWave(attack, launchAway: false);
       }
+    }
+    shadowCloneAttacks.removeWhere((attack) => identical(attack.owner, ball));
+    for (final attack in shadowCloneAttacks) {
+      // The next clone picks a new victim.
+      if (identical(attack.target, ball)) attack.target = null;
     }
   }
 
@@ -748,6 +754,8 @@ class PowerUpSystem {
         _eatFriedChicken(ball);
       case PowerUpKind.ragingDemon:
         _startRagingDemon(ball);
+      case PowerUpKind.shadowClone:
+        _startShadowClone(ball);
       default:
         ball.equipWeapon(
           p.kind,
@@ -861,6 +869,56 @@ class PowerUpSystem {
     _skillYell(owner, PowerUpKind.ragingDemon, 'DIE ONE THOUSAND DEATHS!');
   }
 
+  /// Kage bunshin: time freezes for the whole sequence while the clones strike one by one
+  /// ([_updateShadowClones]).
+  void _startShadowClone(SimulationBall owner) {
+    final target = _nearestTarget(owner);
+    if (target == null) return;
+    final clones = _t.shadowCloneCount;
+    _freezeTime(ShadowCloneAttack.durationFor(clones));
+    shadowCloneAttacks.add(
+      ShadowCloneAttack(owner: owner, target: target, clones: clones),
+    );
+    _skillYell(owner, PowerUpKind.shadowClone, 'KAGE BUNSHIN NO JUTSU!');
+  }
+
+  void _updateShadowClones() {
+    for (final attack in shadowCloneAttacks.toList()) {
+      attack.age++;
+      if (attack.vanishAt == null) {
+        final current = attack.target;
+        if (current == null || !_alive(current)) {
+          attack.target = _nearestTarget(attack.owner);
+        }
+        final victim = attack.target;
+        if (victim == null || !_alive(attack.owner)) {
+          attack
+            ..target = null
+            ..vanishAt = attack.age;
+        } else if (attack.age >=
+            ShadowCloneAttack.strikeAge(attack.clonesDone)) {
+          attack.struckAt.add(attack.strikePoint(attack.clonesDone, victim));
+          attack.clonesDone++;
+          _hit(
+            victim,
+            PowerUpKind.shadowClone,
+            at: victim.position,
+            from: attack.owner,
+            scaleForCrowd: false,
+          );
+          _skillSound(PowerUpKind.shadowClone);
+          if (attack.clonesDone >= attack.clones) {
+            attack.vanishAt = attack.age;
+          } else if (!_alive(victim)) {
+            attack.target = _nearestTarget(attack.owner);
+            if (attack.target == null) attack.vanishAt = attack.age;
+          }
+        }
+      }
+      if (attack.finished) shadowCloneAttacks.remove(attack);
+    }
+  }
+
   void _updatePhaseEightAttacks() {
     for (final flash in sniperFlashes) {
       flash.age++;
@@ -925,6 +983,7 @@ class PowerUpSystem {
         ragingDemonAttacks.remove(attack);
       }
     }
+    _updateShadowClones();
   }
 
   bool? _twoHandedOverride(SkillDefinition skill) => switch (skill.handedness) {

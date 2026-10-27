@@ -83,7 +83,8 @@ enum PowerUpKind {
   friedChicken('Fried Chicken'),
   sniperRifle('Sniper Rifle'),
   busterSword('Buster Sword'),
-  ragingDemon('Raging Demon');
+  ragingDemon('Raging Demon'),
+  shadowClone('Shadow Clone');
 
   const PowerUpKind(this.label);
 
@@ -131,7 +132,7 @@ enum PowerUpKind {
   /// heavyweight attacks move the whole arena.
   double get impactWeight => switch (this) {
     rocketLauncher || omegaTendrils || energyWave => 1.0,
-    sniperRifle || busterSword || ragingDemon => 1.0,
+    sniperRifle || busterSword || ragingDemon || shadowClone => 1.0,
     flamethrower => 0.72,
     grenade || mine || phaseMine || molotov || fireWall => 0.8,
     sword || orbitingFlail || spikeWall || threadHarpoon => 0.48,
@@ -190,7 +191,7 @@ enum PowerUpKind {
       magnet ||
       bow ||
       waterGun => PowerUpRarity.normal,
-      sniperRifle || busterSword => PowerUpRarity.special,
+      sniperRifle || busterSword || shadowClone => PowerUpRarity.special,
       gatling ||
       threadHarpoon ||
       ghost ||
@@ -320,6 +321,87 @@ class RagingDemonAttack {
   final int totalHits;
   int age = 0;
   int hitsShown = 0;
+}
+
+/// Shadow Clone (kage bunshin): [clones] shadow copies of [owner] appear around it while time is
+/// frozen, then one after another dashes to [target] and strikes it once. The owner stays put.
+///
+/// Timing: the clones appear over [appearSteps], clone `i` strikes at age
+/// `appearSteps + (i + 1) * strikeSteps`, and they all smoke out over [vanishSteps] after the last
+/// strike (or as soon as no opponent is left). Every position is a pure function of [age], the owner's
+/// and the targets' positions: nothing here draws from the RNG.
+class ShadowCloneAttack {
+  ShadowCloneAttack({
+    required this.owner,
+    required this.target,
+    required this.clones,
+  });
+
+  static const int appearSteps = 12;
+  static const int strikeSteps = 14;
+  static const int vanishSteps = 12;
+
+  /// The whole sequence for [clones] clones, in steps (time stays frozen for it).
+  static int durationFor(int clones) =>
+      appearSteps + clones * strikeSteps + vanishSteps;
+
+  final SimulationBall owner;
+
+  /// Who the next clone goes for; null once no opponent is left.
+  SimulationBall? target;
+  final int clones;
+  int age = 0;
+
+  /// Clones that have struck so far.
+  int clonesDone = 0;
+
+  /// Age at which the clones started to smoke out; null before.
+  int? vanishAt;
+
+  /// Where each clone that struck stands (index = clone).
+  final List<Offset> struckAt = [];
+
+  bool get isVanishing => vanishAt != null;
+  bool get finished => vanishAt != null && age >= vanishAt! + vanishSteps;
+
+  /// 0..1 while the clones appear.
+  double get appearProgress => (age / appearSteps).clamp(0.0, 1.0);
+
+  /// 0..1 while the clones smoke out (0 before).
+  double get vanishProgress =>
+      vanishAt == null ? 0 : ((age - vanishAt!) / vanishSteps).clamp(0.0, 1.0);
+
+  /// Age at which clone [index] strikes.
+  static int strikeAge(int index) => appearSteps + (index + 1) * strikeSteps;
+
+  /// Where clone [index] waits: evenly spaced around the owner, the first straight above it.
+  Offset homeOf(int index) =>
+      owner.position +
+      Offset.fromDirection(
+        -math.pi / 2 + 2 * math.pi * index / clones,
+        owner.radius * 2.3,
+      );
+
+  /// Where clone [index] strikes [victim]: just outside touching range, on the side it comes from.
+  Offset strikePoint(int index, SimulationBall victim) {
+    final from = homeOf(index) - victim.position;
+    final direction = from.distance < 1e-6
+        ? const Offset(0, -1)
+        : from / from.distance;
+    return victim.position + direction * (owner.radius + victim.radius) * 1.08;
+  }
+
+  /// Where clone [index] is now.
+  Offset clonePosition(int index) {
+    if (index < struckAt.length) return struckAt[index];
+    final home = homeOf(index);
+    final victim = target;
+    if (index != clonesDone || victim == null || vanishAt != null) return home;
+    final start = appearSteps + index * strikeSteps;
+    final t = ((age - start) / strikeSteps).clamp(0.0, 1.0);
+    // Ease in: a short wind-up, then the dash.
+    return Offset.lerp(home, strikePoint(index, victim), t * t)!;
+  }
 }
 
 /// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
@@ -783,6 +865,7 @@ class PowerUpTuning {
     PowerUpKind.flamethrower: 3,
     PowerUpKind.busterSword: 3,
     PowerUpKind.ragingDemon: 1,
+    PowerUpKind.shadowClone: 5,
   };
   static const double arenaCollisionDamage = 5;
   static const double arenaShieldBash = 5;
@@ -823,6 +906,7 @@ class PowerUpTuning {
     PowerUpKind.flamethrower: 1,
     PowerUpKind.busterSword: 1,
     PowerUpKind.ragingDemon: 1,
+    PowerUpKind.shadowClone: 2,
   };
   static const int allOutShieldBash = 5;
   static const int allOutAppleSlots = 20;
@@ -896,6 +980,8 @@ String powerUpDescription(
       '$aim freezes time, dashes to the farthest opponent, and slashes eight times for ${dmg(kind)} each.',
     PowerUpKind.ragingDemon =>
       'Dashes to the nearest opponent and lands ${config.ragingDemonHits} unavoidable hits for ${dmg(kind)} each.',
+    PowerUpKind.shadowClone =>
+      'Freezes time and makes ${config.shadowCloneCount} shadow clones. One by one they dash to the nearest opponent and hit it for ${dmg(kind)} each.',
     PowerUpKind.shield =>
       arsenal
           ? 'Blocks $block% of the next hit. Bashes an unarmed ball: '

@@ -82,10 +82,102 @@ class PowerUpPainter {
     PowerUpKind.sniperRifle: Color(0xFFFFC107),
     PowerUpKind.busterSword: Color(0xFFCFB6FF),
     PowerUpKind.ragingDemon: Color(0xFF8F001D),
+    PowerUpKind.shadowClone: Color(0xFF6B5BD6),
   };
 
   /// The color a power-up is drawn in.
   static Color colorOf(PowerUpKind kind) => _colors[kind]!;
+
+  /// Darkens a layer to a third of its brightness (the shadow clones' look).
+  static const ColorFilter _shadowFilter = ColorFilter.matrix(<double>[
+    0.32, 0, 0, 0, 8, //
+    0, 0.3, 0, 0, 6,
+    0, 0, 0.38, 0, 18,
+    0, 0, 0, 1, 0,
+  ]);
+
+  /// Shadow Clone: darkened, translucent copies of the owner's body ([paintBody] draws a ball the
+  /// way the arena does, picture or face), with a smoke puff as they appear and vanish. Call after
+  /// the balls.
+  static void paintShadowClones(
+    Canvas canvas,
+    SimulationState state, {
+    required void Function(Canvas canvas, SimulationBall ball) paintBody,
+  }) {
+    final p = state.powerUps;
+    if (p == null || p.shadowCloneAttacks.isEmpty) return;
+    for (final attack in p.shadowCloneAttacks) {
+      final owner = attack.owner;
+      final r = owner.radius;
+      final appear = attack.appearProgress;
+      final vanish = attack.vanishProgress;
+      final alpha = (appear * (1 - vanish)).clamp(0.0, 1.0);
+      for (var i = 0; i < attack.clones; i++) {
+        final at = attack.clonePosition(i);
+        if (alpha > 0.01) {
+          final home = attack.homeOf(i);
+          if (i == attack.clonesDone && (at - home).distance > r * 0.5) {
+            // The dash: a fading streak back toward where the clone waited.
+            canvas.drawLine(
+              Offset.lerp(home, at, 0.45)!,
+              at,
+              Paint()
+                ..strokeWidth = r * 1.1
+                ..strokeCap = StrokeCap.round
+                ..color = const Color(
+                  0xFF1A1630,
+                ).withValues(alpha: 0.28 * alpha),
+            );
+          }
+          canvas.save();
+          canvas.translate(
+            at.dx - owner.position.dx,
+            at.dy - owner.position.dy,
+          );
+          canvas.saveLayer(
+            Rect.fromCircle(center: owner.position, radius: r * 1.6),
+            Paint()
+              ..color = Color.fromRGBO(0, 0, 0, 0.78 * alpha)
+              ..colorFilter = _shadowFilter,
+          );
+          paintBody(canvas, owner);
+          canvas.restore();
+          canvas.restore();
+          canvas.drawCircle(
+            at,
+            r,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = math.max(1.5, r * 0.08)
+              ..color = const Color(0xFF8E7CFF).withValues(alpha: 0.55 * alpha),
+          );
+        }
+        // Smoke puffs: on appearing, and when the clones go.
+        final puff = appear < 1 ? appear : (attack.isVanishing ? vanish : -1.0);
+        if (puff >= 0 && puff < 1) {
+          SkillArtworkTint.begin(
+            canvas,
+            p.artworkTint(PowerUpKind.shadowClone, ball: owner),
+          );
+          try {
+            for (var k = 0; k < 6; k++) {
+              final angle = k * math.pi / 3 + i * 0.7;
+              canvas.drawCircle(
+                at + Offset.fromDirection(angle, r * (0.35 + 0.9 * puff)),
+                r * (0.42 + 0.38 * puff),
+                Paint()
+                  ..color = const Color(
+                    0xFFD9D6E4,
+                  ).withValues(alpha: 0.62 * (1 - puff)),
+              );
+            }
+          } finally {
+            SkillArtworkTint.end(canvas);
+          }
+        }
+      }
+    }
+  }
 
   /// Field power-ups, aim lines, bullets, mines, blasts and slashes. Call after the fan lines, before the
   /// balls. [showEffects] covers only the decorative blast flash; gameplay objects always draw.

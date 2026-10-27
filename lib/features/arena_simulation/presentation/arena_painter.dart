@@ -111,6 +111,7 @@ class ArenaPainter extends CustomPainter {
       if (ball.isEliminated) continue;
       _paintSingleBall(canvas, ball);
     }
+    PowerUpPainter.paintShadowClones(canvas, state, paintBody: _paintBody);
     // After every ball, so the bars sit on top.
     if (showHpBars) {
       HpBar.paintAll(
@@ -129,6 +130,30 @@ class ArenaPainter extends CustomPainter {
     _paintFloatingText(canvas);
 
     canvas.restore();
+  }
+
+  /// The ball's body in the chosen [look] (also drawn for its shadow clones).
+  void _paintBody(Canvas canvas, SimulationBall ball) {
+    if (look == BallLook.faces) {
+      paintSmiley(canvas, ball, faceHealth(ball), state.balls);
+    } else {
+      BallFacePainter.paint(
+        canvas,
+        ball.position,
+        ball.radius,
+        ball.config,
+        ball.cachedUiImage,
+      );
+      if (look == BallLook.both) {
+        paintSmiley(
+          canvas,
+          ball,
+          faceHealth(ball),
+          state.balls,
+          backgroundAlpha: 0.38,
+        );
+      }
+    }
   }
 
   void _paintBackground(Canvas canvas) {
@@ -611,26 +636,7 @@ class ArenaPainter extends CustomPainter {
       );
     }
 
-    if (look == BallLook.faces) {
-      paintSmiley(canvas, ball, faceHealth(ball), state.balls);
-    } else {
-      BallFacePainter.paint(
-        canvas,
-        ball.position,
-        ball.radius,
-        ball.config,
-        ball.cachedUiImage,
-      );
-      if (look == BallLook.both) {
-        paintSmiley(
-          canvas,
-          ball,
-          faceHealth(ball),
-          state.balls,
-          backgroundAlpha: 0.38,
-        );
-      }
-    }
+    _paintBody(canvas, ball);
     BallHairPainter.paint(canvas, ball);
     double gripSide(PowerUpKind kind, int slot) =>
         state.powerUps

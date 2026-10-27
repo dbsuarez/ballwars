@@ -21,6 +21,7 @@ void main() {
       expect(PowerUpKind.ragingDemon.rarity, PowerUpRarity.epic);
       expect(PowerUpKind.sniperRifle.rarity, PowerUpRarity.special);
       expect(PowerUpKind.busterSword.rarity, PowerUpRarity.special);
+      expect(PowerUpKind.shadowClone.rarity, PowerUpRarity.special);
     },
   );
 

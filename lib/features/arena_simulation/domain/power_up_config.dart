@@ -90,6 +90,7 @@ class PowerUpConfig {
     PowerUpKind.flamethrower,
     PowerUpKind.busterSword,
     PowerUpKind.ragingDemon,
+    PowerUpKind.shadowClone,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.
@@ -304,6 +305,15 @@ class PowerUpConfig {
       24,
       min: 1,
       max: 60,
+      integer: true,
+    ),
+    TuningField(
+      'shadowCloneCount',
+      'Shadow clones',
+      _guns,
+      3,
+      min: 1,
+      max: 6,
       integer: true,
     ),
     TuningField(
@@ -630,6 +640,7 @@ class PowerUpConfig {
   int get gatlingRounds => value('rounds').toInt();
   int get bowArrows => value('arrows').toInt();
   int get ragingDemonHits => value('ragingDemonHits').toInt();
+  int get shadowCloneCount => value('shadowCloneCount').toInt();
 
   /// Arsenal life lost per hit of [kind] (0 for kinds that do no damage).
   double arenaDamage(PowerUpKind kind) => _byId.containsKey('dmg.${kind.name}')

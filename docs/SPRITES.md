@@ -306,7 +306,7 @@ Icons are plain registry frames: `PowerUpSprites.of(kind)` is
 entry uses `"fit": "trim"`, `"padding": 2` and `"output": 64`, so its visible
 art fills 60 px inside a 2 px border. Only the fitted frame is kept.
 
-Kinds without sheet art (`PowerUpSprites.pixelArtOnly`: vampire and repulsor)
+Kinds without sheet art (`PowerUpSprites.pixelArtOnly`: vampire, repulsor and shadow clone)
 are drawn in code from their 16 x 16 pixel art (`power_up_pixel_art.dart`)
 and added by `PowerUpSprites.load()` with:
 

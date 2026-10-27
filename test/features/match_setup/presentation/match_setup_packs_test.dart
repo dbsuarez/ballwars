@@ -721,5 +721,12 @@ void main() {
       find.byKey(const ValueKey('selection-card-apple')).hitTestable(),
       findsOneWidget,
     );
+    expect(
+      find.byKey(
+        const ValueKey('selection-card-shadowClone'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
   });
 }

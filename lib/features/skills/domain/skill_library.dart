@@ -1413,6 +1413,7 @@ class SkillLibrary {
     PowerUpKind.sniperRifle => 'ONE SHOT.',
     PowerUpKind.busterSword => 'OMNISLASH!',
     PowerUpKind.ragingDemon => 'DIE ONE THOUSAND DEATHS!',
+    PowerUpKind.shadowClone => 'KAGE BUNSHIN NO JUTSU!',
   };
 
   static String _defaultSoundFor(PowerUpKind kind) => switch (kind) {
@@ -1422,7 +1423,8 @@ class SkillLibrary {
     PowerUpKind.gatling => 'gatling',
     PowerUpKind.knife ||
     PowerUpKind.sword ||
-    PowerUpKind.orbitingFlail => 'slash',
+    PowerUpKind.orbitingFlail ||
+    PowerUpKind.shadowClone => 'slash',
     PowerUpKind.shield ||
     PowerUpKind.freeze ||
     PowerUpKind.repulsor ||

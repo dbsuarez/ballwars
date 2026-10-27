@@ -478,6 +478,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             wallSparkSize: wallSparkSize,
           ),
           seed: link.seed,
+          nudgeSteps: link.nudgeSteps,
         ),
       ),
     );

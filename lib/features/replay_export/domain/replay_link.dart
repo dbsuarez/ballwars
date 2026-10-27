@@ -46,6 +46,9 @@ class ReplayLink {
   /// Power-up modes: the custom skills (ids) that could spawn; null for all. `cs=` (comma list).
   final Set<String>? customSkills;
 
+  /// Unstuck nudges (steps) the match had; part of the match. `nudge=` (comma list).
+  final List<int> nudgeSteps;
+
   /// Power-up modes: the power-up numbers the match was played with. Part of the match, so the changed
   /// values travel as `t=` ([PowerUpConfig.encode]); old links without it use the defaults.
   final PowerUpConfig tuning;
@@ -83,6 +86,7 @@ class ReplayLink {
     this.look,
     this.powerUps,
     this.customSkills,
+    this.nudgeSteps = const [],
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
@@ -171,6 +175,7 @@ class ReplayLink {
     final hair = randomizedHairstyles ? '&hair=1' : '';
     final lookToken = look == null ? '' : '&look=${look!.name}';
     final chosenCustom = customSkills;
+    final nudgeToken = nudgeSteps.isEmpty ? '' : '&nudge=${nudgeSteps.join(',')}';
     final customToken = mode == MatchMode.threads || chosenCustom == null
         ? ''
         : '&cs=${(chosenCustom.toList()..sort()).join(',')}';
@@ -178,7 +183,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
@@ -250,6 +255,14 @@ class ReplayLink {
         ? BallSize.medium
         : BallSize.byId(params['size']);
     if (ballSize == null) return null;
+    var nudgeSteps = const <int>[];
+    final nudge = params['nudge'];
+    if (nudge != null) {
+      final steps = [for (final part in nudge.split(',')) int.tryParse(part)];
+      // Positive steps within ten minutes of game time, at most 200 of them.
+      if (steps.length > 200 || steps.any((s) => s == null || s < 1 || s > 36000)) return null;
+      nudgeSteps = [...steps.cast<int>()]..sort();
+    }
     Set<String>? customSkills;
     final cs = params['cs'];
     if (cs != null) {
@@ -348,6 +361,7 @@ class ReplayLink {
       look: BallLook.byName(params['look']),
       powerUps: powerUps,
       customSkills: customSkills,
+      nudgeSteps: nudgeSteps,
       tuning: tuning,
       dualWield: dualWield,
       endlessBattle: endlessBattle,

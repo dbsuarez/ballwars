@@ -104,6 +104,19 @@ void main() {
     },
   );
 
+  testWidgets('Unstuck sits at the bottom left of the arena, in line with the sound buttons', (tester) async {
+    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls), seed: 3));
+    await tester.pump();
+    final unstuck = find.byKey(const ValueKey('arena-unstuck'));
+    expect(unstuck, findsOneWidget);
+    final sound = find.byKey(const ValueKey('arena-bgm-control'));
+    expect(tester.getCenter(unstuck).dx, lessThan(tester.getCenter(sound).dx));
+    expect(tester.getBottomLeft(unstuck).dy, closeTo(tester.getBottomLeft(sound).dy, 1));
+    await tester.tap(unstuck);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('pause button toggles between pause and play icons', (
     tester,
   ) async {

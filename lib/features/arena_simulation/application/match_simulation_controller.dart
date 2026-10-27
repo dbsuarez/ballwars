@@ -197,6 +197,69 @@ class MatchSimulationController {
   // Look-ahead limit: ten minutes of game time.
   static const int _maxPredictedSteps = 60 * 60 * 10;
 
+  /// Builds the off-screen copy of this match used by the look-ahead, with these nudges.
+  late final MatchSimulationController Function(List<int> nudges) _makeAhead;
+
+  /// Plays the match ahead off-screen (when slow motion needs it) to learn its finishing step and the
+  /// step from which the endgame is final. Runs again after a nudge, which changes what follows.
+  void _predict() {
+    _finishStep = null;
+    _settledEndgameStep = null;
+    if (endlessBattle ||
+        !lookAhead ||
+        (slowMotionBeforeWinSeconds == null && slowMotionLines <= 0)) {
+      return;
+    }
+    final ahead = _makeAhead(List.of(_nudgeSteps));
+    var lastCalmStep = 0;
+    while (ahead._status != MatchStatus.finished &&
+        ahead._stepCount < _maxPredictedSteps) {
+      ahead._stepPhysics(fixedTimestep);
+      ahead._stepCount++;
+      if (ahead._status == MatchStatus.running) {
+        lastCalmStep = ahead._stepCount;
+      }
+    }
+    if (ahead._status == MatchStatus.finished) {
+      _finishStep = ahead._stepCount;
+      _settledEndgameStep = lastCalmStep + 1;
+    }
+  }
+
+  /// Unstuck: the steps (1-based) at which every ball still in play was pushed in a random direction.
+  /// Part of the match like the seed: replays and videos nudge at the same steps.
+  List<int> get nudgeSteps => List.unmodifiable(_nudgeSteps);
+  final List<int> _nudgeSteps;
+  bool _nudgePending = false;
+
+  /// Unstuck strength, on the skill knockback scale: speed in arena radii per second.
+  static const double nudgeForce = 1;
+
+  /// Unstuck button: nudges every ball still in play at the next step (recorded, so replays repeat it).
+  void requestNudge() {
+    if (_status == MatchStatus.finished) return;
+    _nudgePending = true;
+  }
+
+  /// A nudge planned for the running step: the button's (recorded now, and the look-ahead plans again)
+  /// or one from a replay. Directions come from the match's seeded random source.
+  void _applyNudges() {
+    final step = _stepCount + 1;
+    if (_nudgePending) {
+      _nudgePending = false;
+      if (!_nudgeSteps.contains(step)) {
+        _nudgeSteps.add(step);
+        _predict();
+      }
+    }
+    if (!_nudgeSteps.contains(step)) return;
+    for (final ball in _balls) {
+      if (ball.isEliminated) continue;
+      final angle = _rng.nextDoubleRange(0, 2 * math.pi);
+      ball.velocity = Offset(math.cos(angle), math.sin(angle)) * arenaRadius * nudgeForce;
+    }
+  }
+
   MatchSimulationController(
     List<CustomBall> contestants, {
     required double arenaRadius,
@@ -224,54 +287,41 @@ class MatchSimulationController {
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.automaticSpeedUp = true,
     this.randomizedHairstyles = false,
+    List<int> nudgeSteps = const [],
   }) : tuning = skillLibrary.applyTo(tuning),
+       _nudgeSteps = [...nudgeSteps]..sort(),
        initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
-    if (!endlessBattle &&
-        lookAhead &&
-        (slowMotionBeforeWinSeconds != null || slowMotionLines > 0)) {
-      // Same seed and setup: the steps are identical (slow motion only
-      // changes playback), so its timeline is this match's.
-      final ahead = MatchSimulationController(
-        contestants,
-        arenaRadius: arenaRadius,
-        seed: this.seed,
-        restitution: restitution,
-        rimSlotCount: rimSlotCount,
-        layoutRotation: layoutRotation,
-        slowMotionLines: slowMotionLines,
-        lookAhead: false,
-        ballScale: ballScale,
-        mode: mode,
-        powerUpKinds: powerUpKinds,
-        customSkillIds: customSkillIds,
-        tuning: tuning,
-        skillLibrary: skillLibrary,
-        dualWield: dualWield,
-        endlessBattle: endlessBattle,
-        mayhem: mayhem,
-        mayhemSeconds: mayhemSeconds,
-        shrinkingArena: shrinkingArena,
-        minimumArenaScale: minimumArenaScale,
-        bloodColor: bloodColor,
-        arenaDecoration: arenaDecoration,
-        automaticSpeedUp: automaticSpeedUp,
-        randomizedHairstyles: randomizedHairstyles,
-      );
-      var lastCalmStep = 0;
-      while (ahead._status != MatchStatus.finished &&
-          ahead._stepCount < _maxPredictedSteps) {
-        ahead._stepPhysics(fixedTimestep);
-        ahead._stepCount++;
-        if (ahead._status == MatchStatus.running) {
-          lastCalmStep = ahead._stepCount;
-        }
-      }
-      if (ahead._status == MatchStatus.finished) {
-        _finishStep = ahead._stepCount;
-        _settledEndgameStep = lastCalmStep + 1;
-      }
-    }
+    // Same seed, setup and nudges: the steps are identical (slow motion only changes playback), so its
+    // timeline is this match's. Kept as a function so a nudge mid-match can plan again.
+    _makeAhead = (nudges) => MatchSimulationController(
+      contestants,
+      arenaRadius: arenaRadius,
+      seed: this.seed,
+      restitution: restitution,
+      rimSlotCount: rimSlotCount,
+      layoutRotation: layoutRotation,
+      slowMotionLines: slowMotionLines,
+      lookAhead: false,
+      ballScale: ballScale,
+      mode: mode,
+      powerUpKinds: powerUpKinds,
+      customSkillIds: customSkillIds,
+      tuning: tuning,
+      skillLibrary: skillLibrary,
+      dualWield: dualWield,
+      endlessBattle: endlessBattle,
+      mayhem: mayhem,
+      mayhemSeconds: mayhemSeconds,
+      shrinkingArena: shrinkingArena,
+      minimumArenaScale: minimumArenaScale,
+      bloodColor: bloodColor,
+      arenaDecoration: arenaDecoration,
+      automaticSpeedUp: automaticSpeedUp,
+      randomizedHairstyles: randomizedHairstyles,
+      nudgeSteps: nudges,
+    );
+    _predict();
     _rng = SeededRandom(this.seed);
     _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution);
     _slotOwners = List<SimulationBall?>.filled(rimSlotCount, null);
@@ -684,6 +734,7 @@ class MatchSimulationController {
   }
 
   void _stepPhysics(double dt) {
+    _applyNudges();
     _restoreTestPositions();
     _physics.arenaRadius = arenaRadius;
     // Lines deactivated from outside the step (e.g. tests) free their slots.

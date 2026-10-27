@@ -37,7 +37,15 @@ class ArenaBattleScreen extends StatefulWidget {
   final MatchConfig config;
   final int? seed;
 
-  const ArenaBattleScreen({super.key, required this.config, this.seed});
+  /// Unstuck nudges of a replayed match (steps), repeated in its first round.
+  final List<int> nudgeSteps;
+
+  const ArenaBattleScreen({
+    super.key,
+    required this.config,
+    this.seed,
+    this.nudgeSteps = const [],
+  });
 
   @override
   State<ArenaBattleScreen> createState() => _ArenaBattleScreenState();
@@ -162,7 +170,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   late int? _seedBase = widget.seed;
 
   /// Starts a match. [replaySeed] re-runs a finished match exactly (Replay); it isn't counted again.
-  void _initMatch({int? replaySeed}) {
+  void _initMatch({int? replaySeed, List<int> replayNudges = const []}) {
     // A fixed seed (replay link) gives each round its own fixed seed.
     final seed =
         replaySeed ?? (_seedBase == null ? null : _seedBase! + _round - 1);
@@ -191,6 +199,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       arenaDecoration: widget.config.arenaDecoration,
       automaticSpeedUp: widget.config.automaticSpeedUp,
       randomizedHairstyles: widget.config.randomizedHairstyles,
+      // A replay repeats its Unstuck nudges: the Replay button's own match, or a replay link's first round.
+      nudgeSteps: replaySeed != null
+          ? replayNudges
+          : (_seedBase != null && _round == 1 ? widget.nudgeSteps : const []),
     );
     _roundCounted = replaySeed != null;
     _startCountdown = 3;
@@ -470,6 +482,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   Uri _replayUri() => ReplayLink(
     effectRenderMode: widget.config.effectRenderMode,
     seed: _controller.seed,
+    nudgeSteps: _controller.nudgeSteps,
     speedMultiplier: widget.config.speedMultiplier,
     automaticSpeedUp: widget.config.automaticSpeedUp,
     showEffects: _showEffects,
@@ -525,14 +538,22 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     });
   }
 
+  /// Unstuck: every ball still in play gets a push in a random direction at the next step. The step is
+  /// recorded with the match, so replays and videos nudge at the same moment.
+  void _unstuck() {
+    _audio.click();
+    _controller.requestNudge();
+  }
+
   /// Replay: watch the match that just ended again, exactly as it played (same seed; the round isn't
   /// counted twice).
   void _replay() {
     _audio.click();
     final seed = _controller.seed;
+    final nudges = _controller.nudgeSteps;
     setState(() {
       _isPaused = false;
-      _initMatch(replaySeed: seed);
+      _initMatch(replaySeed: seed, replayNudges: nudges);
     });
   }
 
@@ -805,6 +826,23 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           ),
                         Positioned(
                           bottom: 0,
+                          left: 0,
+                          child: Tooltip(
+                            message: 'Unstuck: push every ball in a random direction',
+                            child: OutlinedButton.icon(
+                              key: const ValueKey('arena-unstuck'),
+                              onPressed: finished ? null : _unstuck,
+                              icon: const Icon(Icons.open_with_rounded, size: 18),
+                              label: const Text('Unstuck'),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
                           right: 0,
                           child: const Row(
                             children: [
@@ -969,6 +1007,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 context,
                                 contestants: widget.config.contestants,
                                 seed: _controller.seed,
+                                nudgeSteps: _controller.nudgeSteps,
                                 arenaRadius: _arenaRadius,
                                 speedMultiplier: widget.config.speedMultiplier,
                                 automaticSpeedUp:

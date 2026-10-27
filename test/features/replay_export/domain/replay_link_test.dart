@@ -693,4 +693,23 @@ void main() {
     final threadsWithCs = threads.replace(queryParameters: {...threads.queryParameters, 'cs': 'custom.x'});
     expect(ReplayLink.fromUri(threadsWithCs, presets: _presets), isNull);
   });
+
+  test('Unstuck nudges travel in the link; bad values are rejected', () {
+    final presetIds = {for (final b in _presets) b.id};
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      nudgeSteps: const [121, 640],
+    ).toUri(presetIds: presetIds);
+    expect(link.queryParameters['nudge'], '121,640');
+    expect(ReplayLink.fromUri(link, presets: _presets)!.nudgeSteps, [121, 640]);
+    final plain = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]]).toUri(presetIds: presetIds);
+    expect(plain.queryParameters.containsKey('nudge'), isFalse);
+    expect(ReplayLink.fromUri(plain, presets: _presets)!.nudgeSteps, isEmpty);
+    for (final bad in ['x', '0', '-3', '99999999', '12,,40']) {
+      final uri = link.replace(queryParameters: {...link.queryParameters, 'nudge': bad});
+      expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
+    }
+  });
 }

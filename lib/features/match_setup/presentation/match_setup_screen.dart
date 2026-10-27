@@ -84,10 +84,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Active custom skills that can spawn as pickups or weapons (same rule as the match's spawner).
   List<SkillDefinition> get _spawnableCustom => [
     for (final skill in AppSettingsScope.of(context).skillLibrary.custom)
-      if (skill.enabled &&
-          (skill.trigger == SkillTrigger.pickup ||
-              skill.trigger == SkillTrigger.aimedFire))
-        skill,
+      if (skill.spawnsInArena) skill,
   ];
 
   /// The custom skills a match may spawn: null for all of them.

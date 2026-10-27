@@ -17,7 +17,9 @@ in the Dart code holds pixel rectangles any more.
 - `lib/core/sprites/sprite_registry.dart`: `SpriteRegistry.load()` reads the
   index, decodes each sheet once, cuts every frame into its own small image and
   frees the sheet. Lookups: `frame(id, [index])` (wraps modulo the frame
-  count; null for an unknown id), `frameCount(id)`, `stepsPerFrame(id)`,
+  count; null for an unknown id), `frameAt(id, step)` and
+  `frameAtProgress(id, t)` (playback, see "Frames and timing"),
+  `frameCount(id)`, `stepsPerFrame(id)`, `anchor(id)`, `anchorOf(image)`,
   `has(id)`, `ids`, `loadProblems`. Loading never throws: a broken manifest is
   skipped and reported in `loadProblems` (and `debugPrint`).
   `register(atlas, sheet, idPrefix: 'custom.<name>')` cuts a user upload under
@@ -49,15 +51,56 @@ A painter draws a sprite like this:
 
 ```dart
 final sprite = enabled
-    ? SpriteRegistry.frame(
+    ? SpriteRegistry.frameAtProgress(
         PowerUpSprites.animId(AnimatedEffect.slash),
-        (progress * 4).floor().clamp(0, 3),
+        progress,
       )
     : null;
 if (sprite == null) {
   // draw the vector fallback
 }
 ```
+
+### Frames and timing
+
+Painters never hard-code a frame count or a rate; the manifest's `frames`
+and `stepsPerFrame` decide them:
+
+- `SpriteRegistry.frameAt(id, step, {offset})`: looping effects. The index is
+  `(step ~/ stepsPerFrame + offset) % frameCount`; `offset` shifts copies of
+  one effect (three flames on a ball) so they do not flicker in step.
+- `SpriteRegistry.frameAtProgress(id, t)`: one-shot effects that play their
+  frames once over their own duration. The index is
+  `(t * frameCount).floor().clamp(0, frameCount - 1)`.
+- `ArenaEffectLibrary.frame(kind, step)`: the arena effects (finishers,
+  lightning, maximum power); looping kinds wrap, the others hold their last
+  frame.
+
+Adding frames or changing `stepsPerFrame` in a manifest therefore changes
+every call site at once. A few call sites keep an older, slower look and pass
+an explicit override (`frameAt(..., stepsPerFrame: 4)`), because
+`ArenaEffectLibrary` plays the same sprite at the manifest rate:
+
+| Sprite | Manifest | Override | Where |
+| --- | --- | --- | --- |
+| `anim.campfire` | 3 | 4 | burning zones, fire walls (`PowerUpPainter._campfireStepsPerFrame`) |
+| `anim.portal` | 3 | 4 | portal and swap flashes, rim portals (`_portalStepsPerFrame`) |
+| `anim.flame` | 3 | 4 | flames on a burning ball (`_burningFlameStepsPerFrame`) |
+| `anim.tornado` | 3, 8 frames | 1 frame per 1/24 of the hook, first 4 frames only | the tornado finisher in `harpoon_cinematic.dart` (`stepsPerFrame: 1, frameCount: 4`) |
+
+### Anchor
+
+Every sprite has an anchor, the point of its image (0 to 1 per axis, from the
+top left) that is put on the painter's target point; it is also the point the
+sprite turns around. The painter helpers (`_drawSprite` and `_drawEffect` in
+`PowerUpPainter`, `_paintRaster` in `HarpoonCinematic`) read it with
+`SpriteRegistry.anchorOf(image)` and place the image with
+`SpriteRegistry.placeRect`, so a manifest anchor works without touching call
+sites. With the default center the rectangle is exactly the old
+`Rect.fromCenter`. Every bundled sprite uses the center today. Drawing code of
+its own (the sticky goo rim slices, `LightningStrikePainter`, which puts the
+strike's foot at 88 percent of the frame height, and the widget icons) does
+not read the anchor.
 
 Rules for painters:
 
@@ -113,6 +156,7 @@ Rules for painters:
 | Field | Default | Meaning |
 | --- | --- | --- |
 | `sheet` | required | Asset path of the PNG, from the repo root. |
+| `sheetSize` | none | `[width, height]` of the sheet in px. When given, a decoded sheet of another size is a problem (`<sheet> is WxH, the manifest expects WxH`), so a replaced or resized sheet is caught instead of cut wrong. Every bundled manifest sets it; `make_atlas.py` writes it. |
 | `sprites` | required | Object of sprite id to definition. |
 | `frames` | required | List of `[x, y, width, height]` in sheet pixels; decimals allowed (`443.5`). Frames play in list order and must not overlap. |
 | `output` | required | Width of each cut image in px (its side when square). |
@@ -121,16 +165,18 @@ Rules for painters:
 | `padding` | `2` | Transparent px kept on each side of the output image. Must leave room: `2 * padding` smaller than both output sides. |
 | `trimCutPadding` | `0` | Fit `trim` only: the margin of the first cut, the one that is measured. Only the four `phase8-skills` icons set it (2), because they were cut into 60 px before the refit and must keep those exact pixels. |
 | `sharedBand` | `false` | All frames share one scale and keep their vertical offsets inside the band that covers every frame, so an animation does not jump or pulse. Needs a square output and cannot be combined with `fill` or `trim`. |
-| `stepsPerFrame` | `4` | Simulation steps (1/60 s) each frame is shown, read with `SpriteRegistry.stepsPerFrame`. Caveat: today most painter call sites (`power_up_painter.dart`, `harpoon_cinematic.dart`) still hard-code their frame counts and timing; only `ArenaEffectLibrary` reads `frameCount` and `stepsPerFrame`. Changing a manifest's frame count or `stepsPerFrame` needs a matching code change at those call sites. |
-| `anchor` | `[0.5, 0.5]` | Anchor inside the output, 0 to 1 per axis. Parsed and kept for later; the cut and the painters currently center every sprite. |
+| `stepsPerFrame` | `4` | Simulation steps (1/60 s) each frame is shown. `frameAt` and `ArenaEffectLibrary` read it together with the frame count, so changing either in the manifest changes the game; only the call sites listed under "Frames and timing" override the rate. |
+| `anchor` | `[0.5, 0.5]` | The point of the output image, 0 to 1 per axis, that painters put on their target point (see "Anchor"). The cut itself does not change. |
 | `bleedOk` | `false` | The frame may touch neighboring art; the isolation test skips it. |
 | `bleedNote` | none | Why bleeding is fine. Required when `bleedOk` is true. |
 
 `problems()` reports, in plain words: no frames, a frame with no area or
 outside the sheet, overlapping frames, padding that leaves no room,
 `sharedBand` without a square output, `fill` or `trim` with `sharedBand`,
-`trimCutPadding` without fit `trim` or without room, and `bleedOk` without a
-`bleedNote`. The registry skips any manifest with problems.
+`trimCutPadding` without fit `trim` or without room, an anchor outside 0 to 1,
+a sheet whose size differs from `sheetSize`, and `bleedOk` without a
+`bleedNote`. The registry skips any manifest with problems (at load, with a
+`loadProblems` entry); `register` throws `ArgumentError` for them.
 
 ## The index file
 
@@ -191,6 +237,9 @@ Options:
   side, with no measuring. Use it to reproduce an existing hand cut exactly,
   e.g. `--grid 4x6 --cell 362x181 --exact --inset 10`.
 - `--padding N` and `--steps-per-frame N`: written into every sprite when given.
+- `--fit contain|trim|fill` (default `contain`): written into every sprite,
+  icons included (icons use `--fit trim`). `trim` and `fill` cannot be
+  combined with `--shared-band`; the tool refuses with exit status 1.
 - `--shared-band`: only sets the flag; frames keep their own rectangles.
 - `--icons ID=x,y,w,h ...`: single-frame sprites at given rectangles. They all
   share `--output`, so a sheet whose sprites need different sizes (the rocket
@@ -203,19 +252,24 @@ Options:
   100). An edge with no clear line in reach stays on the grid line and the tool
   prints a warning to stderr.
 
-The tool never writes `bleedOk`, `bleedNote`, `outputHeight` or `fit` other
-than `contain`; add those by hand. Its own tests:
+The manifest always gets the sheet's real `sheetSize`. The tool never writes
+`bleedOk: true`, `bleedNote`, `outputHeight`, `anchor` or `trimCutPadding`;
+add those by hand. Its own tests:
 `python tool/sprites/test_make_atlas.py`.
 
 ## Tests
 
 - `test/core/sprites/sprite_atlas_test.dart` and `sprite_registry_test.dart`:
-  the parser, `problems()` and the cutting rules, on small fake sheets.
+  the parser, `problems()` (anchor, `sheetSize`), the cutting rules, the
+  playback helpers and anchors, on small fake sheets.
+- `test/features/arena_simulation/presentation/sprite_anchor_painter_test.dart`:
+  the painter puts a sprite's anchor on its target point, and
+  `PowerUpSprites.load()` registers the drawn icons again after a reset.
 - `test/core/sprites/atlas_isolation_test.dart`: every frame of every bundled
   sheet has a clear 2 px border (alpha above 24 fails). Sprites with `bleedOk`
   are skipped. Failures name sheet, id and frame.
 - `test/core/sprites/bundled_atlas_test.dart`: every bundled manifest loads
-  with no problems, every id in `PowerUpSprites.requiredIds` and
+  with no problems and names its `sheetSize`, every id in `PowerUpSprites.requiredIds` and
   `ArenaEffectLibrary` resolves, each sheet is decoded once, and the frame
   counts, sizes and timing match the game.
 - `test/core/sprites/sprite_goldens_test.dart`: contact sheets of every
@@ -259,12 +313,15 @@ await SpriteRegistry.registerDrawn(
 ```
 
 `registerDrawn` puts the whole image through the same fit as a manifest frame
-and stores its own copy as one bundled sprite (one frame). It throws
+and stores its own copy as one bundled sprite (one frame). It has no
+`trimCutPadding` (its trim measures a cut of the whole output, cut padding
+0) and takes an optional `anchor` (center by default). It throws
 `ArgumentError` for `custom.` ids (those belong to `register`), ids already in
 use and sizes the manifest rules reject. A manifest that later names the same
 id is skipped with a load problem. `resetForTest` while it runs discards the
 result, like `load`; `PowerUpSprites.load()` registers the drawn icons again
-after each new registry load. `paintIcon` still draws the pixel art (or an
+after each new registry load; it only tolerates the `ArgumentError` of an id
+another load registered meanwhile and rethrows any other. `paintIcon` still draws the pixel art (or an
 initials badge) directly for widgets while the image is null, and
 `PowerUpIcon` is the widget for both.
 
@@ -292,14 +349,14 @@ initials badge) directly for widgets while the image is null, and
 
    ```dart
    final splash = useSprite
-       ? SpriteRegistry.frame(
+       ? SpriteRegistry.frameAt(
            PowerUpSprites.animId(AnimatedEffect.acidSplash),
-           age ~/ SpriteRegistry.stepsPerFrame(
-             PowerUpSprites.animId(AnimatedEffect.acidSplash),
-           ),
+           age,
          )
        : null;
    ```
+
+   (`frameAtProgress(id, t)` instead for a splash that plays once.)
 
    (If it is an arena effect, add an `ArenaEffectKind` with
    `ArenaEffectDefinition(id: 'anim.acidSplash')` instead and let

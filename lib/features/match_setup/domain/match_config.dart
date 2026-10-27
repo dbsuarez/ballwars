@@ -104,6 +104,10 @@ class MatchConfig {
   /// Power-up modes: the power-ups that can spawn; null for all of them.
   final Set<PowerUpKind>? powerUps;
 
+  /// Power-up modes: the active custom skills (ids) that can spawn; null for all of them. Chosen in the
+  /// Weapons dialog next to the built-ins, independently of their base weapon.
+  final Set<String>? customSkills;
+
   /// Whether balls can equip two weapons instead of one.
   final bool dualWield;
 
@@ -151,6 +155,7 @@ class MatchConfig {
     this.randomizedHairstyles = false,
     this.question,
     this.powerUps,
+    this.customSkills,
     this.dualWield = false,
     this.endlessBattle = false,
     this.mayhem = false,

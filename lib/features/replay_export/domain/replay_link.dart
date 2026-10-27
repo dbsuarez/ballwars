@@ -43,6 +43,9 @@ class ReplayLink {
   /// `w.<base36 bitmask>` token after the mode token; old apps reject it like `m.`.
   final Set<PowerUpKind>? powerUps;
 
+  /// Power-up modes: the custom skills (ids) that could spawn; null for all. `cs=` (comma list).
+  final Set<String>? customSkills;
+
   /// Power-up modes: the power-up numbers the match was played with. Part of the match, so the changed
   /// values travel as `t=` ([PowerUpConfig.encode]); old links without it use the defaults.
   final PowerUpConfig tuning;
@@ -79,6 +82,7 @@ class ReplayLink {
     this.question,
     this.look,
     this.powerUps,
+    this.customSkills,
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
@@ -166,11 +170,15 @@ class ReplayLink {
         : '&blood=${bloodColor.toARGB32().toRadixString(16)}';
     final hair = randomizedHairstyles ? '&hair=1' : '';
     final lookToken = look == null ? '' : '&look=${look!.name}';
+    final chosenCustom = customSkills;
+    final customToken = mode == MatchMode.threads || chosenCustom == null
+        ? ''
+        : '&cs=${(chosenCustom.toList()..sort()).join(',')}';
     final effectVisuals = effectRenderMode == null
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
@@ -242,6 +250,16 @@ class ReplayLink {
         ? BallSize.medium
         : BallSize.byId(params['size']);
     if (ballSize == null) return null;
+    Set<String>? customSkills;
+    final cs = params['cs'];
+    if (cs != null) {
+      // Only with a power-up mode; only ids the app makes (custom.<slug>), and not too many.
+      if (mode == MatchMode.threads) return null;
+      final ids = cs.split(',').where((id) => id.isNotEmpty).toSet();
+      final valid = RegExp(r'^custom\.[a-z0-9-]{1,80}$');
+      if (ids.length > 64 || !ids.every(valid.hasMatch)) return null;
+      customSkills = ids;
+    }
     final dualWield = params['dw'] == '1';
     if (params.containsKey('dw') && params['dw'] != '1') return null;
     if (mode == MatchMode.threads && dualWield) return null;
@@ -329,6 +347,7 @@ class ReplayLink {
       question: cleanQuestion(params['q']),
       look: BallLook.byName(params['look']),
       powerUps: powerUps,
+      customSkills: customSkills,
       tuning: tuning,
       dualWield: dualWield,
       endlessBattle: endlessBattle,

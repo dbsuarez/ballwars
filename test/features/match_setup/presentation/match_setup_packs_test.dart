@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
+import 'package:ballwars/features/settings/presentation/app_settings_scope.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/core/offline/offline_store.dart';
 import 'package:ballwars/core/offline/device_prefs.dart';
@@ -35,6 +39,7 @@ void main() {
     WidgetTester tester, {
     MatchMode? initialMode,
     bool initialMayhem = false,
+    SkillLibrary? skillLibrary,
   }) async {
     started = null;
     // These existing cases exercise the retained List layout. Card defaults
@@ -50,14 +55,19 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
-        home: MatchSetupScreen(
-          initialMode: initialMode,
-          initialMayhem: initialMayhem,
-          packRepository: BallPackRepository(
-            baseUri: Uri.parse('http://localhost:1/packs/'),
-            fetch: (_) async => _catalog,
+        home: AppSettingsScope(
+          settings: ValueNotifier(
+            AppSettings(skillLibrary: skillLibrary ?? SkillLibrary.defaults),
           ),
-          onStartBattle: (config) => started = config,
+          child: MatchSetupScreen(
+            initialMode: initialMode,
+            initialMayhem: initialMayhem,
+            packRepository: BallPackRepository(
+              baseUri: Uri.parse('http://localhost:1/packs/'),
+              fetch: (_) async => _catalog,
+            ),
+            onStartBattle: (config) => started = config,
+          ),
         ),
       ),
     );
@@ -379,6 +389,50 @@ void main() {
     await tester.tap(find.text('Start'));
     expect(started!.question, 'Will it rain?');
   });
+
+  testWidgets(
+    'your custom skills are listed next to the built-ins and switched off per match type',
+    (tester) async {
+      final volley = SkillLibrary.defaults.create(
+        'Knife Volley',
+        PowerUpKind.knife,
+      );
+      final library = SkillLibrary.defaults.withDefinition(
+        volley,
+        PowerUpConfig.defaults,
+      );
+      await pumpSetup(tester, skillLibrary: library);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await openSettings(tester);
+      await tester.tap(find.text('Pickups: All'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your custom skills'), findsOneWidget);
+      final card = find.byKey(ValueKey('selection-card-${volley.id}'));
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      expect(find.text('Knife Volley'), findsOneWidget);
+      await tester.tap(card);
+      await tester.pump();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      await closeSettings(tester);
+
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.customSkills, isEmpty);
+      final arsenal = await tester.runAsync(
+        () => DevicePrefs.read('custom-skills-off-arsenal'),
+      );
+      final allOut = await tester.runAsync(
+        () => DevicePrefs.read('custom-skills-off-allout'),
+      );
+      expect(arsenal, volley.id);
+      expect(allOut, isNull);
+    },
+  );
 
   testWidgets(
     'weapon cards toggle selections; select all works; Done needs at least one',

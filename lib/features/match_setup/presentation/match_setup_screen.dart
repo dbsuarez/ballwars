@@ -75,6 +75,27 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Power-up modes: the chosen power-ups, null for all.
   Set<PowerUpKind>? _powerUps;
   final Map<String, Set<PowerUpKind>?> _modePowerUps = {};
+
+  /// Custom skills switched off in the Weapons dialog (ids), per match type like the built-in choice
+  /// (`pref:custom-skills-off-<profile>`). Stored as the ones that are off, so skills made later start on.
+  final Map<String, Set<String>> _modeCustomOff = {};
+  Set<String> get _customOff => _modeCustomOff[_activeProfileId] ?? const {};
+
+  /// Active custom skills that can spawn as pickups or weapons (same rule as the match's spawner).
+  List<SkillDefinition> get _spawnableCustom => [
+    for (final skill in AppSettingsScope.of(context).skillLibrary.custom)
+      if (skill.enabled &&
+          (skill.trigger == SkillTrigger.pickup ||
+              skill.trigger == SkillTrigger.aimedFire))
+        skill,
+  ];
+
+  /// The custom skills a match may spawn: null for all of them.
+  Set<String>? get _customChoice {
+    final ids = {for (final skill in _spawnableCustom) skill.id};
+    if (ids.intersection(_customOff).isEmpty) return null;
+    return ids.difference(_customOff);
+  }
   VoidCallback? _refreshDrawer;
 
   void _update(VoidCallback update) {
@@ -236,6 +257,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               ...kinds.where((kind) => !kind.isTrap),
               ...PowerUpKind.values.where((kind) => kind.isTrap),
             };
+    }
+    for (final profileId in profileIds) {
+      final off = await DevicePrefs.read('custom-skills-off-$profileId');
+      _modeCustomOff[profileId] = {
+        for (final id in (off ?? '').split(','))
+          if (id.isNotEmpty) id,
+      };
     }
     final filter = _CategoryFilter.byName(
       await DevicePrefs.read('category-filter'),
@@ -424,9 +452,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Opens the weapons list; the choice is remembered on the device.
   Future<void> _chooseWeapons() async {
     GameAudio.instance.click();
-    final chosen = await showDialog<Set<PowerUpKind>>(
+    final spawnable = _spawnableCustom;
+    final choice = await showDialog<_WeaponChoice>(
       context: context,
       builder: (_) => _WeaponsDialog(
+        customSkills: spawnable,
+        initialCustom: {
+          for (final skill in spawnable)
+            if (!_customOff.contains(skill.id)) skill.id,
+        },
         initial: {
           ...?_powerUps,
           ...PowerUpKind.values.where((kind) => kind.isTrap),
@@ -439,9 +473,21 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
       ),
     );
-    if (chosen == null || !mounted) return;
+    if (choice == null || !mounted) return;
+    final chosen = choice.kinds;
     final all = chosen.length == PowerUpKind.values.length;
-    _update(() => _powerUps = all ? null : chosen);
+    _update(() {
+      _powerUps = all ? null : chosen;
+      _modeCustomOff[_activeProfileId] = {
+        ..._customOff.where((id) => !spawnable.any((s) => s.id == id)),
+        for (final skill in spawnable)
+          if (!choice.custom.contains(skill.id)) skill.id,
+      };
+    });
+    DevicePrefs.write(
+      'custom-skills-off-$_activeProfileId',
+      _customOff.join(','),
+    );
     _modePowerUps[_activeProfileId] = _powerUps;
     DevicePrefs.write(
       'power-ups-$_activeProfileId',
@@ -492,6 +538,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         whitePickupBackgrounds: _whitePickupBackgrounds,
         randomizedHairstyles: _randomizedHairstyles,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
+        customSkills: _mode == MatchMode.threads ? null : _customChoice,
         dualWield: _mode != MatchMode.threads && _dualWield,
         endlessBattle:
             _mode == MatchMode.arsenal && (_endlessBattle || _mayhem),
@@ -867,11 +914,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                           icon: Icon(Icons.palette_outlined),
                           label: Text('Appearance'),
                         ),
-                        ButtonSegment(
-                          value: 2,
-                          icon: Icon(Icons.volume_up_outlined),
-                          label: Text('Audio'),
-                        ),
+                        // No Audio tab: music, sound effects and UX sounds are switched in the arena.
                       ],
                       selected: {_settingsTab},
                       showSelectedIcon: false,
@@ -1454,46 +1497,6 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             },
           ),
         ]),
-      if (tab == 2)
-        _settingsGroup('Audio', [
-          _choice(
-            Icons.music_note,
-            'Music',
-            const [false, true],
-            GameAudio.instance.musicOn,
-            (v) => v ? 'On' : 'Off',
-            (v) async {
-              final saved = GameAudio.instance.setMusicOn(v);
-              await saved;
-              if (mounted) _update(() {});
-            },
-          ),
-          _choice(
-            Icons.volume_up,
-            'Sound effects',
-            const [false, true],
-            GameAudio.instance.effectsOn,
-            (v) => v ? 'On' : 'Off',
-            (v) async {
-              final saved = GameAudio.instance.setEffectsOn(v);
-              if (v) GameAudio.instance.click();
-              await saved;
-              if (mounted) _update(() {});
-            },
-          ),
-          _choice(
-            Icons.touch_app,
-            'UX sounds',
-            const [false, true],
-            GameAudio.instance.uxOn,
-            (v) => v ? 'On' : 'Off',
-            (v) async {
-              final saved = GameAudio.instance.setUxOn(v);
-              await saved;
-              if (mounted) _update(() {});
-            },
-          ),
-        ]),
     ],
   );
 }
@@ -1544,14 +1547,27 @@ enum _CategoryFilter {
 
 /// Which power-ups can spawn: compact cards with an icon, description and
 /// corner checkmark. Done needs at least one selection.
+/// What the Weapons dialog returns: the built-ins and the custom skills (ids) that are on.
+class _WeaponChoice {
+  const _WeaponChoice(this.kinds, this.custom);
+  final Set<PowerUpKind> kinds;
+  final Set<String> custom;
+}
+
 class _WeaponsDialog extends StatefulWidget {
   final Set<PowerUpKind> initial;
+
+  /// Active custom skills that can spawn, listed next to the built-ins, and the ones that start on.
+  final List<SkillDefinition> customSkills;
+  final Set<String> initialCustom;
   final bool arsenal;
   final PowerUpConfig config;
   final ArenaDecoration arenaDecoration;
 
   const _WeaponsDialog({
     required this.initial,
+    this.customSkills = const [],
+    this.initialCustom = const {},
     required this.arsenal,
     required this.config,
     required this.arenaDecoration,
@@ -1563,6 +1579,11 @@ class _WeaponsDialog extends StatefulWidget {
 
 class _WeaponsDialogState extends State<_WeaponsDialog> {
   late final Set<PowerUpKind> _on = {...widget.initial};
+  late final Set<String> _customOn = {...widget.initialCustom};
+
+  List<SkillDefinition> _customIn(bool Function(SkillCategory category) test) =>
+      widget.customSkills.where((skill) => test(skill.resolvedCategory)).toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   @override
   Widget build(BuildContext context) {
@@ -1570,15 +1591,26 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final powerUps = PowerUpKind.values.where((kind) => kind.isPowerUp);
     final traps = PowerUpKind.values.where((kind) => kind.isTrap);
     final selectable = PowerUpKind.values.where((kind) => !kind.isTrap);
-    final selectedCount = selectable.where(_on.contains).length;
+    final selectedCount =
+        selectable.where(_on.contains).length + _customOn.length;
+    final customWeapons = _customIn((c) => c == SkillCategory.weapon);
+    final customTraps = _customIn(
+      (c) => c == SkillCategory.trap || c == SkillCategory.arenaTrap,
+    );
+    final customPowerUps = _customIn(
+      (c) =>
+          c != SkillCategory.weapon &&
+          c != SkillCategory.trap &&
+          c != SkillCategory.arenaTrap,
+    );
     List<PowerUpKind> sorted(Iterable<PowerUpKind> kinds) => kinds.toList()
       ..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
     return AlertDialog(
-      constraints: const BoxConstraints(maxWidth: 760),
+      constraints: const BoxConstraints(maxWidth: 1080),
       title: const Text('Weapons, power-ups & traps'),
       contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
       content: SizedBox(
-        width: 720,
+        width: 1040,
         height: MediaQuery.sizeOf(context).height * 0.62,
         child: DefaultTabController(
           length: 3,
@@ -1602,11 +1634,17 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => setState(() => _on.addAll(selectable)),
+                    onPressed: () => setState(() {
+                      _on.addAll(selectable);
+                      _customOn.addAll(widget.customSkills.map((s) => s.id));
+                    }),
                     child: const Text('Select all'),
                   ),
                   TextButton(
-                    onPressed: () => setState(() => _on.removeAll(selectable)),
+                    onPressed: () => setState(() {
+                      _on.removeAll(selectable);
+                      _customOn.clear();
+                    }),
                     child: const Text('Clear'),
                   ),
                 ],
@@ -1622,12 +1660,29 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 child: TabBarView(
                   children: [
                     SingleChildScrollView(
-                      child: _cardGrid(sorted(weapons), selectable: true),
+                      child: Column(
+                        children: [
+                          _cardGrid(sorted(weapons), selectable: true),
+                          ..._customSection(customWeapons),
+                        ],
+                      ),
                     ),
                     SingleChildScrollView(
-                      child: _cardGrid(sorted(powerUps), selectable: true),
+                      child: Column(
+                        children: [
+                          _cardGrid(sorted(powerUps), selectable: true),
+                          ..._customSection(customPowerUps),
+                        ],
+                      ),
                     ),
-                    SingleChildScrollView(child: _trapSection(sorted(traps))),
+                    SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _trapSection(sorted(traps)),
+                          ..._customSection(customTraps),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1644,7 +1699,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
         FilledButton(
           onPressed: selectedCount == 0
               ? null
-              : () => Navigator.of(context).pop(_on),
+              : () => Navigator.of(context).pop(_WeaponChoice(_on, _customOn)),
           child: const Text('Done'),
         ),
       ],
@@ -1746,11 +1801,136 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     );
   }
 
+  /// Your custom skills in this tab, each switched on or off on its own.
+  List<Widget> _customSection(List<SkillDefinition> skills) {
+    if (skills.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Your custom skills',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+      ),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 8.0;
+          final columns = constraints.maxWidth >= 900
+              ? 3
+              : constraints.maxWidth >= 560
+              ? 2
+              : 1;
+          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final skill in skills)
+                  SizedBox(
+                    width: width - (columns == 1 ? 16 : 8),
+                    height: 100,
+                    child: _customCard(skill),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    ];
+  }
+
+  Widget _customCard(SkillDefinition skill) {
+    final selected = _customOn.contains(skill.id);
+    final colors = Theme.of(context).colorScheme;
+    final appColors = BallWarsColors.of(context);
+    final fires = skill.payloadSkillId;
+    final firedName = fires == null
+        ? null
+        : widget.customSkills.where((s) => s.id == fires).firstOrNull?.name ??
+              (fires.startsWith('builtin.')
+                  ? PowerUpKind.values
+                        .where((k) => k.name == fires.substring(8))
+                        .firstOrNull
+                        ?.label
+                  : null);
+    final details = [
+      'Custom ${skill.resolvedCategory == SkillCategory.weapon ? 'weapon' : 'skill'} based on ${skill.baseKind.label}',
+      if (skill.artworkKind != null) 'looks like ${skill.artworkKind!.label}',
+      if (firedName != null)
+        'fires ${skill.projectileCount ?? 1} x $firedName',
+    ].join(', ');
+    return Card(
+      margin: EdgeInsets.zero,
+      color: selected ? appColors.surfaceHigh : appColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: selected ? appColors.text : appColors.border,
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('selection-card-${skill.id}'),
+        onTap: () => setState(
+          () => selected ? _customOn.remove(skill.id) : _customOn.add(skill.id),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PowerUpIcon(skill.displayKind, size: 40, tint: skill.spriteTint),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      skill.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$details.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: appColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                size: 22,
+                color: selected ? colors.primary : colors.outline,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _cardGrid(Iterable<PowerUpKind> kinds, {required bool selectable}) =>
       LayoutBuilder(
         builder: (context, constraints) {
           const gap = 8.0;
-          final columns = constraints.maxWidth >= 560 ? 2 : 1;
+          final columns = constraints.maxWidth >= 900
+              ? 3
+              : constraints.maxWidth >= 560
+              ? 2
+              : 1;
           final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1761,7 +1941,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 for (final kind in kinds)
                   SizedBox(
                     width: width - (columns == 1 ? 16 : 8),
-                    height: 132,
+                    height: 100,
                     child: _itemCard(kind, selectable: selectable),
                   ),
               ],
@@ -1818,7 +1998,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                         arsenal: widget.arsenal,
                         config: widget.config,
                       ),
-                      maxLines: 3,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(
                         context,

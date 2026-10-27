@@ -666,4 +666,31 @@ void main() {
     expect(parsed, isNotNull);
     expect(parsed!.look, isNull);
   });
+
+  test('the chosen custom skills travel in the link; bad ids and threads links are rejected', () {
+    final presetIds = {for (final b in _presets) b.id};
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      customSkills: const {'custom.knife-volley', 'custom.boom-merang'},
+    ).toUri(presetIds: presetIds);
+    expect(link.queryParameters['cs'], 'custom.boom-merang,custom.knife-volley');
+    expect(ReplayLink.fromUri(link, presets: _presets)!.customSkills, {'custom.knife-volley', 'custom.boom-merang'});
+
+    final none = link.replace(queryParameters: {...link.queryParameters, 'cs': ''});
+    expect(ReplayLink.fromUri(none, presets: _presets)!.customSkills, isEmpty);
+    final all = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], mode: MatchMode.arsenal)
+        .toUri(presetIds: presetIds);
+    expect(all.queryParameters.containsKey('cs'), isFalse);
+    expect(ReplayLink.fromUri(all, presets: _presets)!.customSkills, isNull);
+
+    final bad = link.replace(queryParameters: {...link.queryParameters, 'cs': 'builtin.pistol'});
+    expect(ReplayLink.fromUri(bad, presets: _presets), isNull);
+    final threads = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]])
+        .toUri(presetIds: presetIds);
+    final threadsWithCs = threads.replace(queryParameters: {...threads.queryParameters, 'cs': 'custom.x'});
+    expect(ReplayLink.fromUri(threadsWithCs, presets: _presets), isNull);
+  });
 }

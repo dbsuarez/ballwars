@@ -168,6 +168,9 @@ class MatchSimulationController {
   /// the seed.
   final Set<PowerUpKind>? powerUpKinds;
 
+  /// The custom skills (ids) that can spawn; null for every active one. Part of the match, like the seed.
+  final Set<String>? customSkillIds;
+
   /// The power-up numbers (the admin's settings, or a replay link's). Part of the match, like the seed.
   final PowerUpConfig tuning;
   final SkillLibrary skillLibrary;
@@ -208,6 +211,7 @@ class MatchSimulationController {
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
     this.powerUpKinds,
+    this.customSkillIds,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
     this.dualWield = false,
@@ -240,6 +244,7 @@ class MatchSimulationController {
         ballScale: ballScale,
         mode: mode,
         powerUpKinds: powerUpKinds,
+        customSkillIds: customSkillIds,
         tuning: tuning,
         skillLibrary: skillLibrary,
         dualWield: dualWield,

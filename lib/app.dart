@@ -457,6 +457,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             mode: link.mode,
             question: link.question,
             powerUps: link.powerUps,
+            customSkills: link.customSkills,
             tuning: link.tuning,
             skillLibrary: link.skillLibrary,
             dualWield: link.dualWield,

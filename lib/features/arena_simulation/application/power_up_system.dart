@@ -1643,11 +1643,25 @@ class PowerUpSystem {
   void _spawn(int number, {PowerUpKind? forcedKind}) {
     // Uniform over the chosen kinds; with all of them chosen this draws exactly as with none chosen.
     final chosen = match.powerUpKinds;
+    // Custom skills are chosen on their own (null: every active one); one can spawn even when its base
+    // weapon is switched off.
+    final chosenCustom = match.customSkillIds;
+    final spawnableCustom = [
+      for (final skill in match.skillLibrary.custom)
+        if (skill.enabled &&
+            (skill.trigger == SkillTrigger.pickup ||
+                skill.trigger == SkillTrigger.aimedFire) &&
+            (chosenCustom == null || chosenCustom.contains(skill.id)))
+          skill,
+    ];
     final kinds = chosen == null || chosen.length == PowerUpKind.values.length
         ? PowerUpKind.values
         : [
             for (final k in PowerUpKind.values)
-              if (chosen.contains(k) || k.isTrap) k,
+              if (chosen.contains(k) ||
+                  k.isTrap ||
+                  spawnableCustom.any((skill) => skill.baseKind == k))
+                k,
           ];
     final timedKinds = number < _t.trapStartSteps
         ? kinds.where((kind) => !kind.isTrap).toList()
@@ -1659,19 +1673,17 @@ class PowerUpSystem {
     if (eligibleKinds.isEmpty && forcedKind == null) return;
     final kind =
         forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
-    final variants = match.skillLibrary.custom
-        .where(
-          (skill) =>
-              skill.enabled &&
-              skill.baseKind == kind &&
-              (skill.trigger == SkillTrigger.pickup ||
-                  skill.trigger == SkillTrigger.aimedFire),
-        )
+    final variants = spawnableCustom
+        .where((skill) => skill.baseKind == kind)
         .toList();
+    // The built-in itself only when it's chosen too (with everything chosen this draws as before).
+    final builtInChosen = chosen == null || chosen.contains(kind) || kind.isTrap;
+    final candidates = [
+      if (builtInChosen) match.skillLibrary.builtIn(kind, _t),
+      ...variants,
+    ];
     final selectedSkill = forcedKind == null && variants.isNotEmpty
-        ? [match.skillLibrary.builtIn(kind, _t), ...variants][rng.nextInt(
-            variants.length + 1,
-          )]
+        ? candidates[rng.nextInt(candidates.length)]
         : match.skillLibrary.builtIn(kind, _t);
     final radius = fieldRadius;
     final balls = match.state.balls;

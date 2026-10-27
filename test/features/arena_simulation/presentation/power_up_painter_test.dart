@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/core/sprites/sprite_registry.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_painter.dart';
@@ -29,35 +30,6 @@ const _balls = [
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  test('visible artwork fills icon without clipping or stretching', () async {
-    final recorder = ui.PictureRecorder();
-    ui.Canvas(recorder).drawRect(
-      const Rect.fromLTWH(24, 16, 16, 32),
-      Paint()..color = Colors.red,
-    );
-    final picture = recorder.endRecording();
-    final input = await picture.toImage(64, 64);
-    final fitted = await PowerUpSprites.fitVisibleArtwork(input);
-    final bytes = (await fitted.toByteData(
-      format: ui.ImageByteFormat.rawRgba,
-    ))!;
-    final pixels = <Offset>[];
-    for (var y = 0; y < 64; y++) {
-      for (var x = 0; x < 64; x++) {
-        if (bytes.getUint8((y * 64 + x) * 4 + 3) > 16) {
-          pixels.add(Offset(x.toDouble(), y.toDouble()));
-        }
-      }
-    }
-    expect(pixels.map((p) => p.dy).reduce(math.min), 2);
-    expect(pixels.map((p) => p.dy).reduce(math.max), 61);
-    expect(pixels.map((p) => p.dx).reduce(math.min), 17);
-    expect(pixels.map((p) => p.dx).reduce(math.max), 46);
-    input.dispose();
-    fitted.dispose();
-    picture.dispose();
-  });
 
   test(
     'paints field power-ups, projectiles, mines, blasts and ball effects without throwing',
@@ -235,13 +207,13 @@ void main() {
       expect(image.height, 64, reason: kind.label);
     }
     for (final kind in EffectSprite.values) {
-      final image = PowerUpSprites.effect(kind);
+      final image = SpriteRegistry.frame(PowerUpSprites.effectId(kind));
       expect(image, isNotNull, reason: '$kind has no effect crop');
       expect(image!.width, 96, reason: '$kind');
       expect(image.height, 96, reason: '$kind');
     }
     for (final kind in ProjectileSprite.values) {
-      final image = PowerUpSprites.projectile(kind);
+      final image = SpriteRegistry.frame(PowerUpSprites.projectileId(kind));
       expect(image, isNotNull, reason: '$kind has no projectile crop');
       expect(image!.width, 96, reason: '$kind');
       expect(image.height, 96, reason: '$kind');
@@ -251,7 +223,7 @@ void main() {
       final frameCount = kind == AnimatedEffect.lightning ? 8 : 4;
       final frameSize = kind == AnimatedEffect.lightning ? 192 : 96;
       for (var frame = 0; frame < frameCount; frame++) {
-        final image = PowerUpSprites.effectFrame(kind, frame);
+        final image = SpriteRegistry.frame(PowerUpSprites.animId(kind), frame);
         expect(image, isNotNull, reason: '$kind frame $frame is missing');
         expect(image!.width, frameSize, reason: '$kind frame $frame');
         expect(image.height, frameSize, reason: '$kind frame $frame');

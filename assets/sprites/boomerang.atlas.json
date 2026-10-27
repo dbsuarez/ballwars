@@ -1,0 +1,26 @@
+{
+  "sheet": "assets/sprites/boomerang.png",
+  "sheetSize": [1774, 887],
+  "sprites": {
+    "powerup.boomerang": {
+      "frames": [
+        [0, 0, 887, 887]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    },
+    "projectile.boomerang": {
+      "frames": [
+        [887, 0, 887, 887]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 0
+    }
+  }
+}

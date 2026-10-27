@@ -1,0 +1,17 @@
+{
+  "sheet": "assets/sprites/sticky-goo-rim-v2.png",
+  "sheetSize": [2173, 725],
+  "sprites": {
+    "effect.stickyGooRim": {
+      "frames": [
+        [0, 102.25, 2173, 406]
+      ],
+      "output": 768,
+      "fit": "fill",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 0,
+      "outputHeight": 160
+    }
+  }
+}

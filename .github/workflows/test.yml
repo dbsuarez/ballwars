@@ -1,0 +1,33 @@
+name: Test branch
+
+# Runs the tests on Linux for every branch except master (master is tested by
+# deploy-pages.yml). Deploys nothing. Golden failures upload their diff images.
+on:
+  push:
+    branches-ignore: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.38.5
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: golden-failures
+          path: test/**/failures/
+          if-no-files-found: ignore

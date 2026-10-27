@@ -1,0 +1,76 @@
+{
+  "sheet": "assets/sprites/effects-animated-v3.png",
+  "sheetSize": [1520, 1122],
+  "sprites": {
+    "anim.flame": {
+      "frames": [
+        [19, 8, 342, 251],
+        [399, 8, 342, 251],
+        [779, 8, 342, 251],
+        [1159, 8, 342, 251]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "stepsPerFrame": 3,
+      "bleedOk": false
+    },
+    "anim.explosion": {
+      "frames": [
+        [17, 270, 346, 183],
+        [397, 267, 346, 201],
+        [777, 268, 346, 200],
+        [1157, 270, 346, 197]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": true,
+      "padding": 3,
+      "stepsPerFrame": 2,
+      "bleedOk": false
+    },
+    "anim.iceImpact": {
+      "frames": [
+        [17, 476, 346, 191],
+        [397, 476, 346, 191],
+        [777, 476, 346, 191],
+        [1157, 476, 346, 191]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": true,
+      "padding": 3,
+      "stepsPerFrame": 2,
+      "bleedOk": false
+    },
+    "anim.slash": {
+      "frames": [
+        [19, 672, 342, 255],
+        [399, 672, 342, 255],
+        [779, 672, 342, 255],
+        [1159, 672, 342, 255]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "stepsPerFrame": 2,
+      "bleedOk": false
+    },
+    "anim.blood": {
+      "frames": [
+        [19, 935, 342, 179],
+        [399, 935, 342, 179],
+        [779, 935, 342, 179],
+        [1159, 935, 342, 179]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "stepsPerFrame": 2,
+      "bleedOk": false
+    }
+  }
+}

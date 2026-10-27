@@ -1,0 +1,46 @@
+{
+  "sheet": "assets/sprites/elemental-powers.png",
+  "sheetSize": [2172, 724],
+  "sprites": {
+    "powerup.fireWall": {
+      "frames": [
+        [0, 0, 543, 724]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    },
+    "powerup.poisonSwamp": {
+      "frames": [
+        [543, 0, 543, 724]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    },
+    "powerup.waterGun": {
+      "frames": [
+        [1086, 0, 559, 724]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    },
+    "powerup.lightningStrikes": {
+      "frames": [
+        [1645, 0, 527, 724]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    }
+  }
+}

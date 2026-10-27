@@ -1,0 +1,50 @@
+{
+  "sheet": "assets/sprites/phase8-skills.png",
+  "sheetSize": [1760, 440],
+  "sprites": {
+    "powerup.friedChicken": {
+      "frames": [
+        [12, 12, 416, 416]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "trimCutPadding": 2
+    },
+    "powerup.sniperRifle": {
+      "frames": [
+        [452, 12, 416, 416]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "trimCutPadding": 2
+    },
+    "powerup.busterSword": {
+      "frames": [
+        [892, 12, 416, 416]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "trimCutPadding": 2
+    },
+    "powerup.ragingDemon": {
+      "frames": [
+        [1332, 12, 416, 416]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "trimCutPadding": 2
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "sheet": "assets/sprites/projectiles-master-v2.png",
+  "sheetSize": [1838, 919],
+  "sprites": {
+    "projectile.pistol": {
+      "frames": [
+        [8, 8, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.shotgun": {
+      "frames": [
+        [470, 8, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.gatling": {
+      "frames": [
+        [927, 8, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.bow": {
+      "frames": [
+        [1386.5, 8, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.prismLaser": {
+      "frames": [
+        [8, 467.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.swapCannon": {
+      "frames": [
+        [467.5, 467.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.harpoon": {
+      "frames": [
+        [927, 467.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.ricochetDisc": {
+      "frames": [
+        [1386.5, 467.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    }
+  }
+}

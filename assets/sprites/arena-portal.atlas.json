@@ -1,0 +1,20 @@
+{
+  "sheet": "assets/sprites/arena-portal.png",
+  "sheetSize": [2172, 724],
+  "sprites": {
+    "anim.portal": {
+      "frames": [
+        [0, 0, 543, 724],
+        [543, 0, 543, 724],
+        [1086, 0, 543, 724],
+        [1629, 0, 543, 724]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "stepsPerFrame": 3
+    }
+  }
+}

@@ -1,15 +1,19 @@
 # Ball Wars sprite asset standard
 
-All generated and manually added sprites use `SpriteAssetPipeline`; do not add
-one-off atlas cropping to a painter.
+All bundled sprites are cut by `SpriteRegistry` (`lib/core/sprites/`) from an
+atlas manifest next to the sheet (`assets/sprites/<sheet>.atlas.json`, listed
+in `assets/sprites/atlas-index.json`); do not add one-off atlas cropping to a
+painter. `python tool/sprites/make_atlas.py` measures or copies frame
+rectangles into a manifest, and `test/core/sprites/atlas_isolation_test.dart`
+checks that every frame keeps a transparent 2 px border.
 
 ## Required layout
 
-- Use a fixed rectangular grid. Declare columns, rows, cell width, and cell
-  height in a `SpriteSheetSpec`; the loader rejects every other image size.
+- Use a fixed rectangular grid, and list every frame's rectangle in the
+  manifest; the registry rejects frames that fall outside the sheet.
 - Keep the subject centered on one stable anchor in every frame.
-- Reserve a transparent safe area inside every cell. The pipeline crops the
-  declared inset before fitting, so pixels can never bleed from a neighbor.
+- Reserve a transparent safe area inside every cell, and keep frame
+  rectangles inside it, so pixels can never bleed from a neighbor.
 - Use a genuinely transparent RGBA canvas. Do not use white, black,
   checkerboard, glow-box, or other rectangular cell backgrounds.
 - Put one animation frame in every cell, ordered left-to-right and then
@@ -18,12 +22,11 @@ one-off atlas cropping to a painter.
   sheets and `<item>-vN.png` for single-frame artwork.
 - Keep the entire effect inside its cell, including glow, smoke, sparks, and
   antialiasing. No pixel may rely on content from another cell.
-- Add new bundled or manually supplied artwork through a validated
-  `SpriteSheetSpec`, then paint only the isolated images returned by the
-  pipeline.
+- Add new bundled artwork through a manifest, then paint only the isolated
+  images returned by `SpriteRegistry.frame`.
 
 The Phase 7 Tornado sheet is `1760x880`: four columns by two rows, with eight
-`440x440` frames and a 12-pixel enforced safe inset.
+`440x440` frames, cut with a 12-pixel inset (`tornado-animated-v2.atlas.json`).
 
 ## External lightning-generation prompt
 

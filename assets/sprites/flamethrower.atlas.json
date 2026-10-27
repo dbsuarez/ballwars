@@ -1,0 +1,16 @@
+{
+  "sheet": "assets/sprites/flamethrower.png",
+  "sheetSize": [1536, 1024],
+  "sprites": {
+    "powerup.flamethrower": {
+      "frames": [
+        [0, 0, 1536, 1024]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    }
+  }
+}

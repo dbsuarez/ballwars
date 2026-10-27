@@ -1,0 +1,126 @@
+{
+  "sheet": "assets/sprites/effects-master-v2.png",
+  "sheetSize": [1600, 1200],
+  "sprites": {
+    "effect.flame": {
+      "frames": [
+        [18.929, 18.929, 362.143, 362.143]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 3,
+      "bleedOk": false
+    },
+    "effect.explosion": {
+      "frames": [
+        [410.881, 10.881, 378.238, 378.238]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 1,
+      "bleedOk": false
+    },
+    "effect.iceWave": {
+      "frames": [
+        [810.881, 10.881, 378.238, 378.238]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 1,
+      "bleedOk": false
+    },
+    "effect.slash": {
+      "frames": [
+        [1218.928, 18.929, 362.143, 362.143]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 3,
+      "bleedOk": false
+    },
+    "effect.portalBurst": {
+      "frames": [
+        [22.952, 422.952, 354.095, 354.095]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 4,
+      "bleedOk": false
+    },
+    "effect.shieldImpact": {
+      "frames": [
+        [414.905, 414.905, 370.19, 370.19]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 2,
+      "bleedOk": false
+    },
+    "effect.speedStreak": {
+      "frames": [
+        [814.905, 414.905, 370.19, 370.19]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 2,
+      "bleedOk": false
+    },
+    "effect.blood": {
+      "frames": [
+        [1231, 431, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": false
+    },
+    "effect.magneticField": {
+      "frames": [
+        [22.952, 822.952, 354.095, 354.095]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 4,
+      "bleedOk": false
+    },
+    "effect.timeBubble": {
+      "frames": [
+        [426.976, 826.976, 346.048, 346.048]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "bleedOk": false
+    },
+    "effect.goldenArmorHit": {
+      "frames": [
+        [831, 831, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": false
+    },
+    "effect.stickyGoo": {
+      "frames": [
+        [1231, 831, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": false
+    }
+  }
+}

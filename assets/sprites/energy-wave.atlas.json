@@ -1,0 +1,16 @@
+{
+  "sheet": "assets/sprites/energy-wave.png",
+  "sheetSize": [1254, 1254],
+  "sprites": {
+    "powerup.energyWave": {
+      "frames": [
+        [0, 0, 1254, 1254]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "sheet": "assets/sprites/omega-tendrils.png",
+  "sheetSize": [512, 256],
+  "sprites": {
+    "powerup.omegaTendrils": {
+      "frames": [
+        [0, 0, 256, 256]
+      ],
+      "output": 64,
+      "fit": "trim",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2
+    },
+    "effect.omegaTendrilsAttack": {
+      "frames": [
+        [256, 0, 256, 256]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 0
+    }
+  }
+}

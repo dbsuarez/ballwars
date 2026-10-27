@@ -51,3 +51,6 @@ app.*.map.json
 
 # Owner's local handoff notes (not shared)
 docs/BALLWARS-HANDOFF.md
+
+# Golden test failure output
+test/**/failures/

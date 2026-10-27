@@ -6,7 +6,7 @@ Usage:
   python tool/sprites/make_atlas.py --sheet assets/sprites/X.png --grid 4x6 \
       --id-row 1=effect.explosion --id-row 3=effect.ice-impact [--shared-band] \
       [--cell 443.5x443.5] [--exact] [--inset 12] [--padding 2] \
-      [--steps-per-frame 4] [--margin 2] \
+      [--steps-per-frame 4] [--margin 2] [--fit contain|trim|fill] \
       [--icons gem=10,20,32,32 ...] [--output 96] [--max-shift 100] \
       [--force] --out assets/sprites/X.atlas.json
 
@@ -30,7 +30,10 @@ clean lines, without overlapping a neighbouring frame, so the frame keeps the
 given, with no measuring (to reproduce existing hand cuts).
 
 --shared-band only sets the flag; frames keep their own rectangles. --padding
-and --steps-per-frame are written into every sprite when given.
+and --steps-per-frame are written into every sprite when given. --fit (default
+contain) is written into every sprite; trim and fill cannot be combined with
+--shared-band. The manifest records the sheet's size as "sheetSize", which the
+app checks when it loads the sheet.
 """
 import argparse
 import os
@@ -48,11 +51,16 @@ def num(value):
     return int(value) if float(value).is_integer() else value
 
 
+FITS = ('contain', 'trim', 'fill')
+
+
 def to_json(atlas):
     """The manifest as indented JSON with one [x, y, w, h] rect per line."""
     text = json.dumps(atlas, indent=2)
-    return re.sub(r'\[\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+)\s*\]',
-                  r'[\1, \2, \3, \4]', text) + '\n'
+    text = re.sub(r'\[\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+),\s*([-\d.e]+)\s*\]',
+                  r'[\1, \2, \3, \4]', text)
+    return re.sub(r'"sheetSize": \[\s*(\d+),\s*(\d+)\s*\]',
+                  r'"sheetSize": [\1, \2]', text) + '\n'
 
 
 def clean_lines(alpha, box, vertical):
@@ -170,12 +178,18 @@ def add_margin(alpha, frames, missing, margin):
 
 def build_atlas(sheet, cols, rows, id_rows, shared_band=False, icons=None,
                 output=96, max_shift=100, cell=None, exact=False, inset=0,
-                padding=None, steps_per_frame=None, margin=2):
+                padding=None, steps_per_frame=None, margin=2, fit='contain'):
     """Return (manifest dict, warning strings) for the sheet at path `sheet`.
 
     id_rows maps a grid row to a sprite id; rows sharing an id become one
     sprite with their frames in row order. cell is (width, height) or None.
+    fit is 'contain', 'trim' or 'fill'; trim and fill cannot be combined with
+    shared_band (ValueError). The manifest records the sheet's sheetSize.
     """
+    if fit not in FITS:
+        raise ValueError(f'fit must be one of {", ".join(FITS)}, got {fit}')
+    if fit != 'contain' and shared_band:
+        raise ValueError(f'fit {fit} cannot be combined with --shared-band')
     with Image.open(sheet) as img:
         alpha = img.convert('RGBA').getchannel('A')
     width, height = alpha.size
@@ -221,14 +235,15 @@ def build_atlas(sheet, cols, rows, id_rows, shared_band=False, icons=None,
     for row in sorted(id_rows):
         sprite_id = id_rows[row]
         entry = sprites.setdefault(sprite_id, extras(
-            {'frames': [], 'output': output, 'fit': 'contain',
+            {'frames': [], 'output': output, 'fit': fit,
              'sharedBand': shared_band, 'bleedOk': False}))
         entry['frames'].extend(frames[(row, col)] for col in range(cols))
     for sprite_id, rect in (icons or {}).items():
         sprites[sprite_id] = extras(
             {'frames': [[num(n) for n in rect]], 'output': output,
-             'fit': 'contain', 'sharedBand': False, 'bleedOk': False})
-    return {'sheet': sheet, 'sprites': sprites}, warnings
+             'fit': fit, 'sharedBand': False, 'bleedOk': False})
+    return ({'sheet': sheet, 'sheetSize': [width, height], 'sprites': sprites},
+            warnings)
 
 
 def parse_args(argv):
@@ -247,6 +262,8 @@ def parse_args(argv):
     p.add_argument('--padding', type=int)
     p.add_argument('--steps-per-frame', type=int)
     p.add_argument('--margin', type=int, default=2)
+    p.add_argument('--fit', choices=FITS, default='contain',
+                   help='how frames are scaled into the output (default contain)')
     p.add_argument('--max-shift', type=int, default=100)
     p.add_argument('--out', required=True)
     p.add_argument('--force', action='store_true',
@@ -274,10 +291,15 @@ def main(argv=None):
     for item in a.icons:
         sprite_id, rect = item.split('=', 1)
         icons[sprite_id] = [num(float(n)) for n in rect.split(',')]
-    atlas, warnings = build_atlas(
-        a.sheet, cols, rows, id_rows, a.shared_band, icons, a.output,
-        a.max_shift, cell=cell, exact=a.exact, inset=num(a.inset),
-        padding=a.padding, steps_per_frame=a.steps_per_frame, margin=a.margin)
+    try:
+        atlas, warnings = build_atlas(
+            a.sheet, cols, rows, id_rows, a.shared_band, icons, a.output,
+            a.max_shift, cell=cell, exact=a.exact, inset=num(a.inset),
+            padding=a.padding, steps_per_frame=a.steps_per_frame,
+            margin=a.margin, fit=a.fit)
+    except ValueError as e:
+        print(f'error: {e}', file=sys.stderr)
+        return 1
     for w in warnings:
         print('warning:', w, file=sys.stderr)
     with open(a.out, 'w', encoding='utf-8') as f:

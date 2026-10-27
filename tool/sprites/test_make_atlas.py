@@ -169,6 +169,43 @@ class MakeAtlasTest(unittest.TestCase):
         self.assertNotIn('padding', s['all'])
         self.assertNotIn('stepsPerFrame', s['all'])
 
+    def test_writes_the_sheet_size_on_one_line(self):
+        path = self.save(Image.new('RGBA', (41, 20), (0, 0, 0, 0)))
+        out = os.path.join(self.dir, 'x.atlas.json')
+        make_atlas.main(['--sheet', path, '--grid', '2x1', '--exact',
+                         '--id-row', '0=a', '--out', out])
+        with open(out) as f:
+            text = f.read()
+        self.assertEqual(json.loads(text)['sheetSize'], [41, 20])
+        self.assertIn('"sheetSize": [41, 20],', text)
+        self.assertEqual(list(json.loads(text)), ['sheet', 'sheetSize', 'sprites'])
+
+    def test_fit_option(self):
+        path = self.sheet_2x2()
+        for fit in ('contain', 'trim', 'fill'):
+            out = os.path.join(self.dir, f'{fit}.atlas.json')
+            code = make_atlas.main([
+                '--sheet', path, '--grid', '2x2', '--id-row', '0=a',
+                '--icons', 'b=1,2,3,4', '--fit', fit, '--out', out])
+            self.assertEqual(code, 0)
+            with open(out) as f:
+                s = json.load(f)['sprites']
+            self.assertEqual((s['a']['fit'], s['b']['fit']), (fit, fit))
+        atlas, _ = make_atlas.build_atlas(path, 2, 2, {0: 'a'})
+        self.assertEqual(atlas['sprites']['a']['fit'], 'contain')
+
+    def test_trim_or_fill_with_shared_band_is_refused(self):
+        path = self.sheet_2x2()
+        out = os.path.join(self.dir, 'x.atlas.json')
+        for fit in ('trim', 'fill'):
+            code = make_atlas.main([
+                '--sheet', path, '--grid', '2x2', '--id-row', '0=a',
+                '--shared-band', '--fit', fit, '--out', out])
+            self.assertEqual(code, 1)
+            self.assertFalse(os.path.exists(out))
+        with self.assertRaises(ValueError):
+            make_atlas.build_atlas(path, 2, 2, {0: 'a'}, fit='stretch')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -41,7 +41,7 @@ class MakeAtlasTest(unittest.TestCase):
     def test_edges_move_to_clean_rows(self):
         path = self.sheet_2x2()
         atlas, warnings = make_atlas.build_atlas(
-            path, 2, 2, {0: 'top', 1: 'bottom'})
+            path, 2, 2, {0: 'top', 1: 'bottom'}, margin=0)
         top = atlas['sprites']['top']['frames'][0]
         bottom = atlas['sprites']['bottom']['frames'][0]
         self.assertEqual(top[1] + top[3], 30)  # ends at the clean row
@@ -86,6 +86,72 @@ class MakeAtlasTest(unittest.TestCase):
         self.assertEqual(data['sprites']['gem']['frames'], [[1, 2, 3, 4]])
         self.assertEqual(sorted(os.listdir(self.dir)),
                          ['sheet.png', 'x.atlas.json'])
+
+    def border_clean(self, path, rect, border=2):
+        with Image.open(path) as img:
+            alpha = img.getchannel('A')
+        x, y, w, h = rect
+        for yy in range(y, y + h):
+            for xx in range(x, x + w):
+                inner = (x + border <= xx < x + w - border and
+                         y + border <= yy < y + h - border)
+                if not inner and alpha.getpixel((xx, yy)) > 24:
+                    return False
+        return True
+
+    def test_margin_keeps_a_clear_border_when_the_gap_allows(self):
+        img = Image.new('RGBA', (2 * CELL, 2 * CELL), (0, 0, 0, 0))
+        paint(img, 3, 3, 17, 20)  # touches the cell's bottom line
+        paint(img, 23, 5, 37, 15)
+        path = self.save(img)
+        tight, _ = make_atlas.build_atlas(path, 2, 2, {0: 'a'}, margin=0)
+        self.assertFalse(self.border_clean(path, tight['sprites']['a']['frames'][0]))
+        atlas, _ = make_atlas.build_atlas(path, 2, 2, {0: 'a'})
+        frames = atlas['sprites']['a']['frames']
+        self.assertEqual(frames[0][1] + frames[0][3], 22)  # clean row 20, then 2 px
+        for f in frames:
+            self.assertTrue(self.border_clean(path, f), f)
+        self.assertLessEqual(frames[0][0] + frames[0][2], frames[1][0])
+
+    def test_margin_never_overlaps_a_neighbour(self):
+        path = self.sheet_2x2()  # one clean row (30) between the two left frames
+        atlas, _ = make_atlas.build_atlas(path, 2, 2, {0: 'top', 1: 'bottom'})
+        top = atlas['sprites']['top']['frames'][0]
+        bottom = atlas['sprites']['bottom']['frames'][0]
+        self.assertLessEqual(top[1] + top[3], bottom[1])
+        self.assertEqual(top[1] + top[3], 31)
+        for sprite in ('top', 'bottom'):
+            fs = atlas['sprites'][sprite]['frames']
+            self.assertLessEqual(fs[0][0] + fs[0][2], fs[1][0])
+
+    def test_exact_cells_with_decimal_size_inset_padding_and_timing(self):
+        path = self.save(Image.new('RGBA', (41, 20), (0, 0, 0, 0)))
+        out = os.path.join(self.dir, 'x.atlas.json')
+        make_atlas.main([
+            '--sheet', path, '--grid', '2x1', '--cell', '20.5x20',
+            '--exact', '--inset', '2', '--id-row', '0=a', '--padding', '3',
+            '--steps-per-frame', '2', '--icons', 'b=20.5,0,20.5,20',
+            '--out', out])
+        with open(out) as f:
+            a = json.load(f)['sprites']
+        self.assertEqual(a['a']['frames'], [[2, 2, 16.5, 16], [22.5, 2, 16.5, 16]])
+        self.assertEqual(a['a']['padding'], 3)
+        self.assertEqual(a['a']['stepsPerFrame'], 2)
+        self.assertEqual(a['b']['frames'], [[20.5, 0, 20.5, 20]])
+        self.assertEqual(a['b']['padding'], 3)
+
+    def test_row_range_makes_one_sprite_and_no_padding_by_default(self):
+        path = self.sheet_2x2()
+        out = os.path.join(self.dir, 'x.atlas.json')
+        make_atlas.main(['--sheet', path, '--grid', '2x2', '--exact',
+                         '--id-row', '0-1=all', '--out', out])
+        with open(out) as f:
+            s = json.load(f)['sprites']
+        self.assertEqual(list(s), ['all'])
+        self.assertEqual(s['all']['frames'], [[0, 0, 20, 20], [20, 0, 20, 20],
+                                              [0, 20, 20, 20], [20, 20, 20, 20]])
+        self.assertNotIn('padding', s['all'])
+        self.assertNotIn('stepsPerFrame', s['all'])
 
 
 if __name__ == '__main__':

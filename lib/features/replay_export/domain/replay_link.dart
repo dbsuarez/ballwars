@@ -29,6 +29,7 @@ class ReplayLink {
   final double speedMultiplier;
   final bool automaticSpeedUp;
   final bool showEffects;
+  final EffectRenderMode? effectRenderMode;
   final double ballGlowWidth;
   final Color bloodColor;
   final bool randomizedHairstyles;
@@ -65,6 +66,7 @@ class ReplayLink {
     this.automaticSpeedUp = true,
     required this.contestants,
     this.showEffects = true,
+    this.effectRenderMode,
     this.ballGlowWidth = 4,
     this.bloodColor = const Color(0xFFD9152B),
     this.randomizedHairstyles = false,
@@ -158,10 +160,13 @@ class ReplayLink {
         ? ''
         : '&blood=${bloodColor.toARGB32().toRadixString(16)}';
     final hair = randomizedHairstyles ? '&hair=1' : '';
+    final effectVisuals = effectRenderMode == null
+        ? ''
+        : '&effectvisuals=${effectRenderMode!.name}';
     final query =
         'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair&balls=${tokens.join(',')}';
     return Uri.parse(
-      '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
+      '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
   }
 
@@ -307,6 +312,9 @@ class ReplayLink {
       automaticSpeedUp: automaticSpeedUp,
       contestants: contestants,
       showEffects: params['fx'] != '0',
+      effectRenderMode: EffectRenderMode.values
+          .where((mode) => mode.name == params['effectvisuals'])
+          .firstOrNull,
       ballGlowWidth: ballGlowWidth,
       bloodColor: Color(bloodValue),
       randomizedHairstyles: randomizedHairstyles,

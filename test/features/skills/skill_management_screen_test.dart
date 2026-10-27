@@ -155,6 +155,8 @@ void main() {
         'skill-trigger',
         'skill-targeting',
         'skill-delivery',
+        'skill-field-repeatCount',
+        'skill-field-count',
         'skill-field-arsenal',
         'visual-preview-item',
         'skill-field-weaponDisplayScale',
@@ -188,6 +190,50 @@ void main() {
       );
       expect(item.size, projectile.size);
       expect(item.top, projectile.top);
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-field-repeatCount')),
+      );
+      final repeatField = find.byKey(const ValueKey('skill-field-repeatCount'));
+      await tester.enterText(repeatField, '1');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('skill-increase-repeatCount')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey('skill-decrease-repeatCount')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('skill-increase-repeatCount')),
+      );
+      await tester.pump();
+      expect(tester.widget<TextField>(repeatField).controller!.text, '2');
+      await tester.enterText(repeatField, '10');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('skill-decrease-repeatCount')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey('skill-increase-repeatCount')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('skill-decrease-repeatCount')),
+      );
+      await tester.pump();
+      expect(tester.widget<TextField>(repeatField).controller!.text, '9');
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },
   );

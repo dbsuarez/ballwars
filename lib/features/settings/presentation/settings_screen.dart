@@ -1081,23 +1081,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       )
                                     >[
                                       (
-                                        'Projectiles',
-                                        settings.projectileRenderMode,
-                                        (mode) => settings.copyWith(
-                                          projectileRenderMode: mode,
-                                        ),
-                                      ),
-                                      (
-                                        'Explosions',
+                                        'Default effect visuals',
                                         settings.explosionRenderMode,
                                         (mode) => settings.copyWith(
+                                          projectileRenderMode: mode,
                                           explosionRenderMode: mode,
-                                        ),
-                                      ),
-                                      (
-                                        'Freeze effects',
-                                        settings.freezeRenderMode,
-                                        (mode) => settings.copyWith(
                                           freezeRenderMode: mode,
                                         ),
                                       ),

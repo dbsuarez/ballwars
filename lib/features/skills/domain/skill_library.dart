@@ -103,6 +103,7 @@ class SkillDefinition {
     this.knockback = 0,
     this.spriteMode = SkillVisualMode.sprite,
     this.effectMode = SkillVisualMode.sprite,
+    this.useGlobalEffectVisuals = true,
     this.soundCue = 'default',
     this.trigger,
     this.targeting,
@@ -162,6 +163,10 @@ class SkillDefinition {
   final double knockback;
   final SkillVisualMode spriteMode;
   final SkillVisualMode effectMode;
+  final bool useGlobalEffectVisuals;
+  bool usesSpriteEffects({bool globalSprite = true}) => useGlobalEffectVisuals
+      ? globalSprite
+      : effectMode == SkillVisualMode.sprite;
   final String soundCue;
   final SkillTrigger? trigger;
   final SkillTargeting? targeting;
@@ -284,6 +289,7 @@ class SkillDefinition {
     double? knockback,
     SkillVisualMode? spriteMode,
     SkillVisualMode? effectMode,
+    bool? useGlobalEffectVisuals,
     String? soundCue,
     SkillTrigger? trigger,
     SkillTargeting? targeting,
@@ -343,6 +349,9 @@ class SkillDefinition {
     knockback: knockback ?? this.knockback,
     spriteMode: spriteMode ?? this.spriteMode,
     effectMode: effectMode ?? this.effectMode,
+    useGlobalEffectVisuals:
+        useGlobalEffectVisuals ??
+        (effectMode == null ? this.useGlobalEffectVisuals : false),
     soundCue: soundCue ?? this.soundCue,
     trigger: trigger ?? this.trigger,
     targeting: targeting ?? this.targeting,
@@ -407,6 +416,7 @@ class SkillDefinition {
     'knockback': knockback,
     'sprite_mode': spriteMode.name,
     'effect_mode': effectMode.name,
+    'use_global_effect_visuals': useGlobalEffectVisuals,
     'sound_cue': soundCue,
     if (trigger != null) 'trigger': trigger!.name,
     if (targeting != null) 'targeting': targeting!.name,
@@ -491,6 +501,9 @@ class SkillDefinition {
         SkillVisualMode.values,
         SkillVisualMode.sprite,
       ),
+      useGlobalEffectVisuals:
+          value['use_global_effect_visuals'] as bool? ??
+          value['effect_mode'] != 'vector',
       effectMode: enumValue(
         'effect_mode',
         SkillVisualMode.values,

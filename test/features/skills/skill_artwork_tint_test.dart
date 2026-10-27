@@ -10,6 +10,8 @@ import 'package:ballwars/features/arena_simulation/presentation/power_up_painter
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/replay_export/domain/replay_link.dart';
+import 'package:ballwars/features/settings/domain/app_settings.dart';
 
 const gold = 0xFFFFD700;
 const tuning = PowerUpConfig.defaults;
@@ -30,6 +32,41 @@ const balls = [
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('replay retains player effect preference and old links use default', () {
+    for (final mode in [null, ...EffectRenderMode.values]) {
+      final link = ReplayLink(
+        seed: 9,
+        speedMultiplier: 1,
+        contestants: balls,
+        effectRenderMode: mode,
+      );
+      final restored = ReplayLink.fromUri(
+        link.toUri(presetIds: {'a', 'b'}),
+        presets: balls,
+      )!;
+      expect(restored.effectRenderMode, mode);
+    }
+  });
+  test('skill effect choice overrides defaults and survives serialization', () {
+    final original = SkillLibrary.defaults.builtIn(
+      PowerUpKind.boomerang,
+      tuning,
+    );
+    expect(original.usesSpriteEffects(), isTrue);
+    expect(original.usesSpriteEffects(globalSprite: false), isFalse);
+    final sprite = original.copyWith(effectMode: SkillVisualMode.sprite);
+    expect(sprite.usesSpriteEffects(globalSprite: false), isTrue);
+    final vector = original.copyWith(effectMode: SkillVisualMode.vector);
+    expect(vector.usesSpriteEffects(), isFalse);
+    expect(
+      SkillDefinition.fromJson(vector.toJson())!.usesSpriteEffects(),
+      isFalse,
+    );
+    expect(
+      vector.copyWith(useGlobalEffectVisuals: true).usesSpriteEffects(),
+      isTrue,
+    );
+  });
 
   test(
     'custom tint survives persistence and replay without recoloring its carrier',

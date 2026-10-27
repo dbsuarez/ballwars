@@ -304,6 +304,11 @@ class PowerUpPainter {
             final flame = PowerUpSprites.effectFrame(
               AnimatedEffect.campfire,
               (state.step ~/ 4 + i) % 4,
+              enabled: p.usesEffectSprite(
+                PowerUpKind.molotov,
+                ball: fire.owner,
+                globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+              ),
             );
             final flicker = 0.5 + 0.5 * math.sin(state.step * 0.48 + i * 1.73);
             final base = fire.position + fireSpots[i] * fire.radius;
@@ -337,6 +342,11 @@ class PowerUpPainter {
           final flame = PowerUpSprites.effectFrame(
             AnimatedEffect.campfire,
             (state.step ~/ 4 + i) % 4,
+            enabled: p.usesEffectSprite(
+              PowerUpKind.fireWall,
+              ball: wall.owner,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            ),
           );
           final spot = wall.center + tangent * visualRadius * (i - 1.5) * 1.35;
           if (flame != null) {
@@ -371,7 +381,11 @@ class PowerUpPainter {
             r * p.visualSkill(PowerUpKind.lightningStrikes).effectDisplayScale;
         if (strike.flashLeft <= 0) continue;
         final target = strike.target.position;
-        if (p.usesEffectSprite(PowerUpKind.lightningStrikes) &&
+        if (p.usesEffectSprite(
+              PowerUpKind.lightningStrikes,
+              ball: strike.owner,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            ) &&
             LightningStrikePainter.paint(
               canvas,
               impact: target,
@@ -609,6 +623,11 @@ class PowerUpPainter {
           final flame = PowerUpSprites.effectFrame(
             AnimatedEffect.flame,
             (state.step ~/ 3 + i) % 4,
+            enabled: p.usesEffectSprite(
+              PowerUpKind.flamethrower,
+              ball: cone.owner,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            ),
           );
           if (flame != null) {
             _drawEffect(
@@ -657,12 +676,17 @@ class PowerUpPainter {
             !p.usesEffectSprite(
               PowerUpKind.rocketLauncher,
               skillId: e.skillId,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
             )) {
           _paintRocketExplosion(canvas, e.position, visualRadius, t, fade);
           continue;
         }
         if (e.kind == PowerUpKind.grenade &&
-            !p.usesEffectSprite(PowerUpKind.grenade, skillId: e.skillId)) {
+            !p.usesEffectSprite(
+              PowerUpKind.grenade,
+              skillId: e.skillId,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            )) {
           canvas.drawCircle(
             e.position,
             visualRadius * (0.35 + 0.65 * t),
@@ -680,9 +704,14 @@ class PowerUpPainter {
           );
         }
         if (showEffects &&
-            explosionRenderMode == EffectRenderMode.sprite &&
-            (e.kind == null ||
-                p.usesEffectSprite(e.kind!, skillId: e.skillId))) {
+            (e.kind == null
+                ? explosionRenderMode == EffectRenderMode.sprite
+                : p.usesEffectSprite(
+                    e.kind!,
+                    skillId: e.skillId,
+                    globalSprite:
+                        explosionRenderMode == EffectRenderMode.sprite,
+                  ))) {
           final sprite = PowerUpSprites.effectFrame(
             AnimatedEffect.explosion,
             (t * 4).floor().clamp(0, 3),
@@ -755,6 +784,10 @@ class PowerUpPainter {
           final sprite = PowerUpSprites.effectFrame(
             AnimatedEffect.portal,
             (state.step ~/ 4) % 4,
+            enabled: p.usesEffectSprite(
+              flash.swap ? PowerUpKind.swapCannon : PowerUpKind.portal,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            ),
           );
           if (sprite != null) {
             _drawEffect(canvas, sprite, spot, r * (1.1 + t), t, opacity: fade);
@@ -861,6 +894,10 @@ class PowerUpPainter {
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.portal,
           (state.step ~/ 4) % 4,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.portal,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
         );
         if (sprite != null) {
           _drawEffect(
@@ -1105,8 +1142,11 @@ class PowerUpPainter {
           }
           if (shot.kind == PowerUpKind.freeze) {
             final sprite =
-                freezeRenderMode == EffectRenderMode.sprite &&
-                    p.usesEffectSprite(shot.kind)
+                p.usesEffectSprite(
+                  shot.kind,
+                  projectile: shot,
+                  globalSprite: freezeRenderMode == EffectRenderMode.sprite,
+                )
                 ? PowerUpSprites.effect(EffectSprite.iceWave)
                 : null;
             if (sprite == null) {
@@ -1325,6 +1365,11 @@ class PowerUpPainter {
         final sprite = PowerUpSprites.effectFrame(
           AnimatedEffect.slash,
           ((m.age / PowerUpTuning.slashShowSteps) * 4).floor().clamp(0, 3),
+          enabled: p.usesEffectSprite(
+            m.kind,
+            skillId: m.skillId,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
         );
         if (sprite != null) {
           _drawEffect(
@@ -1358,7 +1403,11 @@ class PowerUpPainter {
   /// painted after contestants, so the funnel visibly surrounds the victim.
   static Offset tornadoVisualCenter(SimulationBall target) => target.position;
 
-  static void paintTornadoOverlays(Canvas canvas, SimulationState state) {
+  static void paintTornadoOverlays(
+    Canvas canvas,
+    SimulationState state, {
+    bool globalEffectSprite = true,
+  }) {
     final p = state.powerUps;
     if (p == null) return;
     for (final tornado in p.tornadoes) {
@@ -1405,6 +1454,11 @@ class PowerUpPainter {
         final frame = PowerUpSprites.effectFrame(
           AnimatedEffect.tornado,
           (state.step ~/ 3) % 8,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.tornado,
+            ball: tornado.owner,
+            globalSprite: globalEffectSprite,
+          ),
         );
         if (frame != null) {
           _drawEffect(canvas, frame, center, half, 0);
@@ -2068,6 +2122,7 @@ class PowerUpPainter {
     Canvas canvas,
     SimulationBall ball, {
     double displayScale = 1,
+    bool useEffectSprite = true,
   }) {
     if (ball.speedLeft <= 0) return;
     final speed = ball.velocity.distance;
@@ -2075,7 +2130,10 @@ class PowerUpPainter {
     final dir = ball.velocity / speed;
     final side = Offset(-dir.dy, dir.dx);
     final r = ball.radius * displayScale;
-    final sprite = PowerUpSprites.effect(EffectSprite.speedStreak);
+    final sprite = PowerUpSprites.effect(
+      EffectSprite.speedStreak,
+      enabled: useEffectSprite,
+    );
     if (sprite != null) {
       _drawEffect(
         canvas,
@@ -2129,6 +2187,7 @@ class PowerUpPainter {
     int step = 0,
     bool Function(PowerUpKind kind, int slot)? useWeaponSprite,
     int Function(PowerUpKind kind, int slot)? artworkTint,
+    bool Function(PowerUpKind kind)? useEffectSprite,
     double? incomingAttackAngle,
     int Function(PowerUpKind kind)? firedWeaponHoldLeft,
     double Function(PowerUpKind kind, int slot)? weaponDisplayScale,
@@ -2221,6 +2280,7 @@ class PowerUpPainter {
           final flame = PowerUpSprites.effectFrame(
             AnimatedEffect.flame,
             (step ~/ 4 + i) % 4,
+            enabled: useEffectSprite?.call(PowerUpKind.molotov) ?? true,
           );
           final flicker = 0.5 + 0.5 * math.sin(step * 0.52 + i * 1.61);
           final base =
@@ -2314,7 +2374,10 @@ class PowerUpPainter {
       );
       try {
         final range = skillRange?.call(PowerUpKind.timeBubble) ?? 3;
-        final sprite = PowerUpSprites.effect(EffectSprite.timeBubble);
+        final sprite = PowerUpSprites.effect(
+          EffectSprite.timeBubble,
+          enabled: useEffectSprite?.call(PowerUpKind.timeBubble) ?? true,
+        );
         if (sprite != null) {
           _drawEffect(
             canvas,
@@ -2395,7 +2458,9 @@ class PowerUpPainter {
       try {
         final angle = incomingAttackAngle ?? 0;
         final direction = Offset(math.cos(angle), math.sin(angle));
-        final sprite = PowerUpSprites.of(PowerUpKind.mirror);
+        final sprite = (useEffectSprite?.call(PowerUpKind.mirror) ?? true)
+            ? PowerUpSprites.of(PowerUpKind.mirror)
+            : null;
         if (sprite != null) {
           _drawSprite(
             canvas,
@@ -2438,10 +2503,10 @@ class PowerUpPainter {
         artworkTint?.call(PowerUpKind.overcharge, -1) ?? 0xFFFFFFFF,
       );
       try {
-        final maximumPower = ArenaEffectLibrary.frame(
-          ArenaEffectKind.maximumPower,
-          step,
-        );
+        final maximumPower =
+            (useEffectSprite?.call(PowerUpKind.overcharge) ?? true)
+            ? ArenaEffectLibrary.frame(ArenaEffectKind.maximumPower, step)
+            : null;
         if (maximumPower != null) {
           _drawEffect(
             canvas,
@@ -2515,7 +2580,10 @@ class PowerUpPainter {
             (ball.radius *
                 (effectDisplayScale?.call(PowerUpKind.magneticField) ?? 1)) *
             2;
-        final sprite = PowerUpSprites.effect(EffectSprite.magneticField);
+        final sprite = PowerUpSprites.effect(
+          EffectSprite.magneticField,
+          enabled: useEffectSprite?.call(PowerUpKind.magneticField) ?? true,
+        );
         if (sprite != null) {
           _drawEffect(
             canvas,
@@ -2572,7 +2640,10 @@ class PowerUpPainter {
         artworkTint?.call(PowerUpKind.goldenArmor, -1) ?? 0xFFFFFFFF,
       );
       try {
-        final sprite = PowerUpSprites.effect(EffectSprite.goldenArmorHit);
+        final sprite = PowerUpSprites.effect(
+          EffectSprite.goldenArmorHit,
+          enabled: useEffectSprite?.call(PowerUpKind.goldenArmor) ?? true,
+        );
         if (sprite != null) {
           _drawEffect(
             canvas,
@@ -2656,7 +2727,10 @@ class PowerUpPainter {
         artworkTint?.call(PowerUpKind.stickyGoo, -1) ?? 0xFFFFFFFF,
       );
       try {
-        final sprite = PowerUpSprites.effect(EffectSprite.stickyGoo);
+        final sprite = PowerUpSprites.effect(
+          EffectSprite.stickyGoo,
+          enabled: useEffectSprite?.call(PowerUpKind.stickyGoo) ?? true,
+        );
         if (sprite != null) {
           _drawEffect(
             canvas,

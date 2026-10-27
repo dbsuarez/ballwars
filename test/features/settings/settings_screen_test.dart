@@ -241,7 +241,7 @@ void main() {
     expect(repo.saved.last.ballGlowEnabled, isFalse);
     expect(settings.value.ballGlowEnabled, isFalse);
 
-    await tester.tap(find.byKey(const ValueKey('effect-render-Projectiles')));
+    await tester.tap(find.byKey(const ValueKey('effect-render-Default effect visuals')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Vector fallback').last);
     await tester.pumpAndSettle();

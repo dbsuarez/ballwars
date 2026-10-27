@@ -63,6 +63,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   double _speedMultiplier = 1.0;
   bool _automaticSpeedUp = true;
   bool _showEffects = true;
+  EffectRenderMode? _effectRenderMode;
   WallSparkSize _wallSparkSize = WallSparkSize.normal;
   BallSize _ballSize = BallSize.medium;
   MatchMode _mode = MatchMode.threads;
@@ -141,6 +142,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             ? widget.initialMayhem && profileMode == MatchMode.arsenal
             : (profileMode == MatchMode.arsenal &&
                   await DevicePrefs.read('mayhem') == '1'));
+    final effectVisuals = await _readProfile(
+      profileMode,
+      'effect-visuals',
+      mayhem: profileMayhem,
+    );
     final effects =
         await _readProfile(profileMode, 'effects', mayhem: profileMayhem) ??
         ((await EffectsPrefs.effectsOn()) ? '1' : '0');
@@ -258,6 +264,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           .firstOrNull;
       _powerUps = _modePowerUps[_activeProfileId];
       _showEffects = effects != '0';
+      _effectRenderMode = EffectRenderMode.values
+          .where((mode) => mode.name == effectVisuals)
+          .firstOrNull;
       _finishersOn = finishers != '0';
       _settingCards = settingCards;
       _wallSparkSize = wallSparkSize ?? WallSparkSize.normal;
@@ -470,6 +479,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
         showEffects: _showEffects,
+        effectRenderMode: _effectRenderMode,
         ballGlowWidth: AppSettingsScope.of(context).ballGlowWidth,
         bloodColor: AppSettingsScope.of(context).bloodColor,
         wallSparkSize: _wallSparkSize,
@@ -1332,6 +1342,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ]),
       if (tab == 1)
         _settingsGroup('Appearance', [
+          _choice<EffectRenderMode?>(
+            Icons.auto_awesome,
+            'Effect visuals',
+            [null, ...EffectRenderMode.values],
+            _effectRenderMode,
+            (mode) => mode?.label ?? 'Default',
+            (mode) {
+              _update(() => _effectRenderMode = mode);
+              _writeProfile('effect-visuals', mode?.name ?? 'default');
+            },
+          ),
           _choice(
             Icons.stadium_outlined,
             'Arena',

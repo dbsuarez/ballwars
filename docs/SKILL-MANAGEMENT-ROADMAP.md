@@ -243,6 +243,9 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Split Edit Skill into Identity (including behavior), Damage & Timing, Appearance, and Callouts & Sounds tabs, retaining draft values and persistent preview actions.
 - [x] Save directly from Edit Skill to the settings repository, retaining the editor and showing failures for retry; keep Save Library for bulk library changes.
 - [x] Add per-skill Artwork tint in Appearance, including a gold swatch and original-color reset. Persist tint in skill/replay data and apply it to icons, held/dropped artwork, projectiles, skill effects and finishers without modifying shared source images.
+- [x] Use numeric up/down controls for whole-number skill fields, retaining direct typing and enforcing minimum/maximum bounds; preserve decimal inputs for fractional settings.
+- [x] Add general Effect visuals selection, admin defaults starting at Sprite, and per-mode player preferences preserved in replay links and exports. Explicit skill choices override the shared default.
+- [ ] Add independent equipped artwork and fired-skill selection (Knife firing three Boom-merangs). See [next feature handoff](NEXT-SKILL-COMPOSITION.md).
 - [x] Default newly saved replay names to local date/time and filename-safe contestant names with a `.bw` suffix; preserve custom names on re-save.
 
 - [x] Implement the [Skill Management audit](SKILL-MANAGEMENT-AUDIT.md): grouped fixed-label controls, visible validation, aligned sprite/projectile previews, and runtime sizing/parameter corrections.

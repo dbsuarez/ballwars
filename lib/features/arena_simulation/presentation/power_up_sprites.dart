@@ -78,7 +78,8 @@ class PowerUpSprites {
     PowerUpKind.boomerang => _boomerangIcon,
     _ => _images[kind],
   };
-  static ui.Image? effect(EffectSprite kind) => _effects[kind];
+  static ui.Image? effect(EffectSprite kind, {bool enabled = true}) =>
+      enabled ? _effects[kind] : null;
   static ui.Image? projectile(ProjectileSprite kind) => _projectiles[kind];
 
   static ui.Image? projectileArtwork(PowerUpKind kind) => switch (kind) {
@@ -96,7 +97,12 @@ class PowerUpSprites {
     PowerUpKind.freeze => effect(EffectSprite.iceWave),
     _ => of(kind),
   };
-  static ui.Image? effectFrame(AnimatedEffect kind, int frame) {
+  static ui.Image? effectFrame(
+    AnimatedEffect kind,
+    int frame, {
+    bool enabled = true,
+  }) {
+    if (!enabled) return null;
     final frames = _animatedEffects[kind];
     return frames == null ? null : frames[frame % frames.length];
   }

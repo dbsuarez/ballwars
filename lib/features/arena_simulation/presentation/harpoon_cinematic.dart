@@ -25,6 +25,7 @@ class HarpoonCinematic extends StatefulWidget {
     this.onImpact,
     this.visualMove,
     this.artworkTint = 0xFFFFFFFF,
+    this.effectSprites = true,
   });
 
   final CustomBall winner;
@@ -32,6 +33,7 @@ class HarpoonCinematic extends StatefulWidget {
   final String move;
   final String? visualMove;
   final int artworkTint;
+  final bool effectSprites;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -163,6 +165,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                           impactProgress: impact,
                           profile: profile,
                           artworkTint: widget.artworkTint,
+                          effectSprites: widget.effectSprites,
                         ),
                       ),
                     ),
@@ -292,6 +295,7 @@ class _FinisherPainter extends CustomPainter {
     required this.impactProgress,
     required this.profile,
     this.artworkTint = 0xFFFFFFFF,
+    this.effectSprites = true,
   });
 
   final CustomBall winner;
@@ -305,6 +309,7 @@ class _FinisherPainter extends CustomPainter {
   final double impactProgress;
   final FinisherProfile profile;
   final int artworkTint;
+  final bool effectSprites;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -357,7 +362,11 @@ class _FinisherPainter extends CustomPainter {
       }
       return;
     }
-    if (kind != null && _paintSignatureMove(canvas, kind, from, to)) return;
+    if (kind != null &&
+        effectSprites &&
+        _paintSignatureMove(canvas, kind, from, to)) {
+      return;
+    }
     switch (profile.style) {
       case FinisherStyle.hook:
         if (hookProgress > 0 && uppercutProgress < 0.72) {
@@ -383,6 +392,7 @@ class _FinisherPainter extends CustomPainter {
           final slashSprite = PowerUpSprites.effectFrame(
             AnimatedEffect.slash,
             (uppercutProgress * 4).floor().clamp(0, 3),
+            enabled: effectSprites,
           );
           if (slashSprite != null) {
             _paintRaster(
@@ -1154,10 +1164,12 @@ class _FinisherPainter extends CustomPainter {
   void _paintExplosion(Canvas canvas, Offset center, double progress) {
     final burst = Curves.easeOut.transform(progress);
     final fade = 1 - progress;
-    final sprite = ArenaEffectLibrary.frame(
-      ArenaEffectKind.explosion,
-      (progress * 8).floor(),
-    );
+    final sprite = effectSprites
+        ? ArenaEffectLibrary.frame(
+            ArenaEffectKind.explosion,
+            (progress * 8).floor(),
+          )
+        : null;
     if (sprite != null) {
       _paintRaster(
         canvas,

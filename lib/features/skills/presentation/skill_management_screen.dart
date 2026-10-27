@@ -16,6 +16,8 @@ import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/harpoon_cinematic.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../settings/presentation/power_up_test_screen.dart';
+import '../../settings/presentation/app_settings_scope.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
 import 'skill_artwork_tint.dart';
 
@@ -870,6 +872,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
+  late bool _globalEffectVisuals = widget.skill.useGlobalEffectVisuals;
   late bool _enabled = widget.skill.enabled;
   late bool _homing = widget.skill.homing;
   late bool _returnsToOrigin = widget.skill.returnsToOrigin;
@@ -997,6 +1000,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _trackNearestOpponent = defaults.trackNearestOpponent;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
+      _globalEffectVisuals = defaults.useGlobalEffectVisuals;
       _trigger = defaults.trigger;
       _targeting = defaults.targeting;
       _delivery = defaults.delivery;
@@ -1077,6 +1081,11 @@ class _SkillEditorState extends State<_SkillEditor> {
                     move: skill.name,
                     visualMove: skill.baseKind.label,
                     artworkTint: skill.spriteTint,
+                    effectSprites: skill.usesSpriteEffects(
+                      globalSprite:
+                          AppSettingsScope.of(context).explosionRenderMode ==
+                          EffectRenderMode.sprite,
+                    ),
                     onHookFired: () =>
                         GameAudio.instance.skillCue(skill.soundCue),
                     onImpact: GameAudio.instance.hit,
@@ -1189,6 +1198,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       knockback: _double('knockback'),
       spriteMode: _sprite,
       effectMode: _effect,
+      useGlobalEffectVisuals: _globalEffectVisuals,
       soundCue: _sound.text.trim().isEmpty ? 'default' : _sound.text.trim(),
       trigger: _trigger,
       targeting: _targeting,
@@ -1251,20 +1261,32 @@ class _SkillEditorState extends State<_SkillEditor> {
     'handEffectDuration': (0.1, 10),
   };
 
+  static const _wholeNumberKeys = {
+    'count',
+    'allOut',
+    'dotAllOut',
+    'bounces',
+    'repeatCount',
+    'shieldHits',
+  };
+
+  void _stepWholeNumber(String key, int delta) {
+    final value = int.tryParse(_numbers[key]!.text);
+    if (value == null) return;
+    final limits = _limits[key]!;
+    setState(
+      () => _numbers[key]!.text = (value + delta)
+          .clamp(limits.$1.toInt(), limits.$2.toInt())
+          .toString(),
+    );
+  }
+
   String? _numberError(String key) {
     final raw = _numbers[key]?.text ?? '';
     final value = double.tryParse(raw);
     if (value == null || !value.isFinite) return 'Enter a number';
     if (value < 0 && key != 'projectileSpin') return 'Must be zero or more';
-    if (const [
-          'count',
-          'allOut',
-          'dotAllOut',
-          'bounces',
-          'repeatCount',
-          'shieldHits',
-        ].contains(key) &&
-        value != value.roundToDouble()) {
+    if (_wholeNumberKeys.contains(key) && value != value.roundToDouble()) {
       return 'Use a whole number';
     }
     final limits = _limits[key];
@@ -1328,6 +1350,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   );
 
   Widget _number(String key, String label, {String? suffix}) {
+    final wholeNumber = _wholeNumberKeys.contains(key);
     final limits = _limits[key];
     final value = _double(key);
     return Card(
@@ -1337,21 +1360,69 @@ class _SkillEditorState extends State<_SkillEditor> {
         child: Column(
           children: [
             _fixedRow(
-              label,
-              TextField(
-                key: ValueKey('skill-field-$key'),
-                controller: _numbers[key],
-                textAlign: TextAlign.right,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  suffixText: suffix,
-                  isDense: true,
-                  border: const OutlineInputBorder(),
-                  errorText: _numberError(key),
-                ),
-                onChanged: (_) => setState(() {}),
+              wholeNumber && suffix != null ? '$label ($suffix)' : label,
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _numbers[key]!,
+                builder: (context, editingValue, _) {
+                  final value = double.tryParse(editingValue.text);
+                  return TextField(
+                    key: ValueKey('skill-field-$key'),
+                    controller: _numbers[key],
+                    textAlign: TextAlign.right,
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: !wholeNumber,
+                    ),
+                    inputFormatters: wholeNumber
+                        ? [FilteringTextInputFormatter.digitsOnly]
+                        : null,
+                    decoration: InputDecoration(
+                      suffixText: wholeNumber ? null : suffix,
+                      contentPadding: wholeNumber
+                          ? const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 12,
+                            )
+                          : null,
+                      prefixIconConstraints: const BoxConstraints.tightFor(
+                        width: 36,
+                        height: 44,
+                      ),
+                      suffixIconConstraints: const BoxConstraints.tightFor(
+                        width: 36,
+                        height: 44,
+                      ),
+                      prefixIcon: wholeNumber
+                          ? IconButton(
+                              key: ValueKey('skill-decrease-$key'),
+                              tooltip: 'Decrease $label',
+                              padding: EdgeInsets.zero,
+                              onPressed:
+                                  value != null && value > (limits?.$1 ?? 0)
+                                  ? () => _stepWholeNumber(key, -1)
+                                  : null,
+                              icon: const Icon(Icons.remove, size: 18),
+                            )
+                          : null,
+                      suffixIcon: wholeNumber
+                          ? IconButton(
+                              key: ValueKey('skill-increase-$key'),
+                              tooltip: 'Increase $label',
+                              padding: EdgeInsets.zero,
+                              onPressed:
+                                  value != null &&
+                                      value < (limits?.$2 ?? double.infinity)
+                                  ? () => _stepWholeNumber(key, 1)
+                                  : null,
+                              icon: const Icon(Icons.add, size: 18),
+                            )
+                          : null,
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      errorText: _numberError(key),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  );
+                },
               ),
             ),
             if (limits != null &&
@@ -1755,24 +1826,11 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _number(
-                                'repeatCount',
-                                'Repeat count',
-                                suffix: 'times',
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _number(
-                                'repeatInterval',
-                                'Repeat interval',
-                                suffix: 's',
-                              ),
-                            ),
-                          ],
+                        _number('repeatCount', 'Repeat count', suffix: 'times'),
+                        _number(
+                          'repeatInterval',
+                          'Repeat interval',
+                          suffix: 's',
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -2214,32 +2272,37 @@ class _SkillEditorState extends State<_SkillEditor> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (_explodesOnImpact ||
-                          !widget.skill.isComposed &&
-                              const [
-                                PowerUpKind.grenade,
-                                PowerUpKind.rocketLauncher,
-                                PowerUpKind.mine,
-                                PowerUpKind.phaseMine,
-                                PowerUpKind.freeze,
-                              ].contains(widget.skill.baseKind))
-                        _fixedRow(
-                          'Impact / area effect',
-                          DropdownButtonFormField<SkillVisualMode>(
-                            isExpanded: true,
-                            initialValue: _effect,
-                            decoration: const InputDecoration(),
-                            items: [
-                              for (final mode in SkillVisualMode.values)
-                                DropdownMenuItem(
-                                  value: mode,
-                                  child: _visualOption(mode),
-                                ),
-                            ],
-                            onChanged: (value) =>
-                                setState(() => _effect = value!),
+                      _fixedRow(
+                        'Effect visuals',
+                        DropdownButtonFormField<String>(
+                          key: const ValueKey('skill-effect-visuals'),
+                          isExpanded: true,
+                          initialValue: _globalEffectVisuals
+                              ? 'global'
+                              : _effect.name,
+                          decoration: const InputDecoration(
+                            helperText:
+                                'Applies to this skill’s effects. Unavailable sprite artwork uses the vector fallback.',
                           ),
+                          items: [
+                            const DropdownMenuItem(
+                              value: 'global',
+                              child: Text('Use global setting'),
+                            ),
+                            for (final mode in SkillVisualMode.values)
+                              DropdownMenuItem(
+                                value: mode.name,
+                                child: _visualOption(mode),
+                              ),
+                          ],
+                          onChanged: (value) => setState(() {
+                            _globalEffectVisuals = value == 'global';
+                            if (!_globalEffectVisuals) {
+                              _effect = SkillVisualMode.values.byName(value!);
+                            }
+                          }),
                         ),
+                      ),
                       const SizedBox(height: 12),
                     ],
                   ),

@@ -175,9 +175,15 @@ class PowerUpSystem {
     PowerUpKind kind, {
     SimulationBall? ball,
     String? skillId,
-  }) =>
-      visualSkill(kind, ball: ball, skillId: skillId).effectMode ==
-      SkillVisualMode.sprite;
+    Projectile? projectile,
+    bool globalSprite = true,
+  }) {
+    final skill = projectile == null
+        ? visualSkill(kind, ball: ball, skillId: skillId)
+        : _composedProjectiles[projectile] ?? visualSkill(kind);
+    return skill.usesSpriteEffects(globalSprite: globalSprite);
+  }
+
   String skillName(PowerUpKind kind) => visualSkill(kind).name;
   double weaponDisplayScale(PowerUpKind kind, {SimulationBall? ball}) =>
       visualSkill(kind, ball: ball).weaponDisplayScale;

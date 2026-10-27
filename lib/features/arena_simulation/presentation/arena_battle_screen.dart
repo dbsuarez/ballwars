@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/presentation/app_settings_scope.dart';
+import '../../settings/domain/app_settings.dart';
 import '../application/match_simulation_controller.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
@@ -466,6 +467,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   }
 
   Uri _replayUri() => ReplayLink(
+    effectRenderMode: widget.config.effectRenderMode,
     seed: _controller.seed,
     speedMultiplier: widget.config.speedMultiplier,
     automaticSpeedUp: widget.config.automaticSpeedUp,
@@ -739,15 +741,19 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               handsOnPictures: widget.config.handsOnPictures,
                               whitePickupBackgrounds:
                                   widget.config.whitePickupBackgrounds,
-                              projectileRenderMode: AppSettingsScope.of(
-                                context,
-                              ).projectileRenderMode,
-                              explosionRenderMode: AppSettingsScope.of(
-                                context,
-                              ).explosionRenderMode,
-                              freezeRenderMode: AppSettingsScope.of(
-                                context,
-                              ).freezeRenderMode,
+                              projectileRenderMode:
+                                  widget.config.effectRenderMode ??
+                                  AppSettingsScope.of(
+                                    context,
+                                  ).projectileRenderMode,
+                              explosionRenderMode:
+                                  widget.config.effectRenderMode ??
+                                  AppSettingsScope.of(
+                                    context,
+                                  ).explosionRenderMode,
+                              freezeRenderMode:
+                                  widget.config.effectRenderMode ??
+                                  AppSettingsScope.of(context).freezeRenderMode,
                             ),
                           ),
                         ),
@@ -882,6 +888,23 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       winner: _winnerBall!,
                       loser: _loserBall!,
                       move: _controller.winningMove ?? 'Collision',
+                      effectSprites:
+                          _controller.skillLibrary
+                              .all(_controller.tuning)
+                              .where(
+                                (skill) =>
+                                    skill.name == _controller.winningMove,
+                              )
+                              .firstOrNull
+                              ?.usesSpriteEffects(
+                                globalSprite:
+                                    (widget.config.effectRenderMode ??
+                                        AppSettingsScope.of(
+                                          context,
+                                        ).explosionRenderMode) ==
+                                    EffectRenderMode.sprite,
+                              ) ??
+                          true,
                       artworkTint:
                           _controller.skillLibrary
                               .all(_controller.tuning)
@@ -935,6 +958,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           : () {
                               _audio.click();
                               ExportVideoDialog.show(
+                                effectRenderMode:
+                                    widget.config.effectRenderMode ??
+                                    AppSettingsScope.of(
+                                      context,
+                                    ).explosionRenderMode,
                                 context,
                                 contestants: widget.config.contestants,
                                 seed: _controller.seed,

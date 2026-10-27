@@ -22,6 +22,7 @@ import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
 import 'app_settings_scope.dart';
+import '../domain/app_settings.dart';
 
 /// Runs actual matches with local, admin-only scenario controls.
 class PowerUpTestScreen extends StatefulWidget {
@@ -479,6 +480,21 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                       winner: _balls[index],
                       loser: _balls[1 - index],
                       move: kind.label,
+                      effectSprites:
+                          (widget.initialSkill?.baseKind == kind
+                                  ? widget.initialSkill
+                                  : _match?.skillLibrary.builtIn(
+                                      kind,
+                                      _match!.tuning,
+                                    ))
+                              ?.usesSpriteEffects(
+                                globalSprite:
+                                    AppSettingsScope.of(
+                                      context,
+                                    ).explosionRenderMode ==
+                                    EffectRenderMode.sprite,
+                              ) ??
+                          true,
                       artworkTint: widget.initialSkill?.baseKind == kind
                           ? widget.initialSkill!.spriteTint
                           : _match?.state.powerUps?.artworkTint(

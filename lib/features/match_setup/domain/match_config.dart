@@ -81,6 +81,7 @@ class MatchConfig {
 
   /// Show sparks and particles (cosmetic; the match is the same either way).
   final bool showEffects;
+  final EffectRenderMode? effectRenderMode;
   final bool? finishersEnabled;
   final double ballGlowWidth;
   final Color bloodColor;
@@ -136,6 +137,7 @@ class MatchConfig {
     this.speedMultiplier = 1.0,
     this.automaticSpeedUp = true,
     this.showEffects = true,
+    this.effectRenderMode,
     this.finishersEnabled,
     this.ballGlowWidth = 4,
     this.bloodColor = const Color(0xFFD9152B),

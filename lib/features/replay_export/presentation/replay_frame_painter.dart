@@ -52,6 +52,9 @@ class ReplayFramePainter {
         worldRadius: worldRadius,
         rimAngle: 0,
         showEffects: showEffects,
+        projectileRenderMode: _style.effectRenderMode,
+        explosionRenderMode: _style.effectRenderMode,
+        freezeRenderMode: _style.effectRenderMode,
         showBallGlow: _style.ballGlowEnabled,
         ballGlowWidth: _style.ballGlowWidth,
         arenaTitle: _style.arenaTitle,
@@ -443,6 +446,7 @@ class ReplayFramePainter {
 
 /// The exported video's look: the app's headline and theme colors.
 class ReplayStyle {
+  final EffectRenderMode effectRenderMode;
   final String headline;
   final Color background;
   final Color text;
@@ -458,6 +462,7 @@ class ReplayStyle {
   final BallLook look;
 
   const ReplayStyle({
+    this.effectRenderMode = EffectRenderMode.sprite,
     this.headline = 'WHO WINS?',
     this.background = const Color(0xFF0A0A0B),
     this.text = const Color(0xFFF2F2F0),

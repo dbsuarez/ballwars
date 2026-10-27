@@ -106,7 +106,11 @@ class ArenaPainter extends CustomPainter {
       if (ball.isEliminated) continue;
       _paintSingleBall(canvas, ball);
     }
-    PowerUpPainter.paintTornadoOverlays(canvas, state);
+    PowerUpPainter.paintTornadoOverlays(
+      canvas,
+      state,
+      globalEffectSprite: explosionRenderMode == EffectRenderMode.sprite,
+    );
     _paintFloatingText(canvas);
 
     canvas.restore();
@@ -564,6 +568,13 @@ class ArenaPainter extends CustomPainter {
     PowerUpPainter.paintSpeedTrail(
       canvas,
       ball,
+      useEffectSprite:
+          state.powerUps?.usesEffectSprite(
+            PowerUpKind.speed,
+            ball: ball,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ) ??
+          true,
       displayScale:
           state.powerUps
               ?.visualSkill(PowerUpKind.speed, ball: ball)
@@ -609,6 +620,13 @@ class ArenaPainter extends CustomPainter {
     PowerUpPainter.paintBallEffects(
       canvas,
       ball,
+      useEffectSprite: (kind) =>
+          state.powerUps?.usesEffectSprite(
+            kind,
+            ball: ball,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ) ??
+          true,
       step: state.step,
       artworkTint: (kind, slot) =>
           state.powerUps?.artworkTint(

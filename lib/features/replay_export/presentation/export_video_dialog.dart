@@ -81,6 +81,7 @@ class ExportVideoDialog extends StatefulWidget {
     required double speedMultiplier,
     bool automaticSpeedUp = true,
     bool showEffects = true,
+    EffectRenderMode effectRenderMode = EffectRenderMode.sprite,
     int slowMotionLines = MatchSimulationController.slowMotionLineThreshold,
     double? slowMotionBeforeWinSeconds,
     double ballScale = 1.0,
@@ -133,6 +134,7 @@ class ExportVideoDialog extends StatefulWidget {
         finishersEnabled: finishersEnabled,
         randomizedHairstyles: randomizedHairstyles,
         style: ReplayStyle(
+          effectRenderMode: effectRenderMode,
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
           text: colors?.text ?? const ReplayStyle().text,

@@ -464,6 +464,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             minimumArenaScale: link.minimumArenaScale,
             arenaDecoration: link.arenaDecoration,
             showEffects: link.showEffects,
+            effectRenderMode: link.effectRenderMode,
             ballGlowWidth: link.ballGlowWidth,
             bloodColor: link.bloodColor,
             randomizedHairstyles: link.randomizedHairstyles,

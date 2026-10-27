@@ -6,10 +6,10 @@
         [0, 0, 256, 256]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
       "bleedOk": false,
-      "padding": 0
+      "padding": 2
     },
     "effect.omegaTendrilsAttack": {
       "frames": [

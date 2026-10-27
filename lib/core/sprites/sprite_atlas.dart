@@ -1,9 +1,13 @@
 import 'dart:ui';
 
 /// How a cut frame is scaled into its output image: [contain] keeps the
-/// frame's proportions, [trim] first shrinks the frame to its visible art
-/// (alpha >= 16) and then contains it, [fill] stretches the frame to the
-/// whole output box (for strips such as the sticky goo rim).
+/// frame's proportions inside the output minus its padding; [trim] contains
+/// the frame into the whole output (no padding), measures the visible art
+/// (alpha >= 16) of that cut and contains those bounds into the output minus
+/// its padding, so the art fills the box whatever margin the sheet cell has
+/// (a fully transparent frame stays the plain cut; not with sharedBand);
+/// [fill] stretches the frame to the whole output box (for strips such as the
+/// sticky goo rim).
 enum SpriteFit { contain, trim, fill }
 
 /// One sprite: its frames on the sheet and how to cut and play them.
@@ -38,6 +42,10 @@ class SpriteDef {
   /// Transparent margin in pixels kept on each side of the output image.
   final int padding;
 
+  /// Fit [SpriteFit.trim] only: the margin of its first cut, the one whose
+  /// visible art is measured. 0 (the default) cuts into the whole output.
+  final int trimCutPadding;
+
   const SpriteDef({
     required this.id,
     required this.frames,
@@ -50,6 +58,7 @@ class SpriteDef {
     this.bleedOk = false,
     this.bleedNote,
     this.padding = 2,
+    this.trimCutPadding = 0,
   });
 
   /// Height of the output image in pixels.
@@ -156,9 +165,16 @@ class SpriteAtlas {
         'Sprite $id padding must be a whole number of pixels, 0 or more',
       );
     }
+    final cutPadding = v['trimCutPadding'] ?? 0;
+    if (cutPadding is! int || cutPadding < 0) {
+      throw FormatException(
+        'Sprite $id trimCutPadding must be a whole number of pixels, 0 or more',
+      );
+    }
     return SpriteDef(
       id: id,
       padding: padding,
+      trimCutPadding: cutPadding,
       frames: frames,
       anchor: anchor,
       output: output,
@@ -207,6 +223,19 @@ class SpriteAtlas {
       }
       if (def.fit == SpriteFit.fill && def.sharedBand) {
         out.add('${def.id} fill cannot be combined with sharedBand');
+      }
+      if (def.fit == SpriteFit.trim && def.sharedBand) {
+        out.add('${def.id} trim cannot be combined with sharedBand');
+      }
+      if (def.trimCutPadding != 0 && def.fit != SpriteFit.trim) {
+        out.add('${def.id} sets trimCutPadding but its fit is not trim');
+      }
+      if (def.trimCutPadding * 2 >= def.output ||
+          def.trimCutPadding * 2 >= def.height) {
+        out.add(
+          '${def.id} trimCutPadding ${def.trimCutPadding} leaves no room in a '
+          '${def.output}x${def.height} px output',
+        );
       }
       if (def.bleedOk && (def.bleedNote == null || def.bleedNote!.isEmpty)) {
         out.add('${def.id} sets bleedOk but has no bleedNote explaining why');

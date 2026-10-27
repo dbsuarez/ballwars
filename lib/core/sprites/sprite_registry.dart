@@ -131,6 +131,74 @@ class SpriteRegistry {
     }
   }
 
+  /// Adds one bundled sprite (a single frame) that the app draws in code
+  /// instead of cutting it from a sheet, such as a pixel-art icon. The whole
+  /// [image] goes through the same fit as a manifest frame ([fit],
+  /// [output] wide, [outputHeight] tall or square, [padding]) and is stored
+  /// under [id] like a sprite from a bundled manifest: `frame(id)` returns it
+  /// and a manifest that later names the same id is skipped with a load
+  /// problem.
+  ///
+  /// The registry stores its own copy: the caller keeps ownership of [image]
+  /// and may dispose it once the future completes. Throws [ArgumentError] for
+  /// ids starting with `custom.` (those belong to [register]), ids already in
+  /// use, and sizes or a padding the atlas rules reject; [SpriteFit.trim] and
+  /// [SpriteFit.contain] keep the image's shape, [SpriteFit.fill] stretches
+  /// it. Like [load], it is discarded when [resetForTest] runs meanwhile.
+  static Future<void> registerDrawn(
+    String id,
+    ui.Image image, {
+    SpriteFit fit = SpriteFit.contain,
+    int output = 64,
+    int? outputHeight,
+    int padding = 2,
+    int stepsPerFrame = _defaultStepsPerFrame,
+  }) async {
+    if (id.isEmpty || id.startsWith('custom.')) {
+      throw ArgumentError.value(
+        id,
+        'id',
+        'must name a bundled sprite, not a "custom." one',
+      );
+    }
+    if (_sprites.containsKey(id) || _owners.containsKey(id)) {
+      throw ArgumentError.value(id, 'id', 'is already in use');
+    }
+    final def = SpriteDef(
+      id: id,
+      frames: [
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      ],
+      output: output,
+      outputHeight: outputHeight,
+      fit: fit,
+      padding: padding,
+      stepsPerFrame: stepsPerFrame,
+    );
+    final problems = SpriteAtlas(sheet: 'drawn', sprites: {id: def}).problems(
+      sheetSize: Size(image.width.toDouble(), image.height.toDouble()),
+    );
+    if (output <= 0 || (outputHeight != null && outputHeight <= 0)) {
+      problems.add('$id output must be a positive size');
+    }
+    if (problems.isNotEmpty) {
+      throw ArgumentError('Drawn sprite has problems: ${problems.join('; ')}');
+    }
+    final gen = _generation;
+    final frames = await _cutSprite(def, image);
+    final sprite = _CutSprite(frames, stepsPerFrame);
+    if (gen != _generation) {
+      sprite.dispose();
+      return;
+    }
+    if (_sprites.containsKey(id) || _owners.containsKey(id)) {
+      sprite.dispose();
+      throw ArgumentError.value(id, 'id', 'is already in use');
+    }
+    _owners[id] = 'drawn in code';
+    _sprites[id] = sprite;
+  }
+
   static void _problem(String text) {
     _problems.add(text);
     debugPrint('SpriteRegistry: $text');
@@ -240,15 +308,11 @@ class SpriteRegistry {
     ui.Image sheet,
   ) async {
     final out = <String, _CutSprite>{};
-    ByteData? pixels;
     try {
       for (final def in atlas.sprites.values) {
         if (def.frames.isEmpty) continue;
-        if (def.fit == SpriteFit.trim) {
-          pixels ??= await sheet.toByteData(format: ui.ImageByteFormat.rawRgba);
-        }
         out[def.id] = _CutSprite(
-          await _cutSprite(def, sheet, pixels),
+          await _cutSprite(def, sheet),
           def.stepsPerFrame,
         );
       }
@@ -261,21 +325,12 @@ class SpriteRegistry {
     return out;
   }
 
-  static Future<List<ui.Image>> _cutSprite(
-    SpriteDef def,
-    ui.Image sheet,
-    ByteData? pixels,
-  ) async {
+  static Future<List<ui.Image>> _cutSprite(SpriteDef def, ui.Image sheet) async {
     final size = def.output;
     final height = def.height;
     final pad = def.padding.toDouble();
     final inner = Rect.fromLTWH(pad, pad, size - 2 * pad, height - 2 * pad);
-    var sources = def.frames;
-    if (def.fit == SpriteFit.trim && pixels != null) {
-      sources = [
-        for (final f in sources) _visibleBounds(pixels, sheet.width, f),
-      ];
-    }
+    final sources = def.frames;
     var union = sources.first;
     for (final r in sources) {
       union = union.expandToInclude(r);
@@ -293,6 +348,19 @@ class SpriteRegistry {
     final frames = <ui.Image>[];
     try {
       for (final source in sources) {
+        if (def.fit == SpriteFit.trim) {
+          frames.add(
+            await _trimmed(
+              sheet,
+              source,
+              size,
+              height,
+              def.padding,
+              def.trimCutPadding,
+            ),
+          );
+          continue;
+        }
         final Rect dest;
         if (def.sharedBand) {
           // One scale for the whole sprite; each frame sits at its offset
@@ -307,19 +375,9 @@ class SpriteRegistry {
         } else if (def.fit == SpriteFit.fill) {
           dest = inner;
         } else {
-          final fitted = applyBoxFit(BoxFit.contain, source.size, inner.size);
-          dest = Alignment.center.inscribe(fitted.destination, inner);
+          dest = _contain(source.size, inner);
         }
-        final recorder = ui.PictureRecorder();
-        Canvas(recorder).drawImageRect(
-          sheet,
-          source,
-          dest,
-          Paint()..filterQuality = FilterQuality.none,
-        );
-        final picture = recorder.endRecording();
-        frames.add(await picture.toImage(size, height));
-        picture.dispose();
+        frames.add(await _draw(sheet, source, dest, size, height));
       }
     } catch (_) {
       for (final f in frames) {
@@ -330,22 +388,92 @@ class SpriteRegistry {
     return frames;
   }
 
-  /// The tight box around pixels with alpha >= 16 inside [frame]; the frame
-  /// itself when it is fully transparent.
-  static Rect _visibleBounds(ByteData bytes, int sheetWidth, Rect frame) {
-    final x0 = frame.left.floor(), x1 = frame.right.ceil();
-    final y0 = frame.top.floor(), y1 = frame.bottom.ceil();
-    var left = x1, top = y1, right = -1, bottom = -1;
-    for (var y = y0; y < y1; y++) {
-      for (var x = x0; x < x1; x++) {
-        if (bytes.getUint8((y * sheetWidth + x) * 4 + 3) < 16) continue;
+  /// Where [content] lands when contained, centered, in [box].
+  static Rect _contain(Size content, Rect box) {
+    final fitted = applyBoxFit(BoxFit.contain, content, box.size);
+    return Alignment.center.inscribe(fitted.destination, box);
+  }
+
+  /// [source] of [image] drawn at [dest] on a fresh [width] x [height] image,
+  /// nearest-neighbor.
+  static Future<ui.Image> _draw(
+    ui.Image image,
+    Rect source,
+    Rect dest,
+    int width,
+    int height,
+  ) async {
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(
+      image,
+      source,
+      dest,
+      Paint()..filterQuality = FilterQuality.none,
+    );
+    final picture = recorder.endRecording();
+    try {
+      return await picture.toImage(width, height);
+    } finally {
+      picture.dispose();
+    }
+  }
+
+  /// Fit "trim", in two steps: [source] is contained into the
+  /// [width] x [height] canvas minus [cutPadding] on each side (0: the whole
+  /// canvas), the visible art (alpha >= 16) of that cut is measured, and those
+  /// bounds are contained into the canvas minus [padding] on each side, on a
+  /// fresh canvas. A fully transparent cut is returned as is.
+  static Future<ui.Image> _trimmed(
+    ui.Image image,
+    Rect source,
+    int width,
+    int height,
+    int padding,
+    int cutPadding,
+  ) async {
+    final full = Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
+    final cut = await _draw(
+      image,
+      source,
+      _contain(source.size, full.deflate(cutPadding.toDouble())),
+      width,
+      height,
+    );
+    try {
+      final bytes = await cut.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final visible = bytes == null ? null : _visibleBounds(bytes, cut);
+      if (visible == null) return cut;
+      final inner = full.deflate(padding.toDouble());
+      final fitted = await _draw(
+        cut,
+        visible,
+        _contain(visible.size, inner),
+        width,
+        height,
+      );
+      cut.dispose();
+      return fitted;
+    } catch (_) {
+      cut.dispose();
+      rethrow;
+    }
+  }
+
+  /// The tight box around pixels with alpha >= 16 in [image] ([bytes] is its
+  /// raw RGBA); null when it is fully transparent.
+  static Rect? _visibleBounds(ByteData bytes, ui.Image image) {
+    final w = image.width, h = image.height;
+    var left = w, top = h, right = -1, bottom = -1;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (bytes.getUint8((y * w + x) * 4 + 3) < 16) continue;
         left = math.min(left, x);
         right = math.max(right, x);
         top = math.min(top, y);
         bottom = math.max(bottom, y);
       }
     }
-    if (right < left) return frame;
+    if (right < left) return null;
     return Rect.fromLTRB(
       left.toDouble(),
       top.toDouble(),

@@ -377,6 +377,268 @@ void main() {
     },
   );
 
+  group('fit trim', () {
+    /// A [w] x [h] image with an opaque red rectangle at [art].
+    Future<ui.Image> artImage(ui.Rect art, {int w = 64, int h = 64}) async {
+      final rec = ui.PictureRecorder();
+      ui.Canvas(
+        rec,
+      ).drawRect(art, ui.Paint()..color = const ui.Color(0xFFFF0000));
+      return rec.endRecording().toImage(w, h);
+    }
+
+    /// Bounds (left, top, right, bottom, inclusive) of pixels with alpha > 16.
+    Future<List<int>?> visible(ui.Image img) async {
+      final b = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      var l = img.width, t = img.height, r = -1, btm = -1;
+      for (var y = 0; y < img.height; y++) {
+        for (var x = 0; x < img.width; x++) {
+          if (b.getUint8((y * img.width + x) * 4 + 3) <= 16) continue;
+          if (x < l) l = x;
+          if (x > r) r = x;
+          if (y < t) t = y;
+          if (y > btm) btm = y;
+        }
+      }
+      return r < 0 ? null : [l, t, r, btm];
+    }
+
+    SpriteAtlas one(Map<String, Object?> entry) => SpriteAtlas.parse({
+      'sheet': 's.png',
+      'sprites': {'t': entry},
+    });
+
+    test('visible art fills the box without clipping or stretching', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        // The icon fit: 16 x 32 art in a 64 px cell becomes 30 x 60 px,
+        // centered in the 60 px box inside a 2 px border.
+        final sheet = await artImage(const ui.Rect.fromLTWH(24, 16, 16, 32));
+        await SpriteRegistry.register(
+          one({
+            'frames': [
+              [0, 0, 64, 64],
+            ],
+            'output': 64,
+            'padding': 2,
+            'fit': 'trim',
+          }),
+          sheet,
+          idPrefix: 'custom.i',
+        );
+        final img = SpriteRegistry.frame('custom.i.t')!;
+        expect([img.width, img.height], [64, 64]);
+        expect(await visible(img), [17, 2, 46, 61]);
+      });
+    });
+
+    test('measures on the output-size cut, not the sheet', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        // A 128 px cell with art in a 32 x 64 box, cut to 32 px: the art is
+        // measured on the 32 px cut (8 x 16) and fills the 28 px inner box.
+        final sheet = await artImage(
+          const ui.Rect.fromLTWH(48, 32, 32, 64),
+          w: 128,
+          h: 128,
+        );
+        await SpriteRegistry.register(
+          one({
+            'frames': [
+              [0, 0, 128, 128],
+            ],
+            'output': 32,
+            'fit': 'trim',
+          }),
+          sheet,
+          idPrefix: 'custom.m',
+        );
+        expect(await visible(SpriteRegistry.frame('custom.m.t')!), [
+          9,
+          2,
+          22,
+          29,
+        ]);
+      });
+    });
+
+    test('a non-square output contains the art in its inner box', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final sheet = await artImage(const ui.Rect.fromLTWH(20, 28, 24, 8));
+        await SpriteRegistry.register(
+          one({
+            'frames': [
+              [0, 0, 64, 64],
+            ],
+            'output': 64,
+            'outputHeight': 32,
+            'padding': 2,
+            'fit': 'trim',
+          }),
+          sheet,
+          idPrefix: 'custom.w',
+        );
+        final img = SpriteRegistry.frame('custom.w.t')!;
+        expect([img.width, img.height], [64, 32]);
+        // 24 x 8 art scaled into 60 x 28: limited by the width, 60 x 20.
+        expect(await visible(img), [2, 6, 61, 25]);
+      });
+    });
+
+    test('a fully transparent frame stays the plain cut', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final sheet = await artImage(ui.Rect.zero);
+        await SpriteRegistry.register(
+          one({
+            'frames': [
+              [0, 0, 64, 64],
+            ],
+            'output': 48,
+            'fit': 'trim',
+          }),
+          sheet,
+          idPrefix: 'custom.e',
+        );
+        final img = SpriteRegistry.frame('custom.e.t')!;
+        expect([img.width, img.height], [48, 48]);
+        expect(await visible(img), isNull);
+      });
+    });
+
+    test('trimCutPadding sets the margin of the measured cut', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final sheet = await artImage(const ui.Rect.fromLTWH(0, 0, 64, 64));
+        await SpriteRegistry.register(
+          one({
+            'frames': [
+              [0, 0, 64, 64],
+            ],
+            'output': 64,
+            'padding': 4,
+            'trimCutPadding': 2,
+            'fit': 'trim',
+          }),
+          sheet,
+          idPrefix: 'custom.c',
+        );
+        expect(await visible(SpriteRegistry.frame('custom.c.t')!), [
+          4,
+          4,
+          59,
+          59,
+        ]);
+      });
+    });
+
+    test('problems reject trim with sharedBand and a stray trimCutPadding', () {
+      final frames = [
+        [0, 0, 16, 16],
+      ];
+      final atlas = SpriteAtlas.parse({
+        'sheet': 's.png',
+        'sprites': {
+          'band': {
+            'frames': frames,
+            'output': 24,
+            'fit': 'trim',
+            'sharedBand': true,
+          },
+          'stray': {'frames': frames, 'output': 24, 'trimCutPadding': 2},
+          'wide': {
+            'frames': frames,
+            'output': 24,
+            'fit': 'trim',
+            'trimCutPadding': 12,
+          },
+        },
+      });
+      final problems = atlas.problems(sheetSize: const ui.Size(16, 16));
+      expect(problems, hasLength(3));
+      expect(problems[0], contains('trim cannot be combined with sharedBand'));
+      expect(problems[1], contains('stray sets trimCutPadding'));
+      expect(problems[2], contains('wide trimCutPadding 12 leaves no room'));
+    });
+  });
+
+  group('registerDrawn', () {
+    Future<ui.Image> drawn() async {
+      final rec = ui.PictureRecorder();
+      ui.Canvas(rec).drawRect(
+        const ui.Rect.fromLTWH(24, 16, 16, 32),
+        ui.Paint()..color = const ui.Color(0xFFFF0000),
+      );
+      return rec.endRecording().toImage(64, 64);
+    }
+
+    test('fits a drawn image like a manifest frame and keeps a copy', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final image = await drawn();
+        await SpriteRegistry.registerDrawn(
+          'powerup.test',
+          image,
+          fit: SpriteFit.trim,
+        );
+        image.dispose(); // the caller keeps ownership of its image
+        final img = SpriteRegistry.frame('powerup.test')!;
+        expect(SpriteRegistry.frameCount('powerup.test'), 1);
+        expect([img.width, img.height], [64, 64]);
+        final b = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        int alpha(int x, int y) => b.getUint8((y * 64 + x) * 4 + 3);
+        expect(alpha(17, 2), 255);
+        expect(alpha(46, 61), 255);
+        expect(alpha(16, 30), 0);
+        expect(alpha(47, 30), 0);
+        expect(alpha(30, 1), 0);
+        expect(alpha(30, 62), 0);
+      });
+    });
+
+    test('rejects custom ids, ids in use and bad sizes', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final image = await drawn();
+        await expectLater(
+          SpriteRegistry.registerDrawn('custom.x', image),
+          throwsArgumentError,
+        );
+        await SpriteRegistry.registerDrawn('drawn.a', image);
+        await expectLater(
+          SpriteRegistry.registerDrawn('drawn.a', image),
+          throwsArgumentError,
+        );
+        await expectLater(
+          SpriteRegistry.registerDrawn('drawn.b', image, output: 4),
+          throwsArgumentError,
+        );
+        expect(SpriteRegistry.has('drawn.b'), isFalse);
+      });
+    });
+
+    test('a manifest naming a drawn id is skipped with a problem', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final image = await drawn();
+        await SpriteRegistry.registerDrawn('x', image);
+        final bundle = FakeAssetBundle();
+        bundle.putString(
+          SpriteRegistry.indexPath,
+          jsonEncode(['a.atlas.json']),
+        );
+        bundle.files['a.png'] = await pngBytes(await makeSheet(2));
+        bundle.putString('a.atlas.json', manifest('a.png', 'x'));
+        await SpriteRegistry.load(bundle: bundle);
+        expect(SpriteRegistry.frame('x')!.width, 64);
+        expect(SpriteRegistry.loadProblems.single, contains('drawn in code'));
+      });
+    });
+
+    test('resetForTest meanwhile discards the drawn sprite', () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final image = await drawn();
+        final pending = SpriteRegistry.registerDrawn('drawn.r', image);
+        SpriteRegistry.resetForTest();
+        await pending;
+        expect(SpriteRegistry.has('drawn.r'), isFalse);
+      });
+    });
+  });
+
   test('resetForTest during a load discards the stale work', () async {
     await TestWidgetsFlutterBinding.instance.runAsync(() async {
       final bundle = FakeAssetBundle();

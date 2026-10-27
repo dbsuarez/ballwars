@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../../core/sprites/sprite_atlas.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../domain/power_up.dart';
 import 'power_up_pixel_art.dart';
@@ -56,8 +57,9 @@ enum AnimatedEffect {
 /// `anim.<AnimatedEffect>`). The ids are built once, so painting never
 /// formats strings. See `docs/SPRITES.md`.
 ///
-/// Icons are the one special case: [of] returns the registry's 64 px cut
-/// refitted to its visible artwork by [fitVisibleArtwork].
+/// Icons are plain registry frames too ([of] is `frame(iconId(kind))`): their
+/// manifest entries use fit "trim", and [load] registers the kinds without
+/// sheet art ([pixelArtOnly]) with `SpriteRegistry.registerDrawn`.
 ///
 /// [load] runs once per app; until it finishes (and in tests that skip it) the
 /// lookups return null and the painter draws its simple vector glyphs instead.
@@ -111,10 +113,10 @@ class PowerUpSprites {
     _ => null,
   };
 
-  /// Every atlas id this class names.
+  /// Every atlas id this class names, the drawn icons of [pixelArtOnly]
+  /// included (they are registered by [load]).
   static List<String> get requiredIds => [
-    for (final k in PowerUpKind.values)
-      if (!pixelArtOnly.contains(k)) iconId(k),
+    for (final k in PowerUpKind.values) iconId(k),
     ..._effectIds,
     ..._projectileIds,
     ..._animIds,
@@ -124,82 +126,48 @@ class PowerUpSprites {
     stickyGooRimId,
   ];
 
-  /// Icons after [fitVisibleArtwork]; owned (and never disposed) here.
-  static final Map<PowerUpKind, ui.Image> _images = {};
+  static Future<void>? _registryLoad;
   static Future<void>? _loading;
 
-  /// [kind]'s icon (64 x 64 px), or null before [load] has finished.
-  static ui.Image? of(PowerUpKind kind) => _images[kind];
+  /// [kind]'s icon (64 x 64 px, `powerup.<kind>`), or null before [load] has
+  /// finished.
+  static ui.Image? of(PowerUpKind kind) => SpriteRegistry.frame(iconId(kind));
 
-  /// Builds every icon image (once; later calls return the same future).
-  static Future<void> load() => _loading ??= _loadAll();
+  /// Loads the registry and registers the drawn icons (once per registry
+  /// load; later calls return the same future).
+  static Future<void> load() {
+    final registry = SpriteRegistry.load();
+    if (!identical(registry, _registryLoad)) {
+      // First call, or the registry was reset (tests): register again.
+      _registryLoad = registry;
+      _loading = _loadAll(registry);
+    }
+    return _loading!;
+  }
 
-  static Future<void> _loadAll() async {
-    // Every sheet is cut by the registry from its atlas manifest.
-    await SpriteRegistry.load();
-    // Icons fit their visible artwork, rather than the transparent sheet
-    // cell, into 64 px with a two-pixel border. The registry cuts each cell
-    // to 64 px first ("powerup.<kind>"), then this fit runs on that cut, as
-    // before atlases. (Fit "trim" in a manifest measures at sheet resolution
-    // and moves some icons by a few px, so the two-step look is kept.) The
-    // registry owns its frames, so they are never disposed here.
+  static Future<void> _loadAll(Future<void> registry) async {
+    // Every sheet is cut by the registry from its atlas manifest; icons use
+    // fit "trim", so their visible art fills 60 px inside a 2 px border.
+    await registry;
+    // Kinds without sheet art are drawn from their 16 x 16 pixels and go
+    // through the same fit, as bundled sprites.
     for (final kind in pixelArtOnly) {
+      final id = iconId(kind);
+      if (SpriteRegistry.has(id)) continue;
       final recorder = ui.PictureRecorder();
       paintIcon(Canvas(recorder), kind, const Rect.fromLTWH(0, 0, 64, 64));
       final picture = recorder.endRecording();
       final drawn = await picture.toImage(64, 64);
       picture.dispose();
-      final fitted = await fitVisibleArtwork(drawn);
-      _images[kind] = fitted;
-      if (!identical(drawn, fitted)) drawn.dispose();
-    }
-    for (final kind in PowerUpKind.values) {
-      if (_images.containsKey(kind)) continue;
-      final cut = SpriteRegistry.frame(iconId(kind));
-      if (cut != null) _images[kind] = await fitVisibleArtwork(cut);
-    }
-  }
-
-  /// Returns a fitted copy; the caller retains ownership of the input image.
-  static Future<ui.Image> fitVisibleArtwork(ui.Image image) async {
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-    if (bytes == null) return image;
-    var left = image.width, top = image.height, right = -1, bottom = -1;
-    for (var y = 0; y < image.height; y++) {
-      for (var x = 0; x < image.width; x++) {
-        if (bytes.getUint8((y * image.width + x) * 4 + 3) < 16) continue;
-        left = math.min(left, x);
-        right = math.max(right, x);
-        top = math.min(top, y);
-        bottom = math.max(bottom, y);
+      try {
+        await SpriteRegistry.registerDrawn(id, drawn, fit: SpriteFit.trim);
+      } on ArgumentError catch (e) {
+        // Another load registered it meanwhile.
+        debugPrint('PowerUpSprites: $e');
+      } finally {
+        drawn.dispose();
       }
     }
-    if (right < left) return image;
-    final source = Rect.fromLTRB(
-      left.toDouble(),
-      top.toDouble(),
-      (right + 1).toDouble(),
-      (bottom + 1).toDouble(),
-    );
-    final fitted = applyBoxFit(
-      BoxFit.contain,
-      source.size,
-      const Size.square(60),
-    );
-    final recorder = ui.PictureRecorder();
-    Canvas(recorder).drawImageRect(
-      image,
-      source,
-      Alignment.center.inscribe(
-        fitted.destination,
-        const Rect.fromLTWH(2, 2, 60, 60),
-      ),
-      Paint()..filterQuality = FilterQuality.none,
-    );
-    final picture = recorder.endRecording();
-    final result = await picture.toImage(64, 64);
-    picture.dispose();
-    return result;
   }
 
   /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).

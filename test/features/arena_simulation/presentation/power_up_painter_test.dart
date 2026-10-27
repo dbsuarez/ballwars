@@ -31,35 +31,6 @@ const _balls = [
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('visible artwork fills icon without clipping or stretching', () async {
-    final recorder = ui.PictureRecorder();
-    ui.Canvas(recorder).drawRect(
-      const Rect.fromLTWH(24, 16, 16, 32),
-      Paint()..color = Colors.red,
-    );
-    final picture = recorder.endRecording();
-    final input = await picture.toImage(64, 64);
-    final fitted = await PowerUpSprites.fitVisibleArtwork(input);
-    final bytes = (await fitted.toByteData(
-      format: ui.ImageByteFormat.rawRgba,
-    ))!;
-    final pixels = <Offset>[];
-    for (var y = 0; y < 64; y++) {
-      for (var x = 0; x < 64; x++) {
-        if (bytes.getUint8((y * 64 + x) * 4 + 3) > 16) {
-          pixels.add(Offset(x.toDouble(), y.toDouble()));
-        }
-      }
-    }
-    expect(pixels.map((p) => p.dy).reduce(math.min), 2);
-    expect(pixels.map((p) => p.dy).reduce(math.max), 61);
-    expect(pixels.map((p) => p.dx).reduce(math.min), 17);
-    expect(pixels.map((p) => p.dx).reduce(math.max), 46);
-    input.dispose();
-    fitted.dispose();
-    picture.dispose();
-  });
-
   test(
     'paints field power-ups, projectiles, mines, blasts and ball effects without throwing',
     () {

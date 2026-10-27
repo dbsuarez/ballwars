@@ -117,9 +117,10 @@ Rules for painters:
 | `frames` | required | List of `[x, y, width, height]` in sheet pixels; decimals allowed (`443.5`). Frames play in list order and must not overlap. |
 | `output` | required | Width of each cut image in px (its side when square). |
 | `outputHeight` | `output` | Height of the cut image when it is not square (the goo rim is 768 x 160). |
-| `fit` | `"contain"` | `contain`: scale the frame to fit inside the output, keeping its shape, centered. `trim`: first shrink the frame to its visible art (alpha >= 16, measured at sheet resolution), then contain. `fill`: stretch the frame to the whole output box (for strips). |
+| `fit` | `"contain"` | `contain`: scale the frame to fit inside the output minus `padding`, keeping its shape, centered. `trim` (two steps): contain the frame into the whole output canvas (minus `trimCutPadding`, 0 by default), measure the visible art (alpha >= 16) on that cut, then contain those bounds into the output minus `padding` on a fresh canvas. The art then fills the box whatever margin the sheet cell has. A fully transparent frame stays the plain cut. Every icon uses it. `fill`: stretch the frame to the whole output box (for strips). |
 | `padding` | `2` | Transparent px kept on each side of the output image. Must leave room: `2 * padding` smaller than both output sides. |
-| `sharedBand` | `false` | All frames share one scale and keep their vertical offsets inside the band that covers every frame, so an animation does not jump or pulse. Needs a square output and cannot be combined with `fill`. |
+| `trimCutPadding` | `0` | Fit `trim` only: the margin of the first cut, the one that is measured. Only the four `phase8-skills` icons set it (2), because they were cut into 60 px before the refit and must keep those exact pixels. |
+| `sharedBand` | `false` | All frames share one scale and keep their vertical offsets inside the band that covers every frame, so an animation does not jump or pulse. Needs a square output and cannot be combined with `fill` or `trim`. |
 | `stepsPerFrame` | `4` | Simulation steps (1/60 s) each frame is shown, read with `SpriteRegistry.stepsPerFrame`. Caveat: today most painter call sites (`power_up_painter.dart`, `harpoon_cinematic.dart`) still hard-code their frame counts and timing; only `ArenaEffectLibrary` reads `frameCount` and `stepsPerFrame`. Changing a manifest's frame count or `stepsPerFrame` needs a matching code change at those call sites. |
 | `anchor` | `[0.5, 0.5]` | Anchor inside the output, 0 to 1 per axis. Parsed and kept for later; the cut and the painters currently center every sprite. |
 | `bleedOk` | `false` | The frame may touch neighboring art; the isolation test skips it. |
@@ -127,8 +128,9 @@ Rules for painters:
 
 `problems()` reports, in plain words: no frames, a frame with no area or
 outside the sheet, overlapping frames, padding that leaves no room,
-`sharedBand` without a square output, `fill` with `sharedBand`, and `bleedOk`
-without a `bleedNote`. The registry skips any manifest with problems.
+`sharedBand` without a square output, `fill` or `trim` with `sharedBand`,
+`trimCutPadding` without fit `trim` or without room, and `bleedOk` without a
+`bleedNote`. The registry skips any manifest with problems.
 
 ## The index file
 
@@ -236,18 +238,35 @@ sprite, a fixed cut):
 Never update goldens to quiet a refactor that was meant to change nothing.
 Find the difference instead.
 
-## The icon special case
+## Icons and sprites drawn in code
 
-`PowerUpSprites.of(kind)` is not a plain registry frame. The registry cuts
-each icon cell to 64 px (`powerup.<kind>`), then `PowerUpSprites.load()` runs
-`fitVisibleArtwork` on that cut: it fits the visible art (alpha >= 16) into
-60 px inside a 2 px border. Doing the same in one step with `fit: "trim"`
-measures at sheet resolution and moves some icons by a few px (the icons
-golden changed by more than 1%), so the two-step cut stays. Kinds without
-sheet art (`PowerUpSprites.pixelArtOnly`) are drawn from their 16 x 16 pixel
-art (`power_up_pixel_art.dart`) and fitted the same way. `paintIcon` draws
-that pixel art (or an initials badge) directly, and `PowerUpIcon` is the
-widget for both.
+Icons are plain registry frames: `PowerUpSprites.of(kind)` is
+`SpriteRegistry.frame(PowerUpSprites.iconId(kind))`. Every `powerup.<kind>`
+entry uses `"fit": "trim"`, `"padding": 2` and `"output": 64`, so its visible
+art fills 60 px inside a 2 px border. Only the fitted frame is kept.
+
+Kinds without sheet art (`PowerUpSprites.pixelArtOnly`: vampire and repulsor)
+are drawn in code from their 16 x 16 pixel art (`power_up_pixel_art.dart`)
+and added by `PowerUpSprites.load()` with:
+
+```dart
+await SpriteRegistry.registerDrawn(
+  'powerup.vampire',
+  image,               // the caller keeps it and may dispose it afterwards
+  fit: SpriteFit.trim, // same fits as a manifest; contain by default
+  output: 64,          // outputHeight, padding (2), stepsPerFrame optional
+);
+```
+
+`registerDrawn` puts the whole image through the same fit as a manifest frame
+and stores its own copy as one bundled sprite (one frame). It throws
+`ArgumentError` for `custom.` ids (those belong to `register`), ids already in
+use and sizes the manifest rules reject. A manifest that later names the same
+id is skipped with a load problem. `resetForTest` while it runs discards the
+result, like `load`; `PowerUpSprites.load()` registers the drawn icons again
+after each new registry load. `paintIcon` still draws the pixel art (or an
+initials badge) directly for widgets while the image is null, and
+`PowerUpIcon` is the widget for both.
 
 ## Worked example: a new acid splash effect
 

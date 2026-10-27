@@ -6,9 +6,9 @@
         [0, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.shotgun": {
@@ -16,9 +16,9 @@
         [128, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.gatling": {
@@ -26,9 +26,9 @@
         [256, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.knife": {
@@ -36,9 +36,9 @@
         [384, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.sword": {
@@ -46,9 +46,9 @@
         [512, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.shield": {
@@ -56,9 +56,9 @@
         [640, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.freeze": {
@@ -66,9 +66,9 @@
         [768, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.grenade": {
@@ -76,9 +76,9 @@
         [896, 0, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.molotov": {
@@ -86,9 +86,9 @@
         [0, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.hook": {
@@ -96,9 +96,9 @@
         [128, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.ricochetDisc": {
@@ -106,9 +106,9 @@
         [256, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.orbitingFlail": {
@@ -116,9 +116,9 @@
         [384, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.threadHarpoon": {
@@ -126,9 +126,9 @@
         [512, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.prismLaser": {
@@ -136,9 +136,9 @@
         [640, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.swapCannon": {
@@ -146,9 +146,9 @@
         [768, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.bow": {
@@ -156,9 +156,9 @@
         [896, 128, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.apple": {
@@ -166,9 +166,9 @@
         [0, 256, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.speed": {
@@ -176,9 +176,9 @@
         [128, 256, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.magnet": {
@@ -186,9 +186,9 @@
         [256, 256, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.ghost": {
@@ -196,9 +196,9 @@
         [384, 256, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.timeBubble": {
@@ -206,9 +206,9 @@
         [640, 256, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.mirror": {
@@ -216,9 +216,9 @@
         [896, 256, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.overcharge": {
@@ -226,9 +226,9 @@
         [0, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.gremlin": {
@@ -236,9 +236,9 @@
         [128, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.magneticField": {
@@ -246,9 +246,9 @@
         [256, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.goldenArmor": {
@@ -256,9 +256,9 @@
         [384, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.mine": {
@@ -266,9 +266,9 @@
         [512, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.phaseMine": {
@@ -276,9 +276,9 @@
         [640, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.portal": {
@@ -286,9 +286,9 @@
         [768, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.spikeWall": {
@@ -296,9 +296,9 @@
         [896, 384, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     },
     "powerup.stickyGoo": {
@@ -306,9 +306,9 @@
         [0, 512, 128, 128]
       ],
       "output": 64,
-      "fit": "contain",
+      "fit": "trim",
       "sharedBand": false,
-      "padding": 0,
+      "padding": 2,
       "bleedOk": false
     }
   }

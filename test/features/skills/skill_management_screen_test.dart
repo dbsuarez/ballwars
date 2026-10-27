@@ -40,6 +40,58 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  testWidgets(
+    'editor saves directly, reports failures, and keeps edits for retry',
+    (tester) async {
+      SkillManagementResult? saved;
+      var failSave = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (result) async {
+              if (failSave) throw StateError('offline');
+              saved = result;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-field-arsenal')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('skill-field-arsenal')),
+        '17',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(saved, isNull);
+      expect(find.textContaining('Skill could not be saved:'), findsOneWidget);
+      expect(find.byKey(const ValueKey('save-skill')), findsOneWidget);
+      failSave = false;
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        saved!.library.builtIn(PowerUpKind.pistol, saved!.tuning).arsenalDamage,
+        17,
+      );
+      expect(find.text('Skill saved.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('save-skill')), findsOneWidget);
+    },
+  );
+
   Widget app({ValueChanged<SkillManagementResult?>? onResult}) => MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
     home: Builder(
@@ -250,7 +302,7 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('save-skill')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
     await tester.pumpAndSettle();
 
     final saved = result!.library.builtIn(
@@ -397,12 +449,12 @@ void main() {
     );
     await _revealEditor(tester, find.byKey(const ValueKey('skill-enabled')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Done'));
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Custom'));
     await tester.pumpAndSettle();
     expect(find.text('Heavy Pistol'), findsOneWidget);
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Save Library'));
     await tester.pumpAndSettle();
 
     expect(result, isNotNull);
@@ -474,7 +526,7 @@ void main() {
     expect(find.textContaining('Arena • Disabled'), findsNWidgets(4));
     expect(find.textContaining('every 20s'), findsNWidgets(4));
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
     await tester.pumpAndSettle();
     expect(result, isNotNull);
     expect(result!.tuning.arenaTrapsEnabled, isFalse);
@@ -491,6 +543,12 @@ void main() {
       'Pistol',
     );
     await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Pistol',
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
@@ -499,7 +557,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('save-skill')));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
     await tester.pumpAndSettle();
 
     expect(result, isNotNull);

@@ -241,6 +241,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 ### Follow-up polish (2026-10-27)
 
 - [x] Split Edit Skill into Identity (including behavior), Damage & Timing, Appearance, and Callouts & Sounds tabs, retaining draft values and persistent preview actions.
+- [x] Save directly from Edit Skill to the settings repository, retaining the editor and showing failures for retry; keep Save Library for bulk library changes.
 - [x] Default newly saved replay names to local date/time and filename-safe contestant names with a `.bw` suffix; preserve custom names on re-save.
 
 - [x] Implement the [Skill Management audit](SKILL-MANAGEMENT-AUDIT.md): grouped fixed-label controls, visible validation, aligned sprite/projectile previews, and runtime sizing/parameter corrections.

@@ -778,6 +778,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 MaterialPageRoute(
                                                   builder: (_) =>
                                                       SkillManagementScreen(
+                                                        onSave: (result) async {
+                                                          final scope =
+                                                              AppSettingsScope.maybeScope(
+                                                                this.context,
+                                                              )!;
+                                                          final next = scope
+                                                              .notifier!
+                                                              .value
+                                                              .copyWith(
+                                                                skillLibrary:
+                                                                    result
+                                                                        .library,
+                                                                powerUps: result
+                                                                    .library
+                                                                    .applyTo(
+                                                                      result
+                                                                          .tuning,
+                                                                    ),
+                                                              );
+                                                          await scope
+                                                              .repository!
+                                                              .save(next);
+                                                          scope
+                                                                  .notifier!
+                                                                  .value =
+                                                              next;
+                                                        },
                                                         initial: settings
                                                             .skillLibrary,
                                                         tuning:

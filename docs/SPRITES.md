@@ -157,19 +157,26 @@ Several rows into one sprite (`0-1` takes rows 0 and 1, row by row, left to
 right), cut as exact cells; this reproduces the bundled tornado manifest:
 
 ```bash
-python tool/sprites/make_atlas.py --sheet assets/sprites/tornado-animated-v2.png \n    --grid 4x2 --id-row 0-1=anim.tornado --exact --inset 12 --padding 2 \n    --steps-per-frame 3 --out assets/sprites/tornado-animated-v2.atlas.json
+python tool/sprites/make_atlas.py --sheet assets/sprites/tornado-animated-v2.png \
+    --grid 4x2 --id-row 0-1=anim.tornado --exact --inset 12 --padding 2 \
+    --steps-per-frame 3 --out assets/sprites/tornado-animated-v2.atlas.json
 ```
 
 Several sprites from one sheet, one per row, with a fixed cell size:
 
 ```bash
-python tool/sprites/make_atlas.py --sheet assets/sprites/goo-effects.png \n    --grid 4x2 --cell 443.5x443.5 --id-row 0=anim.gooSplash --id-row 1=anim.gooDrip \n    --shared-band --out assets/sprites/goo-effects.atlas.json
+python tool/sprites/make_atlas.py --sheet assets/sprites/goo-effects.png \
+    --grid 4x2 --cell 443.5x443.5 --id-row 0=anim.gooSplash --id-row 1=anim.gooDrip \
+    --shared-band --out assets/sprites/goo-effects.atlas.json
 ```
 
 Single frames at given rectangles (icons and one-offs), as on the rocket sheet:
 
 ```bash
-python tool/sprites/make_atlas.py --sheet assets/sprites/rocket-launcher.png \n    --grid 1x1 --output 64 --padding 0 \n    --icons powerup.rocketLauncher=0,0,887,887 \n    --out assets/sprites/rocket-launcher.atlas.json
+python tool/sprites/make_atlas.py --sheet assets/sprites/rocket-launcher.png \
+    --grid 1x1 --output 64 --padding 0 \
+    --icons powerup.rocketLauncher=0,0,887,887 \
+    --out assets/sprites/rocket-launcher.atlas.json
 ```
 
 Options:

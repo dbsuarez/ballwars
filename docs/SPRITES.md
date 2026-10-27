@@ -132,14 +132,15 @@ Rules for painters:
   manifest at the new file instead. A replaced original moves (`git mv`) to
   `art/sprites-original/<same name>`: it stays in the repo but is not bundled
   (`pubspec.yaml` bundles only `assets/sprites/`). Today that folder holds
-  `effects-animated.png`, `effects-master.png` and `projectiles-master.png`.
+  `effects-animated.png`, `effects-master.png`, `projectiles-master.png` and
+  `sticky-goo-rim.png`.
 - No AI image generation. Art is drawn by hand or composed in PhotoCraft.
 
 ## Manifest fields
 
 ```json
 {
-  "sheet": "assets/sprites/effects-animated-v2.png",
+  "sheet": "assets/sprites/effects-animated-v3.png",
   "sprites": {
     "anim.explosion": {
       "frames": [
@@ -377,14 +378,16 @@ initials badge) directly for widgets while the image is null, and
 
 ## Known issues
 
-- One bundled sprite sets `bleedOk`: `effect.stickyGooRim` (`sticky-goo-rim`).
-  It is a strip that wraps along the rim, so its art runs to the sheet's left
-  and right edges on purpose; a clear 2 px border there would leave gaps where
-  the painter's 56 slices meet. Its top and bottom are clear: the cut is rows
-  y 102.25 to 508.25, so the drips (they end at y 505) are whole.
-- Every other sprite has a clear 2 px border. The sheets whose art used to
-  run into the cut (`effects-animated`, `effects-master`,
-  `projectiles-master`) were rebuilt in PhotoCraft as `*-v2.png`: each frame
+- No bundled sprite sets `bleedOk`; every frame has a clear 2 px border.
+- `effect.stickyGooRim` is a strip whose art ends abruptly at its left and
+  right edges. `sticky-goo-rim-v2.png` is the original with 2 transparent
+  columns added on each side (PhotoCraft canvas size), and the cut covers the
+  whole 2173 px width, rows y 102.25 to 508.25, so the drips (they end at
+  y 505) are whole. `fill` squeezes it about 0.2% across.
+- The sheets whose art used to run into the cut (`effects-animated`,
+  `effects-master`, `projectiles-master`) were rebuilt in PhotoCraft
+  (`effects-animated-v3.png`, `effects-master-v2.png`,
+  `projectiles-master-v2.png`): each frame
   cropped from the original, the pixels of neighboring frames cleared, and the
   frame placed on a new sheet with room around it; no pixel was scaled or
   redrawn. The new frame rectangles keep each frame's center (for

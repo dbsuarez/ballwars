@@ -1,5 +1,5 @@
 {
-  "sheet": "assets/sprites/effects-animated-v2.png",
+  "sheet": "assets/sprites/effects-animated-v3.png",
   "sheetSize": [1520, 1122],
   "sprites": {
     "anim.flame": {
@@ -32,10 +32,10 @@
     },
     "anim.iceImpact": {
       "frames": [
-        [17, 476, 346, 188],
-        [397, 476, 346, 188],
-        [777, 476, 346, 188],
-        [1157, 476, 346, 188]
+        [17, 476, 346, 191],
+        [397, 476, 346, 191],
+        [777, 476, 346, 191],
+        [1157, 476, 346, 191]
       ],
       "output": 96,
       "fit": "contain",

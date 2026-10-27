@@ -1,18 +1,17 @@
 {
-  "sheet": "assets/sprites/sticky-goo-rim.png",
-  "sheetSize": [2169, 725],
+  "sheet": "assets/sprites/sticky-goo-rim-v2.png",
+  "sheetSize": [2173, 725],
   "sprites": {
     "effect.stickyGooRim": {
       "frames": [
-        [0, 102.25, 2169, 406]
+        [0, 102.25, 2173, 406]
       ],
       "output": 768,
       "fit": "fill",
       "sharedBand": false,
-      "bleedOk": true,
+      "bleedOk": false,
       "padding": 0,
-      "outputHeight": 160,
-      "bleedNote": "The goo is a strip that wraps along the rim, so its art runs to the sheet's left and right edges (x 0 and 2168) on purpose: a 2 px clear border there would leave gaps where the 56 slices meet, so those edges stay. The cut is rows y 102.25 to 508.25 (406 rows, as before, moved 8 rows down from 94.25) so the drips, which end at y 505, are no longer clipped; its top and bottom 2 rows are clear."
+      "outputHeight": 160
     }
   }
 }

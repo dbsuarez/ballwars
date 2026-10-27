@@ -121,6 +121,39 @@ void main() {
     expect(second.id, 'custom.arrow-rain-2');
     expect(first.custom, isTrue);
     expect(first.enabled, isTrue);
+    expect(first.trigger, SkillTrigger.aimedFire);
+    expect(first.delivery, SkillDelivery.projectile);
+    expect(first.effectType, SkillEffectType.damage);
+  });
+
+  test('legacy non-composed custom weapons migrate to shared behavior', () {
+    final source =
+        SkillLibrary.defaults
+            .builtIn(PowerUpKind.boomerang, PowerUpConfig.defaults)
+            .copyWith(
+              id: 'custom.boom-merang',
+              name: 'Boom-merang',
+              custom: true,
+              arsenalDamage: 7,
+              knockback: 2,
+              explodesOnImpact: true,
+            )
+            .toJson()
+          ..remove('trigger')
+          ..remove('targeting')
+          ..remove('delivery')
+          ..remove('effect_type');
+    final restored = SkillLibrary.fromJson({
+      'version': 2,
+      'overrides': <String, Object?>{},
+      'custom': [source],
+    }).custom.single;
+
+    expect(restored.isComposed, isTrue);
+    expect(restored.trigger, SkillTrigger.aimedFire);
+    expect(restored.delivery, SkillDelivery.projectile);
+    expect(restored.explodesOnImpact, isTrue);
+    expect(restored.knockback, 2);
   });
 
   test('enabled custom skills sharing a template remain independent', () {

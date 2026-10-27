@@ -1247,10 +1247,10 @@ class PowerUpSystem {
     final heldA = [...a.equippedWeapons];
     final heldB = [...b.equippedWeapons];
     for (final weapon in heldA) {
-      _melee(a, weapon, b, heldB);
+      _melee(a, weapon, b, heldB, skillId: _equippedSkillId(a, weapon));
     }
     for (final weapon in heldB) {
-      _melee(b, weapon, a, heldA);
+      _melee(b, weapon, a, heldA, skillId: _equippedSkillId(b, weapon));
     }
   }
 
@@ -1258,9 +1258,10 @@ class PowerUpSystem {
     SimulationBall attacker,
     PowerUpKind weapon,
     SimulationBall target,
-    List<PowerUpKind> targetHeld,
-  ) {
-    final composed = match.skillLibrary.activeFor(weapon, _t);
+    List<PowerUpKind> targetHeld, {
+    String? skillId,
+  }) {
+    final composed = _skillForId(weapon, skillId);
     if (composed.isComposed && composed.trigger == SkillTrigger.collision) {
       _executeComposed(attacker, composed, primary: target);
       attacker.removeWeapon(weapon);
@@ -1303,6 +1304,12 @@ class PowerUpSystem {
       );
     }
     _hit(target, kind, at: at, from: attacker);
+  }
+
+  String? _equippedSkillId(SimulationBall ball, PowerUpKind weapon) {
+    if (ball.held == weapon) return ball.heldSkillId;
+    if (ball.heldSecondary == weapon) return ball.heldSecondarySkillId;
+    return null;
   }
 
   /// True while [ball] is still in the match: not eliminated, and not already at 0 life (Arsenal) or out
@@ -2181,9 +2188,13 @@ class PowerUpSystem {
         }
         final reach = attacker.radius * 2.7 + target.radius;
         if ((target.position - attacker.position).distance <= reach) {
-          _melee(attacker, PowerUpKind.orbitingFlail, target, [
-            ...target.equippedWeapons,
-          ]);
+          _melee(
+            attacker,
+            PowerUpKind.orbitingFlail,
+            target,
+            [...target.equippedWeapons],
+            skillId: _equippedSkillId(attacker, PowerUpKind.orbitingFlail),
+          );
           break;
         }
       }
@@ -2913,6 +2924,10 @@ class PowerUpSystem {
           if (composed != null) {
             if (composed.explodesOnImpact) {
               final radius = match.arenaRadius * composed.range;
+              blasts++;
+              _sound(
+                composed.soundCue == 'default' ? 'bomb' : composed.soundCue,
+              );
               explosions.add(
                 Explosion(
                   position: end,

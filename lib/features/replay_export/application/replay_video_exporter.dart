@@ -82,6 +82,7 @@ class ReplayVideoExporter {
     double minimumArenaScale = 0.60,
     ReplayStyle style = const ReplayStyle(),
     bool finishersEnabled = true,
+    bool randomizedHairstyles = false,
     bool includeBgm = false,
     bool includeSfx = false,
     String bgmAsset = 'assets/sounds/bgm_arena.wav',
@@ -111,6 +112,7 @@ class ReplayVideoExporter {
       bloodColor: style.bloodColor,
       automaticSpeedUp: automaticSpeedUp,
       arenaDecoration: style.arenaDecoration,
+      randomizedHairstyles: randomizedHairstyles,
     );
     final frameDelta = speedMultiplier / fps;
 

@@ -75,6 +75,7 @@ class MatchSimulationController {
   final Color bloodColor;
   final ArenaDecoration arenaDecoration;
   final bool automaticSpeedUp;
+  final bool randomizedHairstyles;
 
   static const int shrinkGraceSteps = 10 * 60;
   static const int shrinkDurationSteps = 120 * 60;
@@ -218,6 +219,7 @@ class MatchSimulationController {
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.automaticSpeedUp = true,
+    this.randomizedHairstyles = false,
   }) : tuning = skillLibrary.applyTo(tuning),
        initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
@@ -249,6 +251,7 @@ class MatchSimulationController {
         bloodColor: bloodColor,
         arenaDecoration: arenaDecoration,
         automaticSpeedUp: automaticSpeedUp,
+        randomizedHairstyles: randomizedHairstyles,
       );
       var lastCalmStep = 0;
       while (ahead._status != MatchStatus.finished &&
@@ -284,6 +287,34 @@ class MatchSimulationController {
       for (final c in contestants) c.primaryColor,
     ], background: arenaBackground);
 
+    final hairstyleOrder = List<int>.generate(20, (index) => index)
+      ..shuffle(math.Random(this.seed ^ 0x48414952));
+    const hairPalette = <Color>[
+      Color(0xFF17120F),
+      Color(0xFF4B2E20),
+      Color(0xFF8B5A2B),
+      Color(0xFFD6B46A),
+      Color(0xFFEDE3D1),
+      Color(0xFFB3261E),
+      Color(0xFF6D3FC0),
+      Color(0xFF176B87),
+      Color(0xFF157A4C),
+      Color(0xFFFF7A00),
+      Color(0xFFEC407A),
+      Color(0xFF546E7A),
+    ];
+    final hairColorOrder = List<Color>.of(hairPalette)
+      ..shuffle(math.Random(this.seed ^ 0x434F4C52));
+    final assignedHairColors = <Color>[];
+    final availableHairColors = List<Color>.of(hairColorOrder);
+    for (var i = 0; i < count; i++) {
+      final contrasting = availableHairColors.indexWhere(
+        (color) => _colorDistance(color, contestants[i].primaryColor) > 90,
+      );
+      assignedHairColors.add(
+        availableHairColors.removeAt(contrasting < 0 ? 0 : contrasting),
+      );
+    }
     _balls = List.generate(count, (i) {
       final angle = _startAngle(i, count);
       final radial = Offset(math.cos(angle), math.sin(angle));
@@ -315,6 +346,8 @@ class MatchSimulationController {
         velocity: velocity,
         radius: ballRadius,
         lineCount: 0,
+        hairstyle: randomizedHairstyles ? hairstyleOrder[i] : null,
+        hairColor: randomizedHairstyles ? assignedHairColors[i] : null,
       );
     });
 
@@ -335,6 +368,13 @@ class MatchSimulationController {
       _layoutRotation + (2 * math.pi / count) * index;
 
   Offset _tangent(double angle) => Offset(-math.sin(angle), math.cos(angle));
+
+  static double _colorDistance(Color a, Color b) {
+    final dr = a.r - b.r;
+    final dg = a.g - b.g;
+    final db = a.b - b.b;
+    return math.sqrt(dr * dr + dg * dg + db * db) * 255;
+  }
 
   /// More balls means more cutters and much shorter matches, so crowded
   /// matches start slower: 2 / ball count (3 balls 67%, 4 balls 50%).

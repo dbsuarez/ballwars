@@ -14,6 +14,8 @@ class SimulationBall {
   bool isEliminated = false;
   double rotation = 0.0; // Visual spin from collisions
   double angularVelocity = 0.0; // Angular velocity from collisions
+  final int? hairstyle;
+  final Color? hairColor;
 
   // Lines from this ball to the rim slots it owns
   final List<FanLine> fanLines = [];
@@ -147,5 +149,7 @@ class SimulationBall {
     required this.radius,
     required this.lineCount,
     this.cachedUiImage,
+    this.hairstyle,
+    this.hairColor,
   });
 }

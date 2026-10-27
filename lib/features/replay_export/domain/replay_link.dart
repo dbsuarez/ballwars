@@ -31,6 +31,7 @@ class ReplayLink {
   final bool showEffects;
   final double ballGlowWidth;
   final Color bloodColor;
+  final bool randomizedHairstyles;
   final List<CustomBall> contestants;
 
   /// Changes the match, so it travels in the link (`size=`, left out for
@@ -66,6 +67,7 @@ class ReplayLink {
     this.showEffects = true,
     this.ballGlowWidth = 4,
     this.bloodColor = const Color(0xFFD9152B),
+    this.randomizedHairstyles = false,
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
     this.question,
@@ -155,8 +157,9 @@ class ReplayLink {
     final blood = bloodColor.toARGB32() == 0xFFD9152B
         ? ''
         : '&blood=${bloodColor.toARGB32().toRadixString(16)}';
+    final hair = randomizedHairstyles ? '&hair=1' : '';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query',
     );
@@ -271,6 +274,8 @@ class ReplayLink {
         ? 0xFFD9152B
         : int.tryParse(params['blood']!, radix: 16);
     if (bloodValue == null) return null;
+    final randomizedHairstyles = params['hair'] == '1';
+    if (params.containsKey('hair') && params['hair'] != '1') return null;
     var tuning = PowerUpConfig.defaults;
     final t = params['t'];
     if (t != null) {
@@ -304,6 +309,7 @@ class ReplayLink {
       showEffects: params['fx'] != '0',
       ballGlowWidth: ballGlowWidth,
       bloodColor: Color(bloodValue),
+      randomizedHairstyles: randomizedHairstyles,
       ballSize: ballSize,
       mode: mode,
       question: cleanQuestion(params['q']),

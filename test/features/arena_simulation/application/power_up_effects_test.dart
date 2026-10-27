@@ -199,7 +199,13 @@ void main() {
 
   test('every composed projectile honours impact explosion and knockback', () {
     final boom = SkillLibrary.defaults
-        .create('Boom Impact', PowerUpKind.boomerang)
+        .duplicate(
+          SkillLibrary.defaults.builtIn(
+            PowerUpKind.boomerang,
+            PowerUpConfig.defaults,
+          ),
+          'Boom-merang',
+        )
         .copyWith(
           enabled: true,
           returnsToOrigin: false,
@@ -216,6 +222,7 @@ void main() {
     );
     final [owner, target] = c.state.balls;
     _give(c, owner, PowerUpKind.boomerang);
+    expect(owner.heldSkillId, boom.id);
     owner.aimLeft = 1;
 
     _run(c, 50);
@@ -223,6 +230,8 @@ void main() {
     expect(target.life, lessThan(_life));
     expect(target.velocity.dx, greaterThan(0));
     expect(c.powerUps!.explosions, isNotEmpty);
+    expect(c.powerUps!.blasts, greaterThan(0));
+    expect(c.powerUps!.skillSounds, isNotEmpty);
   });
 
   test('a composed skill chains effects and repeats deterministically', () {

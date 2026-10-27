@@ -49,6 +49,50 @@ void _aimAtWall(SimulationBall ball, double degrees) {
 }
 
 void main() {
+  test('random hairstyles are deterministic, unique, and contrast bodies', () {
+    final contestants = List.generate(
+      6,
+      (index) => CustomBall(
+        id: 'hair-$index',
+        name: 'Hair $index',
+        primaryColor: Color(0xFFAA2233 + index * 0x000A12),
+        glowColor: Colors.white,
+      ),
+    );
+    MatchSimulationController make() => MatchSimulationController(
+      contestants,
+      arenaRadius: _arenaRadius,
+      seed: 404,
+      lookAhead: false,
+      randomizedHairstyles: true,
+    );
+    final first = make().state.balls;
+    final second = make().state.balls;
+
+    expect(first.map((ball) => ball.hairstyle).toSet(), hasLength(6));
+    expect(first.map((ball) => ball.hairColor).toSet(), hasLength(6));
+    expect(
+      first.map((ball) => (ball.hairstyle, ball.hairColor)),
+      second.map((ball) => (ball.hairstyle, ball.hairColor)),
+    );
+    for (final ball in first) {
+      expect(ball.hairColor, isNot(ball.config.primaryColor));
+    }
+  });
+
+  test('hairstyles stay absent when the match toggle is off', () {
+    final controller = MatchSimulationController(
+      _twoBalls(),
+      arenaRadius: _arenaRadius,
+      seed: 404,
+      lookAhead: false,
+    );
+    expect(
+      controller.state.balls.every((ball) => ball.hairstyle == null),
+      isTrue,
+    );
+  });
+
   test('Arsenal eliminates a ball with less than one life', () {
     final controller = MatchSimulationController(
       _twoBalls(),

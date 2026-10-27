@@ -25,6 +25,21 @@ const _custom = CustomBall(
 );
 
 void main() {
+  test('random hairstyle choice is preserved in replay links', () {
+    final uri = ReplayLink(
+      seed: 19,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      randomizedHairstyles: true,
+    ).toUri(presetIds: _presetIds, appUrl: 'https://example.com/');
+
+    expect(uri.queryParameters['hair'], '1');
+    expect(
+      ReplayLink.fromUri(uri, presets: _presets)!.randomizedHairstyles,
+      isTrue,
+    );
+  });
+
   test('round-trips preset and custom balls, seed and speed, in order', () {
     final link = ReplayLink(
       seed: 1792650442501,

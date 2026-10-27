@@ -31,7 +31,11 @@ void main() {
   // Setup choices are remembered on the device: start each test fresh.
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
 
-  Future<void> pumpSetup(WidgetTester tester) async {
+  Future<void> pumpSetup(
+    WidgetTester tester, {
+    MatchMode? initialMode,
+    bool initialMayhem = false,
+  }) async {
     started = null;
     // These existing cases exercise the retained List layout. Card defaults
     // and user selection are covered by match_settings_layout_test.dart.
@@ -47,6 +51,8 @@ void main() {
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
         home: MatchSetupScreen(
+          initialMode: initialMode,
+          initialMayhem: initialMayhem,
           packRepository: BallPackRepository(
             baseUri: Uri.parse('http://localhost:1/packs/'),
             fetch: (_) async => _catalog,
@@ -244,7 +250,7 @@ void main() {
 
   testWidgets('mode is passed to the match and remembered', (tester) async {
     await pumpSetup(tester);
-    expect(find.text('Threads'), findsOneWidget);
+    expect(find.text('Threads'), findsNWidgets(2));
     await tester.tap(find.text('Arsenal'));
     await tester.pump();
     await tester.tap(find.byIcon(Icons.shuffle));
@@ -258,6 +264,48 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Start'));
     expect(started!.mode, MatchMode.arsenal);
+  });
+
+  testWidgets('Arsenal and Mayhem restore independent match settings', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      await DevicePrefs.write('match-arsenal-speed', 2);
+      await DevicePrefs.write('match-arsenal-rounds', 3);
+      await DevicePrefs.write('match-mayhem-speed', 0.5);
+      await DevicePrefs.write('match-mayhem-rounds', 1);
+    });
+
+    await pumpSetup(tester, initialMode: MatchMode.arsenal);
+    await openSettings(tester);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('setting-Speed')),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Text && widget.data?.startsWith('2') == true,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('First to 3'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(
+      tester,
+      initialMode: MatchMode.arsenal,
+      initialMayhem: true,
+    );
+    await openSettings(tester);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('setting-Speed')),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Text && widget.data?.startsWith('0.5') == true,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('1 round'), findsOneWidget);
   });
 
   testWidgets('ball look is passed to the match and remembered', (
@@ -282,6 +330,38 @@ void main() {
     await tester.tap(find.text('Appearance').first);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Ball look: faces'), findsOneWidget);
+  });
+
+  testWidgets('random hairstyle toggle is passed to matches and remembered', (
+    tester,
+  ) async {
+    await pumpSetup(tester);
+    await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('setting-Random hairstyles')),
+    );
+    await tester.tap(find.byKey(const ValueKey('setting-Random hairstyles')));
+    await tester.pump();
+    await closeSettings(tester);
+    await tester.tap(find.byIcon(Icons.shuffle));
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    expect(started!.randomizedHairstyles, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester);
+    await openSettings(tester);
+    await tester.tap(find.text('Appearance').first);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('setting-Random hairstyles')),
+        matching: find.text('On'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Yes or No lets the user ask a question', (tester) async {

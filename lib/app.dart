@@ -466,6 +466,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             showEffects: link.showEffects,
             ballGlowWidth: link.ballGlowWidth,
             bloodColor: link.bloodColor,
+            randomizedHairstyles: link.randomizedHairstyles,
             look: look,
             handsOnPictures: handsOnPictures,
             whitePickupBackgrounds: whitePickupBackgrounds,

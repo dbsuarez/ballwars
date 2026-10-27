@@ -227,18 +227,18 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Phase 12 - Match setup information architecture and ball hair (2026-10-27)
 
-**Status: Not started**
+**Status: Complete**
 
 - [x] Use Gameplay, Appearance, and Audio tabs in Match Settings for both list and card layouts.
-- [ ] Replace the generic `New Match` heading/action label with the selected mode: Threads, Arsenal, Mayhem, or All-Out.
-- [ ] Add a pre-match user toggle for randomized hairstyles.
-- [ ] Design 20 lightweight code-drawn hairstyles with independently assigned colors.
-- [ ] Assign unique hairstyles within each match and prevent hair color from matching the ball body color.
-- [ ] Preserve hairstyle assignments in replay data and exported video.
+- [x] Replace the generic `New Match` heading/action label with the selected mode: Threads, Arsenal, Mayhem, or All-Out.
+- [x] Add a pre-match user toggle for randomized hairstyles.
+- [x] Design 20 lightweight code-drawn hairstyles with independently assigned colors.
+- [x] Assign unique hairstyles within each match and prevent hair color from matching the ball body color.
+- [x] Preserve hairstyle assignments in replay data and exported video.
 
 ## Final completion checks
 
-- [ ] Final static analysis and automated tests pass.
+- [x] Final static analysis and automated tests pass (441 tests; 2026-10-27).
 - [ ] Browser verification passes.
 - [ ] Android phone verification passes.
 - [ ] Cross-device synchronization passes.
@@ -246,6 +246,11 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Current position
 
+2026-10-27 verification fixes:
+- [x] Upgrade saved legacy custom skills to executable shared-model definitions; verify impact explosion, sound and knockback on a duplicated Boomerang.
+- [x] Separate Mayhem settings and pickups from Arsenal, including default restoration when switching profiles.
+- [x] List Gravity Well, Quicksand, Vine Snare and Laser Gate individually under Traps with an Arena marker and relevant controls.
+
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [x] Phase 11 -> [>] Phase 12 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [x] Phase 11 -> [x] Phase 12 -> Fully complete
 ```

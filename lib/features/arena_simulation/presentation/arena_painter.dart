@@ -7,6 +7,7 @@ import '../domain/floating_text.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/particle_system.dart';
 import 'ball_face_painter.dart';
+import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
 import 'ball_face_expression.dart';
 import '../../match_setup/domain/match_config.dart';
@@ -589,6 +590,7 @@ class ArenaPainter extends CustomPainter {
         );
       }
     }
+    BallHairPainter.paint(canvas, ball);
     PowerUpPainter.paintBallEffects(
       canvas,
       ball,

@@ -97,6 +97,7 @@ class MatchConfig {
   final BallLook look;
   final bool handsOnPictures;
   final bool whitePickupBackgrounds;
+  final bool randomizedHairstyles;
 
   /// Power-up modes: the power-ups that can spawn; null for all of them.
   final Set<PowerUpKind>? powerUps;
@@ -143,6 +144,7 @@ class MatchConfig {
     this.look = BallLook.pictures,
     this.handsOnPictures = false,
     this.whitePickupBackgrounds = true,
+    this.randomizedHairstyles = false,
     this.question,
     this.powerUps,
     this.dualWield = false,

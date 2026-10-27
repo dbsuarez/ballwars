@@ -250,7 +250,11 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Duplicate'));
     await tester.pumpAndSettle();
     expect(find.text('Edit Heavy Pistol'), findsOneWidget);
-    await tester.drag(find.byType(ListView).last, const Offset(0, -1400));
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('visual-preview-item')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('visual-preview-item')), findsOneWidget);
     expect(find.byKey(const ValueKey('visual-preview-impact')), findsOneWidget);
@@ -268,7 +272,11 @@ void main() {
       matching: find.byType(PowerUpIcon),
     );
     expect(tester.widget<PowerUpIcon>(projectilePreview).size, 64);
-    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('preview-skill-sound')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('preview-skill-sound')).hitTestable(),
@@ -313,6 +321,9 @@ void main() {
   testWidgets('arena trap tuning is available in the built-in Traps tab', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1000, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     SkillManagementResult? result;
     await tester.pumpWidget(
       MaterialApp(
@@ -339,13 +350,26 @@ void main() {
     await tester.tap(find.text('Traps'));
     await tester.pumpAndSettle();
 
+    for (final name in [
+      'Gravity Well',
+      'Quicksand',
+      'Vine Snare',
+      'Laser Gate',
+    ]) {
+      expect(find.byKey(ValueKey('arena-trap-card-$name')), findsOneWidget);
+    }
+    expect(find.textContaining('Arena • Enabled'), findsNWidgets(4));
+    await tester.tap(find.byKey(const ValueKey('arena-trap-card-Quicksand')));
+    await tester.pumpAndSettle();
+    expect(find.text('Quicksand settings'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('arena-trap-config-card')),
+      find.byKey(const ValueKey('arena-trap-quicksandDamage')),
       findsOneWidget,
     );
-    expect(find.textContaining('never collectibles'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('arena-trap-config-card')));
-    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('arena-trap-laserGateDamage')),
+      findsNothing,
+    );
     await tester.enterText(
       find.byKey(const ValueKey('arena-trap-arenaTrapInterval')),
       '20',
@@ -353,8 +377,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('arena-traps-enabled')));
     await tester.tap(find.byKey(const ValueKey('save-arena-trap-config')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Disabled'), findsOneWidget);
-    expect(find.textContaining('every 20s'), findsOneWidget);
+    expect(find.textContaining('Arena • Disabled'), findsNWidgets(4));
+    expect(find.textContaining('every 20s'), findsNWidgets(4));
 
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();

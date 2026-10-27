@@ -698,7 +698,39 @@ class SkillLibrary {
       id = 'custom.$prefix-$suffix';
       suffix++;
     }
-    return source.copyWith(id: id, name: name, custom: true, enabled: true);
+    return _composeLegacyCustom(
+      source.copyWith(id: id, name: name, custom: true, enabled: true),
+    );
+  }
+
+  /// Older duplicates carried presentation values but no executable behavior,
+  /// so runtime fell back to their carrier's hard-coded implementation. Give
+  /// every custom definition an explicit shared-model behavior.
+  static SkillDefinition _composeLegacyCustom(SkillDefinition skill) {
+    if (!skill.custom || skill.isComposed) return skill;
+    if (skill.baseKind.isWeapon) {
+      final projectile = skill.baseKind.isGun;
+      return skill.copyWith(
+        trigger: projectile ? SkillTrigger.aimedFire : SkillTrigger.collision,
+        targeting: SkillTargeting.nearestOpponent,
+        delivery: projectile ? SkillDelivery.projectile : SkillDelivery.instant,
+        effectType: SkillEffectType.damage,
+      );
+    }
+    return skill.copyWith(
+      trigger: SkillTrigger.pickup,
+      targeting: skill.canHeal || skill.canDefend
+          ? SkillTargeting.self
+          : SkillTargeting.nearestOpponent,
+      delivery: skill.resolvedCategory == SkillCategory.arenaTrap
+          ? SkillDelivery.boundaryHazard
+          : SkillDelivery.instant,
+      effectType: skill.canHeal
+          ? SkillEffectType.heal
+          : skill.canDefend
+          ? SkillEffectType.shield
+          : SkillEffectType.damage,
+    );
   }
 
   /// Creates a behavior-composed skill that uses [carrier] only for its
@@ -885,13 +917,14 @@ class SkillLibrary {
       for (final raw in rawCustom) {
         final definition = SkillDefinition.fromJson(raw);
         if (definition != null && definition.custom) {
-          custom.add(
+          final restored = _composeLegacyCustom(
             definition.yell.isEmpty && !definition.isComposed
                 ? definition.copyWith(
                     yell: _defaultYellFor(definition.baseKind),
                   )
                 : definition,
           );
+          custom.add(restored);
         }
       }
     }

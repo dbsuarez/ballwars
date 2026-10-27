@@ -185,6 +185,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       bloodColor: widget.config.bloodColor,
       arenaDecoration: widget.config.arenaDecoration,
       automaticSpeedUp: widget.config.automaticSpeedUp,
+      randomizedHairstyles: widget.config.randomizedHairstyles,
     );
     _roundCounted = replaySeed != null;
     _startCountdown = 3;
@@ -468,6 +469,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     showEffects: _showEffects,
     ballGlowWidth: widget.config.ballGlowWidth,
     bloodColor: widget.config.bloodColor,
+    randomizedHairstyles: widget.config.randomizedHairstyles,
     contestants: widget.config.contestants,
     ballSize: widget.config.ballSize,
     mode: widget.config.mode,
@@ -934,6 +936,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 minimumArenaScale:
                                     widget.config.minimumArenaScale,
                                 finishersEnabled: _finishersOn,
+                                randomizedHairstyles:
+                                    widget.config.randomizedHairstyles,
                                 arenaDecoration: widget.config.arenaDecoration,
                                 headline: headline,
                                 colors: c,

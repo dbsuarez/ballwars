@@ -42,6 +42,7 @@ class ExportVideoDialog extends StatefulWidget {
   final bool shrinkingArena;
   final double minimumArenaScale;
   final bool finishersEnabled;
+  final bool randomizedHairstyles;
   final VideoSaver saver;
 
   const ExportVideoDialog({
@@ -66,6 +67,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.finishersEnabled = true,
+    this.randomizedHairstyles = false,
     this.style = const ReplayStyle(),
     required this.encoder,
     required this.saver,
@@ -93,6 +95,7 @@ class ExportVideoDialog extends StatefulWidget {
     bool shrinkingArena = false,
     double minimumArenaScale = 0.60,
     bool finishersEnabled = true,
+    bool randomizedHairstyles = false,
     ArenaDecoration arenaDecoration = ArenaDecoration.defaultArena,
     BallLook look = BallLook.pictures,
     String headline = 'WHO WINS?',
@@ -128,6 +131,7 @@ class ExportVideoDialog extends StatefulWidget {
         shrinkingArena: shrinkingArena,
         minimumArenaScale: minimumArenaScale,
         finishersEnabled: finishersEnabled,
+        randomizedHairstyles: randomizedHairstyles,
         style: ReplayStyle(
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,
@@ -208,6 +212,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         shrinkingArena: widget.shrinkingArena,
         minimumArenaScale: widget.minimumArenaScale,
         finishersEnabled: widget.finishersEnabled,
+        randomizedHairstyles: widget.randomizedHairstyles,
         includeBgm: _includeBgm,
         includeSfx: _includeSfx,
         bgmAsset: 'assets/${GameAudio.instance.track.asset}',

@@ -245,7 +245,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     await _edit(draft);
   }
 
-  Widget _list(bool custom, {String? category, Widget? header}) {
+  Widget _list(
+    bool custom, {
+    String? category,
+    List<Widget> headers = const [],
+  }) {
     final query = _query.trim().toLowerCase();
     final skills =
         _library
@@ -267,8 +271,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           ..sort(
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
           );
-    final visibleHeader = _query.isEmpty ? header : null;
-    if (skills.isEmpty && visibleHeader == null) {
+    final visibleHeaders = headers;
+    if (skills.isEmpty && visibleHeaders.isEmpty) {
       return AnimatedEmptyState(
         icon: custom ? Icons.auto_awesome_outlined : Icons.search_off,
         message: custom
@@ -278,10 +282,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-      itemCount: skills.length + (visibleHeader == null ? 0 : 1),
+      itemCount: skills.length + visibleHeaders.length,
       itemBuilder: (context, index) {
-        if (visibleHeader != null && index == 0) return visibleHeader;
-        final skill = skills[index - (visibleHeader == null ? 0 : 1)];
+        if (index < visibleHeaders.length) return visibleHeaders[index];
+        final skill = skills[index - visibleHeaders.length];
         final tierLabel =
             skill.resolvedCategory == SkillCategory.trap ||
                 skill.resolvedCategory == SkillCategory.arenaTrap
@@ -358,9 +362,29 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     SkillCategory.arenaTrap => 'Arena trap',
   };
 
-  Future<void> _editArenaTraps() async {
+  static const _arenaTrapFields = <String, List<String>>{
+    'Gravity Well': ['gravityWellForce'],
+    'Quicksand': ['quicksandSlowdown', 'quicksandDamage', 'quicksandLines'],
+    'Vine Snare': ['vineSnareDuration'],
+    'Laser Gate': ['laserGateDamage', 'laserGateLines'],
+  };
+
+  static const _arenaTrapIcons = <String, IconData>{
+    'Gravity Well': Icons.blur_circular,
+    'Quicksand': Icons.landscape_outlined,
+    'Vine Snare': Icons.grass,
+    'Laser Gate': Icons.horizontal_rule,
+  };
+
+  Future<void> _editArenaTrap(String trapName) async {
+    const sharedIds = [
+      'arenaTrapsEnabled',
+      'arenaTrapInterval',
+      'arenaTrapDuration',
+    ];
+    final ids = {...sharedIds, ...?_arenaTrapFields[trapName]};
     final fields = PowerUpConfig.fields
-        .where((field) => field.group == 'Arena traps')
+        .where((field) => ids.contains(field.id))
         .toList();
     final controllers = <String, TextEditingController>{
       for (final field in fields.where(
@@ -376,7 +400,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
-          title: const Text('Arena trap configuration'),
+          title: Text('$trapName settings'),
           content: SizedBox(
             width: 560,
             child: SingleChildScrollView(
@@ -483,25 +507,26 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     TuningUnit.count => '',
   };
 
-  Widget _arenaTrapCard() => Card(
-    key: const ValueKey('arena-trap-config-card'),
+  Widget _arenaTrapCard(String trapName) => Card(
+    key: ValueKey('arena-trap-card-$trapName'),
     color: Theme.of(context).colorScheme.surfaceContainerHigh,
     child: ListTile(
       minVerticalPadding: 14,
-      leading: const Icon(Icons.tune, color: Color(0xFFFFD54F), size: 34),
-      title: const Text(
-        'Arena • Arena trap configuration',
-        style: TextStyle(fontWeight: FontWeight.w800),
+      leading: Icon(
+        _arenaTrapIcons[trapName] ?? Icons.warning_amber_rounded,
+        color: const Color(0xFFFFD54F),
+        size: 34,
       ),
+      title: Text(trapName, style: TextStyle(fontWeight: FontWeight.w800)),
       subtitle: Text(
-        '${_tuning.arenaTrapsEnabled ? "Enabled" : "Disabled"} • '
+        'Arena • ${_tuning.arenaTrapsEnabled ? "Enabled" : "Disabled"} • '
         'every ${_formatTuning(PowerUpConfig.fields.firstWhere((f) => f.id == "arenaTrapInterval"), _tuning.value("arenaTrapInterval"))}s • '
         '${_formatTuning(PowerUpConfig.fields.firstWhere((f) => f.id == "arenaTrapDuration"), _tuning.value("arenaTrapDuration"))}s active\n'
-        'Automatic arena fixtures — never collectibles.',
+        'Arena fixture — never a collectible.',
       ),
       isThreeLine: true,
       trailing: const Icon(Icons.chevron_right),
-      onTap: _editArenaTraps,
+      onTap: () => _editArenaTrap(trapName),
     ),
   );
 
@@ -522,7 +547,19 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             children: [
               _list(false, category: 'Weapons'),
               _list(false, category: 'Power-ups'),
-              _list(false, category: 'Traps', header: _arenaTrapCard()),
+              _list(
+                false,
+                category: 'Traps',
+                headers: [
+                  for (final trapName in _arenaTrapFields.keys)
+                    if (_query.trim().isEmpty ||
+                        trapName.toLowerCase().contains(
+                          _query.trim().toLowerCase(),
+                        ) ||
+                        'arena'.contains(_query.trim().toLowerCase()))
+                      _arenaTrapCard(trapName),
+                ],
+              ),
             ],
           ),
         ),

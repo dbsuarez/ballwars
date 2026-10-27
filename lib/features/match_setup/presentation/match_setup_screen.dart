@@ -69,10 +69,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   BallLook _look = BallLook.pictures;
   bool _handsOnPictures = false;
   bool _whitePickupBackgrounds = true;
+  bool _randomizedHairstyles = false;
 
   /// Power-up modes: the chosen power-ups, null for all.
   Set<PowerUpKind>? _powerUps;
-  final Map<MatchMode, Set<PowerUpKind>?> _modePowerUps = {};
+  final Map<String, Set<PowerUpKind>?> _modePowerUps = {};
   VoidCallback? _refreshDrawer;
 
   void _update(VoidCallback update) {
@@ -80,19 +81,25 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     _refreshDrawer?.call();
   }
 
-  String _profileKey(MatchMode mode, String setting) =>
-      'match-${mode.id}-$setting';
+  String _profileId(MatchMode mode, {required bool mayhem}) =>
+      mayhem ? 'mayhem' : mode.id;
+
+  String get _activeProfileId => _profileId(_mode, mayhem: _mayhem);
+
+  String _profileKey(MatchMode mode, String setting, {required bool mayhem}) =>
+      'match-${_profileId(mode, mayhem: mayhem)}-$setting';
 
   Future<String?> _readProfile(
     MatchMode mode,
     String setting, {
+    required bool mayhem,
     String? legacyKey,
   }) async =>
-      await DevicePrefs.read(_profileKey(mode, setting)) ??
+      await DevicePrefs.read(_profileKey(mode, setting, mayhem: mayhem)) ??
       await DevicePrefs.read(legacyKey ?? setting);
 
   void _writeProfile(String setting, Object value) =>
-      DevicePrefs.write(_profileKey(_mode, setting), value);
+      DevicePrefs.write(_profileKey(_mode, setting, mayhem: _mayhem), value);
 
   bool _dualWield = false;
   bool _endlessBattle = false;
@@ -124,64 +131,99 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   /// Rounds, speed and effects start the way this device last left them.
-  Future<void> _loadPrefs() async {
+  Future<void> _loadPrefs({bool? mayhemOverride}) async {
     final rememberedMode = MatchMode.byId(await DevicePrefs.read('mode'));
     final profileMode =
         widget.initialMode ?? rememberedMode ?? MatchMode.threads;
+    final profileMayhem =
+        mayhemOverride ??
+        (widget.initialMode != null
+            ? widget.initialMayhem && profileMode == MatchMode.arsenal
+            : (profileMode == MatchMode.arsenal &&
+                  await DevicePrefs.read('mayhem') == '1'));
     final effects =
-        await _readProfile(profileMode, 'effects') ??
+        await _readProfile(profileMode, 'effects', mayhem: profileMayhem) ??
         ((await EffectsPrefs.effectsOn()) ? '1' : '0');
     final finishers =
-        await _readProfile(profileMode, 'finishers') ??
+        await _readProfile(profileMode, 'finishers', mayhem: profileMayhem) ??
         ((await EffectsPrefs.finishersOn()) ? '1' : '0');
     final settingCards =
         await DevicePrefs.read('match-settings-layout') != 'list';
     final wallSparkSize = WallSparkSize.byId(
-      await _readProfile(profileMode, 'wall-spark-size'),
+      await _readProfile(profileMode, 'wall-spark-size', mayhem: profileMayhem),
     );
     final rounds = int.tryParse(
-      await _readProfile(profileMode, 'rounds') ?? '',
+      await _readProfile(profileMode, 'rounds', mayhem: profileMayhem) ?? '',
     );
     final speed = double.tryParse(
-      await _readProfile(profileMode, 'speed') ?? '',
+      await _readProfile(profileMode, 'speed', mayhem: profileMayhem) ?? '',
     );
     final automaticSpeedUp = await _readProfile(
       profileMode,
       'automatic-speed-up',
+      mayhem: profileMayhem,
     );
-    final size = BallSize.byId(await _readProfile(profileMode, 'size'));
+    final size = BallSize.byId(
+      await _readProfile(profileMode, 'size', mayhem: profileMayhem),
+    );
     final mode = profileMode;
-    final look = BallLook.byName(await _readProfile(profileMode, 'look'));
+    final look = BallLook.byName(
+      await _readProfile(profileMode, 'look', mayhem: profileMayhem),
+    );
     final handsOnPictures = await _readProfile(
       profileMode,
       'hands-on-pictures',
+      mayhem: profileMayhem,
     );
     final whitePickupBackgrounds = await _readProfile(
       profileMode,
       'white-pickup-backgrounds',
+      mayhem: profileMayhem,
     );
-    final dualWield = await _readProfile(profileMode, 'dual-wield');
-    final endlessBattle = await _readProfile(profileMode, 'endless-battle');
-    final mayhem = await _readProfile(profileMode, 'mayhem');
+    final randomizedHairstyles = await _readProfile(
+      profileMode,
+      'randomized-hairstyles',
+      mayhem: profileMayhem,
+    );
+    final dualWield = await _readProfile(
+      profileMode,
+      'dual-wield',
+      mayhem: profileMayhem,
+    );
+    final endlessBattle = await _readProfile(
+      profileMode,
+      'endless-battle',
+      mayhem: profileMayhem,
+    );
     final duration =
         int.tryParse(
-          await _readProfile(profileMode, 'mayhem-seconds') ?? '120',
+          await _readProfile(
+                profileMode,
+                'mayhem-seconds',
+                mayhem: profileMayhem,
+              ) ??
+              '120',
         ) ??
         120;
-    final shrinkingArena = await _readProfile(profileMode, 'shrinking-arena');
+    final shrinkingArena = await _readProfile(
+      profileMode,
+      'shrinking-arena',
+      mayhem: profileMayhem,
+    );
     final arenaDecoration = await _readProfile(
       profileMode,
       'arena-decoration-user',
+      mayhem: profileMayhem,
     );
     final legacy = await DevicePrefs.read('power-ups');
-    for (final gameMode in MatchMode.values) {
-      final saved =
-          await DevicePrefs.read('power-ups-${gameMode.id}') ?? legacy;
+    final profileIds = [...MatchMode.values.map((mode) => mode.id), 'mayhem'];
+    for (final profileId in profileIds) {
+      final saved = await DevicePrefs.read('power-ups-$profileId') ?? legacy;
       final kinds = {
         for (final name in (saved ?? '').split(','))
           ...PowerUpKind.values.where((kind) => kind.name == name),
       };
-      _modePowerUps[gameMode] =
+      _modePowerUps[profileId] =
           kinds.isEmpty || kinds.length == PowerUpKind.values.length
           ? null
           : {
@@ -198,16 +240,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         _filter = filter;
         _category = _shown.firstOrNull?.id;
       }
-      if (size != null) _ballSize = size;
+      _ballSize = size ?? BallSize.medium;
       _mode = mode;
-      if (look != null) _look = look;
+      _look = look ?? BallLook.pictures;
       _handsOnPictures = handsOnPictures == '1';
       _whitePickupBackgrounds = whitePickupBackgrounds != '0';
+      _randomizedHairstyles = randomizedHairstyles == '1';
       _dualWield = dualWield == '1';
       _endlessBattle = endlessBattle == '1';
-      _mayhem =
-          (widget.initialMode != null ? widget.initialMayhem : mayhem == '1') &&
-          _mode == MatchMode.arsenal;
+      _mayhem = profileMayhem && _mode == MatchMode.arsenal;
       _mayhemSeconds = const [30, 60, 120, 180, 300, 600].contains(duration)
           ? duration
           : 120;
@@ -215,15 +256,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _arenaDecoration = ArenaDecoration.values
           .where((value) => value.name == arenaDecoration)
           .firstOrNull;
-      _powerUps = _modePowerUps[_mode];
+      _powerUps = _modePowerUps[_activeProfileId];
       _showEffects = effects != '0';
       _finishersOn = finishers != '0';
       _settingCards = settingCards;
-      if (wallSparkSize != null) _wallSparkSize = wallSparkSize;
-      if (rounds != null && const [1, 2, 3].contains(rounds)) {
-        _winsNeeded = rounds;
-      }
-      if (speed != null && _speeds.contains(speed)) _speedMultiplier = speed;
+      _wallSparkSize = wallSparkSize ?? WallSparkSize.normal;
+      _winsNeeded = const [1, 2, 3].contains(rounds) ? rounds! : 1;
+      _speedMultiplier = _speeds.contains(speed) ? speed! : 1;
       _automaticSpeedUp = automaticSpeedUp != '0';
     });
   }
@@ -394,9 +433,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     if (chosen == null || !mounted) return;
     final all = chosen.length == PowerUpKind.values.length;
     _update(() => _powerUps = all ? null : chosen);
-    _modePowerUps[_mode] = _powerUps;
+    _modePowerUps[_activeProfileId] = _powerUps;
     DevicePrefs.write(
-      'power-ups-${_mode.id}',
+      'power-ups-$_activeProfileId',
       [for (final k in chosen) k.name].join(','),
     );
   }
@@ -440,6 +479,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         look: _look,
         handsOnPictures: _handsOnPictures,
         whitePickupBackgrounds: _whitePickupBackgrounds,
+        randomizedHairstyles: _randomizedHairstyles,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
         dualWield: _mode != MatchMode.threads && _dualWield,
         endlessBattle:
@@ -471,8 +511,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final c = BallWarsColors.of(context);
     final balls = _visibleBalls;
 
+    final modeTitle = _mayhem ? 'Mayhem' : _mode.label;
     return Scaffold(
-      appBar: AppBar(title: const Text('New match')),
+      appBar: AppBar(title: Text(modeTitle)),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -888,10 +929,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               onSelectionChanged: (v) async {
                 GameAudio.instance.click();
                 _update(() {
-                  _modePowerUps[_mode] = _powerUps;
+                  _modePowerUps[_activeProfileId] = _powerUps;
                   _mode = v.first;
-                  _powerUps = _modePowerUps[_mode];
                   if (_mode != MatchMode.arsenal) _mayhem = false;
+                  _powerUps = _modePowerUps[_activeProfileId];
                   if (_selected.length > _maxBalls) {
                     final keep = _selected.entries.take(_maxBalls).toList();
                     _selected
@@ -1246,7 +1287,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                           ..addEntries(keep);
                       }
                     });
-                    _writeProfile('mayhem', v ? '1' : '0');
+                    DevicePrefs.write('mayhem', v ? '1' : '0');
+                    _loadPrefs(mayhemOverride: v);
                   },
                 ),
               if (_mayhem)
@@ -1376,6 +1418,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             (v) {
               _update(() => _finishersOn = v);
               _writeProfile('finishers', v ? '1' : '0');
+            },
+          ),
+          _choice(
+            Icons.content_cut,
+            'Random hairstyles',
+            const [false, true],
+            _randomizedHairstyles,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _randomizedHairstyles = v);
+              _writeProfile('randomized-hairstyles', v ? '1' : '0');
             },
           ),
         ]),

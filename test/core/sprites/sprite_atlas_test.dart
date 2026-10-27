@@ -109,6 +109,40 @@ void main() {
     expect(trim.sprites['a.b']!.fit, SpriteFit.trim);
   });
 
+  test('fill fit and a non-square output (outputHeight)', () {
+    final atlas = _parse(
+      '''
+{"sheet":"s.png","sprites":{"rim":{"frames":[[0,0,40,10]],"output":32,"outputHeight":8,"fit":"fill"}}}''',
+    );
+    final d = atlas.sprites['rim']!;
+    expect(d.fit, SpriteFit.fill);
+    expect(d.output, 32);
+    expect(d.height, 8);
+    expect(atlas.problems(sheetSize: const Size(40, 10)), isEmpty);
+    expect(
+      _parse(
+        '''
+{"sheet":"s.png","sprites":{"a":{"frames":[[0,0,4,4]],"output":8}}}''',
+      ).sprites['a']!.height,
+      8,
+    );
+    expect(
+      () => _parse(
+        '''
+{"sheet":"s.png","sprites":{"a":{"frames":[[0,0,4,4]],"output":8,"outputHeight":0}}}''',
+      ),
+      throwsFormatException,
+    );
+    final tight = _parse(
+      '''
+{"sheet":"s.png","sprites":{"a":{"frames":[[0,0,4,4]],"output":32,"outputHeight":4,"padding":2,"sharedBand":true}}}''',
+    );
+    final p = tight.problems(sheetSize: const Size(10, 10));
+    expect(p, hasLength(2));
+    expect(p.first, contains('padding 2 leaves no room'));
+    expect(p.last, contains('sharedBand needs a square output'));
+  });
+
   test('malformed rect throws FormatException mentioning the id', () {
     expect(
       () => _parse(

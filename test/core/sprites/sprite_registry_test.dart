@@ -160,6 +160,36 @@ void main() {
     });
   });
 
+  test('fill stretches a frame into a non-square output', () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      final sheet = await makeSheet(2);
+      final atlas = SpriteAtlas.parse({
+        'sheet': 's.png',
+        'sprites': {
+          'rim': {
+            'frames': [
+              [0, 4, 32, 8],
+            ],
+            'output': 64,
+            'outputHeight': 8,
+            'fit': 'fill',
+            'padding': 0,
+          },
+        },
+      });
+      await SpriteRegistry.register(atlas, sheet, idPrefix: 'custom.f');
+      final img = SpriteRegistry.frame('custom.f.rim')!;
+      expect((img.width, img.height), (64, 8));
+      final bytes = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      int alpha(int x, int y) => bytes.getUint8((y * 64 + x) * 4 + 3);
+      // Source x 4..12 (first square) lands on 8..24 when stretched 2x.
+      expect(alpha(9, 4), 255);
+      expect(alpha(23, 4), 255);
+      expect(alpha(4, 4), 0);
+      expect(alpha(26, 4), 0);
+    });
+  });
+
   test('register, replace and unregister custom sprites', () async {
     await TestWidgetsFlutterBinding.instance.runAsync(() async {
       final sheet = await makeSheet(2);
@@ -268,53 +298,55 @@ void main() {
     });
   });
 
-  test('register rejects atlas problems and ids owned by someone else',
-      () async {
-    await TestWidgetsFlutterBinding.instance.runAsync(() async {
-      final sheet = await makeSheet(1);
-      final outside = SpriteAtlas.parse({
-        'sheet': 's.png',
-        'sprites': {
-          'x': {
-            'frames': [
-              [0, 0, 99, 16],
-            ],
-            'output': 32,
+  test(
+    'register rejects atlas problems and ids owned by someone else',
+    () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final sheet = await makeSheet(1);
+        final outside = SpriteAtlas.parse({
+          'sheet': 's.png',
+          'sprites': {
+            'x': {
+              'frames': [
+                [0, 0, 99, 16],
+              ],
+              'output': 32,
+            },
           },
-        },
-      });
-      await expectLater(
-        SpriteRegistry.register(outside, sheet, idPrefix: 'custom.a'),
-        throwsA(
-          isA<ArgumentError>().having(
-            (e) => e.toString(),
-            'message',
-            contains('outside the sheet'),
+        });
+        await expectLater(
+          SpriteRegistry.register(outside, sheet, idPrefix: 'custom.a'),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.toString(),
+              'message',
+              contains('outside the sheet'),
+            ),
           ),
-        ),
-      );
-      expect(SpriteRegistry.has('custom.a.x'), isFalse);
+        );
+        expect(SpriteRegistry.has('custom.a.x'), isFalse);
 
-      // Prefix custom.a with sprite "b.c" and prefix custom.a.b with sprite
-      // "c" both produce the id custom.a.b.c.
-      SpriteAtlas one(String id) => SpriteAtlas.parse({
-        'sheet': 's.png',
-        'sprites': {
-          id: {
-            'frames': [
-              [0, 0, 16, 16],
-            ],
-            'output': 32,
+        // Prefix custom.a with sprite "b.c" and prefix custom.a.b with sprite
+        // "c" both produce the id custom.a.b.c.
+        SpriteAtlas one(String id) => SpriteAtlas.parse({
+          'sheet': 's.png',
+          'sprites': {
+            id: {
+              'frames': [
+                [0, 0, 16, 16],
+              ],
+              'output': 32,
+            },
           },
-        },
+        });
+        await SpriteRegistry.register(one('b.c'), sheet, idPrefix: 'custom.a');
+        await expectLater(
+          SpriteRegistry.register(one('c'), sheet, idPrefix: 'custom.a.b'),
+          throwsArgumentError,
+        );
       });
-      await SpriteRegistry.register(one('b.c'), sheet, idPrefix: 'custom.a');
-      await expectLater(
-        SpriteRegistry.register(one('c'), sheet, idPrefix: 'custom.a.b'),
-        throwsArgumentError,
-      );
-    });
-  });
+    },
+  );
 
   test('resetForTest during a load discards the stale work', () async {
     await TestWidgetsFlutterBinding.instance.runAsync(() async {

@@ -67,39 +67,41 @@ void main() {
     });
   });
 
-  test('the border check names sheet, id and frame, and honours bleedOk',
-      () async {
-    await TestWidgetsFlutterBinding.instance.runAsync(() async {
-      final recorder = ui.PictureRecorder();
-      // Frame 2 (x 16..32) is fully opaque; frame 1 is empty.
-      ui.Canvas(recorder).drawRect(
-        const ui.Rect.fromLTWH(16, 0, 16, 16),
-        ui.Paint()..color = const ui.Color(0xFFFFFFFF),
-      );
-      final image = await recorder.endRecording().toImage(32, 16);
-      final bytes = (await image.toByteData(
-        format: ui.ImageByteFormat.rawRgba,
-      ))!;
-      SpriteAtlas atlas(bool bleed) => SpriteAtlas.parse({
-        'sheet': 'bleed.png',
-        'sprites': {
-          'leaky': {
-            'frames': [
-              [0, 0, 16, 16],
-              [16, 0, 16, 16],
-            ],
-            'output': 16,
-            if (bleed) 'bleedOk': true,
-            if (bleed) 'bleedNote': 'test',
+  test(
+    'the border check names sheet, id and frame, and honours bleedOk',
+    () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final recorder = ui.PictureRecorder();
+        // Frame 2 (x 16..32) is fully opaque; frame 1 is empty.
+        ui.Canvas(recorder).drawRect(
+          const ui.Rect.fromLTWH(16, 0, 16, 16),
+          ui.Paint()..color = const ui.Color(0xFFFFFFFF),
+        );
+        final image = await recorder.endRecording().toImage(32, 16);
+        final bytes = (await image.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        ))!;
+        SpriteAtlas atlas(bool bleed) => SpriteAtlas.parse({
+          'sheet': 'bleed.png',
+          'sprites': {
+            'leaky': {
+              'frames': [
+                [0, 0, 16, 16],
+                [16, 0, 16, 16],
+              ],
+              'output': 16,
+              if (bleed) 'bleedOk': true,
+              if (bleed) 'bleedNote': 'test',
+            },
           },
-        },
+        });
+        final failures = borderFailures(atlas(false), bytes, 32);
+        expect(failures, hasLength(1));
+        expect(failures.single, contains('bleed.png'));
+        expect(failures.single, contains('leaky'));
+        expect(failures.single, contains('frame 2'));
+        expect(borderFailures(atlas(true), bytes, 32), isEmpty);
       });
-      final failures = borderFailures(atlas(false), bytes, 32);
-      expect(failures, hasLength(1));
-      expect(failures.single, contains('bleed.png'));
-      expect(failures.single, contains('leaky'));
-      expect(failures.single, contains('frame 2'));
-      expect(borderFailures(atlas(true), bytes, 32), isEmpty);
-    });
-  });
+    },
+  );
 }

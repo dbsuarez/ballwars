@@ -1,7 +1,10 @@
 import 'dart:ui';
 
-/// How a cut frame is scaled into its square output image.
-enum SpriteFit { contain, trim }
+/// How a cut frame is scaled into its output image: [contain] keeps the
+/// frame's proportions, [trim] first shrinks the frame to its visible art
+/// (alpha >= 16) and then contains it, [fill] stretches the frame to the
+/// whole output box (for strips such as the sticky goo rim).
+enum SpriteFit { contain, trim, fill }
 
 /// One sprite: its frames on the sheet and how to cut and play them.
 class SpriteDef {
@@ -13,8 +16,11 @@ class SpriteDef {
   /// Anchor inside the output image, 0..1 on each axis.
   final Offset anchor;
 
-  /// Side of the square output image in pixels.
+  /// Width of the output image in pixels (its side when square).
   final int output;
+
+  /// Height of the output image when it is not square; null means [output].
+  final int? outputHeight;
   final SpriteFit fit;
 
   /// True when all frames share one scale and baseline.
@@ -37,6 +43,7 @@ class SpriteDef {
     required this.frames,
     this.anchor = const Offset(0.5, 0.5),
     required this.output,
+    this.outputHeight,
     this.fit = SpriteFit.contain,
     this.sharedBand = false,
     this.stepsPerFrame = 4,
@@ -44,6 +51,9 @@ class SpriteDef {
     this.bleedNote,
     this.padding = 2,
   });
+
+  /// Height of the output image in pixels.
+  int get height => outputHeight ?? output;
 }
 
 /// A sprite sheet and the sprites cut from it, read from a JSON manifest.
@@ -101,6 +111,12 @@ class SpriteAtlas {
     if (output is! int || output <= 0) {
       throw FormatException('Sprite $id needs a positive integer "output"');
     }
+    final outputHeight = v['outputHeight'];
+    if (outputHeight != null && (outputHeight is! int || outputHeight <= 0)) {
+      throw FormatException(
+        'Sprite $id outputHeight must be a positive integer',
+      );
+    }
     var anchor = const Offset(0.5, 0.5);
     final a = v['anchor'];
     if (a != null) {
@@ -113,8 +129,9 @@ class SpriteAtlas {
     final fit = switch (fitRaw) {
       'contain' => SpriteFit.contain,
       'trim' => SpriteFit.trim,
+      'fill' => SpriteFit.fill,
       _ => throw FormatException(
-        'Sprite $id fit must be "contain" or "trim", got $fitRaw',
+        'Sprite $id fit must be "contain", "trim" or "fill", got $fitRaw',
       ),
     };
     final steps = v['stepsPerFrame'] ?? 4;
@@ -145,6 +162,7 @@ class SpriteAtlas {
       frames: frames,
       anchor: anchor,
       output: output,
+      outputHeight: outputHeight as int?,
       fit: fit,
       sharedBand: shared,
       stepsPerFrame: steps,
@@ -178,9 +196,14 @@ class SpriteAtlas {
           }
         }
       }
-      if (def.padding * 2 >= def.output) {
-        out.add('${def.id} padding ${def.padding} leaves no room in a '
-            '${def.output} px output');
+      if (def.padding * 2 >= def.output || def.padding * 2 >= def.height) {
+        out.add(
+          '${def.id} padding ${def.padding} leaves no room in a '
+          '${def.output}x${def.height} px output',
+        );
+      }
+      if (def.sharedBand && def.height != def.output) {
+        out.add('${def.id} sharedBand needs a square output');
       }
       if (def.bleedOk && (def.bleedNote == null || def.bleedNote!.isEmpty)) {
         out.add('${def.id} sets bleedOk but has no bleedNote explaining why');

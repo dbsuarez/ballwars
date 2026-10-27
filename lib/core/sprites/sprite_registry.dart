@@ -68,7 +68,8 @@ class SpriteRegistry {
     ui.Image sheet, {
     required String idPrefix,
   }) async {
-    if (!idPrefix.startsWith('custom.') || idPrefix.length == 'custom.'.length) {
+    if (!idPrefix.startsWith('custom.') ||
+        idPrefix.length == 'custom.'.length) {
       throw ArgumentError.value(
         idPrefix,
         'idPrefix',
@@ -182,7 +183,9 @@ class SpriteRegistry {
       }
     } catch (e) {
       if (gen != _generation) return;
-      _problem('Sheet ${atlas.sheet} (manifest $path) could not be decoded: $e');
+      _problem(
+        'Sheet ${atlas.sheet} (manifest $path) could not be decoded: $e',
+      );
       return;
     }
     try {
@@ -254,8 +257,9 @@ class SpriteRegistry {
     ByteData? pixels,
   ) async {
     final size = def.output;
+    final height = def.height;
     final pad = def.padding.toDouble();
-    final inner = Rect.fromLTWH(pad, pad, size - 2 * pad, size - 2 * pad);
+    final inner = Rect.fromLTWH(pad, pad, size - 2 * pad, height - 2 * pad);
     var sources = def.frames;
     if (def.fit == SpriteFit.trim && pixels != null) {
       sources = [
@@ -271,7 +275,9 @@ class SpriteRegistry {
         ? inner.width /
               math.max(
                 union.height,
-                sources.map((r) => math.max(r.width, r.height)).reduce(math.max),
+                sources
+                    .map((r) => math.max(r.width, r.height))
+                    .reduce(math.max),
               )
         : 0.0;
     final frames = <ui.Image>[];
@@ -288,6 +294,8 @@ class SpriteRegistry {
             source.width * sharedScale,
             source.height * sharedScale,
           );
+        } else if (def.fit == SpriteFit.fill) {
+          dest = inner;
         } else {
           final fitted = applyBoxFit(BoxFit.contain, source.size, inner.size);
           dest = Alignment.center.inscribe(fitted.destination, inner);
@@ -300,7 +308,7 @@ class SpriteRegistry {
           Paint()..filterQuality = FilterQuality.none,
         );
         final picture = recorder.endRecording();
-        frames.add(await picture.toImage(size, size));
+        frames.add(await picture.toImage(size, height));
         picture.dispose();
       }
     } catch (_) {

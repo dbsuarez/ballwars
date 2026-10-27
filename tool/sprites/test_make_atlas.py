@@ -89,6 +89,20 @@ class MakeAtlasTest(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(self.dir)),
                          ['sheet.png', 'x.atlas.json'])
 
+    def test_refuses_to_overwrite_without_force(self):
+        path = self.sheet_2x2()
+        out = os.path.join(self.dir, 'x.atlas.json')
+        with open(out, 'w') as f:
+            f.write('keep')
+        args = ['--sheet', path, '--grid', '2x2', '--id-row', '0=top',
+                '--out', out]
+        self.assertNotEqual(make_atlas.main(args), 0)
+        with open(out) as f:
+            self.assertEqual(f.read(), 'keep')
+        self.assertEqual(make_atlas.main(args + ['--force']), 0)
+        with open(out) as f:
+            self.assertIn('top', f.read())
+
     def border_clean(self, path, rect, border=2):
         with Image.open(path) as img:
             alpha = img.getchannel('A')

@@ -76,6 +76,16 @@ class SpriteRegistry {
         'must start with "custom." and name the upload',
       );
     }
+    final nameRe = RegExp(r'^[a-z0-9-]{1,40}$');
+    for (final name in atlas.sprites.keys) {
+      if (!nameRe.hasMatch(name)) {
+        throw ArgumentError.value(
+          name,
+          'atlas.sprites',
+          'sprite name must match ^[a-z0-9-]{1,40}\$',
+        );
+      }
+    }
     final problems = atlas.problems(
       sheetSize: Size(sheet.width.toDouble(), sheet.height.toDouble()),
     );

@@ -120,7 +120,7 @@ Rules for painters:
 | `fit` | `"contain"` | `contain`: scale the frame to fit inside the output, keeping its shape, centered. `trim`: first shrink the frame to its visible art (alpha >= 16, measured at sheet resolution), then contain. `fill`: stretch the frame to the whole output box (for strips). |
 | `padding` | `2` | Transparent px kept on each side of the output image. Must leave room: `2 * padding` smaller than both output sides. |
 | `sharedBand` | `false` | All frames share one scale and keep their vertical offsets inside the band that covers every frame, so an animation does not jump or pulse. Needs a square output and cannot be combined with `fill`. |
-| `stepsPerFrame` | `4` | Simulation steps (1/60 s) each frame is shown, read with `SpriteRegistry.stepsPerFrame`. |
+| `stepsPerFrame` | `4` | Simulation steps (1/60 s) each frame is shown, read with `SpriteRegistry.stepsPerFrame`. Caveat: today most painter call sites (`power_up_painter.dart`, `harpoon_cinematic.dart`) still hard-code their frame counts and timing; only `ArenaEffectLibrary` reads `frameCount` and `stepsPerFrame`. Changing a manifest's frame count or `stepsPerFrame` needs a matching code change at those call sites. |
 | `anchor` | `[0.5, 0.5]` | Anchor inside the output, 0 to 1 per axis. Parsed and kept for later; the cut and the painters currently center every sprite. |
 | `bleedOk` | `false` | The frame may touch neighboring art; the isolation test skips it. |
 | `bleedNote` | none | Why bleeding is fine. Required when `bleedOk` is true. |
@@ -157,19 +157,19 @@ Several rows into one sprite (`0-1` takes rows 0 and 1, row by row, left to
 right), cut as exact cells; this reproduces the bundled tornado manifest:
 
 ```bash
-python tool/sprites/make_atlas.py --sheet assets/sprites/tornado-animated-v2.png     --grid 4x2 --id-row 0-1=anim.tornado --exact --inset 12 --padding 2     --steps-per-frame 3 --out assets/sprites/tornado-animated-v2.atlas.json
+python tool/sprites/make_atlas.py --sheet assets/sprites/tornado-animated-v2.png \n    --grid 4x2 --id-row 0-1=anim.tornado --exact --inset 12 --padding 2 \n    --steps-per-frame 3 --out assets/sprites/tornado-animated-v2.atlas.json
 ```
 
 Several sprites from one sheet, one per row, with a fixed cell size:
 
 ```bash
-python tool/sprites/make_atlas.py --sheet assets/sprites/goo-effects.png     --grid 4x2 --cell 443.5x443.5 --id-row 0=anim.gooSplash --id-row 1=anim.gooDrip     --shared-band --out assets/sprites/goo-effects.atlas.json
+python tool/sprites/make_atlas.py --sheet assets/sprites/goo-effects.png \n    --grid 4x2 --cell 443.5x443.5 --id-row 0=anim.gooSplash --id-row 1=anim.gooDrip \n    --shared-band --out assets/sprites/goo-effects.atlas.json
 ```
 
 Single frames at given rectangles (icons and one-offs), as on the rocket sheet:
 
 ```bash
-python tool/sprites/make_atlas.py --sheet assets/sprites/rocket-launcher.png     --grid 1x1 --output 64 --padding 0     --icons powerup.rocketLauncher=0,0,887,887     --out assets/sprites/rocket-launcher.atlas.json
+python tool/sprites/make_atlas.py --sheet assets/sprites/rocket-launcher.png \n    --grid 1x1 --output 64 --padding 0 \n    --icons powerup.rocketLauncher=0,0,887,887 \n    --out assets/sprites/rocket-launcher.atlas.json
 ```
 
 Options:
@@ -186,6 +186,8 @@ Options:
 - `--icons ID=x,y,w,h ...`: single-frame sprites at given rectangles. They all
   share `--output`, so a sheet whose sprites need different sizes (the rocket
   sheet has a 64 px icon and a 96 px missile) gets its other sizes by hand.
+- `--force`: overwrite `--out` when it already exists. Without it the tool
+  refuses, prints an error to stderr and exits with status 1.
 - `--output N`: output size (default 96; icons use 64).
 - `--margin N`: how far an edge may move out over clear lines (default 2).
 - `--max-shift N`: how far an edge may move to find a clear line (default

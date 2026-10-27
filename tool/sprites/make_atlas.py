@@ -8,7 +8,9 @@ Usage:
       [--cell 443.5x443.5] [--exact] [--inset 12] [--padding 2] \
       [--steps-per-frame 4] [--margin 2] \
       [--icons gem=10,20,32,32 ...] [--output 96] [--max-shift 100] \
-      --out assets/sprites/X.atlas.json
+      [--force] --out assets/sprites/X.atlas.json
+
+--force overwrites an existing --out file; without it the tool refuses.
 
 Rows and columns count from 0. `--id-row 0-1=anim.tornado` gives one sprite
 the frames of rows 0 and 1 (row by row, left to right). The cell size is the
@@ -31,6 +33,7 @@ given, with no measuring (to reproduce existing hand cuts).
 and --steps-per-frame are written into every sprite when given.
 """
 import argparse
+import os
 import json
 import re
 import sys
@@ -246,11 +249,17 @@ def parse_args(argv):
     p.add_argument('--margin', type=int, default=2)
     p.add_argument('--max-shift', type=int, default=100)
     p.add_argument('--out', required=True)
+    p.add_argument('--force', action='store_true',
+                   help='overwrite --out when it already exists')
     return p.parse_args(argv)
 
 
 def main(argv=None):
     a = parse_args(sys.argv[1:] if argv is None else argv)
+    if os.path.exists(a.out) and not a.force:
+        print(f'error: {a.out} already exists; pass --force to overwrite it',
+              file=sys.stderr)
+        return 1
     cols, rows = (int(n) for n in a.grid.lower().split('x'))
     cell = None
     if a.cell:

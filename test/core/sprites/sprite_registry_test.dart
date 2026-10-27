@@ -160,6 +160,35 @@ void main() {
     });
   });
 
+  test('register rejects sprite names with dots or capitals', () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      final sheet = await makeSheet(2);
+      for (final name in ['b.c', 'Bad', '', 'a' * 41]) {
+        final atlas = SpriteAtlas.parse({
+          'sheet': 's.png',
+          'sprites': {
+            name: {
+              'frames': [
+                [0, 0, 16, 16],
+              ],
+              'output': 24,
+            },
+          },
+        });
+        expect(
+          () => SpriteRegistry.register(atlas, sheet, idPrefix: 'custom.n'),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.toString(),
+              'message',
+              contains(name.isEmpty ? 'sprite name' : name),
+            ),
+          ),
+        );
+      }
+    });
+  });
+
   test('fill stretches a frame into a non-square output', () async {
     await TestWidgetsFlutterBinding.instance.runAsync(() async {
       final sheet = await makeSheet(2);

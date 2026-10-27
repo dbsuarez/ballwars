@@ -26,7 +26,13 @@ class _TolerantComparator extends LocalFileComparator {
       imageBytes,
       await getGoldenBytes(golden),
     );
-    return result.passed || result.diffPercent <= 0.001;
+    if (result.passed || result.diffPercent <= 0.001) {
+      result.dispose();
+      return true;
+    }
+    final error = await generateFailureOutput(result, golden, basedir);
+    result.dispose();
+    throw FlutterError(error);
   }
 }
 

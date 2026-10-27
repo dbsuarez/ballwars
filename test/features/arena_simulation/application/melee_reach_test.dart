@@ -174,4 +174,134 @@ void main() {
     expect(a.held, isNull);
     expect(b.life, lessThan(_life));
   });
+
+  /// Two still balls in Arsenal at a gap of [gapRadii] radii beyond touching, built from [order] of the
+  /// first two test balls; [library] holds the skills they are given.
+  MatchSimulationController still(
+    SkillLibrary library, {
+    required double gapRadii,
+    List<CustomBall>? order,
+    bool dualWield = false,
+  }) {
+    final c = MatchSimulationController(
+      order ?? _balls.take(2).toList(),
+      arenaRadius: 260,
+      seed: 1,
+      layoutRotation: 0,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+      dualWield: dualWield,
+      skillLibrary: library,
+    );
+    c.powerUps!.automaticSpawning = false;
+    final [a, b] = c.state.balls;
+    for (final ball in c.state.balls) {
+      ball.velocity = Offset.zero;
+    }
+    a.position = const Offset(-50, 0);
+    b.position = Offset(-50 + a.radius + b.radius + gapRadii * a.radius, 0);
+    return c;
+  }
+
+  SkillDefinition reachSkill(String name, PowerUpKind carrier) => SkillLibrary
+      .defaults
+      .create(name, carrier)
+      .copyWith(enabled: true, meleeReach: 1);
+
+  test(
+    'two balls in reach of each other both strike, whatever their order',
+    () {
+      final knife = reachSkill('Long Knife', PowerUpKind.knife);
+      final library = SkillLibrary.defaults.withDefinition(
+        knife,
+        PowerUpConfig.defaults,
+      );
+      for (final order in [
+        [_balls[0], _balls[1]],
+        [_balls[1], _balls[0]],
+      ]) {
+        final c = still(library, gapRadii: 0.5, order: order);
+        for (final ball in c.state.balls) {
+          ball.life = 5;
+          ball.equipWeapon(
+            PowerUpKind.knife,
+            skillId: knife.id,
+            dualWield: false,
+          );
+        }
+        c.tick(1 / 60);
+        // Both lethal hits land: the first one doesn't stop the second.
+        expect(c.powerUps!.slashes, 2, reason: order.first.id);
+        expect(c.powerUps!.hits, 2, reason: order.first.id);
+        for (final ball in c.state.balls) {
+          expect(ball.held, isNull);
+        }
+      }
+    },
+  );
+
+  test('a collision skill strikes by reach and is used up', () {
+    final bonk = reachSkill('Bonk', PowerUpKind.pistol).copyWith(
+      trigger: SkillTrigger.collision,
+      delivery: SkillDelivery.instant,
+    );
+    expect(bonk.isComposed, isTrue);
+    final c = still(
+      SkillLibrary.defaults.withDefinition(bonk, PowerUpConfig.defaults),
+      gapRadii: 0.5,
+    );
+    final [a, b] = c.state.balls;
+    a.equipWeapon(PowerUpKind.pistol, skillId: bonk.id, dualWield: false);
+    c.tick(1 / 60);
+    expect(c.ballHits, 0);
+    expect(b.life, lessThan(_life));
+    expect(a.held, isNull);
+  });
+
+  test('dual wield: both reach weapons strike', () {
+    final knife = reachSkill('Long Knife', PowerUpKind.knife);
+    final sword = reachSkill('Long Sword', PowerUpKind.sword);
+    final library = SkillLibrary.defaults
+        .withDefinition(knife, PowerUpConfig.defaults)
+        .withDefinition(sword, PowerUpConfig.defaults);
+    final c = still(library, gapRadii: 0.5, dualWield: true);
+    final [a, b] = c.state.balls;
+    a
+      ..equipWeapon(PowerUpKind.knife, skillId: knife.id, dualWield: true)
+      ..equipWeapon(PowerUpKind.sword, skillId: sword.id, dualWield: true);
+    expect(a.equippedWeapons, hasLength(2));
+    c.tick(1 / 60);
+    expect(c.powerUps!.slashes, 2);
+    expect(
+      b.life,
+      _life -
+          PowerUpTuning.arenaDamage[PowerUpKind.knife]! -
+          PowerUpTuning.arenaDamage[PowerUpKind.sword]!,
+    );
+    expect(a.equippedWeapons, isEmpty);
+  });
+
+  test('a bump and a reach in the same step strike only once', () {
+    final knife = reachSkill('Long Knife', PowerUpKind.knife);
+    final c = still(
+      SkillLibrary.defaults.withDefinition(knife, PowerUpConfig.defaults),
+      gapRadii: 0,
+    );
+    final [a, b] = c.state.balls;
+    // Already overlapping and closing, so this step bumps.
+    b.position -= const Offset(2, 0);
+    a.velocity = const Offset(60, 0);
+    b.velocity = const Offset(-60, 0);
+    a.equipWeapon(PowerUpKind.knife, skillId: knife.id, dualWield: false);
+    c.tick(1 / 60);
+    expect(c.ballHits, 1);
+    expect(c.powerUps!.slashes, 1);
+    expect(
+      b.life,
+      _life -
+          PowerUpTuning.arenaCollisionDamage -
+          PowerUpTuning.arenaDamage[PowerUpKind.knife]!,
+    );
+    expect(a.held, isNull);
+  });
 }

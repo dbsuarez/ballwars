@@ -1194,7 +1194,10 @@ class _SkillEditorState extends State<_SkillEditor> {
   /// Strikes on a bump (and so can have a melee reach): a collision trigger, a blade, the orbiting
   /// flail or a shield, matching the match's contact rules.
   bool get _strikesOnContact =>
-      _trigger == SkillTrigger.collision ||
+      (_trigger == SkillTrigger.collision &&
+          _targeting != null &&
+          _delivery != null &&
+          _effectType != null) ||
       widget.skill.baseKind.isBlade ||
       widget.skill.baseKind == PowerUpKind.orbitingFlail ||
       widget.skill.baseKind == PowerUpKind.shield;
@@ -1761,6 +1764,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     String? suffix,
     bool enabled = true,
     String? disabledNote,
+    String? helper,
   }) {
     final wholeNumber = _wholeNumberKeys.contains(key);
     final limits = _limits[key];
@@ -1833,7 +1837,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                       isDense: true,
                       border: const OutlineInputBorder(),
                       errorText: _numberError(key),
-                      helperText: enabled ? null : disabledNote,
+                      helperText: enabled ? helper : disabledNote,
                       helperMaxLines: 3,
                     ),
                     onChanged: (_) => setState(() {}),
@@ -2502,6 +2506,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'meleeReach',
                           'Melee reach',
                           suffix: 'ball radii',
+                          helper:
+                              widget.skill.baseKind == PowerUpKind.orbitingFlail
+                              ? 'The flail already reaches about 1.7 ball radii; higher values extend it.'
+                              : null,
                         ),
                       if (widget.skill.baseKind == PowerUpKind.fireWall ||
                           widget.skill.baseKind == PowerUpKind.tornado) ...[

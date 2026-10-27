@@ -572,6 +572,16 @@ void main() {
     expect(await showsMeleeReach(tester, 'Pistol'), isFalse);
   });
 
+  testWidgets('the orbiting flail explains its own reach', (tester) async {
+    expect(await showsMeleeReach(tester, 'Orbiting Flail'), isTrue);
+    expect(
+      find.text(
+        'The flail already reaches about 1.7 ball radii; higher values extend it.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('melee reach is edited on contact weapons and saved', (
     tester,
   ) async {

@@ -2335,15 +2335,28 @@ class PowerUpSystem {
       weapon == PowerUpKind.orbitingFlail ||
       weapon == PowerUpKind.shield;
 
-  /// Contact weapons with a [SkillDefinition.meleeReach] strike without a bump: once per step, in the
-  /// match's ball order, each held one hits the nearest opponent whose center is within both radii plus
-  /// that many of the holder's radii (ties go to the earlier ball), exactly as a bump would ([_melee]
-  /// uses it up, and a shield still bashes only an unarmed ball). Ghosts neither strike nor get struck.
-  /// A weapon that already struck on a bump this step is gone. Draws nothing from the RNG.
+  /// Contact weapons with a [SkillDefinition.meleeReach] strike without a bump: once per step, each held
+  /// one hits the nearest opponent whose center is within both radii plus that many of the holder's
+  /// radii (ties go to the earlier ball), exactly as a bump would ([_melee] uses it up, and a shield
+  /// still bashes only an unarmed ball). Like a bump, every strike is chosen from the balls as they
+  /// stood before any of them landed, so two balls in each other's reach both hit whatever their order.
+  /// Ghosts neither strike nor get struck. A weapon that already struck on a bump this step is gone.
+  /// Draws nothing from the RNG.
   void _strikeWithMeleeReach() {
-    final balls = match.state.balls;
-    for (final attacker in balls) {
-      if (!_alive(attacker) || attacker.isGhost) continue;
+    final standing = [
+      for (final ball in match.state.balls)
+        if (_alive(ball) && !ball.isGhost) ball,
+    ];
+    final strikes =
+        <
+          (
+            SimulationBall attacker,
+            PowerUpKind weapon,
+            String? skillId,
+            SimulationBall target,
+          )
+        >[];
+    for (final attacker in standing) {
       final slots = [
         if (attacker.held case final weapon?) (weapon, attacker.heldSkillId),
         if (attacker.heldSecondary case final weapon?)
@@ -2356,12 +2369,8 @@ class PowerUpSystem {
         }
         SimulationBall? nearest;
         var best = double.infinity;
-        for (final target in balls) {
-          if (identical(attacker, target) ||
-              !_alive(target) ||
-              target.isGhost) {
-            continue;
-          }
+        for (final target in standing) {
+          if (identical(attacker, target)) continue;
           final distance = (target.position - attacker.position).distance;
           final reach =
               attacker.radius +
@@ -2372,11 +2381,16 @@ class PowerUpSystem {
             nearest = target;
           }
         }
-        if (nearest == null) continue;
-        _melee(attacker, weapon, nearest, [
-          ...nearest.equippedWeapons,
-        ], skillId: skillId);
+        if (nearest != null) strikes.add((attacker, weapon, skillId, nearest));
       }
+    }
+    if (strikes.isEmpty) return;
+    final heldBefore = {
+      for (final ball in standing) ball: [...ball.equippedWeapons],
+    };
+    for (final (attacker, weapon, skillId, target) in strikes) {
+      if (!attacker.equippedWeapons.contains(weapon)) continue;
+      _melee(attacker, weapon, target, heldBefore[target]!, skillId: skillId);
     }
   }
 

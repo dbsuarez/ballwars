@@ -1,1 +1,6 @@
-[]
+[
+  "assets/sprites/powerups-fixed.atlas.json",
+  "assets/sprites/effects-master.atlas.json",
+  "assets/sprites/projectiles-master.atlas.json",
+  "assets/sprites/effects-animated.atlas.json"
+]

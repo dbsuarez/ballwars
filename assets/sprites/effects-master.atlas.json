@@ -1,0 +1,134 @@
+{
+  "sheet": "assets/sprites/effects-master.png",
+  "sprites": {
+    "effect.flame": {
+      "frames": [
+        [12, 12, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the bottom edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.explosion": {
+      "frames": [
+        [374, 12, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the bottom edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.iceWave": {
+      "frames": [
+        [736, 12, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the right and bottom edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.slash": {
+      "frames": [
+        [1098, 12, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the bottom edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.portalBurst": {
+      "frames": [
+        [12, 374, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the right edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.shieldImpact": {
+      "frames": [
+        [374, 374, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the right edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.speedStreak": {
+      "frames": [
+        [736, 374, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the right edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.blood": {
+      "frames": [
+        [1098, 374, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": false
+    },
+    "effect.magneticField": {
+      "frames": [
+        [12, 736, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the right edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.timeBubble": {
+      "frames": [
+        [374, 736, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": true,
+      "bleedNote": "The cut is the 362 px grid cell inset by 12 px, exactly as the game cut it before atlases. The art reaches past the inset on the right edge (into the 12 px cell margin), so the cut clips a few px of it; kept so the sprite looks the same as before."
+    },
+    "effect.goldenArmorHit": {
+      "frames": [
+        [736, 736, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": false
+    },
+    "effect.stickyGoo": {
+      "frames": [
+        [1098, 736, 338, 338]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 6,
+      "bleedOk": false
+    }
+  }
+}

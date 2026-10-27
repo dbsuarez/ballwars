@@ -1,0 +1,74 @@
+{
+  "sheet": "assets/sprites/effects-animated.png",
+  "sprites": {
+    "anim.flame": {
+      "frames": [
+        [10, 10, 342, 161],
+        [372, 10, 342, 161],
+        [734, 10, 342, 161],
+        [1096, 10, 342, 161]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "bleedOk": true,
+      "bleedNote": "Cut as before atlases: the 362 x 181 grid cell inset by 10 px. The art of this row is taller than its cell and reaches past the bottom (and on frame 4 a little of the top) edge of every frame (the rows of this sheet overlap), so the cut clips it; kept so the animation looks the same as before."
+    },
+    "anim.explosion": {
+      "frames": [
+        [8, 215, 346, 183],
+        [370, 212, 346, 201],
+        [732, 213, 346, 200],
+        [1094, 215, 346, 197]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": true,
+      "padding": 3,
+      "bleedOk": false
+    },
+    "anim.iceImpact": {
+      "frames": [
+        [8, 606, 346, 164],
+        [370, 603, 346, 178],
+        [732, 603, 346, 181],
+        [1094, 612, 346, 168]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": true,
+      "padding": 3,
+      "bleedOk": true,
+      "bleedNote": "Frames are the per-frame clean pixel rows the game used before atlases. Frame 3 starts at y 603 inside a 17 px tail of the portal art above (alpha > 24, x 904-920); the game has always shown that tail. The crystals of every frame also run down to the last cut row."
+    },
+    "anim.slash": {
+      "frames": [
+        [10, 734, 342, 161],
+        [372, 734, 342, 161],
+        [734, 734, 342, 161],
+        [1096, 734, 342, 161]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "bleedOk": true,
+      "bleedNote": "Cut as before atlases: the 362 x 181 grid cell inset by 10 px. The art of this row is taller than its cell and reaches past the top and bottom edge of every frame (the rows of this sheet overlap), so the cut clips it; kept so the animation looks the same as before."
+    },
+    "anim.blood": {
+      "frames": [
+        [10, 915, 342, 161],
+        [372, 915, 342, 161],
+        [734, 915, 342, 161],
+        [1096, 915, 342, 161]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 5,
+      "bleedOk": true,
+      "bleedNote": "Cut as before atlases: the 362 x 181 grid cell inset by 10 px. The art of this row is taller than its cell and reaches past the top (and on frames 2 and 3 the bottom) edge of every frame (the rows of this sheet overlap), so the cut clips it; kept so the animation looks the same as before."
+    }
+  }
+}

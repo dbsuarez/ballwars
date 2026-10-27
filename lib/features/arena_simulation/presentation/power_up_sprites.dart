@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/sprites/sprite_registry.dart';
 import '../domain/power_up.dart';
 import 'power_up_pixel_art.dart';
 import 'sprite_asset_pipeline.dart';
@@ -59,8 +60,8 @@ class PowerUpSprites {
   PowerUpSprites._();
 
   static final Map<PowerUpKind, ui.Image> _images = {};
-  static final Map<EffectSprite, ui.Image> _effects = {};
-  static final Map<ProjectileSprite, ui.Image> _projectiles = {};
+  /// One-off animated sheets (campfire, arena portal, ...); the grid sheet's
+  /// effects come from [SpriteRegistry] as `anim.<name>`.
   static final Map<AnimatedEffect, List<ui.Image>> _animatedEffects = {};
   static ui.Image? _rocketLauncher;
   static ui.Image? _rocketMissile;
@@ -79,8 +80,9 @@ class PowerUpSprites {
     _ => _images[kind],
   };
   static ui.Image? effect(EffectSprite kind, {bool enabled = true}) =>
-      enabled ? _effects[kind] : null;
-  static ui.Image? projectile(ProjectileSprite kind) => _projectiles[kind];
+      enabled ? SpriteRegistry.frame('effect.${kind.name}') : null;
+  static ui.Image? projectile(ProjectileSprite kind) =>
+      SpriteRegistry.frame('projectile.${kind.name}');
 
   static ui.Image? projectileArtwork(PowerUpKind kind) => switch (kind) {
     PowerUpKind.pistol ||
@@ -104,7 +106,8 @@ class PowerUpSprites {
   }) {
     if (!enabled) return null;
     final frames = _animatedEffects[kind];
-    return frames == null ? null : frames[frame % frames.length];
+    if (frames != null) return frames[frame % frames.length];
+    return SpriteRegistry.frame('anim.${kind.name}', frame);
   }
 
   static ui.Image? get rocketMissile => _rocketMissile;
@@ -116,198 +119,17 @@ class PowerUpSprites {
   static Future<void> load() => _loading ??= _loadAll();
 
   static Future<void> _loadAll() async {
-    final data = await rootBundle.load('assets/sprites/powerups-fixed.png');
-    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-    final sheet = (await codec.getNextFrame()).image;
-    codec.dispose();
-    const fixedCell = 128.0;
-    const fixedColumns = 8;
-    final kinds = _sheetRects.keys.toList(growable: false);
-    for (var index = 0; index < kinds.length; index++) {
-      final kind = kinds[index];
-      final source = Rect.fromLTWH(
-        (index % fixedColumns) * fixedCell,
-        (index ~/ fixedColumns) * fixedCell,
-        fixedCell,
-        fixedCell,
-      );
+    // The grid sheets (powerups-fixed, effects-master, projectiles-master,
+    // effects-animated) are cut by the registry from their atlas manifests.
+    await SpriteRegistry.load();
+    // Vampire and repulsor have no sheet art; they are drawn from pixel art.
+    for (final kind in const [PowerUpKind.vampire, PowerUpKind.repulsor]) {
       final recorder = ui.PictureRecorder();
-      final fitted = applyBoxFit(
-        BoxFit.contain,
-        source.size,
-        const Size.square(64),
-      );
-      final destination = Alignment.center.inscribe(
-        fitted.destination,
-        const Rect.fromLTWH(0, 0, 64, 64),
-      );
-      if (kind == PowerUpKind.vampire || kind == PowerUpKind.repulsor) {
-        paintIcon(Canvas(recorder), kind, const Rect.fromLTWH(0, 0, 64, 64));
-      } else {
-        Canvas(recorder).drawImageRect(
-          sheet,
-          source,
-          destination,
-          Paint()..filterQuality = FilterQuality.none,
-        );
-      }
+      paintIcon(Canvas(recorder), kind, const Rect.fromLTWH(0, 0, 64, 64));
       final picture = recorder.endRecording();
       _images[kind] = await picture.toImage(64, 64);
       picture.dispose();
     }
-    sheet.dispose();
-
-    final effectData = await rootBundle.load(
-      'assets/sprites/effects-master.png',
-    );
-    final effectCodec = await ui.instantiateImageCodec(
-      effectData.buffer.asUint8List(),
-    );
-    final effectSheet = (await effectCodec.getNextFrame()).image;
-    effectCodec.dispose();
-    const cellWidth = 362.0;
-    const cellHeight = 362.0;
-    const effectInset = 12.0;
-    const effectDestination = Rect.fromLTWH(6, 6, 84, 84);
-    for (final kind in EffectSprite.values) {
-      final column = kind.index % 4;
-      final row = kind.index ~/ 4;
-      final recorder = ui.PictureRecorder();
-      Canvas(recorder).drawImageRect(
-        effectSheet,
-        Rect.fromLTWH(
-          column * cellWidth + effectInset,
-          row * cellHeight + effectInset,
-          cellWidth - effectInset * 2,
-          cellHeight - effectInset * 2,
-        ),
-        effectDestination,
-        Paint()..filterQuality = FilterQuality.none,
-      );
-      final picture = recorder.endRecording();
-      _effects[kind] = await picture.toImage(96, 96);
-      picture.dispose();
-    }
-    effectSheet.dispose();
-
-    final projectileData = await rootBundle.load(
-      'assets/sprites/projectiles-master.png',
-    );
-    final projectileCodec = await ui.instantiateImageCodec(
-      projectileData.buffer.asUint8List(),
-    );
-    final projectileSheet = (await projectileCodec.getNextFrame()).image;
-    projectileCodec.dispose();
-    const projectileCell = 443.5;
-    for (final kind in ProjectileSprite.values) {
-      final column = kind.index % 4;
-      final row = kind.index ~/ 4;
-      final recorder = ui.PictureRecorder();
-      Canvas(recorder).drawImageRect(
-        projectileSheet,
-        Rect.fromLTWH(
-          column * projectileCell,
-          row * projectileCell,
-          projectileCell,
-          projectileCell,
-        ),
-        const Rect.fromLTWH(0, 0, 96, 96),
-        Paint()..filterQuality = FilterQuality.none,
-      );
-      final picture = recorder.endRecording();
-      _projectiles[kind] = await picture.toImage(96, 96);
-      picture.dispose();
-    }
-    projectileSheet.dispose();
-
-    final animatedData = await rootBundle.load(
-      'assets/sprites/effects-animated.png',
-    );
-    final animatedCodec = await ui.instantiateImageCodec(
-      animatedData.buffer.asUint8List(),
-    );
-    final animatedSheet = (await animatedCodec.getNextFrame()).image;
-    animatedCodec.dispose();
-    const animatedWidth = 362.0;
-    const animatedHeight = 181.0;
-    const animatedInset = 10.0;
-    for (final kind in AnimatedEffect.values.where(
-      (kind) =>
-          kind != AnimatedEffect.maximumPower &&
-          kind != AnimatedEffect.campfire &&
-          kind != AnimatedEffect.tornado,
-    )) {
-      final frames = <ui.Image>[];
-      for (var frame = 0; frame < 4; frame++) {
-        final recorder = ui.PictureRecorder();
-        final fitted = applyBoxFit(
-          BoxFit.contain,
-          const Size(
-            animatedWidth - animatedInset * 2,
-            animatedHeight - animatedInset * 2,
-          ),
-          const Size.square(86),
-        );
-        if (kind == AnimatedEffect.explosion) {
-          // The sheet's explosion row (flash, fireball, smoke). Its grid cell also catches the flames
-          // above, so each frame is cut from the band the explosion art occupies instead.
-          final source = Rect.fromLTWH(
-            frame * animatedWidth + 8,
-            _explosionTop,
-            animatedWidth - 16,
-            _explosionHeight,
-          );
-          final fit = applyBoxFit(BoxFit.contain, source.size, const Size.square(90));
-          Canvas(recorder).drawImageRect(
-            animatedSheet,
-            source,
-            Alignment.center.inscribe(
-              fit.destination,
-              const Rect.fromLTWH(3, 3, 90, 90),
-            ),
-            Paint()..filterQuality = FilterQuality.none,
-          );
-        } else if (kind == AnimatedEffect.iceImpact) {
-          // The sheet's ice-crystal row. Its art reaches into the neighboring rows' cells, so each frame
-          // is cut along its own clean rows (_iceRows), placed on one shared origin so the crystals
-          // don't jump between frames.
-          final (top, bottom) = _iceRows[frame];
-          const scale = 90 / (animatedWidth - 16);
-          final left = frame * animatedWidth + 8;
-          Canvas(recorder).drawImageRect(
-            animatedSheet,
-            Rect.fromLTRB(left, top, left + animatedWidth - 16, bottom),
-            Rect.fromLTWH(
-              3,
-              48 - (_iceBandHeight / 2 - (top - _iceBandTop)) * scale,
-              90,
-              (bottom - top) * scale,
-            ),
-            Paint()..filterQuality = FilterQuality.none,
-          );
-        } else {
-          Canvas(recorder).drawImageRect(
-            animatedSheet,
-            Rect.fromLTWH(
-              frame * animatedWidth + animatedInset,
-              kind.index * animatedHeight + animatedInset,
-              animatedWidth - animatedInset * 2,
-              animatedHeight - animatedInset * 2,
-            ),
-            Alignment.center.inscribe(
-              fitted.destination,
-              const Rect.fromLTWH(5, 5, 86, 86),
-            ),
-            Paint()..filterQuality = FilterQuality.none,
-          );
-        }
-        final picture = recorder.endRecording();
-        frames.add(await picture.toImage(96, 96));
-        picture.dispose();
-      }
-      _animatedEffects[kind] = frames;
-    }
-    animatedSheet.dispose();
 
     // Molotov fire uses a dedicated tall campfire loop. Keeping it in its own
     // fixed four-cell sheet prevents the horizontal, eel-like silhouette of
@@ -693,6 +515,16 @@ class PowerUpSprites {
     if (_boomerangIcon != null) {
       _boomerangIcon = await fitVisibleArtwork(_boomerangIcon!);
     }
+    // powerups-fixed icons: the registry cuts each 128 px cell to 64 px
+    // ("powerup.<kind>"), then the same visible-artwork fit as above runs on
+    // that cut. (Fit "trim" in the manifest measures at sheet resolution and
+    // moves some icons by up to 5 px, so the two-step look is kept.) The
+    // registry owns its frames, so they are never disposed here.
+    for (final kind in PowerUpKind.values) {
+      if (_images.containsKey(kind)) continue;
+      final cut = SpriteRegistry.frame('powerup.${kind.name}');
+      if (cut != null) _images[kind] = await fitVisibleArtwork(cut);
+    }
   }
 
   /// Returns a fitted copy; the caller retains ownership of the input image.
@@ -736,61 +568,6 @@ class PowerUpSprites {
     picture.dispose();
     return result;
   }
-
-  static const Map<PowerUpKind, Rect> _sheetRects = {
-    // These are deliberately non-overlapping cells. Some sprites have wide
-    // glows, so content-sized rectangles can accidentally include a neighbor.
-    PowerUpKind.pistol: Rect.fromLTRB(0, 0, 214, 286),
-    PowerUpKind.shotgun: Rect.fromLTRB(214, 0, 484, 286),
-    PowerUpKind.gatling: Rect.fromLTRB(484, 0, 755, 286),
-    PowerUpKind.knife: Rect.fromLTRB(755, 0, 908, 286),
-    PowerUpKind.sword: Rect.fromLTRB(908, 0, 1098, 286),
-    PowerUpKind.shield: Rect.fromLTRB(1098, 0, 1289, 286),
-    PowerUpKind.freeze: Rect.fromLTRB(1289, 0, 1593, 286),
-    PowerUpKind.grenade: Rect.fromLTRB(1593, 0, 1774, 286),
-    PowerUpKind.molotov: Rect.fromLTRB(0, 286, 229, 480),
-    PowerUpKind.hook: Rect.fromLTRB(229, 286, 440, 480),
-    PowerUpKind.ricochetDisc: Rect.fromLTRB(440, 286, 643, 480),
-    PowerUpKind.orbitingFlail: Rect.fromLTRB(643, 286, 845, 480),
-    PowerUpKind.threadHarpoon: Rect.fromLTRB(845, 286, 1030, 480),
-    PowerUpKind.prismLaser: Rect.fromLTRB(1030, 286, 1278, 480),
-    PowerUpKind.swapCannon: Rect.fromLTRB(1278, 286, 1554, 480),
-    PowerUpKind.bow: Rect.fromLTRB(1554, 286, 1774, 480),
-    PowerUpKind.apple: Rect.fromLTRB(0, 480, 145, 695),
-    PowerUpKind.speed: Rect.fromLTRB(153, 480, 269, 695),
-    PowerUpKind.magnet: Rect.fromLTRB(270, 480, 420, 695),
-    PowerUpKind.ghost: Rect.fromLTRB(420, 480, 555, 695),
-    PowerUpKind.repulsor: Rect.fromLTRB(555, 480, 706, 695),
-    PowerUpKind.timeBubble: Rect.fromLTRB(714, 485, 873, 685),
-    PowerUpKind.vampire: Rect.fromLTRB(877, 480, 1036, 695),
-    PowerUpKind.mirror: Rect.fromLTRB(1036, 480, 1157, 695),
-    PowerUpKind.overcharge: Rect.fromLTRB(1157, 480, 1316, 695),
-    PowerUpKind.gremlin: Rect.fromLTRB(1316, 480, 1451, 695),
-    PowerUpKind.magneticField: Rect.fromLTRB(1451, 480, 1595, 695),
-    PowerUpKind.goldenArmor: Rect.fromLTRB(1595, 480, 1774, 695),
-    PowerUpKind.mine: Rect.fromLTRB(400, 695, 600, 887),
-    PowerUpKind.phaseMine: Rect.fromLTRB(600, 695, 786, 887),
-    PowerUpKind.portal: Rect.fromLTRB(786, 695, 974, 887),
-    PowerUpKind.spikeWall: Rect.fromLTRB(974, 695, 1165, 887),
-    PowerUpKind.stickyGoo: Rect.fromLTRB(1165, 695, 1360, 887),
-  };
-
-  /// The explosion row of effects-animated.png: the band (pixel rows) its artwork occupies, clear of
-  /// the flames above and the portal below.
-  static const double _explosionTop = 218;
-  static const double _explosionHeight = 196;
-
-  /// The ice-crystal row of effects-animated.png: per frame, the first and last pixel rows that hold
-  /// only its art (measured: the portal above and the slashes below touch the grid cell). The band
-  /// they share is centered in the frame image.
-  static const List<(double, double)> _iceRows = [
-    (606, 770),
-    (603, 781),
-    (603, 784),
-    (612, 780),
-  ];
-  static const double _iceBandTop = 603;
-  static const double _iceBandHeight = 181;
 
   /// Draws [kind]'s pixels filling [rect] (one rectangle per pixel; for small widgets, not every frame).
   static void paintIcon(Canvas canvas, PowerUpKind kind, Rect rect) {

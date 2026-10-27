@@ -1,0 +1,315 @@
+{
+  "sheet": "assets/sprites/powerups-fixed.png",
+  "sprites": {
+    "powerup.pistol": {
+      "frames": [
+        [0, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.shotgun": {
+      "frames": [
+        [128, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.gatling": {
+      "frames": [
+        [256, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.knife": {
+      "frames": [
+        [384, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.sword": {
+      "frames": [
+        [512, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.shield": {
+      "frames": [
+        [640, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.freeze": {
+      "frames": [
+        [768, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.grenade": {
+      "frames": [
+        [896, 0, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.molotov": {
+      "frames": [
+        [0, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.hook": {
+      "frames": [
+        [128, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.ricochetDisc": {
+      "frames": [
+        [256, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.orbitingFlail": {
+      "frames": [
+        [384, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.threadHarpoon": {
+      "frames": [
+        [512, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.prismLaser": {
+      "frames": [
+        [640, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.swapCannon": {
+      "frames": [
+        [768, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.bow": {
+      "frames": [
+        [896, 128, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.apple": {
+      "frames": [
+        [0, 256, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.speed": {
+      "frames": [
+        [128, 256, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.magnet": {
+      "frames": [
+        [256, 256, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.ghost": {
+      "frames": [
+        [384, 256, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.timeBubble": {
+      "frames": [
+        [640, 256, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.mirror": {
+      "frames": [
+        [896, 256, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.overcharge": {
+      "frames": [
+        [0, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.gremlin": {
+      "frames": [
+        [128, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.magneticField": {
+      "frames": [
+        [256, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.goldenArmor": {
+      "frames": [
+        [384, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.mine": {
+      "frames": [
+        [512, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.phaseMine": {
+      "frames": [
+        [640, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.portal": {
+      "frames": [
+        [768, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.spikeWall": {
+      "frames": [
+        [896, 384, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "powerup.stickyGoo": {
+      "frames": [
+        [0, 512, 128, 128]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    }
+  }
+}

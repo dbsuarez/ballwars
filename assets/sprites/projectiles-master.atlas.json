@@ -1,0 +1,87 @@
+{
+  "sheet": "assets/sprites/projectiles-master.png",
+  "sprites": {
+    "projectile.pistol": {
+      "frames": [
+        [0.0, 0.0, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.shotgun": {
+      "frames": [
+        [443.5, 0.0, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": true,
+      "bleedNote": "The shotgun cell is the 443.5 px grid cell as before atlases; the glow of the shotgun and gatling crosses their shared cell line (x 887), so each cut clips about 1 px of it. Kept so the sprite looks the same as before."
+    },
+    "projectile.gatling": {
+      "frames": [
+        [887.0, 0.0, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": true,
+      "bleedNote": "The gatling cell is the 443.5 px grid cell as before atlases; the glow of the shotgun and gatling crosses their shared cell line (x 887), so each cut clips about 1 px of it. Kept so the sprite looks the same as before."
+    },
+    "projectile.bow": {
+      "frames": [
+        [1330.5, 0.0, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.prismLaser": {
+      "frames": [
+        [0.0, 443.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.swapCannon": {
+      "frames": [
+        [443.5, 443.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.harpoon": {
+      "frames": [
+        [887.0, 443.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    },
+    "projectile.ricochetDisc": {
+      "frames": [
+        [1330.5, 443.5, 443.5, 443.5]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "padding": 0,
+      "bleedOk": false
+    }
+  }
+}

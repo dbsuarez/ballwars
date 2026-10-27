@@ -15,7 +15,7 @@ const int _columns = 8;
 const Color _background = Color(0xFF3A3F4B);
 
 /// Goldens are generated on Windows but CI runs on Linux, so text-free pixel sheets may differ slightly
-/// in rasterization; accept up to 0.5% differing pixels.
+/// in rasterization; accept up to 0.1% differing pixels.
 class _TolerantComparator extends LocalFileComparator {
   _TolerantComparator(super.testFile);
 
@@ -25,7 +25,7 @@ class _TolerantComparator extends LocalFileComparator {
       imageBytes,
       await getGoldenBytes(golden),
     );
-    return result.passed || result.diffPercent <= 0.005;
+    return result.passed || result.diffPercent <= 0.001;
   }
 }
 

@@ -238,6 +238,15 @@ class SkillDefinition {
     return SkillPurpose.utility;
   }
 
+  /// Whether the match spawner can place this skill in the arena: picked up,
+  /// fired after an aim, or used on contact. Timer, damage-taken and
+  /// elimination skills work on every ball without a pickup.
+  bool get spawnsInArena =>
+      enabled &&
+      (trigger == SkillTrigger.pickup ||
+          trigger == SkillTrigger.aimedFire ||
+          trigger == SkillTrigger.collision);
+
   bool get isComposed =>
       trigger != null &&
       targeting != null &&

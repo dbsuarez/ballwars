@@ -1648,9 +1648,7 @@ class PowerUpSystem {
     final chosenCustom = match.customSkillIds;
     final spawnableCustom = [
       for (final skill in match.skillLibrary.custom)
-        if (skill.enabled &&
-            (skill.trigger == SkillTrigger.pickup ||
-                skill.trigger == SkillTrigger.aimedFire) &&
+        if (skill.spawnsInArena &&
             (chosenCustom == null || chosenCustom.contains(skill.id)))
           skill,
     ];

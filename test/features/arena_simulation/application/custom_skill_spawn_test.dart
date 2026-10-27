@@ -62,6 +62,19 @@ void main() {
     expect(spawns, isNotEmpty);
   });
 
+  test('a custom skill used on contact (collision trigger) spawns', () {
+    final blade = SkillLibrary.defaults
+        .create('Big Blade', PowerUpKind.sword)
+        .copyWith(trigger: SkillTrigger.collision);
+    expect(blade.spawnsInArena, isTrue);
+    final spawns = _spawns(
+      SkillLibrary.defaults.withDefinition(blade, tuning),
+      kinds: {PowerUpKind.apple},
+      custom: {blade.id},
+    );
+    expect(spawns.where((s) => s.$2 == blade.id), isNotEmpty);
+  });
+
   test('with everything on, the draws are the same as choosing nothing', () {
     expect(_spawns(library, custom: {volley.id}), _spawns(library));
   });

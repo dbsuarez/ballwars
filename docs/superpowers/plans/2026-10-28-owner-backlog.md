@@ -160,3 +160,34 @@ Rules:
 - [ ] **Step 3: Implement**: model, editor, repository, migration, link, controller mapping, female hair families in `BallHairPainter` (vector paths, no blur, sized to the ball like the existing styles). Inspect them by rendering a contact sheet in a test (`render_hair_test` writing to the scratchpad or a golden) and look at it before committing.
 - [ ] **Step 4: Run** focused then full `flutter test` : PASS.
 - [ ] **Step 5: Commit** `feat: ball gender with female hair styles`; CLAUDE.md (groups + hair); note that migration 022 must be run in the Supabase SQL editor.
+
+---
+
+## Added 2026-10-28 (owner bug reports, same build)
+
+Owner's words:
+- "playing a replay should remove the save replay at the end, saving a reply of a replay is not right"
+- "custom skills does not respect the tiring system. The color coding is not respected in all places like in the weapon selection menu."
+- "built-in knife (normal) and custom kutsilyo (special), they are sharing the rarity setting so when I change one the other changes too, and custom skill is not shown in rarity editor legacy."
+
+### Task 8: No "Save replay" when watching a replay
+
+**Files:** `arena_battle_screen.dart` (WinnerModal `onSaveReplay` ~l.976-1103, `_replay`, how a match opened from a link or saved replay is flagged), `winner_modal.dart`; tests `arena_battle_screen_test.dart`, `winner_modal_test.dart`.
+
+- [ ] **Step 1: Failing tests**: after the winner card's Replay, and for a match opened from a replay link or the saved replays list, the winner card has no Save replay button (`onSaveReplay == null` hides it); a normal match and Play again / New match still show it.
+- [ ] **Step 2: Implement**: the screen knows when the current round is a replay (Replay button, or opened from a link / saved replay until Play again or New match starts new seeds) and passes `onSaveReplay: null` then. Share link and Save video stay available.
+- [ ] **Step 3: Run** focused then full tests. **Commit** `fix: no Save replay when watching a replay`.
+
+### Task 9: Custom skills have their own tier
+
+**Files:** `skill_library.dart` (new `SkillDefinition.rarity`, nullable, JSON `rarity`, used for custom skills only; `calloutStyle`), `skill_management_screen.dart` (editor rarity ~l.170-197, 1127, 1232: a custom skill writes its own rarity, never `tier.<baseKind>`; list chip ~l.350-379), `power_up_config.dart` / rarity screen `lib/features/settings/presentation/power_up_rarity_screen.dart` (list custom skills with their own tier), `match_setup_screen.dart` Weapons dialog custom cards (tier label and color), spawn weighting in `power_up_system.dart` (`PowerUpSpawnSelector` / custom variant choice ~l.1650-1700: a custom skill's spawn weight uses its own tier), anywhere a skill's tier color is shown (grep `rarityOf(` and `.rarity.color`).
+
+**Interfaces:** `PowerUpRarity SkillLibrary.rarityOf(SkillDefinition skill, PowerUpConfig tuning)` = `skill.custom && skill.rarity != null ? skill.rarity! : tuning.rarityOf(skill.baseKind)`; every UI and the spawner use it.
+
+Rules:
+- Built-in tiers stay `tier.<kind>` in PowerUpConfig, unchanged. Old custom skills without `rarity` default to their base kind's tier at load (so nothing changes until edited), and editing a custom skill's tier never touches the built-in.
+- Spawn odds: with everything at defaults, the spawn RNG draws must be unchanged (existing seeds give the same matches). A custom skill's own tier changes only its own odds. Replay links already carry the skill snapshot (`skills=`), so the rarity travels with it.
+- Color coding: the tier color (normal/rare/epic/special) shows for custom skills wherever built-ins show it: Weapons dialog cards, Skill Management lists, rarity editor, callout style.
+
+- [ ] **Step 1: Failing tests**: changing Kutsilyo (custom, base knife) to Special leaves the built-in Knife Normal and vice versa; the rarity editor lists custom skills under their own tier; the Weapons dialog custom card shows the tier label and color; a custom skill's spawn weight follows its own tier; default library gives identical spawn draws to before.
+- [ ] **Step 2: Implement**, **Step 3: Run** focused then full tests. **Commit** `fix: custom skills have their own tier`; CLAUDE.md.

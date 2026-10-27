@@ -228,9 +228,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       );
     }
     if (_hasSkillLibraryColumn) {
-      final confirmed = SkillLibrary.fromJson(updated.first['skill_library']);
-      if (jsonEncode(confirmed.toJson()) !=
-          jsonEncode(settings.skillLibrary.toJson())) {
+      if (!settings.skillLibrary.matchesStored(
+        updated.first['skill_library'],
+      )) {
         throw StateError(
           'The server did not confirm the Skill Library. Reload settings before saving again.',
         );

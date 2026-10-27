@@ -1084,6 +1084,25 @@ class SkillLibrary {
     if (!skillsSetScreenShake) 'skills_set_screen_shake': false,
   };
 
+  /// Whether [stored] (this library as the server returned it) holds the
+  /// same skills. Postgres jsonb sorts object keys, so the JSON text order
+  /// differs; both sides are read back the same way and compared by content.
+  bool matchesStored(Object? stored) {
+    if (stored is! Map) return false;
+    final mine = SkillLibrary.fromJson(jsonDecode(jsonEncode(toJson())));
+    return jsonEncode(_sortedKeys(SkillLibrary.fromJson(stored).toJson())) ==
+        jsonEncode(_sortedKeys(mine.toJson()));
+  }
+
+  static Object? _sortedKeys(Object? value) {
+    if (value is Map) {
+      final keys = value.keys.map((key) => '$key').toList()..sort();
+      return {for (final key in keys) key: _sortedKeys(value[key])};
+    }
+    if (value is List) return [for (final item in value) _sortedKeys(item)];
+    return value;
+  }
+
   /// Immutable skill snapshot embedded in replay links. The replay keeps the
   /// exact definitions that were active when it was created, so later admin
   /// edits cannot change an old match.

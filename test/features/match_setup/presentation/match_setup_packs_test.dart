@@ -374,6 +374,46 @@ void main() {
     );
   });
 
+  testWidgets(
+    'HP bars toggle is passed to matches and remembered per match type',
+    (tester) async {
+      await pumpSetup(tester);
+      await openSettings(tester);
+      await tester.tap(find.text('Appearance').first);
+      await tester.pumpAndSettle();
+      final setting = find.byKey(const ValueKey('setting-HP bars'));
+      await tester.ensureVisible(setting);
+      expect(
+        find.descendant(of: setting, matching: find.text('Off')),
+        findsOneWidget,
+      );
+      await tester.tap(setting);
+      await tester.pump();
+      await closeSettings(tester);
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.showHpBars, isTrue);
+      final threads = await tester.runAsync(
+        () => DevicePrefs.read('match-threads-hp-bars'),
+      );
+      expect(threads, '1');
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpSetup(tester);
+      await openSettings(tester);
+      await tester.tap(find.text('Appearance').first);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('setting-HP bars')),
+          matching: find.text('On'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('Yes or No lets the user ask a question', (tester) async {
     await pumpSetup(tester);
     expect(find.widgetWithText(TextField, 'Your question'), findsNothing);

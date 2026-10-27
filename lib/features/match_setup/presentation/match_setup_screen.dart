@@ -69,6 +69,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   MatchMode _mode = MatchMode.threads;
   BallLook _look = BallLook.pictures;
   bool _handsOnPictures = false;
+  bool _showHpBars = false;
   bool _whitePickupBackgrounds = true;
   bool _randomizedHairstyles = false;
 
@@ -199,6 +200,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       'hands-on-pictures',
       mayhem: profileMayhem,
     );
+    final hpBars = await _readProfile(
+      profileMode,
+      'hp-bars',
+      mayhem: profileMayhem,
+    );
     final whitePickupBackgrounds = await _readProfile(
       profileMode,
       'white-pickup-backgrounds',
@@ -275,6 +281,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _mode = mode;
       _look = look ?? BallLook.pictures;
       _handsOnPictures = handsOnPictures == '1';
+      _showHpBars = hpBars == '1';
       _whitePickupBackgrounds = whitePickupBackgrounds != '0';
       _randomizedHairstyles = randomizedHairstyles == '1';
       _dualWield = dualWield == '1';
@@ -532,6 +539,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         finishersEnabled: _finishersOn,
         look: _look,
         handsOnPictures: _handsOnPictures,
+        showHpBars: _showHpBars,
         whitePickupBackgrounds: _whitePickupBackgrounds,
         randomizedHairstyles: _randomizedHairstyles,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
@@ -1458,6 +1466,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             (v) {
               _update(() => _handsOnPictures = v);
               _writeProfile('hands-on-pictures', v ? '1' : '0');
+            },
+          ),
+          _choice(
+            Icons.health_and_safety_outlined,
+            'HP bars',
+            const [false, true],
+            _showHpBars,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _showHpBars = v);
+              _writeProfile('hp-bars', v ? '1' : '0');
             },
           ),
           _choice(

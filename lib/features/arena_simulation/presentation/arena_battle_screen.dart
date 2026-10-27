@@ -832,6 +832,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               repaint: _frame,
                               look: widget.config.look,
                               handsOnPictures: widget.config.handsOnPictures,
+                              showHpBars: widget.config.showHpBars,
                               whitePickupBackgrounds:
                                   widget.config.whitePickupBackgrounds,
                               projectileRenderMode:
@@ -1107,6 +1108,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 ballScale: widget.config.ballSize.scale,
                                 mode: widget.config.mode,
                                 look: widget.config.look,
+                                showHpBars: widget.config.showHpBars,
                                 powerUps: widget.config.powerUps,
                                 customSkills: widget.config.customSkills,
                                 tuning: widget.config.tuning,

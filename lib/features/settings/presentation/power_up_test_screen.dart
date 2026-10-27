@@ -685,6 +685,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         rimInset: 0,
                         rimAngle: 0,
                         look: BallLook.faces,
+                        showHpBars: true,
                         arenaTitle: AppSettingsScope.of(context).arenaTitle,
                         arenaSubtitle: AppSettingsScope.of(
                           context,

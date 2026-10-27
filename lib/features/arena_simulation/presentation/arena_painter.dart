@@ -12,6 +12,7 @@ import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
 import 'ball_face_expression.dart';
+import 'hp_bar.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../settings/domain/app_settings.dart';
 
@@ -65,8 +66,12 @@ class ArenaPainter extends CustomPainter {
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
+    this.showHpBars = false,
     super.repaint,
   });
+
+  /// A thin HP bar above each ball (cosmetic).
+  final bool showHpBars;
 
   /// Pictures, or smiley faces (cosmetic).
   final BallLook look;
@@ -105,6 +110,16 @@ class ArenaPainter extends CustomPainter {
     for (final ball in sortedBalls) {
       if (ball.isEliminated) continue;
       _paintSingleBall(canvas, ball);
+    }
+    // After every ball, so the bars sit on top.
+    if (showHpBars) {
+      HpBar.paintAll(
+        canvas,
+        state.balls,
+        maxLife:
+            state.powerUps?.match.tuning.arenaMaxLife ??
+            PowerUpTuning.arenaMaxLife,
+      );
     }
     PowerUpPainter.paintTornadoOverlays(
       canvas,

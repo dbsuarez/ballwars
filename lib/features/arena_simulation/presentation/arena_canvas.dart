@@ -29,6 +29,9 @@ class ArenaCanvas extends StatelessWidget {
 
   final BallLook look;
 
+  /// A thin HP bar above each ball (cosmetic).
+  final bool showHpBars;
+
   const ArenaCanvas({
     super.key,
     required this.state,
@@ -50,6 +53,7 @@ class ArenaCanvas extends StatelessWidget {
     this.freezeRenderMode = EffectRenderMode.sprite,
     this.repaint,
     this.look = BallLook.pictures,
+    this.showHpBars = false,
   });
 
   @override
@@ -80,6 +84,7 @@ class ArenaCanvas extends StatelessWidget {
           rimColor: c.text,
           repaint: repaint,
           look: look,
+          showHpBars: showHpBars,
         ),
         size: Size.infinite,
       ),

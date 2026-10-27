@@ -55,12 +55,7 @@ class _SheetPainter extends CustomPainter {
         width: w * scale,
         height: h * scale,
       );
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, w, h),
-        dst,
-        paint,
-      );
+      canvas.drawImageRect(image, Rect.fromLTWH(0, 0, w, h), dst, paint);
     }
   }
 
@@ -114,7 +109,9 @@ void main() {
   setUp(() {
     previous = goldenFileComparator;
     goldenFileComparator = _TolerantComparator(
-      (previous as LocalFileComparator).basedir.resolve('sprite_goldens_test.dart'),
+      (previous as LocalFileComparator).basedir.resolve(
+        'sprite_goldens_test.dart',
+      ),
     );
   });
   tearDown(() => goldenFileComparator = previous);

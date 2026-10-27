@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ballwars/core/sprites/sprite_registry.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_painter.dart';
@@ -235,13 +236,13 @@ void main() {
       expect(image.height, 64, reason: kind.label);
     }
     for (final kind in EffectSprite.values) {
-      final image = PowerUpSprites.effect(kind);
+      final image = SpriteRegistry.frame(PowerUpSprites.effectId(kind));
       expect(image, isNotNull, reason: '$kind has no effect crop');
       expect(image!.width, 96, reason: '$kind');
       expect(image.height, 96, reason: '$kind');
     }
     for (final kind in ProjectileSprite.values) {
-      final image = PowerUpSprites.projectile(kind);
+      final image = SpriteRegistry.frame(PowerUpSprites.projectileId(kind));
       expect(image, isNotNull, reason: '$kind has no projectile crop');
       expect(image!.width, 96, reason: '$kind');
       expect(image.height, 96, reason: '$kind');
@@ -251,7 +252,7 @@ void main() {
       final frameCount = kind == AnimatedEffect.lightning ? 8 : 4;
       final frameSize = kind == AnimatedEffect.lightning ? 192 : 96;
       for (var frame = 0; frame < frameCount; frame++) {
-        final image = PowerUpSprites.effectFrame(kind, frame);
+        final image = SpriteRegistry.frame(PowerUpSprites.animId(kind), frame);
         expect(image, isNotNull, reason: '$kind frame $frame is missing');
         expect(image!.width, frameSize, reason: '$kind frame $frame');
         expect(image.height, frameSize, reason: '$kind frame $frame');

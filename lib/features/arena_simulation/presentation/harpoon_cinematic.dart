@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/sprites/sprite_registry.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/power_up.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -389,11 +390,12 @@ class _FinisherPainter extends CustomPainter {
             uppercutProgress,
           )!;
           _paintItem(canvas, strike, radius * 1.35);
-          final slashSprite = PowerUpSprites.effectFrame(
-            AnimatedEffect.slash,
-            (uppercutProgress * 4).floor().clamp(0, 3),
-            enabled: effectSprites,
-          );
+          final slashSprite = effectSprites
+              ? SpriteRegistry.frame(
+                  PowerUpSprites.animId(AnimatedEffect.slash),
+                  (uppercutProgress * 4).floor().clamp(0, 3),
+                )
+              : null;
           if (slashSprite != null) {
             _paintRaster(
               canvas,
@@ -511,8 +513,8 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.shotgun:
         if (hookProgress > 0 && hookProgress < 1) {
-          final pelletSprite = PowerUpSprites.projectile(
-            ProjectileSprite.shotgun,
+          final pelletSprite = SpriteRegistry.frame(
+            PowerUpSprites.projectileId(ProjectileSprite.shotgun),
           );
           for (var i = -3; i <= 3; i++) {
             final target = loserCenter + Offset(0, i * radius * 0.34);
@@ -763,7 +765,9 @@ class _FinisherPainter extends CustomPainter {
                   winnerCenter,
                   (hookProgress - 0.58) / 0.42,
                 )!;
-          final sprite = PowerUpSprites.boomerangProjectile;
+          final sprite = SpriteRegistry.frame(
+            PowerUpSprites.boomerangProjectileId,
+          );
           if (sprite != null) {
             _paintRaster(
               canvas,
@@ -921,7 +925,7 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.rocketLauncher:
         if (hookProgress > 0 && hookProgress < 1) {
-          final missile = PowerUpSprites.rocketMissile;
+          final missile = SpriteRegistry.frame(PowerUpSprites.rocketMissileId);
           final arc = math.sin(hookProgress * math.pi) * radius * 0.45;
           final point = to - Offset(0, arc);
           final direction = loserCenter - point;
@@ -970,7 +974,9 @@ class _FinisherPainter extends CustomPainter {
                 ..color = i.isEven ? profile.color : profile.accent,
             );
           }
-          final sprite = PowerUpSprites.omegaTendrilsAttack;
+          final sprite = SpriteRegistry.frame(
+            PowerUpSprites.omegaTendrilsAttackId,
+          );
           if (sprite != null) {
             _paintRaster(
               canvas,
@@ -1002,8 +1008,8 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.tornado:
         if (hookProgress > 0) {
-          final sprite = PowerUpSprites.effectFrame(
-            AnimatedEffect.tornado,
+          final sprite = SpriteRegistry.frame(
+            PowerUpSprites.animId(AnimatedEffect.tornado),
             (hookProgress * 24).toInt() % 4,
           );
           if (sprite != null) {
@@ -1073,10 +1079,12 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintBullet(Canvas canvas, Offset center, double size) {
-    final projectile = PowerUpSprites.projectile(
-      _kind == PowerUpKind.gatling
-          ? ProjectileSprite.gatling
-          : ProjectileSprite.pistol,
+    final projectile = SpriteRegistry.frame(
+      PowerUpSprites.projectileId(
+        _kind == PowerUpKind.gatling
+            ? ProjectileSprite.gatling
+            : ProjectileSprite.pistol,
+      ),
     );
     if (projectile != null) {
       _paintRaster(canvas, projectile, center, size * 3.2);
@@ -1114,7 +1122,9 @@ class _FinisherPainter extends CustomPainter {
     Color color, {
     double angle = 0,
   }) {
-    final sprite = PowerUpSprites.projectile(ProjectileSprite.bow);
+    final sprite = SpriteRegistry.frame(
+      PowerUpSprites.projectileId(ProjectileSprite.bow),
+    );
     if (sprite != null) {
       _paintRaster(canvas, sprite, point, radius * 0.95, rotation: angle);
       return;

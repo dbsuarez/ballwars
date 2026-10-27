@@ -48,10 +48,16 @@ enum AnimatedEffect {
   lightning,
 }
 
-/// The power-up icons and effect sprites, cut once from the atlas manifests in
-/// `assets/sprites/` by [SpriteRegistry]; this class maps the game's enums to
-/// atlas ids (`powerup.<kind>`, `effect.<EffectSprite>`,
-/// `projectile.<ProjectileSprite>`, `anim.<AnimatedEffect>`).
+/// The power-up icons, plus the atlas ids of every bundled sprite the game
+/// draws. All sheets are cut once from the JSON manifests in `assets/sprites/`
+/// by [SpriteRegistry]; painters look frames up with
+/// `SpriteRegistry.frame(id, frame)` using the ids below (`powerup.<kind>`,
+/// `effect.<EffectSprite>`, `projectile.<ProjectileSprite>`,
+/// `anim.<AnimatedEffect>`). The ids are built once, so painting never
+/// formats strings. See `docs/SPRITES.md`.
+///
+/// Icons are the one special case: [of] returns the registry's 64 px cut
+/// refitted to its visible artwork by [fitVisibleArtwork].
 ///
 /// [load] runs once per app; until it finishes (and in tests that skip it) the
 /// lookups return null and the painter draws its simple vector glyphs instead.
@@ -68,19 +74,50 @@ class PowerUpSprites {
   /// Kinds with no sheet art: their icons are drawn from [pixelIcons].
   static const pixelArtOnly = {PowerUpKind.vampire, PowerUpKind.repulsor};
 
-  static String iconId(PowerUpKind kind) => 'powerup.${kind.name}';
-  static String effectId(EffectSprite kind) => 'effect.${kind.name}';
-  static String projectileId(ProjectileSprite kind) =>
-      'projectile.${kind.name}';
-  static String animationId(AnimatedEffect kind) => 'anim.${kind.name}';
+  static final List<String> _iconIds = [
+    for (final k in PowerUpKind.values) 'powerup.${k.name}',
+  ];
+  static final List<String> _effectIds = [
+    for (final k in EffectSprite.values) 'effect.${k.name}',
+  ];
+  static final List<String> _projectileIds = [
+    for (final k in ProjectileSprite.values) 'projectile.${k.name}',
+  ];
+  static final List<String> _animIds = [
+    for (final k in AnimatedEffect.values) 'anim.${k.name}',
+  ];
 
-  /// Every atlas id this class looks up.
+  static String iconId(PowerUpKind kind) => _iconIds[kind.index];
+  static String effectId(EffectSprite kind) => _effectIds[kind.index];
+  static String projectileId(ProjectileSprite kind) =>
+      _projectileIds[kind.index];
+  static String animId(AnimatedEffect kind) => _animIds[kind.index];
+
+  /// The atlas id of the projectile art for a [kind]'s shot, or null when the
+  /// shot uses the kind's fitted icon ([of]).
+  static String? projectileArtworkId(PowerUpKind kind) => switch (kind) {
+    PowerUpKind.pistol ||
+    PowerUpKind.sniperRifle => projectileId(ProjectileSprite.pistol),
+    PowerUpKind.shotgun => projectileId(ProjectileSprite.shotgun),
+    PowerUpKind.gatling => projectileId(ProjectileSprite.gatling),
+    PowerUpKind.bow => projectileId(ProjectileSprite.bow),
+    PowerUpKind.prismLaser => projectileId(ProjectileSprite.prismLaser),
+    PowerUpKind.swapCannon => projectileId(ProjectileSprite.swapCannon),
+    PowerUpKind.hook ||
+    PowerUpKind.threadHarpoon => projectileId(ProjectileSprite.harpoon),
+    PowerUpKind.ricochetDisc => projectileId(ProjectileSprite.ricochetDisc),
+    PowerUpKind.rocketLauncher => rocketMissileId,
+    PowerUpKind.freeze => effectId(EffectSprite.iceWave),
+    _ => null,
+  };
+
+  /// Every atlas id this class names.
   static List<String> get requiredIds => [
     for (final k in PowerUpKind.values)
       if (!pixelArtOnly.contains(k)) iconId(k),
-    for (final k in EffectSprite.values) effectId(k),
-    for (final k in ProjectileSprite.values) projectileId(k),
-    for (final k in AnimatedEffect.values) animationId(k),
+    ..._effectIds,
+    ..._projectileIds,
+    ..._animIds,
     rocketMissileId,
     omegaTendrilsAttackId,
     boomerangProjectileId,
@@ -93,38 +130,6 @@ class PowerUpSprites {
 
   /// [kind]'s icon (64 x 64 px), or null before [load] has finished.
   static ui.Image? of(PowerUpKind kind) => _images[kind];
-  static ui.Image? effect(EffectSprite kind, {bool enabled = true}) =>
-      enabled ? SpriteRegistry.frame(effectId(kind)) : null;
-  static ui.Image? projectile(ProjectileSprite kind) =>
-      SpriteRegistry.frame(projectileId(kind));
-
-  static ui.Image? projectileArtwork(PowerUpKind kind) => switch (kind) {
-    PowerUpKind.pistol ||
-    PowerUpKind.sniperRifle => projectile(ProjectileSprite.pistol),
-    PowerUpKind.shotgun => projectile(ProjectileSprite.shotgun),
-    PowerUpKind.gatling => projectile(ProjectileSprite.gatling),
-    PowerUpKind.bow => projectile(ProjectileSprite.bow),
-    PowerUpKind.prismLaser => projectile(ProjectileSprite.prismLaser),
-    PowerUpKind.swapCannon => projectile(ProjectileSprite.swapCannon),
-    PowerUpKind.hook ||
-    PowerUpKind.threadHarpoon => projectile(ProjectileSprite.harpoon),
-    PowerUpKind.ricochetDisc => projectile(ProjectileSprite.ricochetDisc),
-    PowerUpKind.rocketLauncher => rocketMissile,
-    PowerUpKind.freeze => effect(EffectSprite.iceWave),
-    _ => of(kind),
-  };
-  static ui.Image? effectFrame(
-    AnimatedEffect kind,
-    int frame, {
-    bool enabled = true,
-  }) => enabled ? SpriteRegistry.frame(animationId(kind), frame) : null;
-
-  static ui.Image? get rocketMissile => SpriteRegistry.frame(rocketMissileId);
-  static ui.Image? get omegaTendrilsAttack =>
-      SpriteRegistry.frame(omegaTendrilsAttackId);
-  static ui.Image? get boomerangProjectile =>
-      SpriteRegistry.frame(boomerangProjectileId);
-  static ui.Image? get stickyGooRim => SpriteRegistry.frame(stickyGooRimId);
 
   /// Builds every icon image (once; later calls return the same future).
   static Future<void> load() => _loading ??= _loadAll();
@@ -305,6 +310,13 @@ class PowerUpIcon extends StatelessWidget {
     this.tint,
   });
 
+  /// The art [kind]'s shot shows: its projectile sprite, or its icon when it
+  /// has none.
+  static ui.Image? _projectileArtwork(PowerUpKind kind) {
+    final id = PowerUpSprites.projectileArtworkId(kind);
+    return id == null ? PowerUpSprites.of(kind) : SpriteRegistry.frame(id);
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: PowerUpSprites.load(),
@@ -317,9 +329,7 @@ class PowerUpIcon extends StatelessWidget {
         size: Size.square(size),
         painter: _IconPainter(
           kind,
-          projectile
-              ? PowerUpSprites.projectileArtwork(kind)
-              : PowerUpSprites.of(kind),
+          projectile ? _projectileArtwork(kind) : PowerUpSprites.of(kind),
         ),
       ),
     ),

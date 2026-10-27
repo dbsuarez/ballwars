@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:ballwars/core/sprites/sprite_registry.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_effect_library.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
@@ -90,17 +91,23 @@ Future<void> _expectSheet(
   );
 }
 
-/// Frames of [kind] until the cycle repeats (effectFrame wraps with a modulo).
+/// Frames of [kind] until the cycle repeats (SpriteRegistry.frame wraps with a modulo).
 List<ui.Image?> _frames(AnimatedEffect kind) {
-  final first = PowerUpSprites.effectFrame(kind, 0);
+  final first = SpriteRegistry.frame(PowerUpSprites.animId(kind));
   if (first == null) return [null];
   final out = <ui.Image?>[first];
   for (var i = 1; i < 64; i++) {
-    final f = PowerUpSprites.effectFrame(kind, i);
+    final f = SpriteRegistry.frame(PowerUpSprites.animId(kind), i);
     if (identical(f, first)) break;
     out.add(f);
   }
   return out;
+}
+
+/// What [PowerUpIcon] shows for a shot: its projectile art, else its icon.
+ui.Image? _projectileArtwork(PowerUpKind kind) {
+  final id = PowerUpSprites.projectileArtworkId(kind);
+  return id == null ? PowerUpSprites.of(kind) : SpriteRegistry.frame(id);
 }
 
 void main() {
@@ -123,11 +130,13 @@ void main() {
       for (final k in PowerUpKind.values) PowerUpSprites.of(k),
     ]);
     await _expectSheet(tester, 'effect_sprites', [
-      for (final k in EffectSprite.values) PowerUpSprites.effect(k),
+      for (final k in EffectSprite.values)
+        SpriteRegistry.frame(PowerUpSprites.effectId(k)),
     ]);
     await _expectSheet(tester, 'projectile_sprites', [
-      for (final k in ProjectileSprite.values) PowerUpSprites.projectile(k),
-      for (final k in PowerUpKind.values) PowerUpSprites.projectileArtwork(k),
+      for (final k in ProjectileSprite.values)
+        SpriteRegistry.frame(PowerUpSprites.projectileId(k)),
+      for (final k in PowerUpKind.values) _projectileArtwork(k),
     ]);
     // One row per animated effect, padded to whole rows so rows stay aligned.
     final animated = <ui.Image?>[];
@@ -140,10 +149,10 @@ void main() {
     }
     await _expectSheet(tester, 'animated_effect_frames', animated);
     await _expectSheet(tester, 'special_sprites', [
-      PowerUpSprites.rocketMissile,
-      PowerUpSprites.omegaTendrilsAttack,
-      PowerUpSprites.boomerangProjectile,
-      PowerUpSprites.stickyGooRim,
+      SpriteRegistry.frame(PowerUpSprites.rocketMissileId),
+      SpriteRegistry.frame(PowerUpSprites.omegaTendrilsAttackId),
+      SpriteRegistry.frame(PowerUpSprites.boomerangProjectileId),
+      SpriteRegistry.frame(PowerUpSprites.stickyGooRimId),
     ]);
     // Extra family: what ArenaEffectLibrary resolves (step 0 and a late step per kind).
     await _expectSheet(tester, 'arena_effect_library', [

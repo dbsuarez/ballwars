@@ -205,6 +205,9 @@ class SpriteAtlas {
       if (def.sharedBand && def.height != def.output) {
         out.add('${def.id} sharedBand needs a square output');
       }
+      if (def.fit == SpriteFit.fill && def.sharedBand) {
+        out.add('${def.id} fill cannot be combined with sharedBand');
+      }
       if (def.bleedOk && (def.bleedNote == null || def.bleedNote!.isEmpty)) {
         out.add('${def.id} sets bleedOk but has no bleedNote explaining why');
       }

@@ -143,6 +143,16 @@ void main() {
     expect(p.last, contains('sharedBand needs a square output'));
   });
 
+  test('fill combined with sharedBand is a problem', () {
+    final atlas = _parse(
+      '''
+{"sheet":"s.png","sprites":{"rim":{"frames":[[0,0,10,10]],"output":8,"fit":"fill","sharedBand":true}}}''',
+    );
+    expect(atlas.problems(sheetSize: const Size(10, 10)), [
+      'rim fill cannot be combined with sharedBand',
+    ]);
+  });
+
   test('malformed rect throws FormatException mentioning the id', () {
     expect(
       () => _parse(

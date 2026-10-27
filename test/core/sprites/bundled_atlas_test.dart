@@ -148,7 +148,7 @@ void main() {
   });
 
   test('sticky goo rim keeps its 768 x 160 strip', () {
-    final rim = PowerUpSprites.stickyGooRim!;
+    final rim = SpriteRegistry.frame(PowerUpSprites.stickyGooRimId)!;
     expect((rim.width, rim.height), (768, 160));
   });
 }

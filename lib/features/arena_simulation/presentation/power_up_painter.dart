@@ -2219,12 +2219,16 @@ class PowerUpPainter {
     return math.atan2(toward.dy, toward.dx) + spread;
   }
 
-  /// Center of the held item's sprite.
+  /// Center of the held item's sprite. [gripInset] pulls it in along the
+  /// aim (ball radii); [gripSide] moves it across the aim, to the ball's
+  /// right for slot 0 and mirrored for the second hand (slot 1). A shield
+  /// ignores both and keeps hugging the ball.
   static Offset heldCenter(
     SimulationBall ball, {
     PowerUpKind? weapon,
     int slot = 0,
     double? gripInset,
+    double gripSide = 0,
   }) {
     final held = weapon ?? ball.held;
     final angle = heldAngle(ball, weapon: held, slot: slot);
@@ -2243,7 +2247,19 @@ class PowerUpPainter {
         (held == PowerUpKind.shield
             ? baseDistance
             : math.max(0.1, baseDistance - inset));
-    return ball.position + dir * distance;
+    final center = ball.position + dir * distance;
+    if (held == PowerUpKind.shield || gripSide == 0) return center;
+    final side = gripSide.clamp(-1.5, 1.5) * (slot == 1 ? -1 : 1);
+    return center + Offset(-dir.dy, dir.dx) * (ball.radius * side);
+  }
+
+  /// The angle a held sprite is drawn at: the aim [angle] plus the skill's
+  /// grip rotation in [rotationDegrees], mirrored when the sprite flips
+  /// (it points left), so a slanted sprite is corrected on both sides.
+  static double heldSpriteAngle(double angle, double rotationDegrees) {
+    if (rotationDegrees == 0) return angle;
+    final rad = rotationDegrees.clamp(-180.0, 180.0) * math.pi / 180;
+    return math.cos(angle) < 0 ? angle - rad : angle + rad;
   }
 
   /// Yellow lightning streaks behind a ball while the Speed power-up is
@@ -2328,6 +2344,8 @@ class PowerUpPainter {
     double Function(PowerUpKind kind, int slot)? weaponDisplayScale,
     double Function(PowerUpKind kind)? effectDisplayScale,
     double Function(PowerUpKind kind, int slot)? weaponGripInset,
+    double Function(PowerUpKind kind, int slot)? weaponGripSide,
+    double Function(PowerUpKind kind, int slot)? weaponGripRotation,
     double Function(PowerUpKind kind)? skillRange,
     double Function(PowerUpKind kind)? handEffectScale,
     Color Function(PowerUpKind kind)? handEffectColor,
@@ -2949,6 +2967,8 @@ class PowerUpPainter {
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),
+            gripSide: weaponGripSide?.call(weapon, slot) ?? 0,
+            gripRotation: weaponGripRotation?.call(weapon, slot) ?? 0,
             handEffectScale: handEffectScale?.call(weapon) ?? 1,
             handEffectColor: handEffectColor?.call(weapon),
             artwork: artworkKind?.call(weapon, slot) ?? weapon,
@@ -3009,6 +3029,8 @@ class PowerUpPainter {
     bool useSprite = true,
     double displayScale = 1,
     double? gripInset,
+    double gripSide = 0,
+    double gripRotation = 0,
     double handEffectScale = 1,
     Color? handEffectColor,
     PowerUpKind? artwork,
@@ -3071,7 +3093,9 @@ class PowerUpPainter {
           sprite,
           heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset),
           ball.radius * 0.7 * displayScale,
-          angle + math.pi / 2,
+          angle +
+              math.pi / 2 +
+              gripRotation.clamp(-180.0, 180.0) * math.pi / 180,
           anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(art)),
         );
       } else {
@@ -3090,6 +3114,7 @@ class PowerUpPainter {
         weapon: held,
         slot: slot,
         gripInset: gripInset,
+        gripSide: gripSide,
       );
       final r = math.max(
         6.0,
@@ -3105,7 +3130,13 @@ class PowerUpPainter {
     final angle = baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
     final dir = Offset(math.cos(angle), math.sin(angle));
     final center =
-        heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset) +
+        heldCenter(
+          ball,
+          weapon: held,
+          slot: slot,
+          gripInset: gripInset,
+          gripSide: gripSide,
+        ) +
         Offset(
           math.sin(drop * math.pi) * ball.radius * 0.25,
           drop * drop * ball.radius * 2.2,
@@ -3115,7 +3146,7 @@ class PowerUpPainter {
       sprite,
       center,
       ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
-      angle,
+      heldSpriteAngle(angle, gripRotation),
       iconAngle: _iconAngle[art] ?? 0,
       flip: dir.dx < 0,
       opacity: 1 - drop * drop,

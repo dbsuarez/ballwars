@@ -95,6 +95,8 @@ class SkillDefinition {
     this.pickupDisplayScale = 1,
     this.effectDisplayScale = 1,
     this.weaponGripInset = 0,
+    this.weaponGripSide = 0,
+    this.weaponGripRotation = 0,
     this.effectStrength = 1,
     this.healing = 10,
     this.shieldHits = 1,
@@ -157,6 +159,15 @@ class SkillDefinition {
   final double pickupDisplayScale;
   final double effectDisplayScale;
   final double weaponGripInset;
+
+  /// Moves the held weapon across the aim line, in ball radii. Positive is
+  /// the ball's right of the aim for the first hand; the second hand
+  /// (dual wield) mirrors it.
+  final double weaponGripSide;
+
+  /// Degrees added to the held sprite's drawn angle, mirrored when the
+  /// sprite flips, so a slanted sprite sits straight on both sides.
+  final double weaponGripRotation;
   final double effectStrength;
   final double healing;
   final int shieldHits;
@@ -305,6 +316,8 @@ class SkillDefinition {
     double? pickupDisplayScale,
     double? effectDisplayScale,
     double? weaponGripInset,
+    double? weaponGripSide,
+    double? weaponGripRotation,
     double? effectStrength,
     double? healing,
     int? shieldHits,
@@ -366,6 +379,8 @@ class SkillDefinition {
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
     effectDisplayScale: effectDisplayScale ?? this.effectDisplayScale,
     weaponGripInset: weaponGripInset ?? this.weaponGripInset,
+    weaponGripSide: weaponGripSide ?? this.weaponGripSide,
+    weaponGripRotation: weaponGripRotation ?? this.weaponGripRotation,
     effectStrength: effectStrength ?? this.effectStrength,
     healing: healing ?? this.healing,
     shieldHits: shieldHits ?? this.shieldHits,
@@ -440,6 +455,8 @@ class SkillDefinition {
     'pickup_display_scale': pickupDisplayScale,
     'effect_display_scale': effectDisplayScale,
     'weapon_grip_inset': weaponGripInset,
+    'weapon_grip_side': weaponGripSide,
+    'weapon_grip_rotation': weaponGripRotation,
     'effect_strength': effectStrength,
     'healing': healing,
     'shield_hits': shieldHits,
@@ -524,6 +541,8 @@ class SkillDefinition {
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,
       effectDisplayScale: decimal('effect_display_scale') ?? 1,
       weaponGripInset: decimal('weapon_grip_inset') ?? 0,
+      weaponGripSide: decimal('weapon_grip_side') ?? 0,
+      weaponGripRotation: decimal('weapon_grip_rotation') ?? 0,
       effectStrength: decimal('effect_strength') ?? 1,
       healing: decimal('healing') ?? 10,
       shieldHits: integer('shield_hits') ?? 1,
@@ -605,6 +624,8 @@ class SkillDefinition {
     pickupDisplayScale: pickupDisplayScale.clamp(0.25, 3),
     effectDisplayScale: effectDisplayScale.clamp(0.25, 3),
     weaponGripInset: weaponGripInset.clamp(0, 1.5),
+    weaponGripSide: weaponGripSide.clamp(-1.5, 1.5),
+    weaponGripRotation: weaponGripRotation.clamp(-180.0, 180.0),
     effectStrength: effectStrength.clamp(0, 10),
     healing: healing.clamp(0, 500),
     shieldHits: shieldHits.clamp(0, 20),
@@ -867,7 +888,9 @@ class SkillLibrary {
       if (next == null) return 'The skill it fires ("$id") no longer exists.';
       path.add(next.name);
       if (!seen.add(next.id)) return 'Loop: ${path.join(' → ')}.';
-      if (!firesProjectiles(next)) return '${next.name} does not fire projectiles.';
+      if (!firesProjectiles(next)) {
+        return '${next.name} does not fire projectiles.';
+      }
       id = next.payloadSkillId;
     }
     return null;
@@ -1087,7 +1110,8 @@ class SkillLibrary {
       for (final entry in overrides.entries) entry.key: entry.value.toJson(),
     },
     'custom': [for (final item in custom) item.toJson()],
-    if (calloutSeconds != defaultCalloutSeconds) 'callout_seconds': calloutSeconds,
+    if (calloutSeconds != defaultCalloutSeconds)
+      'callout_seconds': calloutSeconds,
     if (!skillsSetCallout) 'skills_set_callout': false,
     if (screenShake != defaultScreenShake) 'screen_shake': screenShake,
     if (!skillsSetScreenShake) 'skills_set_screen_shake': false,

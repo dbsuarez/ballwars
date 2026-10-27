@@ -408,6 +408,38 @@ void main() {
     }
   });
 
+  test('grip sideways and rotation round trip, clamp and default to 0', () {
+    final base = SkillLibrary.defaults.builtIn(
+      PowerUpKind.pistol,
+      PowerUpConfig.defaults,
+    );
+    expect(base.weaponGripSide, 0);
+    expect(base.weaponGripRotation, 0);
+    final json = base
+        .copyWith(weaponGripSide: -0.6, weaponGripRotation: 37.5)
+        .toJson();
+    expect(json['weapon_grip_side'], -0.6);
+    expect(json['weapon_grip_rotation'], 37.5);
+    final decoded = SkillDefinition.fromJson(json)!;
+    expect(decoded.weaponGripSide, -0.6);
+    expect(decoded.weaponGripRotation, 37.5);
+
+    final wild = SkillDefinition.fromJson(
+      Map<String, Object?>.from(base.toJson())
+        ..['weapon_grip_side'] = 9
+        ..['weapon_grip_rotation'] = -400,
+    )!;
+    expect(wild.weaponGripSide, 1.5);
+    expect(wild.weaponGripRotation, -180);
+
+    final old = Map<String, Object?>.from(base.toJson())
+      ..remove('weapon_grip_side')
+      ..remove('weapon_grip_rotation');
+    final legacy = SkillDefinition.fromJson(old)!;
+    expect(legacy.weaponGripSide, 0);
+    expect(legacy.weaponGripRotation, 0);
+  });
+
   test('hilted weapons default to an inset hand grip', () {
     for (final kind in const [
       PowerUpKind.knife,

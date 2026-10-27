@@ -19,6 +19,7 @@ import '../../settings/presentation/power_up_test_screen.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
+import 'grip_preview_dialog.dart';
 import 'skill_artwork_tint.dart';
 
 class SkillManagementScreen extends StatefulWidget {
@@ -739,10 +740,15 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                         ),
                         items: [
                           for (final mode in EffectRenderMode.values)
-                            DropdownMenuItem(value: mode, child: Text(mode.label)),
+                            DropdownMenuItem(
+                              value: mode,
+                              child: Text(mode.label),
+                            ),
                         ],
                         onChanged: (mode) {
-                          if (mode != null) setState(() => _effectVisuals = mode);
+                          if (mode != null) {
+                            setState(() => _effectVisuals = mode);
+                          }
                         },
                       ),
                     ),
@@ -753,7 +759,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   'Sprite artwork or the lightweight vector look for projectiles, explosions and freeze. '
                   'Used by skills whose Effect visuals is "Use global setting"; a skill set to Sprite or Vector '
                   'keeps its own. Players can also pick their own in Match Setup > Appearance.',
-                  style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.35),
+                  style: AppText.ui(
+                    12,
+                    FontWeight.w500,
+                    color: c.muted,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -1061,6 +1072,12 @@ class _SkillEditorState extends State<_SkillEditor> {
     'weaponGripInset': TextEditingController(
       text: '${widget.skill.weaponGripInset}',
     ),
+    'weaponGripSide': TextEditingController(
+      text: '${widget.skill.weaponGripSide}',
+    ),
+    'weaponGripRotation': TextEditingController(
+      text: '${widget.skill.weaponGripRotation}',
+    ),
     'effectStrength': TextEditingController(
       text: '${widget.skill.effectStrength}',
     ),
@@ -1270,6 +1287,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('pickupDisplayScale', defaults.pickupDisplayScale);
       number('effectDisplayScale', defaults.effectDisplayScale);
       number('weaponGripInset', defaults.weaponGripInset);
+      number('weaponGripSide', defaults.weaponGripSide);
+      number('weaponGripRotation', defaults.weaponGripRotation);
       number('effectStrength', defaults.effectStrength);
       number('healing', defaults.healing);
       number('shieldHits', defaults.shieldHits);
@@ -1427,6 +1446,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       pickupDisplayScale: _double('pickupDisplayScale'),
       effectDisplayScale: _double('effectDisplayScale'),
       weaponGripInset: _double('weaponGripInset'),
+      weaponGripSide: _double('weaponGripSide'),
+      weaponGripRotation: _double('weaponGripRotation'),
       effectStrength: _double('effectStrength'),
       healing: _double('healing'),
       shieldHits: _int('shieldHits'),
@@ -1470,6 +1491,8 @@ class _SkillEditorState extends State<_SkillEditor> {
     'pickupDisplayScale': (0.25, 3),
     'effectDisplayScale': (0.25, 3),
     'weaponGripInset': (0, 1.5),
+    'weaponGripSide': (-1.5, 1.5),
+    'weaponGripRotation': (-180, 180),
     'projectileSize': (0.1, 5),
     'screenShake': (0, 1),
     'knockback': (0, 100),
@@ -1500,6 +1523,13 @@ class _SkillEditorState extends State<_SkillEditor> {
     'handEffectDuration': (0.1, 10),
   };
 
+  /// Number fields that may go below zero.
+  static const _signedKeys = {
+    'projectileSpin',
+    'weaponGripSide',
+    'weaponGripRotation',
+  };
+
   static const _wholeNumberKeys = {
     'count',
     'allOut',
@@ -1520,11 +1550,34 @@ class _SkillEditorState extends State<_SkillEditor> {
     );
   }
 
+  Future<void> _previewGrip() async {
+    final result = await GripPreviewDialog.show(
+      context,
+      kind: widget.skill.baseKind,
+      artwork: _artwork ?? widget.skill.baseKind,
+      tint: _spriteTint,
+      useSprite: _sprite == SkillVisualMode.sprite,
+      displayScale: _double('weaponDisplayScale') ?? 1,
+      grip: GripValues(
+        inset: _double('weaponGripInset') ?? 0,
+        side: _double('weaponGripSide') ?? 0,
+        rotation: _double('weaponGripRotation') ?? 0,
+      ),
+    );
+    if (result == null || !mounted) return;
+    String text(double v) => v.toStringAsFixed(2);
+    setState(() {
+      _numbers['weaponGripInset']!.text = text(result.inset);
+      _numbers['weaponGripSide']!.text = text(result.side);
+      _numbers['weaponGripRotation']!.text = text(result.rotation);
+    });
+  }
+
   String? _numberError(String key) {
     final raw = _numbers[key]?.text ?? '';
     final value = double.tryParse(raw);
     if (value == null || !value.isFinite) return 'Enter a number';
-    if (value < 0 && key != 'projectileSpin') return 'Must be zero or more';
+    if (value < 0 && !_signedKeys.contains(key)) return 'Must be zero or more';
     if (_wholeNumberKeys.contains(key) && value != value.roundToDouble()) {
       return 'Use a whole number';
     }
@@ -1562,10 +1615,16 @@ class _SkillEditorState extends State<_SkillEditor> {
           items: [
             DropdownMenuItem<PowerUpKind?>(
               value: null,
-              child: option(widget.skill.baseKind, 'Own look (${widget.skill.baseKind.label})'),
+              child: option(
+                widget.skill.baseKind,
+                'Own look (${widget.skill.baseKind.label})',
+              ),
             ),
             for (final kind in PowerUpKind.values.where((k) => k.isWeapon))
-              DropdownMenuItem<PowerUpKind?>(value: kind, child: option(kind, kind.label)),
+              DropdownMenuItem<PowerUpKind?>(
+                value: kind,
+                child: option(kind, kind.label),
+              ),
           ],
           onChanged: (value) => setState(() => _artwork = value),
         ),
@@ -1586,13 +1645,18 @@ class _SkillEditorState extends State<_SkillEditor> {
                 value: candidate.id,
                 child: option(
                   candidate.baseKind,
-                  candidate.custom ? candidate.name : '${candidate.name} (built-in)',
+                  candidate.custom
+                      ? candidate.name
+                      : '${candidate.name} (built-in)',
                 ),
               ),
             if (_payload != null && !known)
               DropdownMenuItem<String?>(
                 value: _payload,
-                child: Text('Missing: $_payload', overflow: TextOverflow.ellipsis),
+                child: Text(
+                  'Missing: $_payload',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
           ],
           onChanged: (value) => setState(() => _payload = value),
@@ -1701,6 +1765,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     textAlign: TextAlign.right,
                     keyboardType: TextInputType.numberWithOptions(
                       decimal: !wholeNumber,
+                      signed: _signedKeys.contains(key),
                     ),
                     inputFormatters: wholeNumber
                         ? [FilteringTextInputFormatter.digitsOnly]
@@ -1765,6 +1830,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                   'pickupDisplayScale',
                   'effectDisplayScale',
                   'weaponGripInset',
+                  'weaponGripSide',
+                  'weaponGripRotation',
                   'projectileSize',
                   'handEffectScale',
                 ].contains(key))
@@ -2570,9 +2637,32 @@ class _SkillEditorState extends State<_SkillEditor> {
                         ),
                         _number(
                           'weaponGripInset',
-                          'Grip inset',
+                          'Grip forward/back',
                           suffix: 'ball radius',
                         ),
+                        _number(
+                          'weaponGripSide',
+                          'Grip sideways',
+                          suffix: 'ball radius',
+                        ),
+                        _number(
+                          'weaponGripRotation',
+                          'Grip rotation',
+                          suffix: 'degrees',
+                        ),
+                        if (widget.skill.baseKind.isWeapon)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: OutlinedButton.icon(
+                                key: const ValueKey('skill-grip-preview'),
+                                onPressed: _previewGrip,
+                                icon: const Icon(Icons.pan_tool_alt_outlined),
+                                label: const Text('Preview grip'),
+                              ),
+                            ),
+                          ),
                       ],
                       if (_usesProjectileDelivery)
                         _number(

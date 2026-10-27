@@ -632,6 +632,22 @@ class ArenaPainter extends CustomPainter {
       }
     }
     BallHairPainter.paint(canvas, ball);
+    double gripSide(PowerUpKind kind, int slot) =>
+        state.powerUps
+            ?.visualSkill(
+              kind,
+              skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            )
+            .weaponGripSide ??
+        0;
+    double gripRotation(PowerUpKind kind, int slot) =>
+        state.powerUps
+            ?.visualSkill(
+              kind,
+              skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            )
+            .weaponGripRotation ??
+        0;
     PowerUpPainter.paintBallEffects(
       canvas,
       ball,
@@ -695,6 +711,8 @@ class ArenaPainter extends CustomPainter {
               )
               .weaponGripInset ??
           (kind.isBlade ? 0.2 : 0),
+      weaponGripSide: gripSide,
+      weaponGripRotation: gripRotation,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
       handEffectScale: (kind) =>
           state.powerUps?.handEffectScale(kind, ball: ball) ?? 1,
@@ -716,6 +734,8 @@ class ArenaPainter extends CustomPainter {
                 )
                 .weaponGripInset ??
             (kind.isBlade ? 0.2 : 0),
+        weaponGripSide: gripSide,
+        weaponGripRotation: gripRotation,
       );
     }
     if (ball.isGhost) canvas.restore();

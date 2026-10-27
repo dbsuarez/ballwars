@@ -429,9 +429,12 @@ class _HomeScreenState extends State<_HomeScreen> {
       packBalls: extraBalls,
     );
     if (link == null) return;
-    // The ball look is the viewer's own choice (cosmetic, not in links).
+    // The look the match was played with (saved replays and newer links); older links without it use
+    // the viewer's own choice.
     final look =
-        BallLook.byName(await DevicePrefs.read('look')) ?? BallLook.pictures;
+        link.look ??
+        BallLook.byName(await DevicePrefs.read('look')) ??
+        BallLook.pictures;
     final handsOnPictures = await DevicePrefs.read('hands-on-pictures') == '1';
     final whitePickupBackgrounds =
         await DevicePrefs.read('white-pickup-backgrounds') != '0';

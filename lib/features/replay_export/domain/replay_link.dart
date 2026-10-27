@@ -60,6 +60,10 @@ class ReplayLink {
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
 
+  /// The ball look the match was played with (Pictures or Faces). Cosmetic: it doesn't change the match,
+  /// so links without it (older ones) are still valid and use the viewer's own setting. `look=`.
+  final BallLook? look;
+
   const ReplayLink({
     required this.seed,
     required this.speedMultiplier,
@@ -73,6 +77,7 @@ class ReplayLink {
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
     this.question,
+    this.look,
     this.powerUps,
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
@@ -160,11 +165,12 @@ class ReplayLink {
         ? ''
         : '&blood=${bloodColor.toARGB32().toRadixString(16)}';
     final hair = randomizedHairstyles ? '&hair=1' : '';
+    final lookToken = look == null ? '' : '&look=${look!.name}';
     final effectVisuals = effectRenderMode == null
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
@@ -321,6 +327,7 @@ class ReplayLink {
       ballSize: ballSize,
       mode: mode,
       question: cleanQuestion(params['q']),
+      look: BallLook.byName(params['look']),
       powerUps: powerUps,
       tuning: tuning,
       dualWield: dualWield,

@@ -35,6 +35,9 @@ class ExportVideoDialog extends StatefulWidget {
   final Set<PowerUpKind>? powerUps;
   final Set<String>? customSkills;
   final List<int> nudgeSteps;
+
+  /// End battle step of an endless battle (null if it was never pressed).
+  final int? endStep;
   final PowerUpConfig tuning;
   final SkillLibrary skillLibrary;
   final bool endlessBattle;
@@ -62,6 +65,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
+    this.endStep,
     this.tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
     this.endlessBattle = false,
@@ -93,6 +97,7 @@ class ExportVideoDialog extends StatefulWidget {
     Set<PowerUpKind>? powerUps,
     Set<String>? customSkills,
     List<int> nudgeSteps = const [],
+    int? endStep,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     SkillLibrary skillLibrary = SkillLibrary.defaults,
     bool endlessBattle = false,
@@ -131,6 +136,7 @@ class ExportVideoDialog extends StatefulWidget {
         powerUps: powerUps,
         customSkills: customSkills,
         nudgeSteps: nudgeSteps,
+        endStep: endStep,
         tuning: tuning,
         skillLibrary: skillLibrary,
         endlessBattle: endlessBattle,
@@ -215,6 +221,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         powerUps: widget.powerUps,
         customSkills: widget.customSkills,
         nudgeSteps: widget.nudgeSteps,
+        endStep: widget.endStep,
         tuning: widget.tuning,
         skillLibrary: widget.skillLibrary,
         endlessBattle: widget.endlessBattle,

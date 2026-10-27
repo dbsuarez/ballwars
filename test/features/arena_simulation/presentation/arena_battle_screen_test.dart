@@ -117,6 +117,48 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('End battle sits right of Unstuck in endless battles and ends at the next KO', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        const MatchConfig(contestants: _balls, mode: MatchMode.arsenal, endlessBattle: true),
+        seed: 3,
+      ),
+    );
+    await tester.pump();
+    final unstuck = find.byKey(const ValueKey('arena-unstuck'));
+    final end = find.byKey(const ValueKey('arena-end-battle'));
+    expect(end, findsOneWidget);
+    expect(find.text('End battle'), findsOneWidget);
+    expect(tester.getCenter(end).dx, greaterThan(tester.getCenter(unstuck).dx));
+    expect(tester.getBottomLeft(end).dy, closeTo(tester.getBottomLeft(unstuck).dy, 1));
+    await tester.tap(end);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Ending after next KO'), findsOneWidget);
+    expect(tester.widget<OutlinedButton>(end).onPressed, isNull);
+    await _playUntilWinnerCard(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('End battle is not offered outside endless battles or in Mayhem', (tester) async {
+    await tester.pumpWidget(_app(const MatchConfig(contestants: _balls), seed: 3));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('arena-end-battle')), findsNothing);
+    await tester.pumpWidget(
+      _app(
+        const MatchConfig(
+          contestants: _balls,
+          mode: MatchMode.arsenal,
+          endlessBattle: true,
+          mayhem: true,
+        ),
+        seed: 3,
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const ValueKey('arena-end-battle')), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('pause button toggles between pause and play icons', (
     tester,
   ) async {

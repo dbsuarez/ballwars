@@ -479,6 +479,7 @@ class _HomeScreenState extends State<_HomeScreen> {
           ),
           seed: link.seed,
           nudgeSteps: link.nudgeSteps,
+          endStep: link.endStep,
         ),
       ),
     );

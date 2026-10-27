@@ -241,10 +241,31 @@ class MatchSimulationController {
     _nudgePending = true;
   }
 
+  /// End battle (endless, non-Mayhem): the step (1-based) at which the player asked to end the match
+  /// after the next knockout; null until then. Part of the match like the nudges.
+  int? get endStep => _endStep;
+  int? _endStep;
+  bool _endPending = false;
+
+  /// Whether End battle was pressed (the match ends at the next knockout).
+  bool get endRequested => _endPending || _endStep != null;
+
+  /// End battle button: from the next step, the next knockout ends the match with the usual tally
+  /// instead of a respawn. Recorded as a step, so replays and videos end at the same knockout.
+  void requestEndAfterKnockout() {
+    if (!endlessBattle || mayhem || _status == MatchStatus.finished) return;
+    if (endRequested) return;
+    _endPending = true;
+  }
+
   /// A nudge planned for the running step: the button's (recorded now, and the look-ahead plans again)
   /// or one from a replay. Directions come from the match's seeded random source.
   void _applyNudges() {
     final step = _stepCount + 1;
+    if (_endPending) {
+      _endPending = false;
+      _endStep = step;
+    }
     if (_nudgePending) {
       _nudgePending = false;
       if (!_nudgeSteps.contains(step)) {
@@ -288,8 +309,10 @@ class MatchSimulationController {
     this.automaticSpeedUp = true,
     this.randomizedHairstyles = false,
     List<int> nudgeSteps = const [],
+    int? endAfterKnockoutStep,
   }) : tuning = skillLibrary.applyTo(tuning),
        _nudgeSteps = [...nudgeSteps]..sort(),
+       _endStep = endlessBattle && !mayhem ? endAfterKnockoutStep : null,
        initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     // Same seed, setup and nudges: the steps are identical (slow motion only changes playback), so its
@@ -320,6 +343,7 @@ class MatchSimulationController {
       automaticSpeedUp: automaticSpeedUp,
       randomizedHairstyles: randomizedHairstyles,
       nudgeSteps: nudges,
+      endAfterKnockoutStep: endAfterKnockoutStep,
     );
     _predict();
     _rng = SeededRandom(this.seed);
@@ -689,7 +713,17 @@ class MatchSimulationController {
 
   void _finishMayhem() {
     if (_status == MatchStatus.finished || _balls.isEmpty) return;
-    final ranked = [..._balls]
+    final ranked = _tallyRanking();
+    _winnerId = ranked.first.config.id;
+    // The visual loser must match the bottom of the final KO/death/life tally.
+    _lastEliminatedId = ranked.length > 1 ? ranked.last.config.id : null;
+    _winningMove = 'Knockout lead';
+    _status = MatchStatus.finished;
+  }
+
+  /// Endless/Mayhem standings: most knockouts, then fewest times eliminated, then most life.
+  List<SimulationBall> _tallyRanking() {
+    return [..._balls]
       ..sort((a, b) {
         final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
           eliminations[a.config.id] ?? 0,
@@ -703,11 +737,6 @@ class MatchSimulationController {
         if (life != 0) return life;
         return _balls.indexOf(a).compareTo(_balls.indexOf(b));
       });
-    _winnerId = ranked.first.config.id;
-    // The visual loser must match the bottom of the final KO/death/life tally.
-    _lastEliminatedId = ranked.length > 1 ? ranked.last.config.id : null;
-    _winningMove = 'Knockout lead';
-    _status = MatchStatus.finished;
   }
 
   // Used only by the admin test arena. Empty during ordinary matches.
@@ -978,7 +1007,19 @@ class MatchSimulationController {
             ifAbsent: () => 1,
           );
         }
-        _respawn(ball);
+        // End battle was pressed: this knockout ends the match, so the ball stays down.
+        if (_endStep == null || _stepCount + 1 < _endStep!) _respawn(ball);
+      }
+      if (_endStep != null && _stepCount + 1 >= _endStep!) {
+        final defeated = eliminatedNow.last;
+        _winnerId = _tallyRanking().first.config.id;
+        _lastEliminatedId = defeated.config.id;
+        _winningMove = _lastMove[defeated] ?? 'Collision';
+        _status = MatchStatus.finished;
+        for (final ball in _balls) {
+          ball.lineCount = ball.fanLines.length;
+        }
+        return;
       }
       eliminatedNow.clear();
     }

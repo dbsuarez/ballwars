@@ -49,6 +49,10 @@ class ReplayLink {
   /// Unstuck nudges (steps) the match had; part of the match. `nudge=` (comma list).
   final List<int> nudgeSteps;
 
+  /// End battle: the step at which the player asked to end an endless (non-Mayhem) battle after the
+  /// next knockout; part of the match. `end=`, only with `endless=1`.
+  final int? endStep;
+
   /// Power-up modes: the power-up numbers the match was played with. Part of the match, so the changed
   /// values travel as `t=` ([PowerUpConfig.encode]); old links without it use the defaults.
   final PowerUpConfig tuning;
@@ -87,6 +91,7 @@ class ReplayLink {
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
+    this.endStep,
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
@@ -176,6 +181,9 @@ class ReplayLink {
     final lookToken = look == null ? '' : '&look=${look!.name}';
     final chosenCustom = customSkills;
     final nudgeToken = nudgeSteps.isEmpty ? '' : '&nudge=${nudgeSteps.join(',')}';
+    final endToken = endStep != null && mode == MatchMode.arsenal && endlessBattle && !mayhem
+        ? '&end=$endStep'
+        : '';
     final customToken = mode == MatchMode.threads || chosenCustom == null
         ? ''
         : '&cs=${(chosenCustom.toList()..sort()).join(',')}';
@@ -183,7 +191,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
@@ -285,6 +293,15 @@ class ReplayLink {
             tokens.length != mayhemBalls)) {
       return null;
     }
+    int? endStep;
+    final end = params['end'];
+    if (end != null) {
+      // Only with an endless (non-Mayhem) battle; a step within ten minutes of game time.
+      endStep = int.tryParse(end);
+      if (!endlessBattle || mayhem || endStep == null || endStep < 1 || endStep > 36000) {
+        return null;
+      }
+    }
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
     final minimumArenaScale = double.tryParse(params['minarena'] ?? '0.60');
@@ -362,6 +379,7 @@ class ReplayLink {
       powerUps: powerUps,
       customSkills: customSkills,
       nudgeSteps: nudgeSteps,
+      endStep: endStep,
       tuning: tuning,
       dualWield: dualWield,
       endlessBattle: endlessBattle,

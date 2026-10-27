@@ -712,4 +712,44 @@ void main() {
       expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
     }
   });
+
+  test('End battle step travels with endless links; bad values are rejected', () {
+    final presetIds = {for (final b in _presets) b.id};
+    final link = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+      endStep: 900,
+    ).toUri(presetIds: presetIds);
+    expect(link.queryParameters['end'], '900');
+    expect(ReplayLink.fromUri(link, presets: _presets)!.endStep, 900);
+    final plain = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      mode: MatchMode.arsenal,
+      endlessBattle: true,
+    ).toUri(presetIds: presetIds);
+    expect(plain.queryParameters.containsKey('end'), isFalse);
+    expect(ReplayLink.fromUri(plain, presets: _presets)!.endStep, isNull);
+    for (final bad in ['x', '0', '-3', '36001', '1,2']) {
+      final uri = link.replace(queryParameters: {...link.queryParameters, 'end': bad});
+      expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
+    }
+    final notEndless = Map.of(link.queryParameters)..remove('endless');
+    expect(
+      ReplayLink.fromUri(link.replace(queryParameters: notEndless), presets: _presets),
+      isNull,
+    );
+    // Not written outside endless battles.
+    final threads = ReplayLink(
+      seed: 5,
+      speedMultiplier: 1,
+      contestants: [_presets[0], _presets[1]],
+      endStep: 900,
+    ).toUri(presetIds: presetIds);
+    expect(threads.queryParameters.containsKey('end'), isFalse);
+  });
 }

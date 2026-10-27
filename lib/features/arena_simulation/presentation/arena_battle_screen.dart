@@ -40,11 +40,15 @@ class ArenaBattleScreen extends StatefulWidget {
   /// Unstuck nudges of a replayed match (steps), repeated in its first round.
   final List<int> nudgeSteps;
 
+  /// End battle step of a replayed endless match, repeated in its first round.
+  final int? endStep;
+
   const ArenaBattleScreen({
     super.key,
     required this.config,
     this.seed,
     this.nudgeSteps = const [],
+    this.endStep,
   });
 
   @override
@@ -170,7 +174,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   late int? _seedBase = widget.seed;
 
   /// Starts a match. [replaySeed] re-runs a finished match exactly (Replay); it isn't counted again.
-  void _initMatch({int? replaySeed, List<int> replayNudges = const []}) {
+  void _initMatch({
+    int? replaySeed,
+    List<int> replayNudges = const [],
+    int? replayEndStep,
+  }) {
     // A fixed seed (replay link) gives each round its own fixed seed.
     final seed =
         replaySeed ?? (_seedBase == null ? null : _seedBase! + _round - 1);
@@ -203,6 +211,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       nudgeSteps: replaySeed != null
           ? replayNudges
           : (_seedBase != null && _round == 1 ? widget.nudgeSteps : const []),
+      // And its End battle step, the same way.
+      endAfterKnockoutStep: replaySeed != null
+          ? replayEndStep
+          : (_seedBase != null && _round == 1 ? widget.endStep : null),
     );
     _roundCounted = replaySeed != null;
     _startCountdown = 3;
@@ -483,6 +495,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     effectRenderMode: widget.config.effectRenderMode,
     seed: _controller.seed,
     nudgeSteps: _controller.nudgeSteps,
+    endStep: _controller.endStep,
     speedMultiplier: widget.config.speedMultiplier,
     automaticSpeedUp: widget.config.automaticSpeedUp,
     showEffects: _showEffects,
@@ -545,15 +558,23 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _controller.requestNudge();
   }
 
+  /// End battle (endless, not Mayhem): the match ends at the next knockout with the usual finish. The
+  /// step is recorded with the match, so replays and videos end at the same knockout.
+  void _endBattle() {
+    _audio.click();
+    setState(_controller.requestEndAfterKnockout);
+  }
+
   /// Replay: watch the match that just ended again, exactly as it played (same seed; the round isn't
   /// counted twice).
   void _replay() {
     _audio.click();
     final seed = _controller.seed;
     final nudges = _controller.nudgeSteps;
+    final endStep = _controller.endStep;
     setState(() {
       _isPaused = false;
-      _initMatch(replaySeed: seed, replayNudges: nudges);
+      _initMatch(replaySeed: seed, replayNudges: nudges, replayEndStep: endStep);
     });
   }
 
@@ -827,18 +848,45 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         Positioned(
                           bottom: 0,
                           left: 0,
-                          child: Tooltip(
-                            message: 'Unstuck: push every ball in a random direction',
-                            child: OutlinedButton.icon(
-                              key: const ValueKey('arena-unstuck'),
-                              onPressed: finished ? null : _unstuck,
-                              icon: const Icon(Icons.open_with_rounded, size: 18),
-                              label: const Text('Unstuck'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Tooltip(
+                                message: 'Unstuck: push every ball in a random direction',
+                                child: OutlinedButton.icon(
+                                  key: const ValueKey('arena-unstuck'),
+                                  onPressed: finished ? null : _unstuck,
+                                  icon: const Icon(Icons.open_with_rounded, size: 18),
+                                  label: const Text('Unstuck'),
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (widget.config.endlessBattle && !widget.config.mayhem) ...[
+                                const SizedBox(width: 8),
+                                Tooltip(
+                                  message: 'End the battle after the next knockout',
+                                  child: OutlinedButton.icon(
+                                    key: const ValueKey('arena-end-battle'),
+                                    onPressed: finished || _controller.endRequested
+                                        ? null
+                                        : _endBattle,
+                                    icon: const Icon(Icons.flag_rounded, size: 18),
+                                    label: Text(
+                                      _controller.endRequested
+                                          ? 'Ending after next KO'
+                                          : 'End battle',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                         Positioned(
@@ -1008,6 +1056,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 contestants: widget.config.contestants,
                                 seed: _controller.seed,
                                 nudgeSteps: _controller.nudgeSteps,
+                                endStep: _controller.endStep,
                                 arenaRadius: _arenaRadius,
                                 speedMultiplier: widget.config.speedMultiplier,
                                 automaticSpeedUp:

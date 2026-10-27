@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/services.dart';
 
 import '../data/saved_replay_store.dart';
@@ -48,7 +49,7 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Could not create a share link. Your replay is safe on this device. Check your connection and try again. ${error is StateError ? error.message : ""}',
+              'Could not create a share link. Your replay is safe on this device. ${_shareFailureReason(error)}',
             ),
           ),
         );
@@ -56,6 +57,14 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
     } finally {
       if (mounted) setState(() => _sharingId = null);
     }
+  }
+
+  /// Why sharing failed, in plain words: the server's own reason when it answered, else a connection hint.
+  static String _shareFailureReason(Object error) {
+    if (error is StateError) return error.message;
+    if (error is PostgrestException) return 'The server said: ${error.message}';
+    if (error is AuthException) return 'Sign-in failed: ${error.message}';
+    return 'Check your connection and try again.';
   }
 
   Future<void> _rename(SavedReplay entry) async {

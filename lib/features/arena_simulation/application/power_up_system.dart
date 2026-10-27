@@ -124,6 +124,18 @@ class PowerUpSystem {
     skillSounds.update(cue, (value) => value + 1, ifAbsent: () => 1);
   }
 
+  void _announceSkill(SimulationBall ball, SkillDefinition skill) {
+    skillSounds.update(skill.soundCue, (value) => value + 1, ifAbsent: () => 1);
+    if (skill.yell.trim().isEmpty) return;
+    _yell(
+      ball,
+      skill.yell.trim(),
+      calloutStyle: CalloutStyle.values[skill.calloutStyle.index],
+      calloutBubble: CalloutBubble.values[skill.bubbleType.index],
+      durationSeconds: skill.bubbleDurationSeconds,
+    );
+  }
+
   bool usesSprite(PowerUpKind kind) =>
       match.skillLibrary.activeFor(kind, _t).spriteMode ==
       SkillVisualMode.sprite;
@@ -152,6 +164,7 @@ class PowerUpSystem {
       custom.isEmpty ? fallback : custom,
       calloutStyle: CalloutStyle.values[skill.calloutStyle.index],
       calloutBubble: CalloutBubble.values[skill.bubbleType.index],
+      durationSeconds: skill.bubbleDurationSeconds,
     );
   }
 
@@ -178,6 +191,8 @@ class PowerUpSystem {
     ball
       ..held = null
       ..heldSecondary = null
+      ..heldSkillId = null
+      ..heldSecondarySkillId = null
       ..heldTwoHanded = false
       ..heldSecondaryTwoHanded = false
       ..speedLeft = 0
@@ -461,12 +476,8 @@ class PowerUpSystem {
       : ball.fanLines.length.toDouble();
 
   Iterable<SkillDefinition> _activeComposedSkills(SkillTrigger trigger) sync* {
-    for (final kind in PowerUpKind.values) {
-      final skill = match.skillLibrary.activeFor(kind, _t);
-      if (skill.custom &&
-          skill.enabled &&
-          skill.isComposed &&
-          skill.trigger == trigger) {
+    for (final skill in match.skillLibrary.custom) {
+      if (skill.enabled && skill.isComposed && skill.trigger == trigger) {
         yield skill;
       }
     }
@@ -559,7 +570,15 @@ class PowerUpSystem {
       return;
     }
     pickups++;
-    final activeSkill = match.skillLibrary.activeFor(p.kind, _t);
+    final matchingCustom = match.skillLibrary.custom
+        .where((skill) => skill.enabled && skill.baseKind == p.kind)
+        .toList();
+    final activeSkill = p.skillId != null
+        ? match.skillLibrary.byId(p.skillId!, _t) ??
+              match.skillLibrary.builtIn(p.kind, _t)
+        : matchingCustom.length == 1
+        ? matchingCustom.single
+        : match.skillLibrary.builtIn(p.kind, _t);
     if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
       _executeComposed(ball, activeSkill);
       return;
@@ -643,6 +662,7 @@ class PowerUpSystem {
           p.kind,
           dualWield: match.dualWield,
           twoHanded: _twoHandedOverride(activeSkill),
+          skillId: activeSkill.id,
         );
         // All-Out sword sweep: for a moment the new blade rakes through threads with a wider reach.
         if (p.kind.isBlade && match.mode == MatchMode.allOut) {
@@ -1513,6 +1533,20 @@ class PowerUpSystem {
     if (eligibleKinds.isEmpty && forcedKind == null) return;
     final kind =
         forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
+    final variants = match.skillLibrary.custom
+        .where(
+          (skill) =>
+              skill.enabled &&
+              skill.baseKind == kind &&
+              (skill.trigger == SkillTrigger.pickup ||
+                  skill.trigger == SkillTrigger.aimedFire),
+        )
+        .toList();
+    final selectedSkill = forcedKind == null && variants.isNotEmpty
+        ? [match.skillLibrary.builtIn(kind, _t), ...variants][rng.nextInt(
+            variants.length + 1,
+          )]
+        : match.skillLibrary.builtIn(kind, _t);
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);
@@ -1612,6 +1646,7 @@ class PowerUpSystem {
         kind: kind,
         position: spot,
         spawnStep: number,
+        skillId: selectedSkill.id,
       );
       field.add(spawned);
       if (field.length > PowerUpTuning.maxOnField(_ballCount)) {
@@ -1834,8 +1869,7 @@ class PowerUpSystem {
         _composedProjectiles[shot] = skill;
         shots++;
       }
-      _skillSound(skill.baseKind);
-      if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
+      _announceSkill(owner, skill);
       return;
     }
     _executeComposed(owner, skill, primary: target);
@@ -1902,8 +1936,7 @@ class PowerUpSystem {
         ),
       );
     }
-    _skillSound(skill.baseKind);
-    if (skill.yell.isNotEmpty) _skillYell(owner, skill.baseKind, skill.yell);
+    _announceSkill(owner, skill);
   }
 
   void _applyComposedEffects(
@@ -1942,14 +1975,7 @@ class PowerUpSystem {
         scheduled.skill,
       );
       if (scheduled.announceOnNext) {
-        _skillSound(scheduled.skill.baseKind);
-        if (scheduled.skill.yell.isNotEmpty) {
-          _skillYell(
-            scheduled.owner,
-            scheduled.skill.baseKind,
-            scheduled.skill.yell,
-          );
-        }
+        _announceSkill(scheduled.owner, scheduled.skill);
         scheduled.announceOnNext = false;
       }
       scheduled.repeatsLeft--;
@@ -2079,12 +2105,15 @@ class PowerUpSystem {
             skill.baseKind,
             dualWield: match.dualWield,
             twoHanded: _twoHandedOverride(skill),
+            skillId: skill.id,
           );
         }
       case SkillEffectType.disarm:
         target
           ..held = null
           ..heldSecondary = null
+          ..heldSkillId = null
+          ..heldSecondarySkillId = null
           ..heldTwoHanded = false
           ..heldSecondaryTwoHanded = false;
       case null:
@@ -2133,8 +2162,14 @@ class PowerUpSystem {
         continue;
       }
       final bursting = ball.burstLeft > 0;
-      final guns = ball.equippedWeapons.where((weapon) {
-        final skill = match.skillLibrary.activeFor(weapon, _t);
+      final equipped = <({PowerUpKind kind, String? skillId})>[
+        if (ball.held != null) (kind: ball.held!, skillId: ball.heldSkillId),
+        if (ball.heldSecondary != null)
+          (kind: ball.heldSecondary!, skillId: ball.heldSecondarySkillId),
+      ];
+      final guns = equipped.where((entry) {
+        final weapon = entry.kind;
+        final skill = _skillForId(weapon, entry.skillId);
         final canAim = skill.isComposed
             ? skill.trigger == SkillTrigger.aimedFire
             : weapon.isGun;
@@ -2166,9 +2201,10 @@ class PowerUpSystem {
         gatlingShots++;
         ball.burstLeft--;
       } else {
-        for (final kind in guns) {
+        for (final entry in guns) {
+          final kind = entry.kind;
           _holdFiredWeapon(ball, kind);
-          final composed = match.skillLibrary.activeFor(kind, _t);
+          final composed = _skillForId(kind, entry.skillId);
           if (composed.isComposed &&
               composed.trigger == SkillTrigger.aimedFire) {
             _launchComposed(ball, target, composed);
@@ -2251,6 +2287,13 @@ class PowerUpSystem {
         ball.aimTarget = null;
       }
     }
+  }
+
+  SkillDefinition _skillForId(PowerUpKind kind, String? id) {
+    return id == null
+        ? match.skillLibrary.builtIn(kind, _t)
+        : match.skillLibrary.byId(id, _t) ??
+              match.skillLibrary.builtIn(kind, _t);
   }
 
   /// A hook caught [target]: a held shield blocks it (and breaks); otherwise [owner] yells and starts
@@ -2701,9 +2744,9 @@ class PowerUpSystem {
           }
         }
       }
-      if ((p.kind == PowerUpKind.boomerang ||
-              composedSkill?.returnsToOrigin == true) &&
-          p.returning) {
+      final returnsToOrigin =
+          composedSkill?.returnsToOrigin ?? (p.kind == PowerUpKind.boomerang);
+      if (returnsToOrigin && p.returning) {
         final returnSpot = p.returnTo ?? p.owner.position;
         final home = returnSpot - from;
         if (home.distance <= p.owner.radius * 1.15) {
@@ -2734,9 +2777,7 @@ class PowerUpSystem {
         if (identical(ball, p.owner) ||
             ball.isEliminated ||
             ball.isGhost ||
-            ((p.kind == PowerUpKind.boomerang ||
-                    _composedProjectiles[p]?.returnsToOrigin == true) &&
-                p.hitTargets.contains(ball))) {
+            (returnsToOrigin && p.hitTargets.contains(ball))) {
           continue;
         }
         final t = _entry(
@@ -2817,13 +2858,41 @@ class PowerUpSystem {
           _yell(struck, 'RETURN TO SENDER!');
           continue;
         }
-        p.spent = p.kind != PowerUpKind.boomerang;
+        final composed = _composedProjectiles[p];
+        p.spent = composed == null
+            ? p.kind != PowerUpKind.boomerang
+            : !composed.returnsToOrigin;
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
         } else {
-          final composed = _composedProjectiles[p];
           if (composed != null) {
-            _executeComposed(p.owner, composed, primary: struck);
+            if (composed.explodesOnImpact) {
+              final radius = match.arenaRadius * composed.range;
+              explosions.add(
+                Explosion(
+                  position: end,
+                  radius: radius,
+                  kind: composed.baseKind,
+                ),
+              );
+              _applyComposedEffects(
+                p.owner,
+                balls.where(
+                  (ball) =>
+                      !identical(ball, p.owner) &&
+                      _alive(ball) &&
+                      (ball.position - end).distance <= radius + ball.radius,
+                ),
+                composed,
+              );
+              if (composed.screenShake > 0) {
+                weaponImpacts.add(
+                  WeaponImpact(position: end, strength: composed.screenShake),
+                );
+              }
+            } else {
+              _executeComposed(p.owner, composed, primary: struck);
+            }
             p.hitTargets.add(struck);
             if (composed.returnsToOrigin) {
               p.returning = true;
@@ -2851,8 +2920,7 @@ class PowerUpSystem {
       } else if (end.distance >= match.arenaRadius &&
           p.kind != PowerUpKind.rocketLauncher) {
         final composed = _composedProjectiles[p];
-        if (p.kind == PowerUpKind.boomerang ||
-            composed?.returnsToOrigin == true) {
+        if (composed?.returnsToOrigin ?? (p.kind == PowerUpKind.boomerang)) {
           p
             ..position = end / end.distance * (match.arenaRadius - 2)
             ..returning = true;
@@ -3124,6 +3192,7 @@ class PowerUpSystem {
     String text, {
     CalloutStyle calloutStyle = CalloutStyle.normal,
     CalloutBubble calloutBubble = CalloutBubble.shout,
+    double durationSeconds = FloatingText.defaultLifespan,
   }) {
     match.state.floatingTexts.spawn(
       ball.position - Offset(0, ball.radius * 1.4),
@@ -3133,6 +3202,7 @@ class PowerUpSystem {
       calloutStyle: calloutStyle,
       calloutBubble: calloutBubble,
       attachedTo: ball,
+      lifespan: durationSeconds,
     );
   }
 

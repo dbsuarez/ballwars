@@ -53,6 +53,10 @@ enum SkillBubbleType { shout, speech, thought, radio }
 
 enum SkillHandedness { carrierDefault, oneHanded, twoHanded }
 
+enum SkillCategory { weapon, powerUp, trap, arenaTrap }
+
+enum SkillPurpose { attack, recovery, defense, hybrid, utility }
+
 class SkillDefinition {
   static const List<String> soundCues = [
     'shot',
@@ -69,6 +73,7 @@ class SkillDefinition {
     required this.id,
     required this.name,
     required this.baseKind,
+    this.category,
     this.enabled = true,
     this.custom = false,
     this.arsenalDamage,
@@ -114,11 +119,14 @@ class SkillDefinition {
     this.yell = '',
     this.calloutStyle = SkillCalloutStyle.normal,
     this.bubbleType = SkillBubbleType.shout,
+    this.bubbleDurationSeconds = 1.2,
+    this.explodesOnImpact = false,
   });
 
   final String id;
   final String name;
   final PowerUpKind baseKind;
+  final SkillCategory? category;
   final bool enabled;
   final bool custom;
   final double? arsenalDamage;
@@ -164,6 +172,37 @@ class SkillDefinition {
   final String yell;
   final SkillCalloutStyle calloutStyle;
   final SkillBubbleType bubbleType;
+  final double bubbleDurationSeconds;
+  final bool explodesOnImpact;
+  SkillCategory get resolvedCategory => category ?? _legacyCategory(baseKind);
+  bool get canDamage =>
+      (arsenalDamage ?? 0) > 0 ||
+      (allOutDamage ?? 0) > 0 ||
+      (dotArsenalDamage ?? 0) > 0 ||
+      (dotAllOutDamage ?? 0) > 0 ||
+      effectType == SkillEffectType.damage ||
+      effectType == SkillEffectType.damageOverTime ||
+      secondaryEffectType == SkillEffectType.damage ||
+      secondaryEffectType == SkillEffectType.damageOverTime;
+  bool get canHeal =>
+      effectType == SkillEffectType.heal ||
+      secondaryEffectType == SkillEffectType.heal;
+  bool get canDefend =>
+      effectType == SkillEffectType.shield ||
+      secondaryEffectType == SkillEffectType.shield;
+  SkillPurpose get purpose {
+    final count = [
+      canDamage,
+      canHeal,
+      canDefend,
+    ].where((value) => value).length;
+    if (count > 1) return SkillPurpose.hybrid;
+    if (canDamage) return SkillPurpose.attack;
+    if (canHeal) return SkillPurpose.recovery;
+    if (canDefend) return SkillPurpose.defense;
+    return SkillPurpose.utility;
+  }
+
   bool get isComposed =>
       trigger != null &&
       targeting != null &&
@@ -202,6 +241,7 @@ class SkillDefinition {
     String? name,
     bool? enabled,
     bool? custom,
+    SkillCategory? category,
     double? arsenalDamage,
     int? allOutDamage,
     double? dotArsenalDamage,
@@ -245,10 +285,13 @@ class SkillDefinition {
     String? yell,
     SkillCalloutStyle? calloutStyle,
     SkillBubbleType? bubbleType,
+    double? bubbleDurationSeconds,
+    bool? explodesOnImpact,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
     baseKind: baseKind,
+    category: category ?? this.category,
     enabled: enabled ?? this.enabled,
     custom: custom ?? this.custom,
     arsenalDamage: arsenalDamage ?? this.arsenalDamage,
@@ -298,12 +341,15 @@ class SkillDefinition {
     yell: yell ?? this.yell,
     calloutStyle: calloutStyle ?? this.calloutStyle,
     bubbleType: bubbleType ?? this.bubbleType,
+    bubbleDurationSeconds: bubbleDurationSeconds ?? this.bubbleDurationSeconds,
+    explodesOnImpact: explodesOnImpact ?? this.explodesOnImpact,
   );
 
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
     'base': baseKind.name,
+    'category': resolvedCategory.name,
     'enabled': enabled,
     'custom': custom,
     if (arsenalDamage != null) 'arsenal_damage': arsenalDamage,
@@ -350,6 +396,8 @@ class SkillDefinition {
     if (yell.isNotEmpty) 'yell': yell,
     'callout_style': calloutStyle.name,
     'bubble_type': bubbleType.name,
+    'bubble_duration_seconds': bubbleDurationSeconds,
+    'explodes_on_impact': explodesOnImpact,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -376,6 +424,7 @@ class SkillDefinition {
       id: id,
       name: name.trim(),
       baseKind: kinds.first,
+      category: nullableEnum('category', SkillCategory.values),
       enabled: value['enabled'] as bool? ?? true,
       custom: value['custom'] as bool? ?? id.startsWith('custom.'),
       arsenalDamage: decimal('arsenal_damage'),
@@ -444,6 +493,8 @@ class SkillDefinition {
         SkillBubbleType.values,
         SkillBubbleType.shout,
       ),
+      bubbleDurationSeconds: decimal('bubble_duration_seconds') ?? 1.2,
+      explodesOnImpact: value['explodes_on_impact'] as bool? ?? false,
     ).validated();
   }
 
@@ -468,7 +519,8 @@ class SkillDefinition {
     shieldHits: shieldHits.clamp(0, 20),
     frozenDamageMultiplier: frozenDamageMultiplier.clamp(1, 5),
     frozenCollisionDamage: frozenCollisionDamage.clamp(0, 200),
-    knockback: knockback.clamp(0, 10),
+    knockback: knockback.clamp(0, 100),
+    bubbleDurationSeconds: bubbleDurationSeconds.clamp(0.25, 10),
     repeatCount: repeatCount.clamp(1, 10),
     repeatIntervalSeconds: repeatIntervalSeconds.clamp(0.1, 10),
     startDelaySeconds: startDelaySeconds.clamp(0, 30),
@@ -486,7 +538,7 @@ class SkillDefinition {
     final issues = <String>[];
     if ((trigger == SkillTrigger.aimedFire ||
             trigger == SkillTrigger.collision) &&
-        !baseKind.isWeapon) {
+        resolvedCategory != SkillCategory.weapon) {
       issues.add('Aimed fire and collision triggers require a weapon carrier.');
     }
     if ((trigger == SkillTrigger.damageTaken ||
@@ -510,18 +562,25 @@ class SkillDefinition {
       issues.add('A boundary hazard cannot target its owner.');
     }
     final effects = [effectType, secondaryEffectType];
-    if (effects.contains(SkillEffectType.equipCarrier) && !baseKind.isWeapon) {
+    if (effects.contains(SkillEffectType.equipCarrier) &&
+        resolvedCategory != SkillCategory.weapon) {
       issues.add('Equip carrier requires a weapon carrier.');
     }
     return List.unmodifiable(issues);
   }
 }
 
+SkillCategory _legacyCategory(PowerUpKind kind) => kind.isWeapon
+    ? SkillCategory.weapon
+    : kind.isTrap
+    ? SkillCategory.trap
+    : SkillCategory.powerUp;
+
 const Object _unset = Object();
 
 class SkillLibrary {
   const SkillLibrary({
-    this.version = 1,
+    this.version = currentVersion,
     this.overrides = const {},
     this.custom = const [],
   });
@@ -531,7 +590,7 @@ class SkillLibrary {
   final List<SkillDefinition> custom;
 
   static const SkillLibrary defaults = SkillLibrary();
-  static const int currentVersion = 1;
+  static const int currentVersion = 2;
   static const int maxImportCharacters = 1000000;
   static const int maxImportedDefinitions = 512;
   static const int maxReplayCharacters = 48000;
@@ -541,13 +600,21 @@ class SkillLibrary {
   SkillDefinition builtIn(PowerUpKind kind, PowerUpConfig tuning) =>
       overrides['builtin.${kind.name}'] ?? _defaultFor(kind, tuning);
 
-  /// The enabled custom variant for [kind], or its built-in definition.
-  /// Only one custom variant of a base skill may be active at a time.
+  /// Legacy-kind lookup. Custom skills are resolved by their stable ID and do
+  /// not replace this built-in definition.
   SkillDefinition activeFor(PowerUpKind kind, PowerUpConfig tuning) =>
-      custom
-          .where((skill) => skill.enabled && skill.baseKind == kind)
-          .firstOrNull ??
       builtIn(kind, tuning);
+
+  SkillDefinition? byId(String id, PowerUpConfig tuning) {
+    if (id.startsWith('builtin.')) {
+      final kindName = id.substring('builtin.'.length);
+      final kind = PowerUpKind.values
+          .where((candidate) => candidate.name == kindName)
+          .firstOrNull;
+      return kind == null ? null : builtIn(kind, tuning);
+    }
+    return custom.where((skill) => skill.id == id).firstOrNull;
+  }
 
   List<SkillDefinition> all(PowerUpConfig tuning) => [
     for (final kind in PowerUpKind.values) builtIn(kind, tuning),
@@ -560,15 +627,7 @@ class SkillLibrary {
   ) {
     final valid = definition.validated();
     if (valid.custom) {
-      final next = [
-        for (final item in custom)
-          if (valid.enabled &&
-              item.id != valid.id &&
-              item.baseKind == valid.baseKind)
-            item.copyWith(enabled: false)
-          else
-            item,
-      ];
+      final next = [...custom];
       final index = next.indexWhere((item) => item.id == valid.id);
       if (index < 0) {
         next.add(valid);
@@ -582,7 +641,10 @@ class SkillLibrary {
       );
     }
     final next = Map<String, SkillDefinition>.of(overrides);
-    final original = _defaultFor(valid.baseKind, tuning);
+    // Compare with immutable factory defaults. [tuning] may already contain
+    // this library's applied values after a settings reload; comparing against
+    // it used to silently discard an edit as if it were the default.
+    final original = _defaultFor(valid.baseKind, PowerUpConfig.defaults);
     if (_same(valid, original)) {
       next.remove(valid.id);
     } else {
@@ -614,7 +676,7 @@ class SkillLibrary {
       id = 'custom.$prefix-$suffix';
       suffix++;
     }
-    return source.copyWith(id: id, name: name, custom: true, enabled: false);
+    return source.copyWith(id: id, name: name, custom: true, enabled: true);
   }
 
   /// Creates a behavior-composed skill that uses [carrier] only for its
@@ -651,9 +713,8 @@ class SkillLibrary {
   PowerUpConfig applyTo(PowerUpConfig tuning) {
     var result = tuning;
     for (final kind in PowerUpKind.values) {
-      final skill = activeFor(kind, tuning);
-      final explicitlyConfigured =
-          skill.custom || overrides.containsKey(skill.id);
+      final skill = builtIn(kind, tuning);
+      final explicitlyConfigured = overrides.containsKey(skill.id);
       if (skill.arsenalDamage != null &&
           (PowerUpConfig.damageKinds.contains(kind) ||
               kind == PowerUpKind.speed)) {
@@ -813,7 +874,7 @@ class SkillLibrary {
       }
     }
     return SkillLibrary(
-      version: (value['version'] as num?)?.toInt().clamp(1, 100) ?? 1,
+      version: currentVersion,
       overrides: Map.unmodifiable(overrides),
       custom: List.unmodifiable(custom),
     );
@@ -834,9 +895,11 @@ class SkillLibrary {
       throw const FormatException('The JSON root must be an object.');
     }
     final version = decoded['version'];
-    if (version is! num || version.toInt() != currentVersion) {
+    if (version is! num ||
+        version.toInt() < 1 ||
+        version.toInt() > currentVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected $currentVersion.',
+        'Unsupported skill-library version. Expected 1-$currentVersion.',
       );
     }
     final overrides = decoded['overrides'];
@@ -866,14 +929,6 @@ class SkillLibrary {
     for (final skill in [...library.overrides.values, ...library.custom]) {
       if (!ids.add(skill.id)) {
         throw FormatException('Duplicate skill ID: ${skill.id}.');
-      }
-    }
-    for (final kind in PowerUpKind.values) {
-      if (library.custom.where((s) => s.baseKind == kind && s.enabled).length >
-          1) {
-        throw FormatException(
-          'Only one active custom skill may use ${kind.label}.',
-        );
       }
     }
     return library;
@@ -907,6 +962,7 @@ class SkillLibrary {
       id: 'builtin.${kind.name}',
       name: kind.label,
       baseKind: kind,
+      category: _legacyCategory(kind),
       arsenalDamage: damaging ? tuning.arenaDamage(kind) : null,
       allOutDamage: damaging ? tuning.allOutThreads(kind) : null,
       durationSeconds: duration,

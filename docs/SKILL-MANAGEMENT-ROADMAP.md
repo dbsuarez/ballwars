@@ -108,7 +108,7 @@ Replay and video remain last, by agreement.
 **Status: Complete**
 
 - [x] Lock mobile gameplay to portrait orientation.
-- [x] Remember match settings, including rounds, speed, mode, size, look, effects, finishers, Mayhem, and per-mode pickups.
+- [ ] Remember rounds, speed, size, look, effects, finishers, Mayhem, and pickup selections as a separate complete profile for each game mode (tracked in Phase 11).
 - [x] Let users enable or disable automatic per-minute battle acceleration and preserve the choice in replays and videos.
 - [x] Organize Admin Settings into clear category tabs without long scrolling.
 - [x] Rework legacy Power-up Numbers into Common, Arsenal, and All-Out tabs with fixed side-by-side Restore and Save actions.
@@ -187,6 +187,55 @@ Replay and video remain last, by agreement.
 - [x] Hide Replay Finisher whenever finishers are disabled.
 - [x] Keep interactive player controls out of exported replay video.
 
+## Phase 10 - Independent skill model and editor correctness (2026-10-27)
+
+Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
+
+**Status: Complete**
+
+- [x] Fix built-in skill persistence so edited Boomerang damage, knockback, and every exposed parameter survive Save, reload, and cross-device synchronization.
+- [x] Replace carrier-derived classification with an explicit skill category: Weapon, Power-up, Trap, or Arena trap.
+- [x] Add explicit capabilities/purpose so a skill may damage, heal, defend, or combine effects such as Vampire without exposing irrelevant fields.
+- [x] Make custom skills independent additions with their own identity and spawn eligibility instead of replacing the built-in item that supplied their carrier/icon.
+- [x] Remove remaining hard-coded behavior gates from `PowerUpKind`; composed/custom skills honor explosion, knockback, return-to-origin, delivery, targeting, and secondary effects at runtime.
+- [x] Make duplicated BOOM-MERANG support explosion plus knockback and obey disabled return-to-origin.
+- [x] Keep legacy built-ins backward compatible while migrating them into the same editable model.
+- [x] Fix Power-up Test category placement so Fried Chicken and every skill use their explicit category rather than being mounted as weapons.
+- [x] Restore live speech bubbles for built-in, edited, duplicated, and newly created skills.
+- [x] Add configurable speech-bubble duration and preserve it in live battles, previews, replays, and video snapshots.
+- [x] Give item-sprite and impact-sprite previews identical dimensions and alignment.
+- [x] Put arena-only traps in Skill Management's Traps category, visibly marked `Arena`.
+- [x] Add a generic code-drawn fallback icon for skills and arena traps without artwork.
+- [x] Never generate paid image assets automatically; provide generation prompts for externally produced assets and integrate supplied files.
+- [x] Move the admin Groups card to the Gameplay tab while preserving the legacy settings labels.
+
+## Phase 11 - Arena hazards, modes, and battle feedback (2026-10-27)
+
+**Status: Not started**
+
+- [ ] When Desert Quicksand releases/expires, expel affected balls away from its center and restore motion so nobody remains stranded.
+- [ ] Confirm Mayhem match time remains visible during the battle and on the result screen; add regression coverage for both.
+- [ ] Animate Neon Laser Gate glow, add matching crossing/hit SFX, and draw a visible dark emitter/source at each endpoint.
+- [ ] Audit and reuse the existing vine sprite for Wilderness Vine Snare, with a vector fallback only when unavailable.
+- [ ] Persist separate complete match-setting profiles for Threads, Arsenal, Mayhem, and All-Out.
+- [ ] Add a clear Saved Replays browser/player so users can list, open, replay, export, and delete saved replays instead of only relying on the last replay shortcut.
+- [ ] Make arena outer-glow width user-adjustable and replay-safe.
+- [ ] Add green and custom-picker blood colors and preserve them in settings/replays.
+- [ ] Aim Tornado before casting; show wind effects on the ball's hands instead of mounting the tornado artwork.
+- [ ] Add reusable configurable hand-effect visuals (asset/effect, scale, color, duration) and migrate Firewall and Tornado to them.
+- [ ] Add countdown SFX and delay match BGM until the countdown completes.
+
+## Phase 12 - Match setup information architecture and ball hair (2026-10-27)
+
+**Status: Not started**
+
+- [ ] Use Gameplay, Appearance, and Sound tabs in Match Settings for both list and card layouts.
+- [ ] Replace the generic `New Match` heading/action label with the selected mode: Threads, Arsenal, Mayhem, or All-Out.
+- [ ] Add a pre-match user toggle for randomized hairstyles.
+- [ ] Design 20 lightweight code-drawn hairstyles with independently assigned colors.
+- [ ] Assign unique hairstyles within each match and prevent hair color from matching the ball body color.
+- [ ] Preserve hairstyle assignments in replay data and exported video.
+
 ## Final completion checks
 
 - [ ] Final static analysis and automated tests pass.
@@ -198,5 +247,5 @@ Replay and video remain last, by agreement.
 ## Current position
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [ ] Phase 9 -> Fully complete
+[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [ ] Phase 11 -> [ ] Phase 12 -> Fully complete
 ```

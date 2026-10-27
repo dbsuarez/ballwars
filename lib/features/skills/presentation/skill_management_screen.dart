@@ -282,7 +282,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       itemBuilder: (context, index) {
         if (visibleHeader != null && index == 0) return visibleHeader;
         final skill = skills[index - (visibleHeader == null ? 0 : 1)];
-        final tierLabel = skill.baseKind.isTrap
+        final tierLabel =
+            skill.resolvedCategory == SkillCategory.trap ||
+                skill.resolvedCategory == SkillCategory.arenaTrap
             ? 'Special'
             : _tuning.rarityOf(skill.baseKind)!.label;
         final details = <String>[
@@ -303,20 +305,18 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               skill.name,
               key: ValueKey('skill-name-${skill.id}'),
               style: TextStyle(
-                color: skill.baseKind.isTrap
+                color:
+                    skill.resolvedCategory == SkillCategory.trap ||
+                        skill.resolvedCategory == SkillCategory.arenaTrap
                     ? const Color(0xFFFFD54F)
                     : _tuning.rarityOf(skill.baseKind)?.color,
                 fontWeight: FontWeight.w700,
               ),
             ),
             subtitle: Text(
-              '${skill.baseKind.isWeapon
-                  ? "Weapon"
-                  : skill.baseKind.isTrap
-                  ? "Trap"
-                  : "Power-up"}'
+              '${_categoryLabel(skill.resolvedCategory)}'
               '${details.isEmpty ? "" : " • ${details.join(" • ")}"}'
-              '${skill.custom && skill.enabled ? "\nReplaces ${skill.baseKind.label} in matches" : ""}',
+              '${skill.custom && skill.enabled ? "\nIndependent skill using ${skill.baseKind.label} artwork" : ""}',
             ),
             isThreeLine: skill.custom && skill.enabled,
             trailing: PopupMenuButton<String>(
@@ -344,11 +344,19 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
   }
 
-  static String _categoryOf(SkillDefinition skill) => skill.baseKind.isWeapon
-      ? 'Weapons'
-      : skill.baseKind.isTrap
-      ? 'Traps'
-      : 'Power-ups';
+  static String _categoryOf(SkillDefinition skill) =>
+      switch (skill.resolvedCategory) {
+        SkillCategory.weapon => 'Weapons',
+        SkillCategory.powerUp => 'Power-ups',
+        SkillCategory.trap || SkillCategory.arenaTrap => 'Traps',
+      };
+
+  static String _categoryLabel(SkillCategory category) => switch (category) {
+    SkillCategory.weapon => 'Weapon',
+    SkillCategory.powerUp => 'Power-up',
+    SkillCategory.trap => 'Trap',
+    SkillCategory.arenaTrap => 'Arena trap',
+  };
 
   Future<void> _editArenaTraps() async {
     final fields = PowerUpConfig.fields
@@ -482,7 +490,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       minVerticalPadding: 14,
       leading: const Icon(Icons.tune, color: Color(0xFFFFD54F), size: 34),
       title: const Text(
-        'Arena trap configuration',
+        'Arena • Arena trap configuration',
         style: TextStyle(fontWeight: FontWeight.w800),
       ),
       subtitle: Text(
@@ -578,8 +586,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
               child: Text(
-                'Built-in edits affect gameplay immediately. Activate a custom variant to replace its base skill; '
-                'only one variant per base skill can be active at a time.',
+                'Built-in edits affect gameplay immediately. Custom skills keep their own identity and may share a visual template without replacing one another.',
                 style: AppText.ui(
                   12,
                   FontWeight.w500,
@@ -719,6 +726,9 @@ class _SkillEditorState extends State<_SkillEditor> {
         text: '${widget.skill.triggerIntervalSeconds}',
       ),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
+    'bubbleDuration': TextEditingController(
+      text: '${widget.skill.bubbleDurationSeconds}',
+    ),
   };
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
@@ -734,6 +744,8 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillCalloutStyle _calloutStyle = widget.skill.calloutStyle;
   late SkillBubbleType _bubbleType = widget.skill.bubbleType;
   late SkillHandedness _handedness = widget.skill.handedness;
+  late SkillCategory _category = widget.skill.resolvedCategory;
+  late bool _explodesOnImpact = widget.skill.explodesOnImpact;
   late PowerUpRarity? _rarity = widget.rarity;
   late final _effectColor = TextEditingController(
     text: (widget.skill.effectColor & 0xFFFFFF)
@@ -829,6 +841,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       _calloutStyle = defaults.calloutStyle;
       _bubbleType = defaults.bubbleType;
       _handedness = defaults.handedness;
+      _category = defaults.resolvedCategory;
+      _explodesOnImpact = defaults.explodesOnImpact;
       _effectColor.text = (defaults.effectColor & 0xFFFFFF)
           .toRadixString(16)
           .padLeft(6, '0')
@@ -862,6 +876,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('cooldown', defaults.cooldownSeconds);
       number('screenShake', defaults.screenShake);
       number('triggerInterval', defaults.triggerIntervalSeconds);
+      number('bubbleDuration', defaults.bubbleDurationSeconds);
     });
   }
 
@@ -976,6 +991,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     return widget.skill.copyWith(
       name: _name.text.trim(),
       enabled: _enabled,
+      category: _category,
       arsenalDamage: _double('arsenal'),
       allOutDamage: _int('allOut'),
       dotArsenalDamage: _double('dotArsenal'),
@@ -1016,6 +1032,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       yell: _yell.text,
       calloutStyle: _calloutStyle,
       bubbleType: _bubbleType,
+      bubbleDurationSeconds: _double('bubbleDuration'),
+      explodesOnImpact: _explodesOnImpact,
       effectColor: _colorValue,
       screenShake: _double('screenShake'),
       handedness: _handedness,
@@ -1073,6 +1091,34 @@ class _SkillEditorState extends State<_SkillEditor> {
                 maxLength: 40,
                 decoration: const InputDecoration(labelText: 'Skill name'),
                 onChanged: (_) => setState(() {}),
+              ),
+              DropdownButtonFormField<SkillCategory>(
+                key: const ValueKey('skill-category'),
+                initialValue: _category,
+                decoration: InputDecoration(
+                  labelText: 'Category',
+                  helperText:
+                      'Purpose: ${result?.purpose.name ?? widget.skill.purpose.name}',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: SkillCategory.weapon,
+                    child: Text('Weapon'),
+                  ),
+                  DropdownMenuItem(
+                    value: SkillCategory.powerUp,
+                    child: Text('Power-up'),
+                  ),
+                  DropdownMenuItem(
+                    value: SkillCategory.trap,
+                    child: Text('Trap'),
+                  ),
+                  DropdownMenuItem(
+                    value: SkillCategory.arenaTrap,
+                    child: Text('Arena trap'),
+                  ),
+                ],
+                onChanged: (value) => setState(() => _category = value!),
               ),
               if (_rarity != null) ...[
                 const SizedBox(height: 8),
@@ -1154,6 +1200,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                 onChanged: (value) => setState(() => _bubbleType = value!),
               ),
               const SizedBox(height: 12),
+              _number('bubbleDuration', 'Speech bubble duration', suffix: 's'),
+              const SizedBox(height: 12),
               if (widget.skill.custom)
                 SwitchListTile(
                   key: const ValueKey('skill-enabled'),
@@ -1161,8 +1209,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                   title: const Text('Active in matches'),
                   subtitle: Text(
                     _enabled
-                        ? 'Replaces the built-in ${widget.skill.baseKind.label} skill.'
-                        : 'Saved as an inactive variant.',
+                        ? 'Available as an independent skill using ${widget.skill.baseKind.label} as its visual template.'
+                        : 'Saved but unavailable in matches.',
                   ),
                   value: _enabled,
                   onChanged: (value) => setState(() => _enabled = value),
@@ -1230,7 +1278,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     }
                   }),
                 ),
-                if (widget.skill.baseKind.isWeapon) ...[
+                if (_category == SkillCategory.weapon) ...[
                   const SizedBox(height: 4),
                   SwitchListTile.adaptive(
                     key: const ValueKey('skill-weapon-healing'),
@@ -1344,7 +1392,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                   ],
                 ),
                 _number('screenShake', 'Screen shake', suffix: '0-1'),
-                if (widget.skill.baseKind.isWeapon) ...[
+                if (_category == SkillCategory.weapon) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<SkillHandedness>(
                     key: const ValueKey('skill-handedness'),
@@ -1461,7 +1509,18 @@ class _SkillEditorState extends State<_SkillEditor> {
                       setState(() => _returnsToOrigin = value),
                   title: const Text('Return to launch point'),
                 ),
-              if (widget.skill.baseKind.isWeapon)
+              if (_usesProjectileDelivery)
+                SwitchListTile.adaptive(
+                  key: const ValueKey('skill-explosion'),
+                  value: _explodesOnImpact,
+                  onChanged: (value) =>
+                      setState(() => _explodesOnImpact = value),
+                  title: const Text('Explosion on impact'),
+                  subtitle: const Text(
+                    'Uses effect range, damage, color, sound, and shake.',
+                  ),
+                ),
+              if (_category == SkillCategory.weapon)
                 SwitchListTile.adaptive(
                   key: const ValueKey('skill-track-opponent'),
                   value: _trackNearestOpponent,
@@ -1485,7 +1544,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           mode: _sprite,
                           scale: _double('weaponDisplayScale') ?? 1,
                         ),
-                        if (widget.skill.baseKind.isWeapon) ...[
+                        if (_category == SkillCategory.weapon) ...[
                           const SizedBox(height: 8),
                           _number(
                             'weaponDisplayScale',

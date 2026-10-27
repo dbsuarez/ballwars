@@ -110,7 +110,7 @@ void main() {
     );
   });
 
-  test('duplicates get unique stable IDs and start disabled', () {
+  test('duplicates get unique stable IDs and start enabled', () {
     const tuning = PowerUpConfig.defaults;
     final source = SkillLibrary.defaults.builtIn(PowerUpKind.bow, tuning);
     final first = SkillLibrary.defaults.duplicate(source, 'Arrow Rain');
@@ -120,10 +120,10 @@ void main() {
     expect(first.id, 'custom.arrow-rain');
     expect(second.id, 'custom.arrow-rain-2');
     expect(first.custom, isTrue);
-    expect(first.enabled, isFalse);
+    expect(first.enabled, isTrue);
   });
 
-  test('one enabled custom variant replaces its built-in skill at runtime', () {
+  test('enabled custom skills sharing a template remain independent', () {
     const tuning = PowerUpConfig.defaults;
     final source = SkillLibrary.defaults.builtIn(PowerUpKind.pistol, tuning);
     final heavy = SkillLibrary.defaults
@@ -138,24 +138,28 @@ void main() {
         );
     final library = SkillLibrary.defaults.withDefinition(heavy, tuning);
 
-    expect(library.activeFor(PowerUpKind.pistol, tuning).name, 'Heavy Pistol');
-    expect(library.applyTo(tuning).arenaDamage(PowerUpKind.pistol), 44);
+    expect(library.activeFor(PowerUpKind.pistol, tuning).name, 'Pistol');
+    expect(
+      library.applyTo(tuning).arenaDamage(PowerUpKind.pistol),
+      tuning.arenaDamage(PowerUpKind.pistol),
+    );
     expect(
       library.applyTo(tuning).projectileSpeedRatio(PowerUpKind.pistol),
-      2.5,
+      tuning.bulletSpeedRatio,
     );
 
     final faster = library
         .duplicate(source, 'Faster Pistol')
         .copyWith(enabled: true);
     final replaced = library.withDefinition(faster, tuning);
-    expect(
-      replaced.activeFor(PowerUpKind.pistol, tuning).name,
-      'Faster Pistol',
-    );
+    expect(replaced.custom, hasLength(2));
     expect(
       replaced.custom.singleWhere((item) => item.id == heavy.id).enabled,
-      isFalse,
+      isTrue,
+    );
+    expect(
+      replaced.custom.singleWhere((item) => item.id == faster.id).enabled,
+      isTrue,
     );
   });
 
@@ -177,7 +181,49 @@ void main() {
     final skill = library.custom.single;
     expect(skill.arsenalDamage, 500);
     expect(skill.projectileCount, 100);
-    expect(skill.knockback, 10);
+    expect(skill.knockback, 99);
+  });
+
+  test(
+    'built-in edits persist when tuning already includes an earlier edit',
+    () {
+      const defaults = PowerUpConfig.defaults;
+      final first = SkillLibrary.defaults.withDefinition(
+        SkillLibrary.defaults
+            .builtIn(PowerUpKind.boomerang, defaults)
+            .copyWith(arsenalDamage: 8, knockback: 0),
+        defaults,
+      );
+      final applied = first.applyTo(defaults);
+      final edited = first.withDefinition(
+        first
+            .builtIn(PowerUpKind.boomerang, applied)
+            .copyWith(arsenalDamage: 7, knockback: 20),
+        applied,
+      );
+      final reopened = SkillLibrary.fromJson(edited.toJson());
+      final boomerang = reopened.builtIn(PowerUpKind.boomerang, defaults);
+
+      expect(boomerang.arsenalDamage, 7);
+      expect(boomerang.knockback, 20);
+    },
+  );
+
+  test('version one definitions infer category and migrate to version two', () {
+    final migrated = SkillLibrary.fromJson({
+      'version': 1,
+      'custom': [
+        {
+          'id': 'custom.snack',
+          'name': 'Snack',
+          'base': 'friedChicken',
+          'custom': true,
+        },
+      ],
+    });
+
+    expect(migrated.version, SkillLibrary.currentVersion);
+    expect(migrated.custom.single.resolvedCategory, SkillCategory.powerUp);
   });
 
   test('older saved built-ins recover their real arena yell', () {

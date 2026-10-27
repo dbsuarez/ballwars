@@ -222,8 +222,6 @@ void main() {
       const Offset(0, 300),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('skill-enabled')));
-    await tester.pump();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Custom'));
@@ -236,12 +234,7 @@ void main() {
     expect(result!.library.custom.single.name, 'Heavy Pistol');
     expect(result!.library.custom.single.arsenalDamage, 42);
     expect(result!.library.custom.single.enabled, isTrue);
-    expect(
-      result!.library
-          .applyTo(PowerUpConfig.defaults)
-          .arenaDamage(PowerUpKind.pistol),
-      42,
-    );
+    expect(result!.library.custom.single.arsenalDamage, 42);
   });
 
   testWidgets('arena trap tuning is available in the built-in Traps tab', (
@@ -336,21 +329,57 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Edit Gravity Burst'), findsOneWidget);
-    await tester.drag(find.byType(ListView).last, const Offset(0, -220));
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-trigger')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-bubble-type')),
+      find.byType(ListView).last,
+      const Offset(0, 300),
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('skill-bubble-type')), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('callout-bubble-shout')),
+      find.byType(ListView).last,
+      const Offset(0, 300),
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('callout-bubble-shout')), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-yell')),
+      find.byType(ListView).last,
+      const Offset(0, 300),
+    );
     await tester.enterText(find.byKey(const ValueKey('skill-yell')), 'GO!');
     await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('callout-style-preview')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
     final shortBubble = tester.getSize(
       find.byKey(const ValueKey('callout-style-preview')),
+    );
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('skill-yell')),
+      find.byType(ListView).last,
+      const Offset(0, 300),
     );
     await tester.enterText(
       find.byKey(const ValueKey('skill-yell')),
       'UNLEASH THE GRAVITY STORM!',
     );
     await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('callout-style-preview')),
+      find.byType(ListView).last,
+      const Offset(0, -300),
+    );
     final longBubble = tester.getSize(
       find.byKey(const ValueKey('callout-style-preview')),
     );

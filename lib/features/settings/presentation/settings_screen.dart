@@ -778,7 +778,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           );
                                         },
                                   child: const Text(
-                                    'Edit legacy power-up numbers',
+                                    'Edit power-up numbers (Legacy)',
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -813,7 +813,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           );
                                         },
                                   child: const Text(
-                                    'Edit legacy item rarities',
+                                    'Edit item rarities (Legacy)',
                                   ),
                                 ),
                               ],
@@ -1126,7 +1126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ],
                             ),
                           ),
-                        if (_settingsTab == 3 && widget.customGroups != null)
+                        if (_settingsTab == 1 && widget.customGroups != null)
                           _Section(
                             title: 'GROUPS',
                             child: Column(

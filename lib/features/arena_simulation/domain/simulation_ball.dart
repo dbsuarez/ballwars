@@ -25,6 +25,8 @@ class SimulationBall {
   /// Primary and optional secondary equipped weapon.
   PowerUpKind? held;
   PowerUpKind? heldSecondary;
+  String? heldSkillId;
+  String? heldSecondarySkillId;
   bool heldTwoHanded = false;
   bool heldSecondaryTwoHanded = false;
 
@@ -34,12 +36,15 @@ class SimulationBall {
     PowerUpKind weapon, {
     required bool dualWield,
     bool? twoHanded,
+    String? skillId,
   }) {
     assert(weapon.isWeapon);
     final usesTwoHands = twoHanded ?? weapon.isTwoHanded;
     if (!dualWield) {
       held = weapon;
       heldSecondary = null;
+      heldSkillId = skillId;
+      heldSecondarySkillId = null;
       heldTwoHanded = usesTwoHands;
       heldSecondaryTwoHanded = false;
       return;
@@ -50,6 +55,8 @@ class SimulationBall {
     if (usesTwoHands) {
       held = weapon;
       heldSecondary = null;
+      heldSkillId = skillId;
+      heldSecondarySkillId = null;
       heldTwoHanded = true;
       heldSecondaryTwoHanded = false;
       return;
@@ -57,6 +64,8 @@ class SimulationBall {
     if (heldTwoHanded) {
       held = weapon;
       heldSecondary = null;
+      heldSkillId = skillId;
+      heldSecondarySkillId = null;
       heldTwoHanded = false;
       heldSecondaryTwoHanded = false;
       return;
@@ -64,9 +73,11 @@ class SimulationBall {
 
     if (held == null) {
       held = weapon;
+      heldSkillId = skillId;
       heldTwoHanded = false;
     } else {
       heldSecondary = weapon;
+      heldSecondarySkillId = skillId;
       heldSecondaryTwoHanded = false;
     }
   }
@@ -74,11 +85,14 @@ class SimulationBall {
   void removeWeapon(PowerUpKind weapon) {
     if (held == weapon) {
       held = heldSecondary;
+      heldSkillId = heldSecondarySkillId;
       heldTwoHanded = heldSecondaryTwoHanded;
       heldSecondary = null;
+      heldSecondarySkillId = null;
       heldSecondaryTwoHanded = false;
     } else if (heldSecondary == weapon) {
       heldSecondary = null;
+      heldSecondarySkillId = null;
       heldSecondaryTwoHanded = false;
     }
   }

@@ -109,13 +109,18 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     if (allowed) await _loadRememberedChoices();
     final initialSkill = widget.initialSkill;
     if (allowed && initialSkill != null) {
-      _items[0] = initialSkill.baseKind;
-      _savedItems[0] = initialSkill.baseKind;
-      _pickerTabs[0] = initialSkill.baseKind.isWeapon
-          ? 0
-          : initialSkill.baseKind.isTrap
-          ? 2
-          : 1;
+      final category = initialSkill.resolvedCategory;
+      if (category == SkillCategory.weapon) {
+        _items[0] = initialSkill.baseKind;
+        _savedItems[0] = initialSkill.baseKind;
+        _pickerTabs[0] = 0;
+      } else if (category == SkillCategory.powerUp) {
+        _powerUps[0] = initialSkill.baseKind;
+        _pickerTabs[0] = 1;
+      } else {
+        _arenaTraps[0] = initialSkill.baseKind;
+        _pickerTabs[0] = 2;
+      }
     }
     if (!mounted) return;
     setState(() {
@@ -308,6 +313,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           kind: kind,
           position: ball.position,
           spawnStep: match.stepCount,
+          skillId: widget.initialSkill?.baseKind == kind
+              ? widget.initialSkill!.id
+              : null,
         ),
       );
     }

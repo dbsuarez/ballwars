@@ -226,9 +226,11 @@ class FieldPowerUp {
     required this.kind,
     required this.position,
     required this.spawnStep,
+    this.skillId,
   });
 
   final PowerUpKind kind;
+  final String? skillId;
   Offset position;
 
   /// Simulation step at which it appeared.

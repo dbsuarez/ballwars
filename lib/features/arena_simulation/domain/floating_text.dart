@@ -7,7 +7,7 @@ enum CalloutStyle { normal, rare, epic, special }
 enum CalloutBubble { shout, speech, thought, radio }
 
 class FloatingText {
-  static const double lifespan = 1.2;
+  static const double defaultLifespan = 1.2;
 
   Offset position;
   double age;
@@ -19,6 +19,7 @@ class FloatingText {
   final CalloutStyle calloutStyle;
   final CalloutBubble calloutBubble;
   final SimulationBall? attachedTo;
+  final double lifespan;
 
   FloatingText({
     required this.position,
@@ -28,6 +29,7 @@ class FloatingText {
     this.calloutStyle = CalloutStyle.normal,
     this.calloutBubble = CalloutBubble.shout,
     this.attachedTo,
+    this.lifespan = defaultLifespan,
     this.age = 0.0,
   });
 
@@ -49,6 +51,7 @@ class FloatingTextManager {
     CalloutStyle calloutStyle = CalloutStyle.normal,
     CalloutBubble calloutBubble = CalloutBubble.shout,
     SimulationBall? attachedTo,
+    double lifespan = FloatingText.defaultLifespan,
   }) {
     final item = FloatingText(
       position: position,
@@ -58,6 +61,7 @@ class FloatingTextManager {
       calloutStyle: calloutStyle,
       calloutBubble: calloutBubble,
       attachedTo: attachedTo,
+      lifespan: lifespan,
     );
     _items.add(item);
     return item;

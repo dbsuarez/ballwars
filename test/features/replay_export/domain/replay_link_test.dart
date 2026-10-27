@@ -594,10 +594,7 @@ void main() {
     ).toUri(presetIds: _presetIds);
 
     final restored = ReplayLink.fromUri(uri, presets: _presets)!;
-    final skill = restored.skillLibrary.activeFor(
-      PowerUpKind.pistol,
-      PowerUpConfig.defaults,
-    );
+    final skill = restored.skillLibrary.byId(draft.id, PowerUpConfig.defaults)!;
     expect(skill.name, 'Replay Bolt');
     expect(skill.arsenalDamage, 37);
     expect(skill.yell, 'SNAPSHOT!');
@@ -606,15 +603,10 @@ void main() {
       skill.copyWith(arsenalDamage: 99, yell: 'CHANGED!'),
       PowerUpConfig.defaults,
     );
-    expect(
-      changed
-          .activeFor(PowerUpKind.pistol, PowerUpConfig.defaults)
-          .arsenalDamage,
-      99,
-    );
+    expect(changed.byId(draft.id, PowerUpConfig.defaults)!.arsenalDamage, 99);
     expect(
       restored.skillLibrary
-          .activeFor(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .byId(draft.id, PowerUpConfig.defaults)!
           .arsenalDamage,
       37,
     );

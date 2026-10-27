@@ -29,6 +29,9 @@ class SpriteDef {
   /// Why bleeding is fine; required when [bleedOk] is true.
   final String? bleedNote;
 
+  /// Transparent margin in pixels kept on each side of the output image.
+  final int padding;
+
   const SpriteDef({
     required this.id,
     required this.frames,
@@ -39,6 +42,7 @@ class SpriteDef {
     this.stepsPerFrame = 4,
     this.bleedOk = false,
     this.bleedNote,
+    this.padding = 2,
   });
 }
 
@@ -129,8 +133,15 @@ class SpriteAtlas {
         'Sprite $id sharedBand and bleedOk must be true/false, bleedNote text',
       );
     }
+    final padding = v['padding'] ?? 2;
+    if (padding is! int || padding < 0) {
+      throw FormatException(
+        'Sprite $id padding must be a whole number of pixels, 0 or more',
+      );
+    }
     return SpriteDef(
       id: id,
+      padding: padding,
       frames: frames,
       anchor: anchor,
       output: output,
@@ -166,6 +177,10 @@ class SpriteAtlas {
             out.add('${def.id} frames ${i + 1} and ${j + 1} overlap');
           }
         }
+      }
+      if (def.padding * 2 >= def.output) {
+        out.add('${def.id} padding ${def.padding} leaves no room in a '
+            '${def.output} px output');
       }
       if (def.bleedOk && (def.bleedNote == null || def.bleedNote!.isEmpty)) {
         out.add('${def.id} sets bleedOk but has no bleedNote explaining why');

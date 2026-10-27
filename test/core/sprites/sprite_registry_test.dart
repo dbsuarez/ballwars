@@ -194,4 +194,139 @@ void main() {
       );
     });
   });
+
+  test('padding sets the inner size of the cut frame', () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      final rec = ui.PictureRecorder();
+      ui.Canvas(rec).drawRect(
+        const ui.Rect.fromLTWH(0, 0, 16, 16),
+        ui.Paint()..color = const ui.Color(0xFFFFFFFF),
+      );
+      final sheet = await rec.endRecording().toImage(16, 16);
+      SpriteAtlas atlas(int? pad) => SpriteAtlas.parse({
+        'sheet': 's.png',
+        'sprites': {
+          'p': {
+            'frames': [
+              [0, 0, 16, 16],
+            ],
+            'output': 32,
+            'padding': ?pad,
+          },
+        },
+      });
+      Future<int> opaqueWidth(int? pad, String prefix) async {
+        await SpriteRegistry.register(atlas(pad), sheet, idPrefix: prefix);
+        final img = SpriteRegistry.frame('$prefix.p')!;
+        final b = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        var n = 0;
+        for (var x = 0; x < 32; x++) {
+          if (b.getUint8((16 * 32 + x) * 4 + 3) > 200) n++;
+        }
+        return n;
+      }
+
+      expect(await opaqueWidth(null, 'custom.d'), 28);
+      expect(await opaqueWidth(0, 'custom.z'), 32);
+      expect(await opaqueWidth(6, 'custom.s'), 20);
+    });
+  });
+
+  test('sharedBand keeps a tall union inside the output', () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      final rec = ui.PictureRecorder();
+      final c = ui.Canvas(rec);
+      final paint = ui.Paint()..color = const ui.Color(0xFFFFFFFF);
+      c.drawRect(const ui.Rect.fromLTWH(0, 0, 10, 4), paint);
+      c.drawRect(const ui.Rect.fromLTWH(10, 36, 10, 4), paint);
+      final sheet = await rec.endRecording().toImage(20, 40);
+      final atlas = SpriteAtlas.parse({
+        'sheet': 's.png',
+        'sprites': {
+          'tall': {
+            'frames': [
+              [0, 0, 10, 4],
+              [10, 36, 10, 4],
+            ],
+            'output': 32,
+            'sharedBand': true,
+          },
+        },
+      });
+      await SpriteRegistry.register(atlas, sheet, idPrefix: 'custom.t');
+      // Frame 1 sits at the top of the band, frame 2 at the bottom; both
+      // must be fully visible (band 40 tall scaled into 28 px).
+      for (final (i, row) in [(0, 2), (1, 29)]) {
+        final img = SpriteRegistry.frame('custom.t.tall', i)!;
+        final b = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+        var any = false;
+        for (var x = 0; x < 32; x++) {
+          if (b.getUint8((row * 32 + x) * 4 + 3) > 200) any = true;
+        }
+        expect(any, isTrue, reason: 'frame ${i + 1} row $row');
+      }
+    });
+  });
+
+  test('register rejects atlas problems and ids owned by someone else',
+      () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      final sheet = await makeSheet(1);
+      final outside = SpriteAtlas.parse({
+        'sheet': 's.png',
+        'sprites': {
+          'x': {
+            'frames': [
+              [0, 0, 99, 16],
+            ],
+            'output': 32,
+          },
+        },
+      });
+      await expectLater(
+        SpriteRegistry.register(outside, sheet, idPrefix: 'custom.a'),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.toString(),
+            'message',
+            contains('outside the sheet'),
+          ),
+        ),
+      );
+      expect(SpriteRegistry.has('custom.a.x'), isFalse);
+
+      // Prefix custom.a with sprite "b.c" and prefix custom.a.b with sprite
+      // "c" both produce the id custom.a.b.c.
+      SpriteAtlas one(String id) => SpriteAtlas.parse({
+        'sheet': 's.png',
+        'sprites': {
+          id: {
+            'frames': [
+              [0, 0, 16, 16],
+            ],
+            'output': 32,
+          },
+        },
+      });
+      await SpriteRegistry.register(one('b.c'), sheet, idPrefix: 'custom.a');
+      await expectLater(
+        SpriteRegistry.register(one('c'), sheet, idPrefix: 'custom.a.b'),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  test('resetForTest during a load discards the stale work', () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      final bundle = FakeAssetBundle();
+      bundle.putString(SpriteRegistry.indexPath, jsonEncode(['a.atlas.json']));
+      bundle.files['a.png'] = await pngBytes(await makeSheet(2));
+      bundle.putString('a.atlas.json', manifest('a.png', 'x'));
+      final pending = SpriteRegistry.load(bundle: bundle);
+      SpriteRegistry.resetForTest();
+      await pending;
+      expect(SpriteRegistry.has('x'), isFalse);
+      expect(SpriteRegistry.loadProblems, isEmpty);
+    });
+  });
 }

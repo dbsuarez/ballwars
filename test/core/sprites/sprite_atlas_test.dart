@@ -152,4 +152,44 @@ void main() {
       ),
     );
   });
+
+  group('padding', () {
+    Map<String, dynamic> withPadding(Object? p) => {
+      'sheet': 's.png',
+      'sprites': {
+        'a': {
+          'frames': [
+            [0, 0, 8, 8],
+          ],
+          'output': 16,
+          'padding': ?p,
+        },
+      },
+    };
+
+    test('defaults to 2 and reads an explicit value', () {
+      expect(SpriteAtlas.parse(withPadding(null)).sprites['a']!.padding, 2);
+      expect(SpriteAtlas.parse(withPadding(5)).sprites['a']!.padding, 5);
+    });
+
+    test('rejects bad types and reports no room', () {
+      for (final bad in [-1, 'x', 1.5]) {
+        expect(
+          () => SpriteAtlas.parse(withPadding(bad)),
+          throwsA(
+            isA<FormatException>().having(
+              (e) => e.message,
+              'message',
+              contains('Sprite a'),
+            ),
+          ),
+        );
+      }
+      final atlas = SpriteAtlas.parse(withPadding(8));
+      expect(
+        atlas.problems(sheetSize: const Size(8, 8)),
+        contains(contains('padding 8')),
+      );
+    });
+  });
 }

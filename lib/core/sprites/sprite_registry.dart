@@ -24,6 +24,7 @@ class SpriteRegistry {
   static final Map<String, Set<String>> _customIds = {};
   static final Map<String, String> _owners = {};
   static final List<String> _problems = [];
+  static int _generation = 0;
 
   static List<String> get loadProblems => List.unmodifiable(_problems);
   static List<String> get ids => List.unmodifiable(_sprites.keys);
@@ -49,6 +50,7 @@ class SpriteRegistry {
   @visibleForTesting
   static void resetForTest() {
     _loading = null;
+    _generation++;
     for (final s in _sprites.values) {
       s.dispose();
     }
@@ -73,7 +75,32 @@ class SpriteRegistry {
         'must start with "custom." and name the upload',
       );
     }
+    final problems = atlas.problems(
+      sheetSize: Size(sheet.width.toDouble(), sheet.height.toDouble()),
+    );
+    if (problems.isNotEmpty) {
+      throw ArgumentError('Atlas has problems: ${problems.join('; ')}');
+    }
+    final mine = _customIds[idPrefix] ?? const <String>{};
+    final clashes = [
+      for (final id in atlas.sprites.keys)
+        if (_sprites.containsKey('$idPrefix.$id') &&
+            !mine.contains('$idPrefix.$id'))
+          '$idPrefix.$id',
+    ];
+    if (clashes.isNotEmpty) {
+      throw ArgumentError(
+        'Sprite ids already in use by another owner: ${clashes.join(', ')}',
+      );
+    }
+    final gen = _generation;
     final cut = await _cutAtlas(atlas, sheet);
+    if (gen != _generation) {
+      for (final s in cut.values) {
+        s.dispose();
+      }
+      return;
+    }
     unregister(idPrefix);
     final added = <String>{};
     cut.forEach((id, sprite) {
@@ -99,9 +126,12 @@ class SpriteRegistry {
   }
 
   static Future<void> _load(AssetBundle bundle) async {
+    final gen = _generation;
     List<dynamic> index;
     try {
-      final decoded = jsonDecode(await bundle.loadString(indexPath));
+      final text = await bundle.loadString(indexPath);
+      if (gen != _generation) return;
+      final decoded = jsonDecode(text);
       if (decoded is! List) {
         _problem('$indexPath must be a list of manifest paths');
         return;
@@ -112,23 +142,32 @@ class SpriteRegistry {
       return;
     }
     for (final entry in index) {
+      if (gen != _generation) return;
       if (entry is! String) {
         _problem('$indexPath has an entry that is not a manifest path');
         continue;
       }
       try {
-        await _loadManifest(bundle, entry);
+        await _loadManifest(bundle, entry, gen);
       } catch (e) {
+        if (gen != _generation) return;
         _problem('Manifest $entry was skipped: $e');
       }
     }
   }
 
-  static Future<void> _loadManifest(AssetBundle bundle, String path) async {
+  static Future<void> _loadManifest(
+    AssetBundle bundle,
+    String path,
+    int gen,
+  ) async {
     final SpriteAtlas atlas;
     try {
-      atlas = SpriteAtlas.parse(jsonDecode(await bundle.loadString(path)));
+      final text = await bundle.loadString(path);
+      if (gen != _generation) return;
+      atlas = SpriteAtlas.parse(jsonDecode(text));
     } catch (e) {
+      if (gen != _generation) return;
       _problem('Manifest $path is not valid: $e');
       return;
     }
@@ -142,10 +181,12 @@ class SpriteRegistry {
         codec.dispose();
       }
     } catch (e) {
+      if (gen != _generation) return;
       _problem('Sheet ${atlas.sheet} (manifest $path) could not be decoded: $e');
       return;
     }
     try {
+      if (gen != _generation) return;
       final problems = atlas.problems(
         sheetSize: Size(sheet.width.toDouble(), sheet.height.toDouble()),
       );
@@ -154,6 +195,12 @@ class SpriteRegistry {
         return;
       }
       final cut = await _cutAtlas(atlas, sheet);
+      if (gen != _generation) {
+        for (final s in cut.values) {
+          s.dispose();
+        }
+        return;
+      }
       for (final entry in cut.entries) {
         final owner = _owners[entry.key];
         if (owner != null) {
@@ -168,6 +215,7 @@ class SpriteRegistry {
         _sprites[entry.key] = entry.value;
       }
     } catch (e) {
+      if (gen != _generation) return;
       _problem('Manifest $path could not be cut: $e');
     } finally {
       sheet.dispose();
@@ -206,7 +254,8 @@ class SpriteRegistry {
     ByteData? pixels,
   ) async {
     final size = def.output;
-    final inner = Rect.fromLTWH(2, 2, size - 4.0, size - 4.0);
+    final pad = def.padding.toDouble();
+    final inner = Rect.fromLTWH(pad, pad, size - 2 * pad, size - 2 * pad);
     var sources = def.frames;
     if (def.fit == SpriteFit.trim && pixels != null) {
       sources = [
@@ -217,9 +266,13 @@ class SpriteRegistry {
     for (final r in sources) {
       union = union.expandToInclude(r);
     }
+    // One scale that fits both the largest frame and the whole union band.
     final sharedScale = def.sharedBand
         ? inner.width /
-              sources.map((r) => math.max(r.width, r.height)).reduce(math.max)
+              math.max(
+                union.height,
+                sources.map((r) => math.max(r.width, r.height)).reduce(math.max),
+              )
         : 0.0;
     final frames = <ui.Image>[];
     try {

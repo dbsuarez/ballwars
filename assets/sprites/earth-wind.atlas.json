@@ -1,0 +1,25 @@
+{
+  "sheet": "assets/sprites/earth-wind.png",
+  "sprites": {
+    "powerup.earthquake": {
+      "frames": [
+        [0, 0, 887, 887]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 0
+    },
+    "powerup.tornado": {
+      "frames": [
+        [887, 0, 887, 887]
+      ],
+      "output": 64,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 0
+    }
+  }
+}

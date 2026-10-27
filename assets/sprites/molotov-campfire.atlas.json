@@ -1,0 +1,19 @@
+{
+  "sheet": "assets/sprites/molotov-campfire.png",
+  "sprites": {
+    "anim.campfire": {
+      "frames": [
+        [0, 0, 543, 724],
+        [543, 0, 543, 724],
+        [1086, 0, 543, 724],
+        [1629, 0, 543, 724]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 3,
+      "stepsPerFrame": 3
+    }
+  }
+}

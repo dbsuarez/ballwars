@@ -1,0 +1,19 @@
+{
+  "sheet": "assets/sprites/maximum-power.png",
+  "sprites": {
+    "anim.maximumPower": {
+      "frames": [
+        [0, 0, 256, 256],
+        [256, 0, 256, 256],
+        [512, 0, 256, 256],
+        [768, 0, 256, 256]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 0,
+      "stepsPerFrame": 3
+    }
+  }
+}

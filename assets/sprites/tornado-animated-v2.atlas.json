@@ -1,0 +1,23 @@
+{
+  "sheet": "assets/sprites/tornado-animated-v2.png",
+  "sprites": {
+    "anim.tornado": {
+      "frames": [
+        [12, 12, 416, 416],
+        [452, 12, 416, 416],
+        [892, 12, 416, 416],
+        [1332, 12, 416, 416],
+        [12, 452, 416, 416],
+        [452, 452, 416, 416],
+        [892, 452, 416, 416],
+        [1332, 452, 416, 416]
+      ],
+      "output": 96,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "stepsPerFrame": 3
+    }
+  }
+}

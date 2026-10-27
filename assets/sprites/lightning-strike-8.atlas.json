@@ -1,0 +1,23 @@
+{
+  "sheet": "assets/sprites/lightning-strike-8.png",
+  "sprites": {
+    "anim.lightning": {
+      "frames": [
+        [0, 0, 444, 444],
+        [444, 0, 444, 444],
+        [888, 0, 444, 444],
+        [1332, 0, 444, 444],
+        [0, 444, 444, 444],
+        [444, 444, 444, 444],
+        [888, 444, 444, 444],
+        [1332, 444, 444, 444]
+      ],
+      "output": 192,
+      "fit": "contain",
+      "sharedBand": false,
+      "bleedOk": false,
+      "padding": 2,
+      "stepsPerFrame": 1
+    }
+  }
+}

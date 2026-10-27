@@ -2,5 +2,19 @@
   "assets/sprites/powerups-fixed.atlas.json",
   "assets/sprites/effects-master.atlas.json",
   "assets/sprites/projectiles-master.atlas.json",
-  "assets/sprites/effects-animated.atlas.json"
+  "assets/sprites/effects-animated.atlas.json",
+  "assets/sprites/molotov-campfire.atlas.json",
+  "assets/sprites/arena-portal.atlas.json",
+  "assets/sprites/maximum-power.atlas.json",
+  "assets/sprites/tornado-animated-v2.atlas.json",
+  "assets/sprites/lightning-strike-8.atlas.json",
+  "assets/sprites/phase8-skills.atlas.json",
+  "assets/sprites/rocket-launcher.atlas.json",
+  "assets/sprites/omega-tendrils.atlas.json",
+  "assets/sprites/boomerang.atlas.json",
+  "assets/sprites/sticky-goo-rim.atlas.json",
+  "assets/sprites/elemental-powers.atlas.json",
+  "assets/sprites/earth-wind.atlas.json",
+  "assets/sprites/energy-wave.atlas.json",
+  "assets/sprites/flamethrower.atlas.json"
 ]

@@ -490,7 +490,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
 
   Future<void> _saveReplay() async {
-    await SavedReplayStore.add(_replayUri());
+    await SavedReplayStore.add(
+      _replayUri(),
+      contestantNames: widget.config.contestants.map((ball) => ball.name),
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Replay saved on this device.')),
@@ -879,8 +882,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       move: _controller.winningMove ?? 'Collision',
                       visualMove: _controller.skillLibrary
                           .all(_controller.tuning)
-                          .where((skill) => skill.name == _controller.winningMove)
-                          .firstOrNull?.baseKind.label,
+                          .where(
+                            (skill) => skill.name == _controller.winningMove,
+                          )
+                          .firstOrNull
+                          ?.baseKind
+                          .label,
                       onHookFired: _playFinisherLaunch,
                       onImpact: _playFinisherImpact,
                       onFinished: () {

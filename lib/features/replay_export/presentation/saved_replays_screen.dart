@@ -59,7 +59,7 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
   }
 
   Future<void> _rename(SavedReplay entry) async {
-    final controller = TextEditingController(text: entry.name ?? '');
+    final controller = TextEditingController(text: entry.displayName);
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -67,7 +67,7 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          maxLength: 80,
+          maxLength: 240,
           decoration: const InputDecoration(labelText: 'Replay name'),
           onSubmitted: (value) => Navigator.pop(context, value),
         ),
@@ -127,7 +127,7 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
             return Card(
               child: ListTile(
                 leading: const Icon(Icons.play_circle_outline),
-                title: Text(entry.name ?? 'Replay ${entries.length - index}'),
+                title: Text(entry.displayName),
                 subtitle: Text(_stamp(entry.savedAt)),
                 onTap: () {
                   Navigator.pop(context);

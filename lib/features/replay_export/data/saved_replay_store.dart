@@ -16,6 +16,30 @@ class SavedReplay {
   final String? name;
   final String? shareUri;
 
+  String get displayName => name ?? defaultName(savedAt, const []);
+
+  /// Local date/time and safe contestant names, suitable for a portable .bw file.
+  static String defaultName(DateTime savedAt, Iterable<String> contestants) {
+    final time = savedAt.toLocal();
+    String two(int value) => value.toString().padLeft(2, '0');
+    final stamp =
+        '${time.year}${two(time.month)}${two(time.day)}_'
+        '${two(time.hour)}${two(time.minute)}${two(time.second)}';
+    final names = contestants
+        .map((name) {
+          final safe = name
+              .trim()
+              .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1f\s]+'), '_')
+              .replaceAll(RegExp(r'[. _]+$'), '');
+          return safe.isEmpty
+              ? 'ball'
+              : String.fromCharCodes(safe.runes.take(24));
+        })
+        .take(8)
+        .join('_');
+    return '${stamp}_${names.isEmpty ? 'replay' : names}.bw';
+  }
+
   Map<String, Object?> toJson() => {
     'id': id,
     'saved_at': savedAt.toUtc().toIso8601String(),
@@ -67,7 +91,11 @@ class SavedReplayStore {
     ];
   }
 
-  static Future<void> add(Uri uri, {Uri? shareUri}) async {
+  static Future<void> add(
+    Uri uri, {
+    Uri? shareUri,
+    Iterable<String> contestantNames = const [],
+  }) async {
     final now = DateTime.now().toUtc();
     final entries = await load();
     final existing = entries
@@ -78,7 +106,9 @@ class SavedReplayStore {
         id: existing?.id ?? now.microsecondsSinceEpoch.toString(),
         savedAt: existing?.savedAt ?? now,
         uri: uri.toString(),
-        name: existing?.name,
+        name:
+            existing?.name ??
+            SavedReplay.defaultName(existing?.savedAt ?? now, contestantNames),
         shareUri: shareUri?.toString() ?? existing?.shareUri,
       ),
       ...entries.where((entry) => entry.uri != uri.toString()),

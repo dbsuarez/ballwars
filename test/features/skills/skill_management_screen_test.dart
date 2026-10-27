@@ -8,21 +8,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _revealEditor(WidgetTester tester, Finder target) async {
-  final scrollable = find
-      .descendant(
-        of: find.byType(ListView).last,
-        matching: find.byType(Scrollable),
-      )
-      .first;
-  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-  await tester.pump();
-  await tester.scrollUntilVisible(
-    target,
-    280,
-    scrollable: scrollable,
-    maxScrolls: 100,
-  );
-  await tester.pumpAndSettle();
+  if (target.hitTestable().evaluate().isNotEmpty) return;
+  for (final label in [
+    'Identity',
+    'Damage & Timing',
+    'Appearance',
+    'Callouts & Sounds',
+  ]) {
+    await tester.ensureVisible(find.widgetWithText(Tab, label));
+    await tester.tap(find.widgetWithText(Tab, label));
+    await tester.pumpAndSettle();
+    final list = find.byType(ListView).last;
+    final scrollable = find
+        .descendant(of: list, matching: find.byType(Scrollable))
+        .first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    position.jumpTo(0);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) {
+      if (target.evaluate().isNotEmpty) {
+        await tester.ensureVisible(target);
+        await tester.pumpAndSettle();
+        return;
+      }
+      if (position.pixels >= position.maxScrollExtent) break;
+      await tester.drag(list, const Offset(0, -280));
+      await tester.pumpAndSettle();
+    }
+  }
+  fail('Editor control not found: $target');
 }
 
 void main() {
@@ -78,6 +92,17 @@ void main() {
       ]) {
         await _revealEditor(tester, find.byKey(ValueKey(key)));
         expect(tester.takeException(), isNull, reason: key);
+        for (final action in [
+          'preview-skill',
+          'test-skill-live',
+          'preview-skill-finisher',
+        ]) {
+          expect(
+            find.byKey(ValueKey(action)).hitTestable(),
+            findsOneWidget,
+            reason: '$action stays visible while editing $key',
+          );
+        }
       }
       await _revealEditor(
         tester,
@@ -181,6 +206,8 @@ void main() {
     await tester.tap(find.widgetWithText(ListTile, 'Boomerang'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.widgetWithText(Tab, 'Damage & Timing'));
+    await tester.pumpAndSettle();
     final editor = find.byType(ListView).last;
     for (
       var i = 0;

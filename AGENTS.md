@@ -1,5 +1,9 @@
 # Ball Wars image workflow
 
+## Settings UX
+
+- Group long settings editors into clearly named tabs instead of one long list. Keep related controls together and preserve unsaved edits when switching tabs. For Skill Management use Identity (including behavior), Damage & Timing, Appearance, and Callouts & Sounds.
+
 - Use the installed PhotoCraft CLI for all raster image editing and sprite processing: `C:\Program Files\PhotoCraft\photocraft-cli.exe`.
 - Read `docs/PHOTOCRAFT-CLI-HANDOFF.md` before processing image assets. Use the tested helpers in `tools/photocraft/` to avoid Windows PowerShell JSON quoting errors.
 - When new illustrated artwork is needed, provide the user with a precise generation prompt. The user will generate it with another AI and supply the result. Do not invoke AI image generation/editing unless the user explicitly changes this policy.

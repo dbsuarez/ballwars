@@ -1114,6 +1114,7 @@ class _SkillEditorState extends State<_SkillEditor> {
         text: '${widget.skill.triggerIntervalSeconds}',
       ),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
+    'meleeReach': TextEditingController(text: '${widget.skill.meleeReach}'),
     'bubbleDuration': TextEditingController(
       text: '${widget.skill.bubbleDurationSeconds}',
     ),
@@ -1189,6 +1190,14 @@ class _SkillEditorState extends State<_SkillEditor> {
   bool get _showsFreezeSettings =>
       _usesEffect(SkillEffectType.freeze) ||
       (!widget.skill.isComposed && widget.skill.baseKind == PowerUpKind.freeze);
+
+  /// Strikes on a bump (and so can have a melee reach): a collision trigger, a blade, the orbiting
+  /// flail or a shield, matching the match's contact rules.
+  bool get _strikesOnContact =>
+      _trigger == SkillTrigger.collision ||
+      widget.skill.baseKind.isBlade ||
+      widget.skill.baseKind == PowerUpKind.orbitingFlail ||
+      widget.skill.baseKind == PowerUpKind.shield;
 
   bool get _usesProjectileDelivery =>
       _delivery == SkillDelivery.projectile ||
@@ -1295,6 +1304,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('frozenDamageMultiplier', defaults.frozenDamageMultiplier);
       number('frozenCollisionDamage', defaults.frozenCollisionDamage);
       number('knockback', defaults.knockback);
+      number('meleeReach', defaults.meleeReach);
       number('repeatCount', defaults.repeatCount);
       number('repeatInterval', defaults.repeatIntervalSeconds);
       number('startDelay', defaults.startDelaySeconds);
@@ -1454,6 +1464,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       frozenDamageMultiplier: _double('frozenDamageMultiplier'),
       frozenCollisionDamage: _double('frozenCollisionDamage'),
       knockback: _double('knockback'),
+      meleeReach: _double('meleeReach'),
       spriteMode: _sprite,
       effectMode: _effect,
       useGlobalEffectVisuals: _globalEffectVisuals,
@@ -1496,6 +1507,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     'projectileSize': (0.1, 5),
     'screenShake': (0, 1),
     'knockback': (0, 100),
+    'meleeReach': (0, 3),
     'range': (0.05, 12),
     'arsenal': (0, 500),
     'allOut': (0, 360),
@@ -1841,6 +1853,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                   'weaponGripRotation',
                   'projectileSize',
                   'handEffectScale',
+                  'meleeReach',
                 ].contains(key))
               Slider(
                 value: value.clamp(limits.$1, limits.$2),
@@ -2484,6 +2497,12 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ),
                         ),
                       _number('knockback', 'Knockback strength', suffix: 'x'),
+                      if (_strikesOnContact)
+                        _number(
+                          'meleeReach',
+                          'Melee reach',
+                          suffix: 'ball radii',
+                        ),
                       if (widget.skill.baseKind == PowerUpKind.fireWall ||
                           widget.skill.baseKind == PowerUpKind.tornado) ...[
                         _number(

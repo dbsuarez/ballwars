@@ -440,6 +440,29 @@ void main() {
     expect(legacy.weaponGripRotation, 0);
   });
 
+  test('melee reach round trips, clamps to 0..3 and defaults to 0', () {
+    for (final skill in SkillLibrary.defaults.all(PowerUpConfig.defaults)) {
+      expect(skill.meleeReach, 0, reason: skill.id);
+    }
+    final base = SkillLibrary.defaults.builtIn(
+      PowerUpKind.knife,
+      PowerUpConfig.defaults,
+    );
+    // Left out at 0, so existing snapshots keep their size.
+    expect(base.toJson().containsKey('melee_reach'), isFalse);
+    final json = base.copyWith(meleeReach: 1.25).toJson();
+    expect(json['melee_reach'], 1.25);
+    expect(SkillDefinition.fromJson(json)!.meleeReach, 1.25);
+    final wild = SkillDefinition.fromJson(
+      Map<String, Object?>.from(base.toJson())..['melee_reach'] = 9,
+    )!;
+    expect(wild.meleeReach, 3);
+    final negative = SkillDefinition.fromJson(
+      Map<String, Object?>.from(base.toJson())..['melee_reach'] = -2,
+    )!;
+    expect(negative.meleeReach, 0);
+  });
+
   test('hilted weapons default to an inset hand grip', () {
     for (final kind in const [
       PowerUpKind.knife,

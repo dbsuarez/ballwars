@@ -542,6 +542,66 @@ void main() {
     expect(reopened.knockback, 20);
   });
 
+  Future<bool> showsMeleeReach(
+    WidgetTester tester,
+    String skill, {
+    ValueChanged<SkillManagementResult?>? onResult,
+  }) async {
+    await tester.pumpWidget(app(onResult: onResult ?? (_) {}));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      skill,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, skill).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Damage & Timing'));
+    await tester.pumpAndSettle();
+    final editor = find.byType(ListView).last;
+    const key = ValueKey('skill-field-meleeReach');
+    for (var i = 0; i < 10 && find.byKey(key).evaluate().isEmpty; i++) {
+      await tester.drag(editor, const Offset(0, -500));
+      await tester.pumpAndSettle();
+    }
+    return find.byKey(key).evaluate().isNotEmpty;
+  }
+
+  testWidgets('a gun has no melee reach field', (tester) async {
+    expect(await showsMeleeReach(tester, 'Pistol'), isFalse);
+  });
+
+  testWidgets('melee reach is edited on contact weapons and saved', (
+    tester,
+  ) async {
+    SkillManagementResult? result;
+    expect(
+      await showsMeleeReach(
+        tester,
+        'Knife',
+        onResult: (value) => result = value,
+      ),
+      isTrue,
+    );
+    expect(find.text('Melee reach'), findsOneWidget);
+    expect(find.text('ball radii'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-field-meleeReach')),
+      '1.5',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
+    await tester.pumpAndSettle();
+    final saved = result!.library.builtIn(
+      PowerUpKind.knife,
+      PowerUpConfig.defaults,
+    );
+    expect(saved.meleeReach, 1.5);
+  });
+
   testWidgets('grip preview edits forward/back, sideways and rotation live', (
     tester,
   ) async {

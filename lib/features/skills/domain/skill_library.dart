@@ -103,6 +103,7 @@ class SkillDefinition {
     this.frozenDamageMultiplier = 1.5,
     this.frozenCollisionDamage = 5,
     this.knockback = 0,
+    this.meleeReach = 0,
     this.spriteMode = SkillVisualMode.sprite,
     this.effectMode = SkillVisualMode.sprite,
     this.useGlobalEffectVisuals = true,
@@ -174,6 +175,10 @@ class SkillDefinition {
   final double frozenDamageMultiplier;
   final double frozenCollisionDamage;
   final double knockback;
+
+  /// Contact weapons (blades, orbiting flail, shield bash, collision skills) strike an opponent up to
+  /// this many of the holder's radii beyond touching. 0: only on a bump.
+  final double meleeReach;
   final SkillVisualMode spriteMode;
   final SkillVisualMode effectMode;
   final bool useGlobalEffectVisuals;
@@ -324,6 +329,7 @@ class SkillDefinition {
     double? frozenDamageMultiplier,
     double? frozenCollisionDamage,
     double? knockback,
+    double? meleeReach,
     SkillVisualMode? spriteMode,
     SkillVisualMode? effectMode,
     bool? useGlobalEffectVisuals,
@@ -388,6 +394,7 @@ class SkillDefinition {
         frozenDamageMultiplier ?? this.frozenDamageMultiplier,
     frozenCollisionDamage: frozenCollisionDamage ?? this.frozenCollisionDamage,
     knockback: knockback ?? this.knockback,
+    meleeReach: meleeReach ?? this.meleeReach,
     spriteMode: spriteMode ?? this.spriteMode,
     effectMode: effectMode ?? this.effectMode,
     useGlobalEffectVisuals:
@@ -463,6 +470,7 @@ class SkillDefinition {
     'frozen_damage_multiplier': frozenDamageMultiplier,
     'frozen_collision_damage': frozenCollisionDamage,
     'knockback': knockback,
+    if (meleeReach > 0) 'melee_reach': meleeReach,
     'sprite_mode': spriteMode.name,
     'effect_mode': effectMode.name,
     'use_global_effect_visuals': useGlobalEffectVisuals,
@@ -549,6 +557,7 @@ class SkillDefinition {
       frozenDamageMultiplier: decimal('frozen_damage_multiplier') ?? 1.5,
       frozenCollisionDamage: decimal('frozen_collision_damage') ?? 5,
       knockback: decimal('knockback') ?? 0,
+      meleeReach: decimal('melee_reach') ?? 0,
       spriteMode: enumValue(
         'sprite_mode',
         SkillVisualMode.values,
@@ -632,6 +641,7 @@ class SkillDefinition {
     frozenDamageMultiplier: frozenDamageMultiplier.clamp(1, 5),
     frozenCollisionDamage: frozenCollisionDamage.clamp(0, 200),
     knockback: knockback.clamp(0, 100),
+    meleeReach: meleeReach.clamp(0, 3),
     bubbleDurationSeconds: bubbleDurationSeconds.clamp(0.25, 10),
     repeatCount: repeatCount.clamp(1, 10),
     repeatIntervalSeconds: repeatIntervalSeconds.clamp(0.1, 10),

@@ -382,6 +382,7 @@ class PowerUpSystem {
     _triggerPoisonSwamps();
     _pickUpTouched();
     _strikeWithOrbitingFlails();
+    _strikeWithMeleeReach();
     _sweep();
     _updateFrozen();
     _updateStunned();
@@ -1675,7 +1676,8 @@ class PowerUpSystem {
         .where((skill) => skill.baseKind == kind)
         .toList();
     // The built-in itself only when it's chosen too (with everything chosen this draws as before).
-    final builtInChosen = chosen == null || chosen.contains(kind) || kind.isTrap;
+    final builtInChosen =
+        chosen == null || chosen.contains(kind) || kind.isTrap;
     final candidates = [
       if (builtInChosen) match.skillLibrary.builtIn(kind, _t),
       ...variants,
@@ -2119,7 +2121,10 @@ class PowerUpSystem {
       );
       if (match.skillLibrary.screenShakeFor(skill) > 0) {
         weaponImpacts.add(
-          WeaponImpact(position: target.position, strength: match.skillLibrary.screenShakeFor(skill)),
+          WeaponImpact(
+            position: target.position,
+            strength: match.skillLibrary.screenShakeFor(skill),
+          ),
         );
       }
     }
@@ -2318,6 +2323,59 @@ class PowerUpSystem {
           );
           break;
         }
+      }
+    }
+  }
+
+  /// Whether [weapon] (resolved as [skill]) strikes on contact: a collision skill, a blade, the
+  /// orbiting flail or a shield bash.
+  static bool _strikesOnContact(PowerUpKind weapon, SkillDefinition skill) =>
+      (skill.isComposed && skill.trigger == SkillTrigger.collision) ||
+      weapon.isBlade ||
+      weapon == PowerUpKind.orbitingFlail ||
+      weapon == PowerUpKind.shield;
+
+  /// Contact weapons with a [SkillDefinition.meleeReach] strike without a bump: once per step, in the
+  /// match's ball order, each held one hits the nearest opponent whose center is within both radii plus
+  /// that many of the holder's radii (ties go to the earlier ball), exactly as a bump would ([_melee]
+  /// uses it up, and a shield still bashes only an unarmed ball). Ghosts neither strike nor get struck.
+  /// A weapon that already struck on a bump this step is gone. Draws nothing from the RNG.
+  void _strikeWithMeleeReach() {
+    final balls = match.state.balls;
+    for (final attacker in balls) {
+      if (!_alive(attacker) || attacker.isGhost) continue;
+      final slots = [
+        if (attacker.held case final weapon?) (weapon, attacker.heldSkillId),
+        if (attacker.heldSecondary case final weapon?)
+          (weapon, attacker.heldSecondarySkillId),
+      ];
+      for (final (weapon, skillId) in slots) {
+        final skill = _skillForId(weapon, skillId);
+        if (skill.meleeReach <= 0 || !_strikesOnContact(weapon, skill)) {
+          continue;
+        }
+        SimulationBall? nearest;
+        var best = double.infinity;
+        for (final target in balls) {
+          if (identical(attacker, target) ||
+              !_alive(target) ||
+              target.isGhost) {
+            continue;
+          }
+          final distance = (target.position - attacker.position).distance;
+          final reach =
+              attacker.radius +
+              target.radius +
+              skill.meleeReach * attacker.radius;
+          if (distance <= reach && distance < best) {
+            best = distance;
+            nearest = target;
+          }
+        }
+        if (nearest == null) continue;
+        _melee(attacker, weapon, nearest, [
+          ...nearest.equippedWeapons,
+        ], skillId: skillId);
       }
     }
   }
@@ -3099,7 +3157,10 @@ class PowerUpSystem {
               );
               if (match.skillLibrary.screenShakeFor(composed) > 0) {
                 weaponImpacts.add(
-                  WeaponImpact(position: end, strength: match.skillLibrary.screenShakeFor(composed)),
+                  WeaponImpact(
+                    position: end,
+                    strength: match.skillLibrary.screenShakeFor(composed),
+                  ),
                 );
               }
             } else {
@@ -3227,7 +3288,10 @@ class PowerUpSystem {
       displayScale: impactSkill.effectDisplayScale,
     );
     weaponImpacts.add(
-      WeaponImpact(position: impact, strength: match.skillLibrary.screenShakeFor(impactSkill)),
+      WeaponImpact(
+        position: impact,
+        strength: match.skillLibrary.screenShakeFor(impactSkill),
+      ),
     );
     var share = 1.0;
     final shielded = match.mode == MatchMode.arsenal

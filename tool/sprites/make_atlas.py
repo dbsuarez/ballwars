@@ -5,7 +5,7 @@ Read-only: it reads the sheet and writes only the JSON file.
 Usage:
   python tool/sprites/make_atlas.py --sheet assets/sprites/X.png --grid 4x6 \
       --id-row 1=effect.explosion --id-row 3=effect.ice-impact [--shared-band] \
-      [--icons gem=10,20,32,32 ...] [--output 96] [--max-shift 40] \
+      [--icons gem=10,20,32,32 ...] [--output 96] [--max-shift 100] \
       --out assets/sprites/X.atlas.json
 
 Rows and columns count from 0. Each frame starts as its grid cell; every edge
@@ -13,7 +13,9 @@ then moves to the nearest fully transparent row or column (alpha <= 24), so a
 frame never cuts through art, even when art spills over a cell border. An edge
 with no clean row within --max-shift px stays on the grid line, the sprite gets
 "bleedOk": false and a warning goes to stderr. --shared-band only sets the
-flag; frames keep their own measured rectangles.
+flag; frames keep their own measured rectangles. Frames end at the nearest
+clean separator row/column, so they can include a few px of transparent margin
+(they are not tight to the art).
 """
 import argparse
 import json
@@ -85,13 +87,17 @@ def measure_frame(alpha, cell, max_shift):
 
 
 def build_atlas(sheet, cols, rows, id_rows, shared_band=False, icons=None,
-                output=96, max_shift=40):
+                output=96, max_shift=100):
     """Return (manifest dict, warning strings) for the sheet at path `sheet`."""
     with Image.open(sheet) as img:
         alpha = img.convert('RGBA').getchannel('A')
     width, height = alpha.size
-    cw, ch = width // cols, height // rows
     sprites, warnings = {}, []
+    cw, ch = width // cols, height // rows
+    if width % cols or height % rows:
+        warnings.append(f'sheet {width}x{height} is not divisible by the '
+                        f'{cols}x{rows} grid: {width % cols} px and '
+                        f'{height % rows} px left over at the right/bottom')
     for row, sprite_id in sorted(id_rows.items()):
         frames = []
         for col in range(cols):
@@ -119,7 +125,7 @@ def parse_args(argv):
     p.add_argument('--shared-band', action='store_true')
     p.add_argument('--icons', nargs='*', default=[], metavar='ID=x,y,w,h')
     p.add_argument('--output', type=int, default=96)
-    p.add_argument('--max-shift', type=int, default=40)
+    p.add_argument('--max-shift', type=int, default=100)
     p.add_argument('--out', required=True)
     return p.parse_args(argv)
 

@@ -58,7 +58,12 @@ class MakeAtlasTest(unittest.TestCase):
         path = self.save(img)
         atlas, warnings = make_atlas.build_atlas(path, 2, 2, {0: 'a'}, max_shift=5)
         self.assertFalse(atlas['sprites']['a']['bleedOk'])
-        self.assertTrue(any('a' in w and 'frame 1' in w and 'bottom' in w
+        self.assertIn('a frame 1: no clean bottom edge within 5 px', warnings)
+
+    def test_uneven_grid_warns(self):
+        path = self.save(Image.new('RGBA', (41, 40), (0, 0, 0, 0)))
+        _, warnings = make_atlas.build_atlas(path, 2, 2, {0: 'a'})
+        self.assertTrue(any('not divisible' in w and '1 px' in w
                             for w in warnings), warnings)
 
     def test_shared_band_and_output(self):

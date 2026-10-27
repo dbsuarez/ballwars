@@ -248,8 +248,26 @@ class PowerUpSprites {
           ),
           const Size.square(86),
         );
-        if (kind == AnimatedEffect.explosion ||
-            kind == AnimatedEffect.iceImpact) {
+        if (kind == AnimatedEffect.explosion) {
+          // The sheet's explosion row (flash, fireball, smoke). Its grid cell also catches the flames
+          // above, so each frame is cut from the band the explosion art occupies instead.
+          final source = Rect.fromLTWH(
+            frame * animatedWidth + 8,
+            _explosionTop,
+            animatedWidth - 16,
+            _explosionHeight,
+          );
+          final fit = applyBoxFit(BoxFit.contain, source.size, const Size.square(90));
+          Canvas(recorder).drawImageRect(
+            animatedSheet,
+            source,
+            Alignment.center.inscribe(
+              fit.destination,
+              const Rect.fromLTWH(3, 3, 90, 90),
+            ),
+            Paint()..filterQuality = FilterQuality.none,
+          );
+        } else if (kind == AnimatedEffect.iceImpact) {
           _paintIsolatedEffect(Canvas(recorder), kind, frame);
         } else {
           Canvas(recorder).drawImageRect(
@@ -740,6 +758,11 @@ class PowerUpSprites {
     PowerUpKind.spikeWall: Rect.fromLTRB(974, 695, 1165, 887),
     PowerUpKind.stickyGoo: Rect.fromLTRB(1165, 695, 1360, 887),
   };
+
+  /// The explosion row of effects-animated.png: the band (pixel rows) its artwork occupies, clear of
+  /// the flames above and the portal below.
+  static const double _explosionTop = 218;
+  static const double _explosionHeight = 196;
 
   /// Independent frames cannot include pixels from neighboring atlas cells.
   static void _paintIsolatedEffect(

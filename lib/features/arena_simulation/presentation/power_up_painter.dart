@@ -725,6 +725,8 @@ class PowerUpPainter {
               t * 0.2,
               opacity: fade,
             );
+            // The sprite is the whole look: no vector ring over it.
+            continue;
           }
         }
         canvas.drawCircle(

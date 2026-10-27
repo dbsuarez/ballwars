@@ -136,29 +136,47 @@ class PowerUpSystem {
     );
   }
 
-  bool usesSprite(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).spriteMode ==
+  SkillDefinition visualSkill(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+    String? skillId,
+  }) => _skillForId(
+    kind,
+    skillId ??
+        (ball == null
+            ? null
+            : _equippedSkillId(ball, kind) ?? ball.activeEffectSkillIds[kind]),
+  );
+
+  bool usesSprite(
+    PowerUpKind kind, {
+    String? skillId,
+    Projectile? projectile,
+    SimulationBall? ball,
+  }) =>
+      (projectile == null
+              ? visualSkill(kind, skillId: skillId, ball: ball)
+              : _composedProjectiles[projectile] ?? visualSkill(kind))
+          .spriteMode ==
       SkillVisualMode.sprite;
-
-  bool usesEffectSprite(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).effectMode ==
+  bool usesEffectSprite(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+    String? skillId,
+  }) =>
+      visualSkill(kind, ball: ball, skillId: skillId).effectMode ==
       SkillVisualMode.sprite;
-
-  String skillName(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).name;
-
-  double weaponDisplayScale(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).weaponDisplayScale;
-  double handEffectScale(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).handEffectScale;
-  Color handEffectColor(PowerUpKind kind) =>
-      Color(match.skillLibrary.activeFor(kind, _t).handEffectColor);
-
-  double weaponGripInset(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).weaponGripInset;
-
-  double skillRange(PowerUpKind kind) =>
-      match.skillLibrary.activeFor(kind, _t).range;
+  String skillName(PowerUpKind kind) => visualSkill(kind).name;
+  double weaponDisplayScale(PowerUpKind kind, {SimulationBall? ball}) =>
+      visualSkill(kind, ball: ball).weaponDisplayScale;
+  double handEffectScale(PowerUpKind kind, {SimulationBall? ball}) =>
+      visualSkill(kind, ball: ball).handEffectScale;
+  Color handEffectColor(PowerUpKind kind, {SimulationBall? ball}) =>
+      Color(visualSkill(kind, ball: ball).handEffectColor);
+  double weaponGripInset(PowerUpKind kind, {SimulationBall? ball}) =>
+      visualSkill(kind, ball: ball).weaponGripInset;
+  double skillRange(PowerUpKind kind, {SimulationBall? ball}) =>
+      visualSkill(kind, ball: ball).range;
 
   void _skillYell(SimulationBall ball, PowerUpKind kind, String fallback) {
     final skill = match.skillLibrary.activeFor(kind, _t);
@@ -192,6 +210,7 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    ball.activeEffectSkillIds.clear();
     ball
       ..held = null
       ..heldSecondary = null
@@ -545,7 +564,9 @@ class PowerUpSystem {
     PowerUpKind kind, {
     int steps = firedWeaponHoldSteps,
   }) {
-    (_firedWeaponHold[ball] ??= {})[kind] = steps;
+    (_firedWeaponHold[ball] ??= {})[kind] = kind == PowerUpKind.fireWall
+        ? (visualSkill(kind, ball: ball).handEffectDurationSeconds * 60).round()
+        : steps;
   }
 
   void _updateFiredWeaponHold() {
@@ -571,6 +592,23 @@ class PowerUpSystem {
   /// without replacing equipment; a weapon replaces the one equipped weapon.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
     field.remove(p);
+    final matchingCustom = match.skillLibrary.custom
+        .where((skill) => skill.enabled && skill.baseKind == p.kind)
+        .toList();
+    final activeSkill = p.skillId != null
+        ? match.skillLibrary.byId(p.skillId!, _t) ??
+              match.skillLibrary.builtIn(p.kind, _t)
+        : matchingCustom.length == 1
+        ? matchingCustom.single
+        : match.skillLibrary.builtIn(p.kind, _t);
+    if (activeSkill.resolvedCategory != SkillCategory.weapon) {
+      ball.activeEffectSkillIds[p.kind] = activeSkill.id;
+    }
+    if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
+      pickups++;
+      _executeComposed(ball, activeSkill);
+      return;
+    }
     if (!p.kind.isWeapon) _skillSound(p.kind);
     if (p.kind == PowerUpKind.mine || p.kind == PowerUpKind.phaseMine) {
       _sound('trap');
@@ -589,19 +627,6 @@ class PowerUpSystem {
       return;
     }
     pickups++;
-    final matchingCustom = match.skillLibrary.custom
-        .where((skill) => skill.enabled && skill.baseKind == p.kind)
-        .toList();
-    final activeSkill = p.skillId != null
-        ? match.skillLibrary.byId(p.skillId!, _t) ??
-              match.skillLibrary.builtIn(p.kind, _t)
-        : matchingCustom.length == 1
-        ? matchingCustom.single
-        : match.skillLibrary.builtIn(p.kind, _t);
-    if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
-      _executeComposed(ball, activeSkill);
-      return;
-    }
     if (p.kind.isWeapon) {
       ball.magnetPending = false;
       // A new power-up starts its own aim (a gatling burst already firing finishes first).
@@ -633,7 +658,7 @@ class PowerUpSystem {
         ball.timeBubbleLeft = _t.timeBubbleSteps;
         _skillYell(ball, p.kind, 'TIME OUT!');
       case PowerUpKind.vampire:
-        ball.vampireLeft = PowerUpTuning.specialEffectSteps;
+        ball.vampireLeft = ((activeSkill.durationSeconds ?? 3) * 60).round();
         _skillYell(ball, p.kind, 'I WANT YOUR POWER!');
       case PowerUpKind.mirror:
         ball.mirrorCharges++;
@@ -646,11 +671,12 @@ class PowerUpSystem {
         if (target != null) target.gremlinShots++;
         _skillYell(ball, p.kind, 'CHAOS MODE!');
       case PowerUpKind.magneticField:
-        ball.magneticFieldLeft = PowerUpTuning.specialEffectSteps;
+        ball.magneticFieldLeft = ((activeSkill.durationSeconds ?? 3) * 60)
+            .round();
         ball.magneticReflectedOwners.clear();
         _skillYell(ball, p.kind, 'NOTHING GETS THROUGH!');
       case PowerUpKind.goldenArmor:
-        ball.goldenArmorHits = 2;
+        ball.goldenArmorHits = activeSkill.shieldHits;
         _skillYell(ball, p.kind, 'GOLDEN GUARD!');
       case PowerUpKind.omegaTendrils:
         _launchOmegaTendrils(ball);
@@ -658,7 +684,10 @@ class PowerUpSystem {
       case PowerUpKind.lightningStrikes:
         final target = _nearestTarget(ball);
         if (target != null) {
-          lightningStrikes.add(LightningStrike(owner: ball, target: target));
+          lightningStrikes.add(
+            LightningStrike(owner: ball, target: target)
+              ..strikesLeft = activeSkill.projectileCount ?? 3,
+          );
           _skillYell(ball, p.kind, 'THUNDER, STRIKE!');
         }
       case PowerUpKind.earthquake:
@@ -718,7 +747,14 @@ class PowerUpSystem {
         const Color(0xFFFFD54F),
       );
     }
-    match.state.particles.spawnSparkle(origin: ball.position, rng: rng);
+    match.state.particles.spawnSparkle(
+      origin: ball.position,
+      rng: rng,
+      displayScale: visualSkill(
+        PowerUpKind.friedChicken,
+        ball: ball,
+      ).effectDisplayScale,
+    );
     _skillYell(ball, PowerUpKind.friedChicken, 'FEAST MODE!');
   }
 
@@ -1246,11 +1282,13 @@ class PowerUpSystem {
     }
     final heldA = [...a.equippedWeapons];
     final heldB = [...b.equippedWeapons];
-    for (final weapon in heldA) {
-      _melee(a, weapon, b, heldB, skillId: _equippedSkillId(a, weapon));
+    final idsA = [a.heldSkillId, a.heldSecondarySkillId];
+    final idsB = [b.heldSkillId, b.heldSecondarySkillId];
+    for (var slot = 0; slot < heldA.length; slot++) {
+      _melee(a, heldA[slot], b, heldB, skillId: idsA[slot]);
     }
-    for (final weapon in heldB) {
-      _melee(b, weapon, a, heldA, skillId: _equippedSkillId(b, weapon));
+    for (var slot = 0; slot < heldB.length; slot++) {
+      _melee(b, heldB[slot], a, heldA, skillId: idsB[slot]);
     }
   }
 
@@ -1395,7 +1433,10 @@ class PowerUpSystem {
   /// Either way a green sparkle bursts from the ball.
   void _eatApple(SimulationBall ball) {
     if (match.mode == MatchMode.arsenal) {
-      ball.life = math.min(_t.arenaMaxLife, ball.life + _t.arenaAppleHeal);
+      ball.life = math.min(
+        _t.arenaMaxLife,
+        ball.life + visualSkill(PowerUpKind.apple, ball: ball).healing,
+      );
     } else {
       final claimed = match.claimFreeSlots(ball, _t.allOutAppleSlots);
       if (claimed > 0) {
@@ -1406,7 +1447,14 @@ class PowerUpSystem {
         );
       }
     }
-    match.state.particles.spawnSparkle(origin: ball.position, rng: rng);
+    match.state.particles.spawnSparkle(
+      origin: ball.position,
+      rng: rng,
+      displayScale: visualSkill(
+        PowerUpKind.apple,
+        ball: ball,
+      ).effectDisplayScale,
+    );
   }
 
   /// The magnet pulls the nearest field power-up straight onto [ball] (it is picked up next step as
@@ -1455,7 +1503,10 @@ class PowerUpSystem {
   /// [_t.blastRadiusRatio] arena radii (ghosts are spared), as [kind]. In All-Out it also cuts
   /// every thread passing through it, from every ball but the owner and ghosts.
   void _explode(Offset at, SimulationBall owner, PowerUpKind kind) {
-    final radius = match.arenaRadius * _t.blastRadiusRatio;
+    final skill = visualSkill(kind);
+    final radius =
+        match.arenaRadius *
+        (skill.explodesOnImpact ? skill.range : _t.blastRadiusRatio);
     final balls = match.state.balls;
     blasts++;
     explosions.add(Explosion(position: at, radius: radius, kind: kind));
@@ -1484,7 +1535,7 @@ class PowerUpSystem {
       final side = distance > ball.radius
           ? at + offset * ((distance - ball.radius) / distance)
           : at;
-      _hit(ball, kind, at: side);
+      _hit(ball, kind, at: side, from: owner);
     }
   }
 
@@ -1496,8 +1547,7 @@ class PowerUpSystem {
         ..clear()
         ..addAll(
           ball.equippedWeapons.where(
-            (kind) =>
-                match.skillLibrary.activeFor(kind, _t).trackNearestOpponent,
+            (kind) => visualSkill(kind, ball: ball).trackNearestOpponent,
           ),
         );
       if (ball.trackingItems.isEmpty || !_alive(ball)) {
@@ -1988,7 +2038,12 @@ class PowerUpSystem {
       if (!_alive(target)) continue;
       _applyComposedEffect(owner, target, skill, skill.effectType);
       if (skill.secondaryEffectType != null) {
-        _applyComposedEffect(owner, target, skill, skill.secondaryEffectType);
+        _applyComposedEffect(
+          owner,
+          skill.secondaryEffectType == SkillEffectType.heal ? owner : target,
+          skill,
+          skill.secondaryEffectType,
+        );
       }
       // Knockback is an impact parameter, not a standalone effect requirement.
       // Custom/composed skills (including duplicates of built-ins) must honour a
@@ -2008,6 +2063,7 @@ class PowerUpSystem {
         color: Color(skill.effectColor),
         accent: const Color(0xFFFFFFFF),
         count: 7 + (skill.screenShake * 10).round(),
+        displayScale: skill.effectDisplayScale,
       );
       if (skill.screenShake > 0) {
         weaponImpacts.add(
@@ -2069,6 +2125,15 @@ class PowerUpSystem {
     SkillEffectType? effect, {
     bool dotTick = false,
   }) {
+    final artworkKind = switch (effect) {
+      SkillEffectType.speed => PowerUpKind.speed,
+      SkillEffectType.freeze => PowerUpKind.freeze,
+      SkillEffectType.shield => PowerUpKind.goldenArmor,
+      _ => null,
+    };
+    if (artworkKind != null) {
+      target.activeEffectSkillIds[artworkKind] = skill.id;
+    }
     switch (effect) {
       case SkillEffectType.damage:
         if (match.mode == MatchMode.arsenal) {
@@ -2109,6 +2174,8 @@ class PowerUpSystem {
       case SkillEffectType.heal:
         if (match.mode == MatchMode.arsenal) {
           target.life = math.min(_t.arenaMaxLife, target.life + skill.healing);
+        } else {
+          match.claimFreeSlots(target, skill.healing.round());
         }
       case SkillEffectType.shield:
         target.goldenArmorHits = math.max(
@@ -2116,6 +2183,8 @@ class PowerUpSystem {
           skill.shieldHits,
         );
       case SkillEffectType.freeze:
+        target.frozenDamageMultiplierOverride = skill.frozenDamageMultiplier;
+        target.frozenCollisionDamageOverride = skill.frozenCollisionDamage;
         if (target.frozenLeft == 0) _frozenVelocity[target] = target.velocity;
         target.frozenLeft = ((skill.durationSeconds ?? 2) * 60).round();
         target.velocity = Offset.zero;
@@ -2438,7 +2507,7 @@ class PowerUpSystem {
         ball,
         target,
         PowerUpKind.shotgun,
-        -spread / 2 + spread * i / (count - 1) + jitter,
+        (count == 1 ? 0 : -spread / 2 + spread * i / (count - 1)) + jitter,
         volley: volley,
         sabotaged: sabotaged,
       );
@@ -2458,7 +2527,7 @@ class PowerUpSystem {
         ball,
         target,
         PowerUpKind.bow,
-        -spread / 2 + spread * i / (count - 1),
+        count == 1 ? 0 : -spread / 2 + spread * i / (count - 1),
         volley: volley,
         sabotaged: sabotaged,
       );
@@ -2476,6 +2545,10 @@ class PowerUpSystem {
       Projectile(
         owner: ball,
         kind: PowerUpKind.grenade,
+        renderScale: visualSkill(
+          PowerUpKind.grenade,
+          ball: ball,
+        ).projectileSize,
         position: ball.position + direction * ball.radius,
         velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
         landAt: ball.position + direction * distance,
@@ -2494,6 +2567,10 @@ class PowerUpSystem {
       Projectile(
         owner: ball,
         kind: PowerUpKind.molotov,
+        renderScale: visualSkill(
+          PowerUpKind.molotov,
+          ball: ball,
+        ).projectileSize,
         position: ball.position + direction * ball.radius,
         velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
         landAt: ball.position + direction * distance,
@@ -2515,7 +2592,17 @@ class PowerUpSystem {
         position: ball.position + direction * ball.radius,
         velocity: direction * (match.arenaRadius * _t.bulletSpeedRatio * 0.72),
         target: target,
-        homing: !sabotaged,
+        homing:
+            visualSkill(PowerUpKind.rocketLauncher, ball: ball).homing &&
+            !sabotaged,
+        returnTo:
+            visualSkill(PowerUpKind.rocketLauncher, ball: ball).returnsToOrigin
+            ? ball.position
+            : null,
+        renderScale: visualSkill(
+          PowerUpKind.rocketLauncher,
+          ball: ball,
+        ).projectileSize,
       ),
     );
     shots++;
@@ -2731,7 +2818,15 @@ class PowerUpSystem {
             direction *
             (match.arenaRadius * (speedRatio ?? _t.projectileSpeedRatio(kind))),
         volley: volley,
-        returnTo: kind == PowerUpKind.boomerang ? ball.position : null,
+        target: visualSkill(kind, ball: ball).homing && !firesBackward
+            ? target
+            : null,
+        homing: visualSkill(kind, ball: ball).homing && !firesBackward,
+        returnTo: visualSkill(kind, ball: ball).returnsToOrigin
+            ? ball.position
+            : null,
+        renderScale: visualSkill(kind, ball: ball).projectileSize,
+        spinDegreesPerSecond: visualSkill(kind, ball: ball).projectileSpin,
       ),
     );
     _skillSound(kind);
@@ -2783,8 +2878,7 @@ class PowerUpSystem {
       if (p.spent) continue;
       final from = p.position;
       final composedSkill = _composedProjectiles[p];
-      if (p.homing &&
-          (p.kind == PowerUpKind.rocketLauncher || composedSkill != null)) {
+      if (p.homing) {
         var target = p.target;
         if (target == null || !_alive(target)) {
           target = _nearestTarget(p.owner);
@@ -2801,7 +2895,7 @@ class PowerUpSystem {
         }
       }
       final returnsToOrigin =
-          composedSkill?.returnsToOrigin ?? (p.kind == PowerUpKind.boomerang);
+          composedSkill?.returnsToOrigin ?? visualSkill(p.kind).returnsToOrigin;
       if (returnsToOrigin && p.returning) {
         final returnSpot = p.returnTo ?? p.owner.position;
         final home = returnSpot - from;
@@ -2910,14 +3004,13 @@ class PowerUpSystem {
           if (struck.magneticFieldLeft > 0) {
             struck.magneticReflectedOwners.add(p.owner);
           }
+          p.target = p.owner;
           p.owner = struck;
           _yell(struck, 'RETURN TO SENDER!');
           continue;
         }
         final composed = _composedProjectiles[p];
-        p.spent = composed == null
-            ? p.kind != PowerUpKind.boomerang
-            : !composed.returnsToOrigin;
+        p.spent = !returnsToOrigin;
         if (p.kind == PowerUpKind.hook) {
           _catch(p.owner, struck);
         } else {
@@ -2933,6 +3026,7 @@ class PowerUpSystem {
                   position: end,
                   radius: radius,
                   kind: composed.baseKind,
+                  skillId: composed.id,
                 ),
               );
               _applyComposedEffects(
@@ -2961,9 +3055,14 @@ class PowerUpSystem {
               _composedProjectiles.remove(p);
             }
           } else {
-            _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+            if (visualSkill(p.kind).explodesOnImpact) {
+              _explode(end, p.owner, p.kind);
+              _sound(visualSkill(p.kind).soundCue);
+            } else {
+              _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+            }
           }
-          if (p.kind == PowerUpKind.boomerang) {
+          if (returnsToOrigin) {
             p.hitTargets.add(struck);
             p.position += p.velocity / p.velocity.distance * 2;
           }
@@ -2978,15 +3077,16 @@ class PowerUpSystem {
           }
         }
       } else if (end.distance >= match.arenaRadius &&
-          p.kind != PowerUpKind.rocketLauncher) {
+          (p.kind != PowerUpKind.rocketLauncher || !p.homing)) {
         final composed = _composedProjectiles[p];
-        if (composed?.returnsToOrigin ?? (p.kind == PowerUpKind.boomerang)) {
+        if (returnsToOrigin) {
           p
             ..position = end / end.distance * (match.arenaRadius - 2)
             ..returning = true;
         } else if ((p.kind == PowerUpKind.ricochetDisc ||
                 p.kind == PowerUpKind.prismLaser ||
-                composed != null) &&
+                composed != null ||
+                _t.maxBounces(p.kind) > 0) &&
             p.wallBounces < (composed?.maxBounces ?? _t.maxBounces(p.kind))) {
           final normal = end.distance == 0
               ? const Offset(1, 0)
@@ -3003,6 +3103,8 @@ class PowerUpSystem {
                 Projectile(
                   owner: p.owner,
                   kind: PowerUpKind.prismLaser,
+                  renderScale: p.renderScale,
+                  spinDegreesPerSecond: p.spinDegreesPerSecond,
                   position: p.position,
                   velocity:
                       Offset(math.cos(angle), math.sin(angle)) *
@@ -3053,16 +3155,18 @@ class PowerUpSystem {
     hits++;
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
-    final (impactColor, impactAccent) = _impactColors(kind);
+    final (_, impactAccent) = _impactColors(kind);
+    final impactSkill = visualSkill(kind, ball: from);
     match.state.particles.spawnImpact(
       origin: impact,
       rng: rng,
-      color: impactColor,
+      color: Color(impactSkill.effectColor),
       accent: impactAccent,
       count: 7 + (kind.impactWeight * 10).round(),
+      displayScale: impactSkill.effectDisplayScale,
     );
     weaponImpacts.add(
-      WeaponImpact(position: impact, strength: kind.impactWeight),
+      WeaponImpact(position: impact, strength: impactSkill.screenShake),
     );
     var share = 1.0;
     final shielded = match.mode == MatchMode.arsenal
@@ -3079,6 +3183,8 @@ class PowerUpSystem {
       share = shielded;
     }
     if (kind == PowerUpKind.freeze) {
+      target.frozenDamageMultiplierOverride = null;
+      target.frozenCollisionDamageOverride = null;
       _sound('freeze');
       final steps = (_t.freezeSteps * share).round();
       if (steps > target.frozenLeft) {

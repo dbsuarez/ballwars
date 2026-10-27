@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../domain/replay_document.dart';
 
 /// Short share links: a shared match is stored in Supabase (`replays`, see
 /// supabase/migrations/003) under a random 7-character code, so the link is
@@ -16,29 +17,32 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
   final SupabaseClient _client;
   final math.Random _random;
 
-  SupabaseShortLinkRepository(this._client, {math.Random? random}) : _random = random ?? math.Random.secure();
+  SupabaseShortLinkRepository(this._client, {math.Random? random})
+    : _random = random ?? math.Random.secure();
 
-  static const String _alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  static const String _alphabet =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-  String _newCode() => List.generate(7, (_) => _alphabet[_random.nextInt(_alphabet.length)]).join();
+  String _newCode() => List.generate(
+    7,
+    (_) => _alphabet[_random.nextInt(_alphabet.length)],
+  ).join();
 
   @override
   Future<String> create(Map<String, String> replayQuery) async {
-    // The current table cannot store these options. Let the caller keep its
-    // full link rather than return a short link that changes the match.
-    const stored = {'seed', 'speed', 'fx', 'balls', 'size', 'q', 't'};
-    if (replayQuery.keys.any((key) => !stored.contains(key))) {
-      throw StateError('This match uses options that require the full replay link.');
-    }
+    final document = ReplayDocument(replayQuery);
     // Links are tied to the device's (anonymous) account, which the database
     // uses to limit how many one device can make (migration 007).
-    if (_client.auth.currentUser == null) await _client.auth.signInAnonymously();
+    if (_client.auth.currentUser == null) {
+      await _client.auth.signInAnonymously();
+    }
     // 62^7 codes: a clash is very unlikely, but retry a few times anyway.
     for (var attempt = 0; attempt < 4; attempt++) {
       final code = _newCode();
       try {
         await _client.from('replays').insert({
           'id': code,
+          'replay_payload': document.toJson(),
           'seed': int.parse(replayQuery['seed']!),
           'speed': double.tryParse(replayQuery['speed'] ?? '1') ?? 1,
           'effects': replayQuery['fx'] != '0',
@@ -53,7 +57,14 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
         });
         return code;
       } on PostgrestException catch (e) {
-        if (e.code != '23505') rethrow; // 23505: duplicate key, try another code
+        if (e.code == 'PGRST204' || e.code == '42703') {
+          throw StateError(
+            'Server replay storage needs migration 020_replay_documents.sql.',
+          );
+        }
+        if (e.code != '23505') {
+          rethrow; // 23505: duplicate key, try another code
+        }
       }
     }
     throw StateError('Could not create a short link');
@@ -61,13 +72,21 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
 
   @override
   Future<Map<String, String>?> resolve(String code) async {
-    final row = await _client.from('replays').select().eq('id', code).maybeSingle();
+    final row = await _client
+        .from('replays')
+        .select()
+        .eq('id', code)
+        .maybeSingle();
     if (row == null) return null;
+    if (row['replay_payload'] != null) {
+      return ReplayDocument.fromJson(row['replay_payload']).query;
+    }
     return {
       'seed': '${row['seed']}',
       'speed': '${row['speed']}',
       if (row['effects'] == false) 'fx': '0',
-      if (row['size'] != null && row['size'] != 'm') 'size': row['size'] as String,
+      if (row['size'] != null && row['size'] != 'm')
+        'size': row['size'] as String,
       if (row['question'] != null) 'q': row['question'] as String,
       if (row['tuning'] != null) 't': row['tuning'] as String,
       'balls': row['balls'] as String,

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/saved_replay_store.dart';
+import '../data/short_link_repository.dart';
 
 class SavedReplaysScreen extends StatefulWidget {
-  const SavedReplaysScreen({super.key, required this.onOpen});
+  const SavedReplaysScreen({super.key, required this.onOpen, this.shortLinks});
   final ValueChanged<Uri> onOpen;
+  final ShortLinkRepository? shortLinks;
 
   @override
   State<SavedReplaysScreen> createState() => _SavedReplaysScreenState();
@@ -12,6 +15,48 @@ class SavedReplaysScreen extends StatefulWidget {
 
 class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
   late Future<List<SavedReplay>> _entries = SavedReplayStore.load();
+  String? _sharingId;
+
+  Future<void> _share(SavedReplay entry) async {
+    if (_sharingId != null) return;
+    setState(() => _sharingId = entry.id);
+    try {
+      var shareUri = entry.shareUri == null ? null : Uri.parse(entry.shareUri!);
+      if (shareUri == null) {
+        final repository = widget.shortLinks;
+        if (repository == null) {
+          throw StateError('Server sharing is unavailable.');
+        }
+        final replay = Uri.parse(entry.uri);
+        final code = await repository.create(replay.queryParameters);
+        shareUri = replay.replace(queryParameters: {'r': code});
+        await SavedReplayStore.attachShareUri(entry.id, shareUri);
+      }
+      await Clipboard.setData(ClipboardData(text: shareUri.toString()));
+      if (mounted) {
+        setState(() => _entries = SavedReplayStore.load());
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Share link copied. Your replay is also kept on this device.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not create a share link. Your replay is safe on this device. Check your connection and try again. ${error is StateError ? error.message : ""}',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharingId = null);
+    }
+  }
 
   Future<void> _rename(SavedReplay entry) async {
     final controller = TextEditingController(text: entry.name ?? '');
@@ -89,12 +134,25 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
                   widget.onOpen(Uri.parse(entry.uri));
                 },
                 trailing: PopupMenuButton<String>(
+                  enabled: _sharingId != entry.id,
                   tooltip: 'Replay options',
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'rename', child: Text('Rename')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                    PopupMenuItem(
+                      value: 'share',
+                      child: Text(
+                        entry.shareUri == null
+                            ? 'Create share link'
+                            : 'Copy share link',
+                      ),
+                    ),
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                   onSelected: (action) async {
+                    if (action == 'share') {
+                      await _share(entry);
+                      return;
+                    }
                     if (action == 'rename') {
                       await _rename(entry);
                       return;

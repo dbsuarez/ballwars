@@ -77,6 +77,22 @@ class PowerUpSprites {
   };
   static ui.Image? effect(EffectSprite kind) => _effects[kind];
   static ui.Image? projectile(ProjectileSprite kind) => _projectiles[kind];
+
+  static ui.Image? projectileArtwork(PowerUpKind kind) => switch (kind) {
+    PowerUpKind.pistol ||
+    PowerUpKind.sniperRifle => projectile(ProjectileSprite.pistol),
+    PowerUpKind.shotgun => projectile(ProjectileSprite.shotgun),
+    PowerUpKind.gatling => projectile(ProjectileSprite.gatling),
+    PowerUpKind.bow => projectile(ProjectileSprite.bow),
+    PowerUpKind.prismLaser => projectile(ProjectileSprite.prismLaser),
+    PowerUpKind.swapCannon => projectile(ProjectileSprite.swapCannon),
+    PowerUpKind.hook ||
+    PowerUpKind.threadHarpoon => projectile(ProjectileSprite.harpoon),
+    PowerUpKind.ricochetDisc => projectile(ProjectileSprite.ricochetDisc),
+    PowerUpKind.rocketLauncher => rocketMissile,
+    PowerUpKind.freeze => effect(EffectSprite.iceWave),
+    _ => of(kind),
+  };
   static ui.Image? effectFrame(AnimatedEffect kind, int frame) {
     final frames = _animatedEffects[kind];
     return frames == null ? null : frames[frame % frames.length];
@@ -848,15 +864,26 @@ class PowerUpSprites {
 class PowerUpIcon extends StatelessWidget {
   final PowerUpKind kind;
   final double size;
+  final bool projectile;
 
-  const PowerUpIcon(this.kind, {super.key, this.size = 32});
+  const PowerUpIcon(
+    this.kind, {
+    super.key,
+    this.size = 32,
+    this.projectile = false,
+  });
 
   @override
   Widget build(BuildContext context) => FutureBuilder<void>(
     future: PowerUpSprites.load(),
     builder: (_, _) => CustomPaint(
       size: Size.square(size),
-      painter: _IconPainter(kind, PowerUpSprites.of(kind)),
+      painter: _IconPainter(
+        kind,
+        projectile
+            ? PowerUpSprites.projectileArtwork(kind)
+            : PowerUpSprites.of(kind),
+      ),
     ),
   );
 }

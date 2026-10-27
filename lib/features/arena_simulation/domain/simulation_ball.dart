@@ -102,6 +102,8 @@ class SimulationBall {
   int speedLeft = 0;
   double speedFactor = PowerUpTuning.speedFactor;
   int frozenLeft = 0;
+  double? frozenDamageMultiplierOverride;
+  double? frozenCollisionDamageOverride;
   int stunnedLeft = 0;
   int ghostLeft = 0;
   int flailLeft = 0;
@@ -132,6 +134,7 @@ class SimulationBall {
   /// `PowerUpSystem`). Blocking works from every side; this only shows where it braces.
   double shieldAngle = 0;
   final Set<PowerUpKind> trackingItems = {};
+  final Map<PowerUpKind, String> activeEffectSkillIds = {};
 
   /// Steps left of aiming before a gun fires at [aimTarget].
   int aimLeft = 0;

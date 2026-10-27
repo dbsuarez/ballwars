@@ -181,7 +181,7 @@ void paintSmiley(
 void paintHands(
   Canvas canvas,
   SimulationBall ball, {
-  double Function(PowerUpKind kind)? weaponGripInset,
+  double Function(PowerUpKind kind, int slot)? weaponGripInset,
 }) {
   final r = ball.radius;
   final held = ball.held;
@@ -207,7 +207,7 @@ void paintHands(
         ball,
         weapon: weapon,
         slot: slot,
-        gripInset: weaponGripInset?.call(weapon),
+        gripInset: weaponGripInset?.call(weapon, slot),
       );
       final dir = _unit(angle);
       _paintHandAt(
@@ -235,7 +235,7 @@ void paintHands(
   final side = Offset(-dir.dy, dir.dx);
   final weaponCenter = PowerUpPainter.heldCenter(
     ball,
-    gripInset: weaponGripInset?.call(held),
+    gripInset: weaponGripInset?.call(held, 0),
   );
   final Offset grip;
   if (held == PowerUpKind.shield) {

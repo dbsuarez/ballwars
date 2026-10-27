@@ -116,6 +116,88 @@ Projectile _bulletAt(
 );
 
 void main() {
+  test('visual controls resolve the equipped custom ID and survive reload', () {
+    final custom = SkillLibrary.defaults
+        .create('Large Knife', PowerUpKind.knife)
+        .copyWith(
+          enabled: true,
+          weaponDisplayScale: 2.5,
+          weaponGripInset: 0.8,
+          projectileSize: 2.2,
+          pickupDisplayScale: 1.6,
+          effectDisplayScale: 1.8,
+          spriteMode: SkillVisualMode.vector,
+          trackNearestOpponent: true,
+        );
+    final saved = SkillLibrary.defaults.withDefinition(
+      custom,
+      PowerUpConfig.defaults,
+    );
+    final restored = SkillLibrary.fromJson(saved.toJson());
+    final c = _match(skillLibrary: restored);
+    final [a, b] = c.state.balls;
+    a.equipWeapon(PowerUpKind.knife, skillId: custom.id, dualWield: false);
+    b.equipWeapon(
+      PowerUpKind.knife,
+      skillId: 'builtin.knife',
+      dualWield: false,
+    );
+    expect(c.powerUps!.weaponDisplayScale(PowerUpKind.knife, ball: a), 2.5);
+    expect(c.powerUps!.weaponDisplayScale(PowerUpKind.knife, ball: b), 1);
+    expect(c.powerUps!.weaponGripInset(PowerUpKind.knife, ball: a), 0.8);
+    expect(c.powerUps!.usesSprite(PowerUpKind.knife, ball: a), isFalse);
+    expect(c.powerUps!.usesSprite(PowerUpKind.knife, ball: b), isTrue);
+    expect(
+      c.powerUps!.visualSkill(PowerUpKind.knife, ball: a).pickupDisplayScale,
+      1.6,
+    );
+    expect(
+      c.powerUps!.visualSkill(PowerUpKind.knife, ball: a).effectDisplayScale,
+      1.8,
+    );
+    _run(c, 1);
+    expect(a.trackingItems, contains(PowerUpKind.knife));
+    expect(b.trackingItems, isEmpty);
+  });
+
+  test('built-in projectile scale and homing reach actual fired shots', () {
+    final edited = SkillLibrary.defaults
+        .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+        .copyWith(projectileSize: 2.4, homing: true, projectileSpin: 120);
+    final c = _match(
+      skillLibrary: SkillLibrary.defaults.withDefinition(
+        edited,
+        PowerUpConfig.defaults,
+      ),
+    );
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.pistol);
+    owner.aimLeft = 1;
+    _run(c, 1);
+    final shot = c.powerUps!.projectiles.single;
+    expect(shot.renderScale, 2.4);
+    expect(shot.homing, isTrue);
+    expect(shot.spinDegreesPerSecond, 120);
+  });
+
+  test('Golden Armor hit count and Apple healing use saved definitions', () {
+    final armor = SkillLibrary.defaults
+        .builtIn(PowerUpKind.goldenArmor, PowerUpConfig.defaults)
+        .copyWith(shieldHits: 4);
+    final apple = SkillLibrary.defaults
+        .builtIn(PowerUpKind.apple, PowerUpConfig.defaults)
+        .copyWith(healing: 7);
+    final library = SkillLibrary.defaults
+        .withDefinition(armor, PowerUpConfig.defaults)
+        .withDefinition(apple, PowerUpConfig.defaults);
+    final c = _match(skillLibrary: library);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.goldenArmor);
+    expect(owner.goldenArmorHits, 4);
+    owner.life = 50;
+    _give(c, owner, PowerUpKind.apple);
+    expect(owner.life, 57);
+  });
   test('a composed pickup skill executes its new behavior', () {
     final draft = SkillLibrary.defaults
         .create('Apple Shockwave', PowerUpKind.apple)

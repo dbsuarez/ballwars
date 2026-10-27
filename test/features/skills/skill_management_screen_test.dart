@@ -7,6 +7,24 @@ import 'package:ballwars/features/skills/presentation/skill_management_screen.da
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Future<void> _revealEditor(WidgetTester tester, Finder target) async {
+  final scrollable = find
+      .descendant(
+        of: find.byType(ListView).last,
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+  await tester.pump();
+  await tester.scrollUntilVisible(
+    target,
+    280,
+    scrollable: scrollable,
+    maxScrolls: 100,
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   Widget app({ValueChanged<SkillManagementResult?>? onResult}) => MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
@@ -27,6 +45,54 @@ void main() {
         child: const Text('open'),
       ),
     ),
+  );
+
+  testWidgets(
+    'phone editor keeps fixed labels and aligned previews without overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(app());
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('create-new-skill')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Skill name'),
+        'Phone skill',
+      );
+      await tester.tap(find.text('Build skill'));
+      await tester.pumpAndSettle();
+      for (final key in [
+        'skill-category',
+        'skill-trigger',
+        'skill-targeting',
+        'skill-delivery',
+        'skill-field-arsenal',
+        'visual-preview-item',
+        'skill-field-weaponDisplayScale',
+        'skill-field-projectileSize',
+        'skill-yell',
+        'preview-skill-sound',
+      ]) {
+        await _revealEditor(tester, find.byKey(ValueKey(key)));
+        expect(tester.takeException(), isNull, reason: key);
+      }
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('visual-preview-item')),
+      );
+      final item = tester.getRect(
+        find.byKey(const ValueKey('visual-preview-item')),
+      );
+      final projectile = tester.getRect(
+        find.byKey(const ValueKey('visual-preview-impact')),
+      );
+      expect(item.size, projectile.size);
+      expect(item.top, projectile.top);
+      await tester.pumpWidget(const SizedBox());
+    },
   );
 
   testWidgets(
@@ -250,32 +316,38 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Duplicate'));
     await tester.pumpAndSettle();
     expect(find.text('Edit Heavy Pistol'), findsOneWidget);
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('visual-preview-item')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('visual-preview-item')), findsOneWidget);
     expect(find.byKey(const ValueKey('visual-preview-impact')), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('skill-field-weaponGripInset')),
-      findsOneWidget,
+      tester.getSize(find.byKey(const ValueKey('visual-preview-item'))),
+      tester.getSize(find.byKey(const ValueKey('visual-preview-impact'))),
+    );
+    await _revealEditor(
+      tester,
+      find.byKey(const ValueKey('skill-field-projectileSize')),
     );
     await tester.enterText(
       find.byKey(const ValueKey('skill-field-projectileSize')),
       '2',
     );
     await tester.pump();
+    await _revealEditor(
+      tester,
+      find.byKey(const ValueKey('visual-preview-impact')),
+    );
     final projectilePreview = find.descendant(
       of: find.byKey(const ValueKey('visual-preview-impact')),
       matching: find.byType(PowerUpIcon),
     );
     expect(tester.widget<PowerUpIcon>(projectilePreview).size, 64);
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('preview-skill-sound')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
     );
     await tester.pumpAndSettle();
     expect(
@@ -287,21 +359,16 @@ void main() {
     expect(find.text('Skill settings guide'), findsOneWidget);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('skill-field-arsenal')),
-      find.byType(ListView).last,
-      const Offset(0, 300),
     );
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('skill-field-arsenal')),
       '42',
     );
-    await tester.dragUntilVisible(
-      find.byKey(const ValueKey('skill-enabled')),
-      find.byType(ListView).last,
-      const Offset(0, 300),
-    );
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-enabled')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
@@ -426,56 +493,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Edit Gravity Burst'), findsOneWidget);
-    await tester.dragUntilVisible(
-      find.byKey(const ValueKey('skill-trigger')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
-    );
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-trigger')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('skill-trigger')), findsOneWidget);
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('skill-bubble-type')),
-      find.byType(ListView).last,
-      const Offset(0, 300),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('skill-bubble-type')), findsOneWidget);
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('callout-bubble-shout')),
-      find.byType(ListView).last,
-      const Offset(0, 300),
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('callout-bubble-shout')), findsOneWidget);
-    await tester.dragUntilVisible(
-      find.byKey(const ValueKey('skill-yell')),
-      find.byType(ListView).last,
-      const Offset(0, 300),
-    );
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-yell')));
     await tester.enterText(find.byKey(const ValueKey('skill-yell')), 'GO!');
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('callout-style-preview')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
     );
     final shortBubble = tester.getSize(
       find.byKey(const ValueKey('callout-style-preview')),
     );
-    await tester.dragUntilVisible(
-      find.byKey(const ValueKey('skill-yell')),
-      find.byType(ListView).last,
-      const Offset(0, 300),
-    );
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-yell')));
     await tester.enterText(
       find.byKey(const ValueKey('skill-yell')),
       'UNLEASH THE GRAVITY STORM!',
     );
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('callout-style-preview')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
     );
     final longBubble = tester.getSize(
       find.byKey(const ValueKey('callout-style-preview')),
@@ -489,10 +540,9 @@ void main() {
       find.byKey(const ValueKey('callout-bubble-thought')),
       findsOneWidget,
     );
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('skill-effect-type')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
     );
     expect(find.byKey(const ValueKey('skill-effect-type')), findsOneWidget);
     expect(find.byKey(const ValueKey('skill-weapon-healing')), findsOneWidget);
@@ -503,17 +553,12 @@ void main() {
         )
         .onChanged!(true);
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
+    await _revealEditor(
+      tester,
       find.byKey(const ValueKey('skill-field-healing')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
     );
     expect(find.byKey(const ValueKey('skill-field-healing')), findsOneWidget);
-    await tester.dragUntilVisible(
-      find.byKey(const ValueKey('preview-skill')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
-    );
+    await _revealEditor(tester, find.byKey(const ValueKey('preview-skill')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('preview-skill')));
     await tester.pumpAndSettle();
@@ -538,11 +583,7 @@ void main() {
     );
     await tester.tap(find.text('Build skill'));
     await tester.pumpAndSettle();
-    await tester.dragUntilVisible(
-      find.byKey(const ValueKey('skill-targeting')),
-      find.byType(ListView).last,
-      const Offset(0, -300),
-    );
+    await _revealEditor(tester, find.byKey(const ValueKey('skill-targeting')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('skill-targeting')));
     await tester.pumpAndSettle();

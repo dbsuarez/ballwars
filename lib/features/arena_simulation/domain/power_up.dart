@@ -247,7 +247,7 @@ class Projectile {
     this.volley = 0,
     this.landAt,
     this.target,
-    this.homing = true,
+    this.homing = false,
     this.returning = false,
     this.returnTo,
     this.renderScale = 1,
@@ -324,11 +324,17 @@ class RagingDemonAttack {
 
 /// A bomb that went off, kept for [PowerUpTuning.explosionShowSteps] steps so it can be drawn.
 class Explosion {
-  Explosion({required this.position, required this.radius, this.kind});
+  Explosion({
+    required this.position,
+    required this.radius,
+    this.kind,
+    this.skillId,
+  });
 
   final Offset position;
   final double radius;
   final PowerUpKind? kind;
+  final String? skillId;
 
   /// Steps since it went off.
   int age = 0;

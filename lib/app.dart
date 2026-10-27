@@ -660,8 +660,10 @@ class _HomeScreenState extends State<_HomeScreen> {
                           'Watch or delete $_savedReplayCount saved replay${_savedReplayCount == 1 ? "" : "s"}',
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) =>
-                              SavedReplaysScreen(onOpen: _openReplayLink),
+                          builder: (_) => SavedReplaysScreen(
+                            onOpen: _openReplayLink,
+                            shortLinks: widget.shortLinks,
+                          ),
                         ),
                       ),
                     ),

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../domain/power_up.dart';
 import '../domain/simulation_state.dart';
 import '../domain/floating_text.dart';
 import '../domain/simulation_ball.dart';
@@ -555,7 +556,15 @@ class ArenaPainter extends CustomPainter {
       );
     }
 
-    PowerUpPainter.paintSpeedTrail(canvas, ball);
+    PowerUpPainter.paintSpeedTrail(
+      canvas,
+      ball,
+      displayScale:
+          state.powerUps
+              ?.visualSkill(PowerUpKind.speed, ball: ball)
+              .effectDisplayScale ??
+          1,
+    );
 
     if (showBallGlow) {
       canvas.drawCircle(
@@ -595,24 +604,58 @@ class ArenaPainter extends CustomPainter {
       canvas,
       ball,
       step: state.step,
+      useWeaponSprite: (kind, slot) =>
+          state.powerUps?.usesSprite(
+            kind,
+            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+          ) ??
+          true,
       incomingAttackAngle: PowerUpPainter.incomingAttackAngle(state, ball),
       firedWeaponHoldLeft: (kind) =>
           state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
-      weaponDisplayScale: (kind) =>
-          state.powerUps?.weaponDisplayScale(kind) ?? 1,
-      weaponGripInset: (kind) =>
-          state.powerUps?.weaponGripInset(kind) ?? (kind.isBlade ? 0.2 : 0),
-      skillRange: (kind) => state.powerUps?.skillRange(kind) ?? 1,
-      handEffectScale: (kind) => state.powerUps?.handEffectScale(kind) ?? 1,
+      weaponDisplayScale: (kind, slot) =>
+          state.powerUps
+              ?.visualSkill(
+                kind,
+                skillId: slot == 0
+                    ? ball.heldSkillId
+                    : ball.heldSecondarySkillId,
+              )
+              .weaponDisplayScale ??
+          1,
+      effectDisplayScale: (kind) =>
+          state.powerUps?.visualSkill(kind, ball: ball).effectDisplayScale ?? 1,
+      weaponGripInset: (kind, slot) =>
+          state.powerUps
+              ?.visualSkill(
+                kind,
+                skillId: slot == 0
+                    ? ball.heldSkillId
+                    : ball.heldSecondarySkillId,
+              )
+              .weaponGripInset ??
+          (kind.isBlade ? 0.2 : 0),
+      skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
+      handEffectScale: (kind) =>
+          state.powerUps?.handEffectScale(kind, ball: ball) ?? 1,
       handEffectColor: (kind) =>
-          state.powerUps?.handEffectColor(kind) ?? const Color(0xFFFFFFFF),
+          state.powerUps?.handEffectColor(kind, ball: ball) ??
+          const Color(0xFFFFFFFF),
     );
     if (look != BallLook.pictures || handsOnPictures) {
       paintHands(
         canvas,
         ball,
-        weaponGripInset: (kind) =>
-            state.powerUps?.weaponGripInset(kind) ?? (kind.isBlade ? 0.2 : 0),
+        weaponGripInset: (kind, slot) =>
+            state.powerUps
+                ?.visualSkill(
+                  kind,
+                  skillId: slot == 0
+                      ? ball.heldSkillId
+                      : ball.heldSecondarySkillId,
+                )
+                .weaponGripInset ??
+            (kind.isBlade ? 0.2 : 0),
       );
     }
     if (ball.isGhost) canvas.restore();

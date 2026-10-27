@@ -155,6 +155,7 @@ class ParticleSystem {
     required Color color,
     required Color accent,
     int count = 10,
+    double displayScale = 1,
   }) {
     count += rng.nextInt(5);
     for (var i = 0; i < count; i++) {
@@ -166,14 +167,18 @@ class ParticleSystem {
           velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
           lifespan: rng.nextDoubleRange(0.12, 0.28),
           color: i.isEven ? color : accent,
-          baseRadius: rng.nextDoubleRange(1.2, 2.8),
+          baseRadius: rng.nextDoubleRange(1.2, 2.8) * displayScale,
         ),
       );
     }
   }
 
   /// Spawns a burst of small green sparkles all around [origin], when a ball takes an apple.
-  void spawnSparkle({required Offset origin, required SeededRandom rng}) {
+  void spawnSparkle({
+    required Offset origin,
+    required SeededRandom rng,
+    double displayScale = 1,
+  }) {
     final count = 14 + rng.nextInt(7); // 14..20
 
     for (var i = 0; i < count; i++) {
@@ -185,7 +190,7 @@ class ParticleSystem {
           velocity: Offset(math.cos(angle), math.sin(angle)) * speed,
           lifespan: rng.nextDoubleRange(0.3, 0.6),
           color: sparkleColor,
-          baseRadius: rng.nextDoubleRange(1.2, 2.8),
+          baseRadius: rng.nextDoubleRange(1.2, 2.8) * displayScale,
         ),
       );
     }

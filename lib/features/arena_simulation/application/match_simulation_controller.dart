@@ -482,7 +482,7 @@ class MatchSimulationController {
         ? math.pow(_balls.length / 2, 2).toDouble()
         : 1.0;
     final frozenMultiplier = applyFrozenMultiplier && ball.frozenLeft > 0
-        ? tuning.frozenDamageMultiplier
+        ? (ball.frozenDamageMultiplierOverride ?? tuning.frozenDamageMultiplier)
         : 1.0;
     final before = ball.life;
     ball.life = math.max(0, ball.life - amount * crowd * frozenMultiplier);
@@ -814,7 +814,7 @@ class MatchSimulationController {
           if (a.frozenLeft > 0) {
             damage(
               a,
-              tuning.frozenCollisionDamage,
+              a.frozenCollisionDamageOverride ?? tuning.frozenCollisionDamage,
               attacker: b,
               move: 'Frozen collision',
               applyFrozenMultiplier: false,
@@ -823,7 +823,7 @@ class MatchSimulationController {
           if (b.frozenLeft > 0) {
             damage(
               b,
-              tuning.frozenCollisionDamage,
+              b.frozenCollisionDamageOverride ?? tuning.frozenCollisionDamage,
               attacker: a,
               move: 'Frozen collision',
               applyFrozenMultiplier: false,

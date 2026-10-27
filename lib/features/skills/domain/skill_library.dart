@@ -92,6 +92,8 @@ class SkillDefinition {
     this.returnsToOrigin = false,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
+    this.pickupDisplayScale = 1,
+    this.effectDisplayScale = 1,
     this.weaponGripInset = 0,
     this.effectStrength = 1,
     this.healing = 10,
@@ -148,6 +150,8 @@ class SkillDefinition {
   final bool returnsToOrigin;
   final bool trackNearestOpponent;
   final double weaponDisplayScale;
+  final double pickupDisplayScale;
+  final double effectDisplayScale;
   final double weaponGripInset;
   final double effectStrength;
   final double healing;
@@ -182,10 +186,11 @@ class SkillDefinition {
   final double handEffectDurationSeconds;
   SkillCategory get resolvedCategory => category ?? _legacyCategory(baseKind);
   bool get canDamage =>
-      (arsenalDamage ?? 0) > 0 ||
-      (allOutDamage ?? 0) > 0 ||
-      (dotArsenalDamage ?? 0) > 0 ||
-      (dotAllOutDamage ?? 0) > 0 ||
+      (!isComposed &&
+          ((arsenalDamage ?? 0) > 0 ||
+              (allOutDamage ?? 0) > 0 ||
+              (dotArsenalDamage ?? 0) > 0 ||
+              (dotAllOutDamage ?? 0) > 0)) ||
       effectType == SkillEffectType.damage ||
       effectType == SkillEffectType.damageOverTime ||
       secondaryEffectType == SkillEffectType.damage ||
@@ -264,6 +269,8 @@ class SkillDefinition {
     bool? returnsToOrigin,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
+    double? pickupDisplayScale,
+    double? effectDisplayScale,
     double? weaponGripInset,
     double? effectStrength,
     double? healing,
@@ -319,6 +326,8 @@ class SkillDefinition {
     returnsToOrigin: returnsToOrigin ?? this.returnsToOrigin,
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
+    pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
+    effectDisplayScale: effectDisplayScale ?? this.effectDisplayScale,
     weaponGripInset: weaponGripInset ?? this.weaponGripInset,
     effectStrength: effectStrength ?? this.effectStrength,
     healing: healing ?? this.healing,
@@ -381,6 +390,8 @@ class SkillDefinition {
     'returns_to_origin': returnsToOrigin,
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
+    'pickup_display_scale': pickupDisplayScale,
+    'effect_display_scale': effectDisplayScale,
     'weapon_grip_inset': weaponGripInset,
     'effect_strength': effectStrength,
     'healing': healing,
@@ -459,6 +470,8 @@ class SkillDefinition {
       returnsToOrigin: value['returns_to_origin'] as bool? ?? false,
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
+      pickupDisplayScale: decimal('pickup_display_scale') ?? 1,
+      effectDisplayScale: decimal('effect_display_scale') ?? 1,
       weaponGripInset: decimal('weapon_grip_inset') ?? 0,
       effectStrength: decimal('effect_strength') ?? 1,
       healing: decimal('healing') ?? 10,
@@ -532,6 +545,8 @@ class SkillDefinition {
     projectileSize: projectileSize.clamp(0.1, 5),
     projectileSpin: projectileSpin.clamp(-2160, 2160),
     weaponDisplayScale: weaponDisplayScale.clamp(0.25, 3),
+    pickupDisplayScale: pickupDisplayScale.clamp(0.25, 3),
+    effectDisplayScale: effectDisplayScale.clamp(0.25, 3),
     weaponGripInset: weaponGripInset.clamp(0, 1.5),
     effectStrength: effectStrength.clamp(0, 10),
     healing: healing.clamp(0, 500),
@@ -1068,6 +1083,7 @@ class SkillLibrary {
           ? SkillVisualMode.vector
           : SkillVisualMode.sprite,
       soundCue: _defaultSoundFor(kind),
+      screenShake: kind.impactWeight,
       yell: _defaultYellFor(kind),
       calloutStyle: kind.isTrap
           ? SkillCalloutStyle.special

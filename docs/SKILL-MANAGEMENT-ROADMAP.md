@@ -240,6 +240,10 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ### Follow-up polish (2026-10-27)
 
+- [x] Implement the [Skill Management audit](SKILL-MANAGEMENT-AUDIT.md): grouped fixed-label controls, visible validation, aligned sprite/projectile previews, and runtime sizing/parameter corrections.
+- [x] Add opt-in replay server upload and cached short-link sharing while retaining local offline playback.
+- [ ] Apply production migration `020_replay_documents.sql` to enable full replay documents on the server.
+
 - [x] Pass each mode's finisher choice into the live battle rather than reading a stale global setting.
 - [x] Add Laser Gate and Quicksand finisher profiles and gallery previews using their arena hazard renderer. Gravity Well and Vine Snare do not directly damage balls and remain excluded.
 - [x] Reuse existing fire, ice, tornado, slash, explosion and projectile artwork in finishers; add missing elemental presentations and preserve custom-skill carrier artwork.
@@ -247,7 +251,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Add Rename to saved replay options and persist the name without changing playback data.
 - [x] Replace hex-only Effect color entry with a visual picker for all skills, with swatches, hue, saturation and brightness controls.
 
-- [x] Final static analysis and automated tests pass (444-test full suite plus all-damaging-finisher render regression; 2026-10-27). Release web build passed.
+- [x] Final static analysis and automated tests pass (452-test full suite; 2026-10-27), including actual equipped-size pixel rendering and a 390px editor layout.
 - [ ] Browser verification passes.
 - [ ] Android phone verification passes.
 - [ ] Cross-device synchronization passes.

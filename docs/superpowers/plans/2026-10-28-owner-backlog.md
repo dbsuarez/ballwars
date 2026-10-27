@@ -191,3 +191,23 @@ Rules:
 
 - [ ] **Step 1: Failing tests**: changing Kutsilyo (custom, base knife) to Special leaves the built-in Knife Normal and vice versa; the rarity editor lists custom skills under their own tier; the Weapons dialog custom card shows the tier label and color; a custom skill's spawn weight follows its own tier; default library gives identical spawn draws to before.
 - [ ] **Step 2: Implement**, **Step 3: Run** focused then full tests. **Commit** `fix: custom skills have their own tier`; CLAUDE.md.
+
+### Task 10: Pickups count includes custom skills
+
+Owner: "match settings, pickups, the count does not include the custom [skills] that I created."
+
+**Files:** `match_setup_screen.dart` (Pickups ListTile ~l.1296-1301: `'Pickups: All'` / `'Pickups: n of m'` counts only built-in non-trap kinds; `_customChoice`, `_spawnableCustom`, `_customOff` ~l.80-97); test `match_setup_packs_test.dart`.
+
+- [ ] **Step 1: Failing test**: with 2 spawnable custom skills (one switched off for this match type) and some built-ins off, the label reads `Pickups: <on built-ins + on custom> of <all built-ins + all spawnable custom>`; with everything on it reads `Pickups: All`; with no custom skills it reads as today.
+- [ ] **Step 2: Implement** using the same lists the Weapons dialog uses (`_spawnableCustom`, `_customOff`), so the label always matches the dialog's "n selected".
+- [ ] **Step 3: Run** focused then full tests. **Commit** `fix: Pickups count includes custom skills`.
+
+### Task 11: Custom description for custom skills
+
+Owner: "let me add my custom description for custom skills."
+
+**Files:** `skill_library.dart` (`SkillDefinition.description`, String, default '', max 160 chars, JSON `description`, trimmed; part of copyWith/fromJson/clamps), `skill_management_screen.dart` (Identity tab: multi-line TextField `skill-description`, counter, custom skills only), `match_setup_screen.dart` Weapons dialog `_customCard` (~l.1844: show the description; when empty, fall back to today's generated text), Skill Management list card subtitle, Power-up test item picker if it shows descriptions; tests `skill_library_test.dart`, `skill_management_screen_test.dart`, `match_setup_packs_test.dart`.
+
+- [ ] **Step 1: Failing tests**: JSON round trip and 160-char limit; old JSON reads ''; the editor saves the text; the Weapons dialog card shows it (2 lines max, ellipsis, same card height); empty falls back to the generated description.
+- [ ] **Step 2: Implement**. UI text plain `-`. Descriptions travel with the skill snapshot in replay links (`skills=`), so check the snapshot size limit still holds with a 160-char description (`SkillLibrary.maxReplayCharacters`).
+- [ ] **Step 3: Run** focused then full tests. **Commit** `feat: custom descriptions for custom skills`; CLAUDE.md.

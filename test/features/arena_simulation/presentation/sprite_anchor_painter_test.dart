@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:ballwars/core/sprites/sprite_registry.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
+import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
@@ -110,25 +112,99 @@ void main() {
     });
   });
 
-  test('PowerUpSprites.load registers the drawn icons again after a reset',
-      () async {
+  test('the finisher raster helper puts the anchor on its target', () async {
+    const target = Offset(40, 60);
+    const half = 12.0;
     await TestWidgetsFlutterBinding.instance.runAsync(() async {
-      SpriteRegistry.resetForTest();
-      await PowerUpSprites.load();
-      for (final kind in PowerUpSprites.pixelArtOnly) {
-        expect(SpriteRegistry.has(PowerUpSprites.iconId(kind)), isTrue);
+      final image = await _square();
+      for (final anchor in const [
+        Offset(0.5, 0.5),
+        Offset(0, 0.5),
+        Offset(1, 0),
+        Offset(0.25, 0.75),
+      ]) {
+        SpriteRegistry.resetForTest();
+        await SpriteRegistry.registerDrawn(
+          id,
+          image,
+          output: 32,
+          anchor: anchor,
+        );
+        final canvas = _RecordingCanvas();
+        HarpoonCinematic.paintRaster(
+          canvas,
+          SpriteRegistry.frame(id)!,
+          target,
+          half,
+          anchor: SpriteRegistry.anchor(id),
+        );
+        expect(
+          canvas.images.single,
+          Rect.fromLTWH(
+            target.dx - 2 * half * anchor.dx,
+            target.dy - 2 * half * anchor.dy,
+            2 * half,
+            2 * half,
+          ),
+          reason: '$anchor',
+        );
       }
-      SpriteRegistry.resetForTest();
-      for (final kind in PowerUpSprites.pixelArtOnly) {
-        expect(SpriteRegistry.has(PowerUpSprites.iconId(kind)), isFalse);
-      }
-      await PowerUpSprites.load();
-      expect(SpriteRegistry.loadProblems, isEmpty);
-      for (final kind in PowerUpSprites.pixelArtOnly) {
-        final icon = PowerUpSprites.of(kind);
-        expect(icon, isNotNull, reason: '$kind');
-        expect((icon!.width, icon.height), (64, 64));
-      }
+      image.dispose();
     });
   });
+
+  test('one bad drawn icon is reported and the others still load', () async {
+    final original = PowerUpSprites.debugRegisterDrawn;
+    final previousOnError = FlutterError.onError;
+    final reported = <FlutterErrorDetails>[];
+    final bad = PowerUpSprites.iconId(PowerUpSprites.pixelArtOnly.first);
+    PowerUpSprites.debugRegisterDrawn = (drawnId, image) => drawnId == bad
+        ? Future.error(ArgumentError('Drawn sprite has problems: test'))
+        : original(drawnId, image);
+    FlutterError.onError = reported.add;
+    try {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        SpriteRegistry.resetForTest();
+        await PowerUpSprites.load(); // completes normally
+      });
+    } finally {
+      FlutterError.onError = previousOnError;
+      PowerUpSprites.debugRegisterDrawn = original;
+    }
+    expect(reported, hasLength(1));
+    expect(reported.single.exception, isA<ArgumentError>());
+    expect(reported.single.context.toString(), contains(bad));
+    expect(SpriteRegistry.has(bad), isFalse);
+    for (final kind in PowerUpSprites.pixelArtOnly.skip(1)) {
+      expect(SpriteRegistry.has(PowerUpSprites.iconId(kind)), isTrue);
+    }
+    expect(
+      SpriteRegistry.has(PowerUpSprites.iconId(PowerUpKind.pistol)),
+      isTrue,
+    );
+  });
+
+  test(
+    'PowerUpSprites.load registers the drawn icons again after a reset',
+    () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        SpriteRegistry.resetForTest();
+        await PowerUpSprites.load();
+        for (final kind in PowerUpSprites.pixelArtOnly) {
+          expect(SpriteRegistry.has(PowerUpSprites.iconId(kind)), isTrue);
+        }
+        SpriteRegistry.resetForTest();
+        for (final kind in PowerUpSprites.pixelArtOnly) {
+          expect(SpriteRegistry.has(PowerUpSprites.iconId(kind)), isFalse);
+        }
+        await PowerUpSprites.load();
+        expect(SpriteRegistry.loadProblems, isEmpty);
+        for (final kind in PowerUpSprites.pixelArtOnly) {
+          final icon = PowerUpSprites.of(kind);
+          expect(icon, isNotNull, reason: '$kind');
+          expect((icon!.width, icon.height), (64, 64));
+        }
+      });
+    },
+  );
 }

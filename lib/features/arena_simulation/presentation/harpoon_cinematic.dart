@@ -29,6 +29,36 @@ class HarpoonCinematic extends StatefulWidget {
     this.effectSprites = true,
   });
 
+  /// Draws [image] [half] in half-size with its sprite [anchor]
+  /// (`SpriteRegistry.anchor(id)` of the sprite it came from) at [center],
+  /// turned by [rotation] around it. The finisher painter's sprite helper.
+  @visibleForTesting
+  static void paintRaster(
+    Canvas canvas,
+    ui.Image image,
+    Offset center,
+    double half, {
+    required Offset anchor,
+    double rotation = 0,
+    double opacity = 1,
+  }) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      SpriteRegistry.placeRect(Offset.zero, half * 2, half * 2, anchor),
+      Paint()
+        ..filterQuality = FilterQuality.none
+        ..colorFilter = ColorFilter.mode(
+          Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
+          BlendMode.modulate,
+        ),
+    );
+    canvas.restore();
+  }
+
   final CustomBall winner;
   final CustomBall loser;
   final String move;
@@ -403,6 +433,9 @@ class _FinisherPainter extends CustomPainter {
               loserCenter,
               radius * 1.8,
               rotation: -math.pi / 4,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.slash),
+              ),
             );
           }
           final slash = Paint()
@@ -526,7 +559,15 @@ class _FinisherPainter extends CustomPainter {
                 Paint()..color = profile.accent,
               );
             } else {
-              _paintRaster(canvas, pelletSprite, pellet, radius * 0.3);
+              _paintRaster(
+                canvas,
+                pelletSprite,
+                pellet,
+                radius * 0.3,
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.projectileId(ProjectileSprite.shotgun),
+                ),
+              );
             }
           }
         }
@@ -705,6 +746,7 @@ class _FinisherPainter extends CustomPainter {
                   at,
                   radius * 0.62,
                   rotation: angle + math.pi / 2,
+                  anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.flame),
                 );
               }
             }
@@ -775,6 +817,9 @@ class _FinisherPainter extends CustomPainter {
               point,
               radius * 1.25,
               rotation: hookProgress * math.pi * 8,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.boomerangProjectileId,
+              ),
             );
           } else {
             _paintItem(canvas, point, radius * 1.25);
@@ -938,6 +983,7 @@ class _FinisherPainter extends CustomPainter {
               point,
               radius * 1.3 * pulse,
               rotation: angle,
+              anchor: SpriteRegistry.anchor(PowerUpSprites.rocketMissileId),
             );
           } else {
             _paintItem(canvas, point, radius * 1.3);
@@ -984,6 +1030,9 @@ class _FinisherPainter extends CustomPainter {
               loserCenter,
               radius * 1.9,
               rotation: hookProgress * 0.35,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.omegaTendrilsAttackId,
+              ),
             );
           }
         }
@@ -1002,7 +1051,13 @@ class _FinisherPainter extends CustomPainter {
                 ? loserCenter + Offset((i - 1.5) * radius * 0.65, radius * 0.3)
                 : Offset.lerp(from, loserCenter, (i + 1) / 4 * hookProgress)!;
             if (sprite != null) {
-              _paintRaster(canvas, sprite, point, radius * 1.2);
+              _paintRaster(
+                canvas,
+                sprite,
+                point,
+                radius * 1.2,
+                anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.campfire),
+              );
             }
           }
         }
@@ -1017,7 +1072,15 @@ class _FinisherPainter extends CustomPainter {
             frameCount: 4,
           );
           if (sprite != null) {
-            _paintRaster(canvas, sprite, loserCenter, radius * 1.8);
+            _paintRaster(
+              canvas,
+              sprite,
+              loserCenter,
+              radius * 1.8,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.tornado),
+              ),
+            );
           }
         }
       case PowerUpKind.freeze:
@@ -1027,7 +1090,13 @@ class _FinisherPainter extends CustomPainter {
             (hookProgress * 7).toInt(),
           );
           if (sprite != null) {
-            _paintRaster(canvas, sprite, to, radius * 1.5);
+            _paintRaster(
+              canvas,
+              sprite,
+              to,
+              radius * 1.5,
+              anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.iceImpact),
+            );
           }
         }
       case PowerUpKind.poisonSwamp:
@@ -1039,6 +1108,7 @@ class _FinisherPainter extends CustomPainter {
               sprite,
               loserCenter + Offset(0, radius * 0.75),
               radius * 1.8,
+              anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.stickyGoo),
             );
           }
         }
@@ -1083,15 +1153,20 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintBullet(Canvas canvas, Offset center, double size) {
-    final projectile = SpriteRegistry.frame(
-      PowerUpSprites.projectileId(
-        _kind == PowerUpKind.gatling
-            ? ProjectileSprite.gatling
-            : ProjectileSprite.pistol,
-      ),
+    final projectileId = PowerUpSprites.projectileId(
+      _kind == PowerUpKind.gatling
+          ? ProjectileSprite.gatling
+          : ProjectileSprite.pistol,
     );
+    final projectile = SpriteRegistry.frame(projectileId);
     if (projectile != null) {
-      _paintRaster(canvas, projectile, center, size * 3.2);
+      _paintRaster(
+        canvas,
+        projectile,
+        center,
+        size * 3.2,
+        anchor: SpriteRegistry.anchor(projectileId),
+      );
       return;
     }
     final rect = RRect.fromRectAndRadius(
@@ -1130,7 +1205,16 @@ class _FinisherPainter extends CustomPainter {
       PowerUpSprites.projectileId(ProjectileSprite.bow),
     );
     if (sprite != null) {
-      _paintRaster(canvas, sprite, point, radius * 0.95, rotation: angle);
+      _paintRaster(
+        canvas,
+        sprite,
+        point,
+        radius * 0.95,
+        rotation: angle,
+        anchor: SpriteRegistry.anchor(
+          PowerUpSprites.projectileId(ProjectileSprite.bow),
+        ),
+      );
       return;
     }
     canvas.save();
@@ -1171,7 +1255,13 @@ class _FinisherPainter extends CustomPainter {
         Rect.fromCenter(center: center, width: size, height: size),
       );
     } else {
-      _paintRaster(canvas, sprite, center, size / 2);
+      _paintRaster(
+        canvas,
+        sprite,
+        center,
+        size / 2,
+        anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(kind)),
+      );
     }
   }
 
@@ -1191,6 +1281,7 @@ class _FinisherPainter extends CustomPainter {
         center,
         radius * (0.8 + burst * 2.5),
         opacity: fade,
+        anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.explosion),
       );
       return;
     }
@@ -1206,37 +1297,23 @@ class _FinisherPainter extends CustomPainter {
     );
   }
 
-  /// Draws [image] [half] in half-size with its sprite anchor
-  /// ([SpriteRegistry.anchorOf]) at [center], turned by [rotation] around it.
   void _paintRaster(
     Canvas canvas,
     ui.Image image,
     Offset center,
     double half, {
+    required Offset anchor,
     double rotation = 0,
     double opacity = 1,
-  }) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      SpriteRegistry.placeRect(
-        Offset.zero,
-        half * 2,
-        half * 2,
-        SpriteRegistry.anchorOf(image),
-      ),
-      Paint()
-        ..filterQuality = FilterQuality.none
-        ..colorFilter = ColorFilter.mode(
-          Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
-          BlendMode.modulate,
-        ),
-    );
-    canvas.restore();
-  }
+  }) => HarpoonCinematic.paintRaster(
+    canvas,
+    image,
+    center,
+    half,
+    anchor: anchor,
+    rotation: rotation,
+    opacity: opacity,
+  );
 
   void _paintSymbol(Canvas canvas, Offset center, String symbol, double size) {
     final painter = TextPainter(

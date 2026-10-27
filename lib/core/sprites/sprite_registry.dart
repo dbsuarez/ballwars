@@ -28,9 +28,6 @@ class SpriteRegistry {
   static final Map<String, String> _owners = {};
   static final List<String> _problems = [];
 
-  /// Anchors of the frames whose sprite does not use [center], by image, so
-  /// a painter that only holds the image can place it ([anchorOf]).
-  static final Map<ui.Image, Offset> _imageAnchors = Map.identity();
   static int _generation = 0;
 
   static List<String> get loadProblems => List.unmodifiable(_problems);
@@ -56,7 +53,9 @@ class SpriteRegistry {
   ///
   /// [stepsPerFrame] and [frameCount] override the manifest for a call site
   /// that plays the sprite at another rate or over fewer frames than the
-  /// rest of the game; leave them out otherwise. Null when the id is unknown.
+  /// rest of the game; leave them out otherwise. Both must be above 0, and a
+  /// [frameCount] override must not exceed the sprite's real frame count (it
+  /// plays only the first [frameCount] frames). Null when the id is unknown.
   static ui.Image? frameAt(
     String id,
     int step, {
@@ -64,11 +63,14 @@ class SpriteRegistry {
     int? stepsPerFrame,
     int? frameCount,
   }) {
+    assert(stepsPerFrame == null || stepsPerFrame > 0);
+    assert(frameCount == null || frameCount > 0);
     final sprite = _sprites[id];
     if (sprite == null || sprite.frames.isEmpty) return null;
+    assert(frameCount == null || frameCount <= sprite.frames.length);
     final count = frameCount ?? sprite.frames.length;
-    final index = (step ~/ (stepsPerFrame ?? sprite.stepsPerFrame) + offset) %
-        count;
+    final index =
+        (step ~/ (stepsPerFrame ?? sprite.stepsPerFrame) + offset) % count;
     return sprite.frames[index % sprite.frames.length];
   }
 
@@ -84,15 +86,10 @@ class SpriteRegistry {
   }
 
   /// [id]'s anchor: the point of its images (0..1 on each axis, from the top
-  /// left) that painters put on their target point. [center] for sprites
-  /// without one, drawn and custom sprites included, and for unknown ids.
+  /// left) that painters put on their target point (see [placeRect]).
+  /// [center] for sprites without one, drawn and custom sprites included,
+  /// and for unknown ids. One map lookup, no allocation.
   static Offset anchor(String id) => _sprites[id]?.anchor ?? center;
-
-  /// The anchor of the sprite that [image] (a frame from this registry)
-  /// belongs to; [center] for any other image. For painters that only hold
-  /// the image.
-  static Offset anchorOf(ui.Image image) =>
-      _imageAnchors.isEmpty ? center : (_imageAnchors[image] ?? center);
 
   /// Where a [width] x [height] image is drawn so that its [anchor] point
   /// lands on [target]. With [center] it is exactly
@@ -114,24 +111,6 @@ class SpriteRegistry {
     );
   }
 
-  static void _put(String id, _CutSprite sprite) {
-    _sprites[id] = sprite;
-    if (sprite.anchor != center) {
-      for (final f in sprite.frames) {
-        _imageAnchors[f] = sprite.anchor;
-      }
-    }
-  }
-
-  static void _remove(String id) {
-    final sprite = _sprites.remove(id);
-    if (sprite == null) return;
-    for (final f in sprite.frames) {
-      _imageAnchors.remove(f);
-    }
-    sprite.dispose();
-  }
-
   /// Loads every bundled manifest. Idempotent: later calls return the same
   /// future. Never throws.
   static Future<void> load({AssetBundle? bundle}) =>
@@ -146,7 +125,6 @@ class SpriteRegistry {
       s.dispose();
     }
     _sprites.clear();
-    _imageAnchors.clear();
     _customIds.clear();
     _owners.clear();
     _problems.clear();
@@ -210,7 +188,7 @@ class SpriteRegistry {
     final added = <String>{};
     cut.forEach((id, sprite) {
       final full = '$idPrefix.$id';
-      _put(full, sprite);
+      _sprites[full] = sprite;
       added.add(full);
     });
     _customIds[idPrefix] = added;
@@ -221,7 +199,7 @@ class SpriteRegistry {
     final old = _customIds.remove(idPrefix);
     if (old == null) return;
     for (final id in old) {
-      _remove(id);
+      _sprites.remove(id)?.dispose();
     }
   }
 
@@ -294,7 +272,7 @@ class SpriteRegistry {
       throw ArgumentError.value(id, 'id', 'is already in use');
     }
     _owners[id] = 'drawn in code';
-    _put(id, sprite);
+    _sprites[id] = sprite;
   }
 
   static void _problem(String text) {
@@ -391,7 +369,7 @@ class SpriteRegistry {
           continue;
         }
         _owners[entry.key] = path;
-        _put(entry.key, entry.value);
+        _sprites[entry.key] = entry.value;
       }
     } catch (e) {
       if (gen != _generation) return;
@@ -424,7 +402,10 @@ class SpriteRegistry {
     return out;
   }
 
-  static Future<List<ui.Image>> _cutSprite(SpriteDef def, ui.Image sheet) async {
+  static Future<List<ui.Image>> _cutSprite(
+    SpriteDef def,
+    ui.Image sheet,
+  ) async {
     final size = def.output;
     final height = def.height;
     final pad = def.padding.toDouble();

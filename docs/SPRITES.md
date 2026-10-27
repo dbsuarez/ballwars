@@ -19,7 +19,7 @@ in the Dart code holds pixel rectangles any more.
   frees the sheet. Lookups: `frame(id, [index])` (wraps modulo the frame
   count; null for an unknown id), `frameAt(id, step)` and
   `frameAtProgress(id, t)` (playback, see "Frames and timing"),
-  `frameCount(id)`, `stepsPerFrame(id)`, `anchor(id)`, `anchorOf(image)`,
+  `frameCount(id)`, `stepsPerFrame(id)`, `anchor(id)`,
   `has(id)`, `ids`, `loadProblems`. Loading never throws: a broken manifest is
   skipped and reported in `loadProblems` (and `debugPrint`).
   `register(atlas, sheet, idPrefix: 'custom.<name>')` cuts a user upload under
@@ -79,7 +79,9 @@ and `stepsPerFrame` decide them:
 Adding frames or changing `stepsPerFrame` in a manifest therefore changes
 every call site at once. A few call sites keep an older, slower look and pass
 an explicit override (`frameAt(..., stepsPerFrame: 4)`), because
-`ArenaEffectLibrary` plays the same sprite at the manifest rate:
+`ArenaEffectLibrary` plays the same sprite at the manifest rate (overrides
+must be above 0, and a `frameCount` override plays only the first frames, so
+it must not exceed the sprite's real count; both are asserted):
 
 | Sprite | Manifest | Override | Where |
 | --- | --- | --- | --- |
@@ -93,11 +95,12 @@ an explicit override (`frameAt(..., stepsPerFrame: 4)`), because
 Every sprite has an anchor, the point of its image (0 to 1 per axis, from the
 top left) that is put on the painter's target point; it is also the point the
 sprite turns around. The painter helpers (`_drawSprite` and `_drawEffect` in
-`PowerUpPainter`, `_paintRaster` in `HarpoonCinematic`) read it with
-`SpriteRegistry.anchorOf(image)` and place the image with
-`SpriteRegistry.placeRect`, so a manifest anchor works without touching call
-sites. With the default center the rectangle is exactly the old
-`Rect.fromCenter`. Every bundled sprite uses the center today. Drawing code of
+`PowerUpPainter`, `HarpoonCinematic.paintRaster`) take a required `anchor:`,
+which every call site reads by id with `SpriteRegistry.anchor(id)` (or
+`ArenaEffectLibrary.anchor(kind)`), from the same precomputed id it looked the
+frame up with; one map lookup, no allocation. The helpers place the image with
+`SpriteRegistry.placeRect`. With the default center the rectangle is exactly
+the old `Rect.fromCenter`. Every bundled sprite uses the center today. Drawing code of
 its own (the sticky goo rim slices, `LightningStrikePainter`, which puts the
 strike's foot at 88 percent of the frame height, and the widget icons) does
 not read the anchor.
@@ -320,8 +323,10 @@ and stores its own copy as one bundled sprite (one frame). It has no
 use and sizes the manifest rules reject. A manifest that later names the same
 id is skipped with a load problem. `resetForTest` while it runs discards the
 result, like `load`; `PowerUpSprites.load()` registers the drawn icons again
-after each new registry load; it only tolerates the `ArgumentError` of an id
-another load registered meanwhile and rethrows any other. `paintIcon` still draws the pixel art (or an
+after each new registry load. An id another load registered meanwhile is
+skipped quietly; any other failure is reported with `FlutterError.reportError`
+(loud in development and tests) and that icon is skipped, so the other icons
+still register and `load()` never fails. `paintIcon` still draws the pixel art (or an
 initials badge) directly for widgets while the image is null, and
 `PowerUpIcon` is the widget for both.
 

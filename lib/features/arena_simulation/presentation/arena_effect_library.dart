@@ -99,6 +99,13 @@ class ArenaEffectLibrary {
     ),
   };
 
+  /// [kind]'s sprite anchor (`SpriteRegistry.anchor` of its id; the center
+  /// without art).
+  static ui.Offset anchor(ArenaEffectKind kind) {
+    final id = definitions[kind]!.id;
+    return id == null ? SpriteRegistry.center : SpriteRegistry.anchor(id);
+  }
+
   /// The frame of [kind] at simulation [step]: looping effects wrap, the
   /// others hold their last frame. Null before the atlas loads or without art.
   static ui.Image? frame(ArenaEffectKind kind, int step) {

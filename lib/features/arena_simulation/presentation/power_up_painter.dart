@@ -274,6 +274,7 @@ class PowerUpPainter {
             visualRadius * (0.75 + 0.25 * math.sin(state.step * 0.4).abs()),
             math.atan2(delta.dy, delta.dx),
             opacity: reach,
+            anchor: SpriteRegistry.anchor(PowerUpSprites.omegaTendrilsAttackId),
           );
         }
       } finally {
@@ -339,6 +340,9 @@ class PowerUpPainter {
                 fire.radius * (0.42 + (i % 3) * 0.08 + flicker * 0.1) * pulse,
                 0,
                 opacity: life,
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.animId(AnimatedEffect.campfire),
+                ),
               );
             }
           }
@@ -380,6 +384,9 @@ class PowerUpPainter {
               visualRadius *
                   (1.05 + 0.1 * math.sin(state.step * 0.4 + i).abs()),
               0,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.campfire),
+              ),
             );
           } else {
             canvas.drawCircle(
@@ -663,6 +670,9 @@ class PowerUpPainter {
               visualRadius * (0.58 + i * 0.13),
               cone.angle,
               opacity: 0.94 - i * 0.045,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.flame),
+              ),
             );
           }
         }
@@ -750,6 +760,9 @@ class PowerUpPainter {
               visualRadius,
               t * 0.2,
               opacity: fade,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.explosion),
+              ),
             );
             // The sprite is the whole look: no vector ring over it.
             continue;
@@ -821,7 +834,17 @@ class PowerUpPainter {
                 )
               : null;
           if (sprite != null) {
-            _drawEffect(canvas, sprite, spot, r * (1.1 + t), t, opacity: fade);
+            _drawEffect(
+              canvas,
+              sprite,
+              spot,
+              r * (1.1 + t),
+              t,
+              opacity: fade,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.portal),
+              ),
+            );
           }
           canvas.drawOval(
             Rect.fromCenter(
@@ -940,6 +963,9 @@ class PowerUpPainter {
             Offset.zero,
             trapRadius * (1.42 + pulse * 0.08),
             0,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.animId(AnimatedEffect.portal),
+            ),
           );
         } else {
           canvas.drawOval(
@@ -1152,6 +1178,9 @@ class PowerUpPainter {
                 shotRadius * 0.9,
                 angle,
                 flip: shot.velocity.dx < 0,
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.projectileId(ProjectileSprite.harpoon),
+                ),
               );
             }
             continue;
@@ -1172,6 +1201,7 @@ class PowerUpPainter {
                 shot.position,
                 shotRadius * 0.6,
                 state.step * 0.3,
+                anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(shot.kind)),
               );
             }
             continue;
@@ -1196,6 +1226,9 @@ class PowerUpPainter {
                 shot.position,
                 shotRadius * 1.45,
                 math.atan2(shot.velocity.dy, shot.velocity.dx),
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.effectId(EffectSprite.iceWave),
+                ),
               );
             }
             continue;
@@ -1228,6 +1261,7 @@ class PowerUpPainter {
                 shot.position - dir * shotRadius * 0.45,
                 shotRadius * 1.05 * thrust,
                 math.atan2(dir.dy, dir.dx),
+                anchor: SpriteRegistry.anchor(PowerUpSprites.rocketMissileId),
               );
             } else {
               drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.6);
@@ -1247,6 +1281,9 @@ class PowerUpPainter {
                 shot.position,
                 shotRadius * 1.6,
                 state.step * shot.spinDegreesPerSecond * math.pi / 10800,
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.boomerangProjectileId,
+                ),
               );
             } else {
               drawGlyph(canvas, shot.kind, shot.position, shotRadius * 0.65);
@@ -1321,6 +1358,9 @@ class PowerUpPainter {
                 shot.position,
                 shotRadius * 0.72,
                 angle,
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.projectileId(ProjectileSprite.swapCannon),
+                ),
               );
             } else {
               canvas.drawCircle(
@@ -1349,6 +1389,9 @@ class PowerUpPainter {
                 shotRadius * 0.9,
                 math.atan2(dir.dy, dir.dx),
                 flip: dir.dx < 0,
+                anchor: SpriteRegistry.anchor(
+                  PowerUpSprites.projectileId(ProjectileSprite.harpoon),
+                ),
               );
             }
             continue;
@@ -1371,6 +1414,9 @@ class PowerUpPainter {
                   (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62),
               math.atan2(dir.dy, dir.dx) +
                   state.step * shot.spinDegreesPerSecond * math.pi / 10800,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.projectileId(projectileKind!),
+              ),
             );
             continue;
           }
@@ -1425,6 +1471,9 @@ class PowerUpPainter {
             r * 1.8,
             m.angle,
             opacity: fade,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.animId(AnimatedEffect.slash),
+            ),
           );
           continue;
         }
@@ -1509,7 +1558,16 @@ class PowerUpPainter {
               )
             : null;
         if (frame != null) {
-          _drawEffect(canvas, frame, center, half, 0);
+          _drawEffect(
+            canvas,
+            frame,
+            center,
+            half,
+            0,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.animId(AnimatedEffect.tornado),
+            ),
+          );
         } else {
           for (var i = 0; i < 3; i++) {
             canvas.drawOval(
@@ -1840,6 +1898,9 @@ class PowerUpPainter {
         shot.position - direction * r * 0.45,
         r * 0.85,
         math.atan2(direction.dy, direction.dx),
+        anchor: SpriteRegistry.anchor(
+          PowerUpSprites.projectileId(ProjectileSprite.bow),
+        ),
       );
       return;
     }
@@ -2019,7 +2080,14 @@ class PowerUpPainter {
     if (sprite == null) {
       drawGlyph(canvas, kind, c, r * 0.62);
     } else {
-      _drawSprite(canvas, sprite, c, r * 0.68, 0);
+      _drawSprite(
+        canvas,
+        sprite,
+        c,
+        r * 0.68,
+        0,
+        anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(kind)),
+      );
     }
   }
 
@@ -2036,14 +2104,21 @@ class PowerUpPainter {
     if (sprite == null) {
       drawGlyph(canvas, kind, center, radius * 0.9);
     } else {
-      _drawSprite(canvas, sprite, center, radius * 0.95, 0);
+      _drawSprite(
+        canvas,
+        sprite,
+        center,
+        radius * 0.95,
+        0,
+        anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(kind)),
+      );
     }
   }
 
   static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
 
-  /// Draws [image] with its sprite anchor ([SpriteRegistry.anchorOf], the center unless its manifest sets
-  /// one) at [c], [half] in half-size. The icon is first turned so its own direction
+  /// Draws [image] with its sprite [anchor] (`SpriteRegistry.anchor(id)` of the sprite it came from) at
+  /// [c], [half] in half-size. The icon is first turned so its own direction
   /// [iconAngle] lies along +x, then mirrored top-to-bottom if [flip] (so a gun pointing left isn't upside
   /// down), then turned to [rotation].
   static void _drawSprite(
@@ -2052,6 +2127,7 @@ class PowerUpPainter {
     Offset c,
     double half,
     double rotation, {
+    required Offset anchor,
     double iconAngle = 0,
     bool flip = false,
     double opacity = 1,
@@ -2064,12 +2140,7 @@ class PowerUpPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      SpriteRegistry.placeRect(
-        Offset.zero,
-        2 * half,
-        2 * half,
-        SpriteRegistry.anchorOf(image),
-      ),
+      SpriteRegistry.placeRect(Offset.zero, 2 * half, 2 * half, anchor),
       opacity >= 1
           ? _spritePaint
           : (Paint()
@@ -2082,14 +2153,16 @@ class PowerUpPainter {
     canvas.restore();
   }
 
-  /// Draws [image] [half] in half-size with its sprite anchor
-  /// ([SpriteRegistry.anchorOf]) at [center], turned by [rotation] around it.
+  /// Draws [image] [half] in half-size with its sprite [anchor]
+  /// (`SpriteRegistry.anchor(id)` of the sprite it came from) at [center],
+  /// turned by [rotation] around it.
   static void _drawEffect(
     Canvas canvas,
     ui.Image image,
     Offset center,
     double half,
     double rotation, {
+    required Offset anchor,
     double opacity = 1,
   }) {
     canvas.save();
@@ -2098,12 +2171,7 @@ class PowerUpPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      SpriteRegistry.placeRect(
-        Offset.zero,
-        half * 2,
-        half * 2,
-        SpriteRegistry.anchorOf(image),
-      ),
+      SpriteRegistry.placeRect(Offset.zero, half * 2, half * 2, anchor),
       Paint()
         ..filterQuality = FilterQuality.none
         ..colorFilter = ColorFilter.mode(
@@ -2206,6 +2274,9 @@ class PowerUpPainter {
         r * 1.65,
         math.atan2(dir.dy, dir.dx),
         opacity: 0.9,
+        anchor: SpriteRegistry.anchor(
+          PowerUpSprites.effectId(EffectSprite.speedStreak),
+        ),
       );
     }
     final pulse = 0.85 + 0.15 * math.sin(ball.speedLeft * 0.45);
@@ -2329,6 +2400,9 @@ class PowerUpPainter {
                     ) ??
                     1),
             -step * 0.34,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.iconId(PowerUpKind.orbitingFlail),
+            ),
           );
         }
       } finally {
@@ -2369,6 +2443,9 @@ class PowerUpPainter {
                       (effectDisplayScale?.call(PowerUpKind.molotov) ?? 1)) *
                   (0.72 + flicker * 0.16),
               0,
+              anchor: SpriteRegistry.anchor(
+                PowerUpSprites.animId(AnimatedEffect.flame),
+              ),
             );
             continue;
           }
@@ -2457,6 +2534,9 @@ class PowerUpPainter {
                 range,
             step * 0.012,
             opacity: 0.72,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.effectId(EffectSprite.timeBubble),
+            ),
           );
         }
         canvas.drawCircle(
@@ -2544,6 +2624,9 @@ class PowerUpPainter {
                 0.72,
             angle + math.pi / 2,
             iconAngle: -math.pi / 4,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.iconId(PowerUpKind.mirror),
+            ),
           );
         }
         canvas.drawArc(
@@ -2586,6 +2669,7 @@ class PowerUpPainter {
                 2.5,
             0,
             opacity: 0.92,
+            anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.maximumPower),
           );
         }
         canvas.drawCircle(
@@ -2662,6 +2746,9 @@ class PowerUpPainter {
             radius,
             -step * 0.025,
             opacity: pulse,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.effectId(EffectSprite.magneticField),
+            ),
           );
         }
         canvas.drawCircle(
@@ -2725,6 +2812,9 @@ class PowerUpPainter {
                 1.45,
             step * 0.018,
             opacity: 0.68,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.effectId(EffectSprite.goldenArmorHit),
+            ),
           );
         }
         final armor = Paint()
@@ -2820,6 +2910,9 @@ class PowerUpPainter {
                 1.1,
             0,
             opacity: 0.9,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.effectId(EffectSprite.stickyGoo),
+            ),
           );
         }
         canvas.drawArc(
@@ -2941,6 +3034,9 @@ class PowerUpPainter {
             hand - Offset(0, ball.radius * 0.2),
             ball.radius * 0.62 * handEffectScale * displayScale,
             0,
+            anchor: SpriteRegistry.anchor(
+              PowerUpSprites.animId(AnimatedEffect.flame),
+            ),
           );
         } else {
           canvas.drawCircle(
@@ -2976,6 +3072,7 @@ class PowerUpPainter {
           heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset),
           ball.radius * 0.7 * displayScale,
           angle + math.pi / 2,
+          anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(art)),
         );
       } else {
         drawGlyph(
@@ -3022,6 +3119,7 @@ class PowerUpPainter {
       iconAngle: _iconAngle[art] ?? 0,
       flip: dir.dx < 0,
       opacity: 1 - drop * drop,
+      anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(art)),
     );
   }
 

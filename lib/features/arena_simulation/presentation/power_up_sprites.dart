@@ -129,12 +129,22 @@ class PowerUpSprites {
   static Future<void>? _registryLoad;
   static Future<void>? _loading;
 
+  /// How [load] registers a drawn icon; tests swap it to make one fail.
+  @visibleForTesting
+  static Future<void> Function(String id, ui.Image image) debugRegisterDrawn =
+      _registerDrawn;
+
+  static Future<void> _registerDrawn(String id, ui.Image image) =>
+      SpriteRegistry.registerDrawn(id, image, fit: SpriteFit.trim);
+
   /// [kind]'s icon (64 x 64 px, `powerup.<kind>`), or null before [load] has
   /// finished.
   static ui.Image? of(PowerUpKind kind) => SpriteRegistry.frame(iconId(kind));
 
   /// Loads the registry and registers the drawn icons (once per registry
-  /// load; later calls return the same future).
+  /// load; later calls return the same future). Never fails: a drawn icon
+  /// that cannot be registered is reported with [FlutterError.reportError]
+  /// and skipped (it keeps its pixel-art fallback).
   static Future<void> load() {
     final registry = SpriteRegistry.load();
     if (!identical(registry, _registryLoad)) {
@@ -160,12 +170,24 @@ class PowerUpSprites {
       final drawn = await picture.toImage(64, 64);
       picture.dispose();
       try {
-        await SpriteRegistry.registerDrawn(id, drawn, fit: SpriteFit.trim);
-      } on ArgumentError catch (e) {
-        // Only the race where another load registered it meanwhile is fine;
-        // anything else (sizes or a padding the rules reject) is a bug.
-        if (!SpriteRegistry.has(id)) rethrow;
-        debugPrint('PowerUpSprites: $e');
+        await debugRegisterDrawn(id, drawn);
+      } catch (e, stack) {
+        if (e is ArgumentError && SpriteRegistry.has(id)) {
+          // Another load registered it meanwhile: fine.
+          debugPrint('PowerUpSprites: $e');
+        } else {
+          // A bug (sizes or a padding the rules reject): report it loudly,
+          // but keep going so the other icons register and load() completes
+          // normally; this icon falls back to its pixel art.
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: e,
+              stack: stack,
+              library: 'Ball Wars sprites',
+              context: ErrorDescription('while registering the drawn icon $id'),
+            ),
+          );
+        }
       } finally {
         drawn.dispose();
       }

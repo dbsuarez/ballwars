@@ -151,6 +151,8 @@ void main() {
     // The old hard-coded expressions, step for step.
     final flame = PowerUpSprites.animId(AnimatedEffect.flame);
     final tornado = PowerUpSprites.animId(AnimatedEffect.tornado);
+    final campfire = PowerUpSprites.animId(AnimatedEffect.campfire);
+    final portal = PowerUpSprites.animId(AnimatedEffect.portal);
     for (var step = 0; step < 240; step++) {
       for (var i = 0; i < 4; i++) {
         expect(
@@ -162,7 +164,30 @@ void main() {
         SpriteRegistry.frameAt(tornado, step),
         same(SpriteRegistry.frame(tornado, (step ~/ 3) % 8)),
       );
+      // The PowerUpPainter overrides (stepsPerFrame 4) for campfire, portal
+      // and flames on a burning ball, and the tornado finisher (rate 1, four
+      // frames), against their old expressions.
+      for (var i = 0; i < 4; i++) {
+        expect(
+          SpriteRegistry.frameAt(campfire, step, offset: i, stepsPerFrame: 4),
+          same(SpriteRegistry.frame(campfire, (step ~/ 4 + i) % 4)),
+        );
+        expect(
+          SpriteRegistry.frameAt(flame, step, offset: i, stepsPerFrame: 4),
+          same(SpriteRegistry.frame(flame, (step ~/ 4 + i) % 4)),
+        );
+      }
+      expect(
+        SpriteRegistry.frameAt(portal, step, stepsPerFrame: 4),
+        same(SpriteRegistry.frame(portal, (step ~/ 4) % 4)),
+      );
+      expect(
+        SpriteRegistry.frameAt(tornado, step, stepsPerFrame: 1, frameCount: 4),
+        same(SpriteRegistry.frame(tornado, step % 4)),
+      );
     }
+    expect(SpriteRegistry.frameCount(campfire), 4);
+    expect(SpriteRegistry.frameCount(portal), 4);
     for (final kind in [AnimatedEffect.explosion, AnimatedEffect.slash]) {
       final id = PowerUpSprites.animId(kind);
       for (var k = -10; k <= 130; k++) {
@@ -177,9 +202,9 @@ void main() {
   });
 
   test('every bundled manifest names its sheet size, center anchors', () async {
-    final index = jsonDecode(
-      await rootBundle.loadString(SpriteRegistry.indexPath),
-    ) as List;
+    final index =
+        jsonDecode(await rootBundle.loadString(SpriteRegistry.indexPath))
+            as List;
     for (final path in index.cast<String>()) {
       final atlas = await _manifest(path);
       // loadProblems is empty, so the decoded sheet matched it.

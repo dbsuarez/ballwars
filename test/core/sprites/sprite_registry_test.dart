@@ -697,6 +697,20 @@ void main() {
           );
         }
         expect(SpriteRegistry.frameAt('missing', 3), isNull);
+        // Overrides must be above 0 and frameCount at most the real count.
+        expect(
+          () => SpriteRegistry.frameAt(id, 1, stepsPerFrame: 0),
+          throwsAssertionError,
+        );
+        expect(
+          () => SpriteRegistry.frameAt(id, 1, frameCount: 0),
+          throwsAssertionError,
+        );
+        expect(
+          () => SpriteRegistry.frameAt(id, 1, frameCount: 5),
+          throwsAssertionError,
+        );
+        expect(SpriteRegistry.frameAt(id, 1, frameCount: 4), isNotNull);
       });
     });
 
@@ -756,19 +770,8 @@ void main() {
         expect(SpriteRegistry.anchor('custom.anc.low'), const Offset(0.25, 1));
         expect(SpriteRegistry.anchor('custom.anc.mid'), SpriteRegistry.center);
         expect(SpriteRegistry.anchor('missing'), SpriteRegistry.center);
-        for (var i = 0; i < 2; i++) {
-          expect(
-            SpriteRegistry.anchorOf(SpriteRegistry.frame('custom.anc.low', i)!),
-            const Offset(0.25, 1),
-          );
-        }
-        final mid = SpriteRegistry.frame('custom.anc.mid')!;
-        expect(SpriteRegistry.anchorOf(mid), SpriteRegistry.center);
-        expect(SpriteRegistry.anchorOf(sheet), SpriteRegistry.center);
-
-        final low = SpriteRegistry.frame('custom.anc.low')!;
         SpriteRegistry.unregister('custom.anc');
-        expect(SpriteRegistry.anchorOf(low), SpriteRegistry.center);
+        expect(SpriteRegistry.anchor('custom.anc.low'), SpriteRegistry.center);
       });
     });
 
@@ -783,8 +786,6 @@ void main() {
           anchor: const Offset(0, 0.5),
         );
         expect(SpriteRegistry.anchor('effect.b'), const Offset(0, 0.5));
-        final b = SpriteRegistry.frame('effect.b')!;
-        expect(SpriteRegistry.anchorOf(b), const Offset(0, 0.5));
         await expectLater(
           SpriteRegistry.registerDrawn(
             'effect.c',
@@ -793,8 +794,9 @@ void main() {
           ),
           throwsArgumentError,
         );
+        expect(SpriteRegistry.has('effect.c'), isFalse);
         SpriteRegistry.resetForTest();
-        expect(SpriteRegistry.anchorOf(b), SpriteRegistry.center);
+        expect(SpriteRegistry.anchor('effect.b'), SpriteRegistry.center);
       });
     });
 

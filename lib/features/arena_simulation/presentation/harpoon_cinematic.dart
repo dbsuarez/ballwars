@@ -391,9 +391,9 @@ class _FinisherPainter extends CustomPainter {
           )!;
           _paintItem(canvas, strike, radius * 1.35);
           final slashSprite = effectSprites
-              ? SpriteRegistry.frame(
+              ? SpriteRegistry.frameAtProgress(
                   PowerUpSprites.animId(AnimatedEffect.slash),
-                  (uppercutProgress * 4).floor().clamp(0, 3),
+                  uppercutProgress,
                 )
               : null;
           if (slashSprite != null) {
@@ -1008,9 +1008,13 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.tornado:
         if (hookProgress > 0) {
-          final sprite = SpriteRegistry.frame(
+          // Override: the finisher spins through only the first four of the
+          // eight tornado frames, one per 1/24 of the hook (not per step).
+          final sprite = SpriteRegistry.frameAt(
             PowerUpSprites.animId(AnimatedEffect.tornado),
-            (hookProgress * 24).toInt() % 4,
+            (hookProgress * 24).toInt(),
+            stepsPerFrame: 1,
+            frameCount: 4,
           );
           if (sprite != null) {
             _paintRaster(canvas, sprite, loserCenter, radius * 1.8);
@@ -1202,6 +1206,8 @@ class _FinisherPainter extends CustomPainter {
     );
   }
 
+  /// Draws [image] [half] in half-size with its sprite anchor
+  /// ([SpriteRegistry.anchorOf]) at [center], turned by [rotation] around it.
   void _paintRaster(
     Canvas canvas,
     ui.Image image,
@@ -1216,7 +1222,12 @@ class _FinisherPainter extends CustomPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromCenter(center: Offset.zero, width: half * 2, height: half * 2),
+      SpriteRegistry.placeRect(
+        Offset.zero,
+        half * 2,
+        half * 2,
+        SpriteRegistry.anchorOf(image),
+      ),
       Paint()
         ..filterQuality = FilterQuality.none
         ..colorFilter = ColorFilter.mode(

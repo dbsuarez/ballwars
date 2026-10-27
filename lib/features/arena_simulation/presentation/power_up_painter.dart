@@ -21,6 +21,18 @@ import '../../skills/presentation/skill_artwork_tint.dart';
 class PowerUpPainter {
   PowerUpPainter._();
 
+  // Rate overrides: these call sites play a sprite slower than its manifest
+  // `stepsPerFrame`, which ArenaEffectLibrary (finishers, goldens) uses for
+  // the same sprite. Both looks are kept as they were.
+  /// Campfire flames of burning zones and fire walls (manifest: 3).
+  static const int _campfireStepsPerFrame = 4;
+
+  /// Portal and swap-cannon flashes and portals on the rim (manifest: 3).
+  static const int _portalStepsPerFrame = 4;
+
+  /// Flames on a burning ball (manifest `anim.flame`: 3).
+  static const int _burningFlameStepsPerFrame = 4;
+
   static const Map<PowerUpKind, Color> _colors = {
     PowerUpKind.pistol: Color(0xFFF2B33D),
     PowerUpKind.shotgun: Color(0xFFE8833A),
@@ -310,9 +322,11 @@ class PowerUpPainter {
                   ball: fire.owner,
                   globalSprite: explosionRenderMode == EffectRenderMode.sprite,
                 )
-                ? SpriteRegistry.frame(
+                ? SpriteRegistry.frameAt(
                     PowerUpSprites.animId(AnimatedEffect.campfire),
-                    (state.step ~/ 4 + i) % 4,
+                    state.step,
+                    offset: i,
+                    stepsPerFrame: _campfireStepsPerFrame,
                   )
                 : null;
             final flicker = 0.5 + 0.5 * math.sin(state.step * 0.48 + i * 1.73);
@@ -350,9 +364,11 @@ class PowerUpPainter {
                 ball: wall.owner,
                 globalSprite: explosionRenderMode == EffectRenderMode.sprite,
               )
-              ? SpriteRegistry.frame(
+              ? SpriteRegistry.frameAt(
                   PowerUpSprites.animId(AnimatedEffect.campfire),
-                  (state.step ~/ 4 + i) % 4,
+                  state.step,
+                  offset: i,
+                  stepsPerFrame: _campfireStepsPerFrame,
                 )
               : null;
           final spot = wall.center + tangent * visualRadius * (i - 1.5) * 1.35;
@@ -633,9 +649,10 @@ class PowerUpPainter {
                 ball: cone.owner,
                 globalSprite: explosionRenderMode == EffectRenderMode.sprite,
               )
-              ? SpriteRegistry.frame(
+              ? SpriteRegistry.frameAt(
                   PowerUpSprites.animId(AnimatedEffect.flame),
-                  (state.step ~/ 3 + i) % 4,
+                  state.step,
+                  offset: i,
                 )
               : null;
           if (flame != null) {
@@ -721,9 +738,9 @@ class PowerUpPainter {
                     globalSprite:
                         explosionRenderMode == EffectRenderMode.sprite,
                   ))) {
-          final sprite = SpriteRegistry.frame(
+          final sprite = SpriteRegistry.frameAtProgress(
             PowerUpSprites.animId(AnimatedEffect.explosion),
-            (t * 4).floor().clamp(0, 3),
+            t,
           );
           if (sprite != null) {
             _drawEffect(
@@ -797,9 +814,10 @@ class PowerUpPainter {
                 flash.swap ? PowerUpKind.swapCannon : PowerUpKind.portal,
                 globalSprite: explosionRenderMode == EffectRenderMode.sprite,
               )
-              ? SpriteRegistry.frame(
+              ? SpriteRegistry.frameAt(
                   PowerUpSprites.animId(AnimatedEffect.portal),
-                  (state.step ~/ 4) % 4,
+                  state.step,
+                  stepsPerFrame: _portalStepsPerFrame,
                 )
               : null;
           if (sprite != null) {
@@ -909,9 +927,10 @@ class PowerUpPainter {
               PowerUpKind.portal,
               globalSprite: explosionRenderMode == EffectRenderMode.sprite,
             )
-            ? SpriteRegistry.frame(
+            ? SpriteRegistry.frameAt(
                 PowerUpSprites.animId(AnimatedEffect.portal),
-                (state.step ~/ 4) % 4,
+                state.step,
+                stepsPerFrame: _portalStepsPerFrame,
               )
             : null;
         if (sprite != null) {
@@ -1393,12 +1412,9 @@ class PowerUpPainter {
               skillId: m.skillId,
               globalSprite: explosionRenderMode == EffectRenderMode.sprite,
             )
-            ? SpriteRegistry.frame(
+            ? SpriteRegistry.frameAtProgress(
                 PowerUpSprites.animId(AnimatedEffect.slash),
-                ((m.age / PowerUpTuning.slashShowSteps) * 4).floor().clamp(
-                  0,
-                  3,
-                ),
+                m.age / PowerUpTuning.slashShowSteps,
               )
             : null;
         if (sprite != null) {
@@ -1487,9 +1503,9 @@ class PowerUpPainter {
               ball: tornado.owner,
               globalSprite: globalEffectSprite,
             )
-            ? SpriteRegistry.frame(
+            ? SpriteRegistry.frameAt(
                 PowerUpSprites.animId(AnimatedEffect.tornado),
-                (state.step ~/ 3) % 8,
+                state.step,
               )
             : null;
         if (frame != null) {
@@ -2026,7 +2042,8 @@ class PowerUpPainter {
 
   static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
 
-  /// Draws [image] centered at [c], [half] in half-size. The icon is first turned so its own direction
+  /// Draws [image] with its sprite anchor ([SpriteRegistry.anchorOf], the center unless its manifest sets
+  /// one) at [c], [half] in half-size. The icon is first turned so its own direction
   /// [iconAngle] lies along +x, then mirrored top-to-bottom if [flip] (so a gun pointing left isn't upside
   /// down), then turned to [rotation].
   static void _drawSprite(
@@ -2047,7 +2064,12 @@ class PowerUpPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromCenter(center: Offset.zero, width: 2 * half, height: 2 * half),
+      SpriteRegistry.placeRect(
+        Offset.zero,
+        2 * half,
+        2 * half,
+        SpriteRegistry.anchorOf(image),
+      ),
       opacity >= 1
           ? _spritePaint
           : (Paint()
@@ -2060,6 +2082,8 @@ class PowerUpPainter {
     canvas.restore();
   }
 
+  /// Draws [image] [half] in half-size with its sprite anchor
+  /// ([SpriteRegistry.anchorOf]) at [center], turned by [rotation] around it.
   static void _drawEffect(
     Canvas canvas,
     ui.Image image,
@@ -2074,7 +2098,12 @@ class PowerUpPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromCenter(center: Offset.zero, width: half * 2, height: half * 2),
+      SpriteRegistry.placeRect(
+        Offset.zero,
+        half * 2,
+        half * 2,
+        SpriteRegistry.anchorOf(image),
+      ),
       Paint()
         ..filterQuality = FilterQuality.none
         ..colorFilter = ColorFilter.mode(
@@ -2314,9 +2343,11 @@ class PowerUpPainter {
       try {
         for (var i = 0; i < 3; i++) {
           final flame = useEffectSprite?.call(PowerUpKind.molotov) ?? true
-              ? SpriteRegistry.frame(
+              ? SpriteRegistry.frameAt(
                   PowerUpSprites.animId(AnimatedEffect.flame),
-                  (step ~/ 4 + i) % 4,
+                  step,
+                  offset: i,
+                  stepsPerFrame: _burningFlameStepsPerFrame,
                 )
               : null;
           final flicker = 0.5 + 0.5 * math.sin(step * 0.52 + i * 1.61);
@@ -2898,9 +2929,10 @@ class PowerUpPainter {
     if (held == PowerUpKind.fireWall) {
       for (final side in const [-1.0, 1.0]) {
         final hand = ball.position + Offset(side * ball.radius * 0.82, 0);
-        final flame = SpriteRegistry.frame(
+        final flame = SpriteRegistry.frameAt(
           PowerUpSprites.animId(AnimatedEffect.flame),
-          (firedHoldLeft ~/ 3 + (side > 0 ? 2 : 0)) % 4,
+          firedHoldLeft,
+          offset: side > 0 ? 2 : 0,
         );
         if (flame != null) {
           _drawEffect(

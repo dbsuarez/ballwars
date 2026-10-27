@@ -162,7 +162,9 @@ class PowerUpSprites {
       try {
         await SpriteRegistry.registerDrawn(id, drawn, fit: SpriteFit.trim);
       } on ArgumentError catch (e) {
-        // Another load registered it meanwhile.
+        // Only the race where another load registered it meanwhile is fine;
+        // anything else (sizes or a padding the rules reject) is a bug.
+        if (!SpriteRegistry.has(id)) rethrow;
         debugPrint('PowerUpSprites: $e');
       } finally {
         drawn.dispose();

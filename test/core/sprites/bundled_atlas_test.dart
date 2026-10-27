@@ -147,6 +147,50 @@ void main() {
     });
   });
 
+  test('painter call sites keep the frames they showed before the helpers', () {
+    // The old hard-coded expressions, step for step.
+    final flame = PowerUpSprites.animId(AnimatedEffect.flame);
+    final tornado = PowerUpSprites.animId(AnimatedEffect.tornado);
+    for (var step = 0; step < 240; step++) {
+      for (var i = 0; i < 4; i++) {
+        expect(
+          SpriteRegistry.frameAt(flame, step, offset: i),
+          same(SpriteRegistry.frame(flame, (step ~/ 3 + i) % 4)),
+        );
+      }
+      expect(
+        SpriteRegistry.frameAt(tornado, step),
+        same(SpriteRegistry.frame(tornado, (step ~/ 3) % 8)),
+      );
+    }
+    for (final kind in [AnimatedEffect.explosion, AnimatedEffect.slash]) {
+      final id = PowerUpSprites.animId(kind);
+      for (var k = -10; k <= 130; k++) {
+        final t = k / 100;
+        expect(
+          SpriteRegistry.frameAtProgress(id, t),
+          same(SpriteRegistry.frame(id, (t * 4).floor().clamp(0, 3))),
+          reason: '$kind $t',
+        );
+      }
+    }
+  });
+
+  test('every bundled manifest names its sheet size, center anchors', () async {
+    final index = jsonDecode(
+      await rootBundle.loadString(SpriteRegistry.indexPath),
+    ) as List;
+    for (final path in index.cast<String>()) {
+      final atlas = await _manifest(path);
+      // loadProblems is empty, so the decoded sheet matched it.
+      expect(atlas.sheetSize, isNotNull, reason: path);
+      for (final def in atlas.sprites.values) {
+        expect(def.anchor, SpriteRegistry.center, reason: def.id);
+        expect(SpriteRegistry.anchor(def.id), SpriteRegistry.center);
+      }
+    }
+  });
+
   test('sticky goo rim keeps its 768 x 160 strip', () {
     final rim = SpriteRegistry.frame(PowerUpSprites.stickyGooRimId)!;
     expect((rim.width, rim.height), (768, 160));

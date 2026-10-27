@@ -48,3 +48,6 @@ app.*.map.json
 
 # Browser automation output (screenshots, downloads)
 .playwright-mcp/
+
+# Owner's local handoff notes (not shared)
+docs/BALLWARS-HANDOFF.md

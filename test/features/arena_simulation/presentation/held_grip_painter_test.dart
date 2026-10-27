@@ -91,6 +91,15 @@ void main() {
       PowerUpPainter.heldCenter(ball, gripSide: -0.5),
       const Offset(112, 95),
     );
+
+    // Facing left is a horizontal mirror: the weapon still moves down.
+    final left = _ball(velocity: const Offset(-10, 0))
+      ..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    _expectOffset(PowerUpPainter.heldCenter(left), const Offset(88, 100));
+    _expectOffset(
+      PowerUpPainter.heldCenter(left, gripSide: 0.5),
+      const Offset(88, 105),
+    );
   });
 
   test('the second hand mirrors grip sideways', () {
@@ -198,5 +207,17 @@ void main() {
     _expectOffset(grip(side: 0.5), const Offset(107.5, 108));
     // Turned 90 degrees: the sprite points down, so its grip turns with it.
     _expectOffset(grip(rotation: 90), const Offset(109, 95.5));
+
+    // Facing left mirrors the grip across the ball's vertical axis.
+    final left = _ball(velocity: const Offset(-10, 0))
+      ..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    Offset leftGrip({double side = 0}) {
+      final canvas = _RecordingCanvas();
+      paintHands(canvas, left, weaponGripSide: (_, _) => side);
+      return canvas.circles.first;
+    }
+
+    _expectOffset(leftGrip(), const Offset(92.5, 103));
+    _expectOffset(leftGrip(side: 0.5), const Offset(92.5, 108));
   });
 }

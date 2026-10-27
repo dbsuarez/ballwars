@@ -2221,7 +2221,8 @@ class PowerUpPainter {
 
   /// Center of the held item's sprite. [gripInset] pulls it in along the
   /// aim (ball radii); [gripSide] moves it across the aim, to the ball's
-  /// right for slot 0 and mirrored for the second hand (slot 1). A shield
+  /// right for slot 0 when facing right, mirrored when facing left (the
+  /// sprite flips) and for the second hand (slot 1). A shield
   /// ignores both and keeps hugging the ball.
   static Offset heldCenter(
     SimulationBall ball, {
@@ -2249,7 +2250,12 @@ class PowerUpPainter {
             : math.max(0.1, baseDistance - inset));
     final center = ball.position + dir * distance;
     if (held == PowerUpKind.shield || gripSide == 0) return center;
-    final side = gripSide.clamp(-1.5, 1.5) * (slot == 1 ? -1 : 1);
+    // Facing left is a horizontal mirror of facing right (the sprite flips),
+    // and the second hand mirrors the first.
+    final side =
+        gripSide.clamp(-1.5, 1.5) *
+        (slot == 1 ? -1 : 1) *
+        (math.cos(angle) < 0 ? -1 : 1);
     return center + Offset(-dir.dy, dir.dx) * (ball.radius * side);
   }
 

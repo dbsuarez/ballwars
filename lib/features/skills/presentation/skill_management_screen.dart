@@ -1565,11 +1565,18 @@ class _SkillEditorState extends State<_SkillEditor> {
       ),
     );
     if (result == null || !mounted) return;
-    String text(double v) => v.toStringAsFixed(2);
+    // Whole numbers without decimals ("20", not "20.00"); radii keep two.
+    String text(double v) {
+      final rounded = double.parse(v.toStringAsFixed(2));
+      return rounded == rounded.roundToDouble()
+          ? '${rounded.round()}'
+          : rounded.toStringAsFixed(2);
+    }
+
     setState(() {
       _numbers['weaponGripInset']!.text = text(result.inset);
       _numbers['weaponGripSide']!.text = text(result.side);
-      _numbers['weaponGripRotation']!.text = text(result.rotation);
+      _numbers['weaponGripRotation']!.text = '${result.rotation.round()}';
     });
   }
 

@@ -609,6 +609,8 @@ void main() {
     expect(double.parse(field('weaponGripInset')), 0.4);
     expect(double.parse(field('weaponGripSide')), -0.5);
     expect(double.parse(field('weaponGripRotation')), 30);
+    expect(field('weaponGripInset'), '0.40');
+    expect(field('weaponGripRotation'), '30');
 
     await tester.tap(find.byKey(const ValueKey('save-skill')));
     await tester.pumpAndSettle();

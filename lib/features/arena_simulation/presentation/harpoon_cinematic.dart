@@ -9,6 +9,7 @@ import '../../ball_management/domain/custom_ball.dart';
 import 'finisher_profile.dart';
 import 'arena_effect_library.dart';
 import 'power_up_sprites.dart';
+import 'lightning_strike_painter.dart';
 import 'power_up_painter.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
@@ -438,6 +439,17 @@ class _FinisherPainter extends CustomPainter {
   ) {
     switch (kind) {
       case PowerUpKind.lightningStrikes:
+        if (hookProgress > 0) {
+          final phase = (hookProgress * 3).clamp(0.0, 2.999);
+          if (LightningStrikePainter.paint(
+            canvas,
+            impact: loserCenter,
+            size: radius * 5,
+            step: ((phase % 1) * 8).floor(),
+          )) {
+            return true;
+          }
+        }
         if (hookProgress > 0 && uppercutProgress < 0.75) {
           final progress = (hookProgress * 1.5).clamp(0.0, 1.0);
           final top = Offset(loserCenter.dx, 0);

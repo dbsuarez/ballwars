@@ -1,0 +1,5 @@
+{
+  "steps": [
+    ["image.imageSize", {"width": 128, "height": 128, "resample": "nearest"}]
+  ]
+}

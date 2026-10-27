@@ -42,7 +42,7 @@ class ArenaEffectDefinition {
 }
 
 /// Shared artwork and playback metadata for gameplay and finishers.
-/// Smoke, lightning, and water are reserved for dedicated future sheets.
+/// Smoke and water are reserved for dedicated future sheets.
 class ArenaEffectLibrary {
   ArenaEffectLibrary._();
 
@@ -63,7 +63,11 @@ class ArenaEffectLibrary {
       stepsPerFrame: 2,
     ),
     ArenaEffectKind.smoke: ArenaEffectDefinition(tintable: true),
-    ArenaEffectKind.lightning: ArenaEffectDefinition(tintable: true),
+    ArenaEffectKind.lightning: ArenaEffectDefinition(
+      animation: AnimatedEffect.lightning,
+      frames: 8,
+      stepsPerFrame: 1,
+    ),
     ArenaEffectKind.water: ArenaEffectDefinition(tintable: true),
     ArenaEffectKind.portal: ArenaEffectDefinition(
       animation: AnimatedEffect.portal,

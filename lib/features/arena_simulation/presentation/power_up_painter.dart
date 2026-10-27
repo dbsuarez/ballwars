@@ -6,6 +6,7 @@ import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import 'power_up_sprites.dart';
+import 'lightning_strike_painter.dart';
 import 'arena_effect_library.dart';
 import '../../settings/domain/app_settings.dart';
 
@@ -312,6 +313,15 @@ class PowerUpPainter {
           r * p.visualSkill(PowerUpKind.lightningStrikes).effectDisplayScale;
       if (strike.flashLeft <= 0) continue;
       final target = strike.target.position;
+      if (p.usesEffectSprite(PowerUpKind.lightningStrikes) &&
+          LightningStrikePainter.paint(
+            canvas,
+            impact: target,
+            size: visualRadius * 5,
+            step: 8 - strike.flashLeft,
+          )) {
+        continue;
+      }
       final top = Offset(target.dx, -arenaRadius - visualRadius * 1.5);
       final path = Path()..moveTo(top.dx, top.dy);
       const bends = 7;

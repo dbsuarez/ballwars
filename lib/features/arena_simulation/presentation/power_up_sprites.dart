@@ -44,6 +44,7 @@ enum AnimatedEffect {
   maximumPower,
   campfire,
   tornado,
+  lightning,
 }
 
 /// The power-up icons ([pixelIcons], 16 x 16 pixel art) turned into small images once, so painting a frame
@@ -385,6 +386,18 @@ class PowerUpSprites {
         cellWidth: 440,
         cellHeight: 440,
         safeInset: 12,
+      ),
+    );
+
+    _animatedEffects[AnimatedEffect.lightning] = await SpriteAssetPipeline.load(
+      const SpriteSheetSpec(
+        name: 'Lightning strike',
+        asset: 'assets/sprites/lightning-strike-8.png',
+        columns: 4,
+        rows: 2,
+        cellWidth: 444,
+        cellHeight: 444,
+        outputSize: 192,
       ),
     );
 

@@ -11,4 +11,7 @@ alter table public.app_settings
 
 -- Short links keep the changed numbers the match used (the link's t= value: base64url JSON).
 alter table public.replays
-  add column if not exists tuning text check (tuning is null or tuning ~ '^[A-Za-z0-9_-]{1,2000}$');
+  add column if not exists tuning text check (
+    tuning is null or (tuning ~ '^[A-Za-z0-9_-]+$' and char_length(tuning) <= 2000)
+  );
+-- (Originally written as {1,2000}, which Postgres rejects at insert time; see migration 021.)

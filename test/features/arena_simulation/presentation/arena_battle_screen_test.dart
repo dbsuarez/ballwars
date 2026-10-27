@@ -36,6 +36,10 @@ Future<void> _playUntilWinnerCard(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
+/// Whether the End battle button reads [label] (as text, or in its tooltip when it is icon-only).
+bool _shows(String label) =>
+    find.text(label).evaluate().isNotEmpty || find.byTooltip(label).evaluate().isNotEmpty;
+
 void main() {
   testWidgets(
     'a fresh match shows the headline, round, both balls at half the rim and the timer',
@@ -128,14 +132,78 @@ void main() {
     final unstuck = find.byKey(const ValueKey('arena-unstuck'));
     final end = find.byKey(const ValueKey('arena-end-battle'));
     expect(end, findsOneWidget);
-    expect(find.text('End battle'), findsOneWidget);
+    expect(_shows('End battle'), isTrue);
     expect(tester.getCenter(end).dx, greaterThan(tester.getCenter(unstuck).dx));
     expect(tester.getBottomLeft(end).dy, closeTo(tester.getBottomLeft(unstuck).dy, 1));
     await tester.tap(end);
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Ending after next KO'), findsOneWidget);
+    expect(_shows('Ending after next KO'), isTrue);
     expect(tester.widget<OutlinedButton>(end).onPressed, isNull);
     await _playUntilWinnerCard(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final size in const [Size(360, 800), Size(800, 360)]) {
+    testWidgets('End battle does not overlap the audio buttons on a ${size.width.toInt()}x${size.height.toInt()} phone', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _app(
+          const MatchConfig(contestants: _balls, mode: MatchMode.arsenal, endlessBattle: true),
+          seed: 3,
+        ),
+      );
+      await tester.pump();
+      final end = find.byKey(const ValueKey('arena-end-battle'));
+      final unstuck = find.byKey(const ValueKey('arena-unstuck'));
+      void expectNoOverlap() {
+        final endRect = tester.getRect(end);
+        expect(endRect.overlaps(tester.getRect(unstuck)), isFalse);
+        for (final key in ['arena-bgm-control', 'arena-sfx-control', 'arena-ux-control']) {
+          final audio = tester.getRect(find.byKey(ValueKey(key)));
+          expect(endRect.overlaps(audio), isFalse, reason: '$key $audio vs end $endRect');
+        }
+      }
+
+      expectNoOverlap();
+      await tester.tap(end);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(_shows('Ending after next KO'), isTrue);
+      expectNoOverlap();
+      // Landscape phones already overflow vertically in every mode (outside this button's row), so
+      // only portrait must be free of layout errors.
+      final error = tester.takeException();
+      if (size.width < size.height) expect(error, isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
+  testWidgets('a replay with a recorded end step shows the ending label only from that step', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: const ArenaBattleScreen(
+          config: MatchConfig(contestants: _balls, mode: MatchMode.arsenal, endlessBattle: true),
+          seed: 3,
+          endStep: 60,
+        ),
+      ),
+    );
+    await tester.pump();
+    final end = find.byKey(const ValueKey('arena-end-battle'));
+    expect(_shows('End battle'), isTrue);
+    expect(_shows('Ending after next KO'), isFalse);
+    expect(tester.widget<OutlinedButton>(end).onPressed, isNull, reason: 'a replay cannot be ended by hand');
+    // The 3 s countdown, then about a second of play reaches step 60.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_shows('End battle'), isTrue, reason: 'step 60 not reached yet');
+    for (var i = 0; i < 40 && !_shows('Ending after next KO'); i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(_shows('Ending after next KO'), isTrue);
+    expect(tester.widget<OutlinedButton>(end).onPressed, isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

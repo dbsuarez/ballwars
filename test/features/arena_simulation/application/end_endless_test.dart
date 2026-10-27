@@ -54,7 +54,8 @@ void main() {
     final defeated = match.state.balls.firstWhere((b) => b.config.id == match.lastEliminatedId);
     expect(defeated.isEliminated, isTrue, reason: 'the defeated ball does not respawn');
 
-    final ranked = [...match.state.balls]
+    // The winner is the tally leader among the balls still standing.
+    final ranked = match.state.balls.where((b) => !b.isEliminated).toList()
       ..sort((x, y) {
         final ko = (match.eliminations[y.config.id] ?? 0).compareTo(match.eliminations[x.config.id] ?? 0);
         if (ko != 0) return ko;
@@ -67,6 +68,27 @@ void main() {
     expect(match.state.winnerId, ranked.first.config.id);
     expect(match.winningMove, isNotNull);
     expect(match.winningMove, isNot('Knockout lead'));
+  });
+
+  test('the defeated ball never wins, even when it leads the tally; the move is its last one', () {
+    final match = _endless(seed: 2);
+    match.requestEndAfterKnockout();
+    match.tick(1 / 60);
+    expect(match.endStep, 1);
+    expect(match.state.status, isNot(MatchStatus.finished));
+    final a = match.state.balls.firstWhere((b) => b.config.id == 'a');
+    final b = match.state.balls.firstWhere((b) => b.config.id == 'b');
+    match.eliminations['b'] = 5;
+    match.damage(b, 1000, attacker: a, move: 'Test blade');
+    match.tick(1 / 60);
+
+    expect(match.state.status, MatchStatus.finished);
+    expect(match.lastEliminatedId, 'b');
+    expect(b.isEliminated, isTrue);
+    expect(match.eliminations['b'], 5, reason: 'b still leads the tally');
+    expect(match.eliminations['a'], 1);
+    expect(match.state.winnerId, 'a');
+    expect(match.winningMove, 'Test blade');
   });
 
   test('replaying with endAfterKnockoutStep reproduces the winner', () {

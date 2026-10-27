@@ -722,8 +722,8 @@ class MatchSimulationController {
   }
 
   /// Endless/Mayhem standings: most knockouts, then fewest times eliminated, then most life.
-  List<SimulationBall> _tallyRanking() {
-    return [..._balls]
+  List<SimulationBall> _tallyRanking([Iterable<SimulationBall>? among]) {
+    return [...(among ?? _balls)]
       ..sort((a, b) {
         final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
           eliminations[a.config.id] ?? 0,
@@ -1012,7 +1012,12 @@ class MatchSimulationController {
       }
       if (_endStep != null && _stepCount + 1 >= _endStep!) {
         final defeated = eliminatedNow.last;
-        _winnerId = _tallyRanking().first.config.id;
+        // The winner is the tally leader among the balls still standing (every ball knocked out this
+        // step is down); if nobody is standing, among everyone but the defeated ball.
+        final standing = _balls.where((b) => !b.isEliminated).toList();
+        _winnerId = _tallyRanking(
+          standing.isNotEmpty ? standing : _balls.where((b) => b != defeated),
+        ).first.config.id;
         _lastEliminatedId = defeated.config.id;
         _winningMove = _lastMove[defeated] ?? 'Collision';
         _status = MatchStatus.finished;

@@ -565,6 +565,54 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     setState(_controller.requestEndAfterKnockout);
   }
 
+  /// Width the bottom-right audio buttons take (three 44 px buttons, two gaps, a margin).
+  static const double _audioButtonsWidth = 148;
+
+  /// Room the bottom-left row needs for Unstuck plus a labeled End battle; narrower, End battle is
+  /// an icon with its label in the tooltip.
+  static const double _endBattleLabelWidth = 300;
+
+  /// End battle: enabled until pressed. "Ending after next KO" once the request is in force (a replay
+  /// with a recorded end step shows it only from that step, and can't be ended by hand).
+  Widget _endBattleButton({required bool compact}) => ListenableBuilder(
+    listenable: _frame,
+    builder: (context, _) {
+      final endStep = _controller.endStep;
+      final ending = endStep == null
+          ? _controller.endRequested
+          : _controller.stepCount >= endStep;
+      final label = ending ? 'Ending after next KO' : 'End battle';
+      final onPressed = _state.winnerId != null || _controller.endRequested
+          ? null
+          : _endBattle;
+      final style = OutlinedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        minimumSize: const Size(40, 36),
+      );
+      return Tooltip(
+        message: compact ? label : 'End the battle after the next knockout',
+        child: compact
+            ? OutlinedButton(
+                key: const ValueKey('arena-end-battle'),
+                onPressed: onPressed,
+                style: style,
+                child: Icon(
+                  ending ? Icons.hourglass_bottom_rounded : Icons.flag_rounded,
+                  size: 18,
+                ),
+              )
+            : OutlinedButton.icon(
+                key: const ValueKey('arena-end-battle'),
+                onPressed: onPressed,
+                icon: const Icon(Icons.flag_rounded, size: 18),
+                label: Text(label),
+                style: style,
+              ),
+      );
+    },
+  );
+
   /// Replay: watch the match that just ended again, exactly as it played (same seed; the round isn't
   /// counted twice).
   void _replay() {
@@ -848,45 +896,33 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         Positioned(
                           bottom: 0,
                           left: 0,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message: 'Unstuck: push every ball in a random direction',
-                                child: OutlinedButton.icon(
-                                  key: const ValueKey('arena-unstuck'),
-                                  onPressed: finished ? null : _unstuck,
-                                  icon: const Icon(Icons.open_with_rounded, size: 18),
-                                  label: const Text('Unstuck'),
-                                  style: OutlinedButton.styleFrom(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  ),
-                                ),
-                              ),
-                              if (widget.config.endlessBattle && !widget.config.mayhem) ...[
-                                const SizedBox(width: 8),
+                          // Leaves room for the three audio buttons at the bottom right.
+                          right: _audioButtonsWidth,
+                          child: LayoutBuilder(
+                            builder: (context, box) => Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 Tooltip(
-                                  message: 'End the battle after the next knockout',
+                                  message: 'Unstuck: push every ball in a random direction',
                                   child: OutlinedButton.icon(
-                                    key: const ValueKey('arena-end-battle'),
-                                    onPressed: finished || _controller.endRequested
-                                        ? null
-                                        : _endBattle,
-                                    icon: const Icon(Icons.flag_rounded, size: 18),
-                                    label: Text(
-                                      _controller.endRequested
-                                          ? 'Ending after next KO'
-                                          : 'End battle',
-                                    ),
+                                    key: const ValueKey('arena-unstuck'),
+                                    onPressed: finished ? null : _unstuck,
+                                    icon: const Icon(Icons.open_with_rounded, size: 18),
+                                    label: const Text('Unstuck'),
                                     style: OutlinedButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
                                       padding: const EdgeInsets.symmetric(horizontal: 10),
                                     ),
                                   ),
                                 ),
+                                if (widget.config.endlessBattle && !widget.config.mayhem) ...[
+                                  const SizedBox(width: 8),
+                                  _endBattleButton(
+                                    compact: box.maxWidth < _endBattleLabelWidth,
+                                  ),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
                         ),
                         Positioned(

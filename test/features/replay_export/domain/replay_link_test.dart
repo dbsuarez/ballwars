@@ -707,7 +707,9 @@ void main() {
     final plain = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]]).toUri(presetIds: presetIds);
     expect(plain.queryParameters.containsKey('nudge'), isFalse);
     expect(ReplayLink.fromUri(plain, presets: _presets)!.nudgeSteps, isEmpty);
-    for (final bad in ['x', '0', '-3', '99999999', '12,,40']) {
+    final late = link.replace(queryParameters: {...link.queryParameters, 'nudge': '121,200000'});
+    expect(ReplayLink.fromUri(late, presets: _presets)!.nudgeSteps, [121, 200000]);
+    for (final bad in ['x', '0', '-3', '216001', '99999999', '12,,40']) {
       final uri = link.replace(queryParameters: {...link.queryParameters, 'nudge': bad});
       expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
     }
@@ -734,7 +736,9 @@ void main() {
     ).toUri(presetIds: presetIds);
     expect(plain.queryParameters.containsKey('end'), isFalse);
     expect(ReplayLink.fromUri(plain, presets: _presets)!.endStep, isNull);
-    for (final bad in ['x', '0', '-3', '36001', '1,2']) {
+    final late = link.replace(queryParameters: {...link.queryParameters, 'end': '200000'});
+    expect(ReplayLink.fromUri(late, presets: _presets)!.endStep, 200000);
+    for (final bad in ['x', '0', '-3', '216001', '1,2']) {
       final uri = link.replace(queryParameters: {...link.queryParameters, 'end': bad});
       expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
     }

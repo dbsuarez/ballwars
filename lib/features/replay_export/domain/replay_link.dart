@@ -49,6 +49,9 @@ class ReplayLink {
   /// Unstuck nudges (steps) the match had; part of the match. `nudge=` (comma list).
   final List<int> nudgeSteps;
 
+  /// Highest step `nudge=` and `end=` accept: one hour of game time at 60 steps per second.
+  static const int maxLinkStep = 216000;
+
   /// End battle: the step at which the player asked to end an endless (non-Mayhem) battle after the
   /// next knockout; part of the match. `end=`, only with `endless=1`.
   final int? endStep;
@@ -267,8 +270,8 @@ class ReplayLink {
     final nudge = params['nudge'];
     if (nudge != null) {
       final steps = [for (final part in nudge.split(',')) int.tryParse(part)];
-      // Positive steps within ten minutes of game time, at most 200 of them.
-      if (steps.length > 200 || steps.any((s) => s == null || s < 1 || s > 36000)) return null;
+      // Positive steps within an hour of game time, at most 200 of them.
+      if (steps.length > 200 || steps.any((s) => s == null || s < 1 || s > maxLinkStep)) return null;
       nudgeSteps = [...steps.cast<int>()]..sort();
     }
     Set<String>? customSkills;
@@ -296,9 +299,9 @@ class ReplayLink {
     int? endStep;
     final end = params['end'];
     if (end != null) {
-      // Only with an endless (non-Mayhem) battle; a step within ten minutes of game time.
+      // Only with an endless (non-Mayhem) battle; a step within an hour of game time.
       endStep = int.tryParse(end);
-      if (!endlessBattle || mayhem || endStep == null || endStep < 1 || endStep > 36000) {
+      if (!endlessBattle || mayhem || endStep == null || endStep < 1 || endStep > maxLinkStep) {
         return null;
       }
     }

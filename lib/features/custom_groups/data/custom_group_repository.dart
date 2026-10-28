@@ -64,15 +64,17 @@ abstract class CustomGroupRepository {
     required Uint8List? png,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
   });
 
-  /// Changes a ball's name, style and color, and its picture when [png] is
-  /// given (the old picture is then deleted).
+  /// Changes a ball's name, style, color and gender, and its picture when
+  /// [png] is given (the old picture is then deleted).
   Future<CustomBall> updateBall(
     CustomBall ball, {
     required String name,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
     Uint8List? png,
   });
 
@@ -88,10 +90,30 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   SupabaseCustomGroupRepository(this._client);
 
-  static const String _ballColumns =
+  static const String _baseBallColumns =
       'id, name, image_path, image_style, color, position';
-  static const String _groupColumns =
-      'id, name, is_public, owner, group_balls($_ballColumns)';
+
+  /// `gender` comes with migration 022. Until it has run, queries and saves
+  /// that name it fail once and are retried (and from then on sent) without
+  /// it, so the app keeps working; balls then read as [BallGender.none].
+  final OptionalColumn _gender = OptionalColumn('gender');
+
+  static String _ballColumns(bool withGender) =>
+      withGender ? '$_baseBallColumns, gender' : _baseBallColumns;
+  static String _groupColumns(bool withGender) =>
+      'id, name, is_public, owner, group_balls(${_ballColumns(withGender)})';
+
+  /// The `gender` column's value for [gender].
+  static String genderValue(BallGender gender) => gender.name;
+
+  /// A row's gender; missing (before migration 022) or unknown is none.
+  static BallGender genderOf(Map<String, dynamic> row) {
+    final value = row['gender'];
+    for (final g in BallGender.values) {
+      if (g.name == value) return g;
+    }
+    return BallGender.none;
+  }
 
   StorageFileApi get _images =>
       _client.storage.from(SupabaseConfig.imageBucket);
@@ -110,13 +132,15 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     // Cached per account, so another account's groups never show up here.
     final uid = _client.auth.currentUser?.id ?? await _userId();
     final rows = await _offline('groups:mine:$uid', () async {
-      return _client
-          .from('ball_groups')
-          .select(_groupColumns)
-          .eq('owner', uid)
-          .order('created_at')
-          .order('position', referencedTable: 'group_balls')
-          .retry(enabled: false);
+      return _gender.run(
+        (withGender) => _client
+            .from('ball_groups')
+            .select(_groupColumns(withGender))
+            .eq('owner', uid)
+            .order('created_at')
+            .order('position', referencedTable: 'group_balls')
+            .retry(enabled: false),
+      );
     });
     return [for (final row in rows) _group(row)];
   }
@@ -125,12 +149,14 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   Future<List<CustomGroup>> allGroups() async {
     final rows = await _offline('groups:all', () async {
       await _userId();
-      return _client
-          .from('ball_groups')
-          .select(_groupColumns)
-          .order('created_at', ascending: false)
-          .order('position', referencedTable: 'group_balls')
-          .retry(enabled: false);
+      return _gender.run(
+        (withGender) => _client
+            .from('ball_groups')
+            .select(_groupColumns(withGender))
+            .order('created_at', ascending: false)
+            .order('position', referencedTable: 'group_balls')
+            .retry(enabled: false),
+      );
     });
     return [for (final row in rows) _group(row)];
   }
@@ -141,12 +167,16 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     final rows = await _offline('groups:saved:$uid', () async {
       // RLS limits saved_groups to this user's rows; !inner keeps only the
       // groups that have one.
-      return _client
-          .from('ball_groups')
-          .select('$_groupColumns, saved_groups!inner(group_id)')
-          .order('name')
-          .order('position', referencedTable: 'group_balls')
-          .retry(enabled: false);
+      return _gender.run(
+        (withGender) => _client
+            .from('ball_groups')
+            .select(
+              '${_groupColumns(withGender)}, saved_groups!inner(group_id)',
+            )
+            .order('name')
+            .order('position', referencedTable: 'group_balls')
+            .retry(enabled: false),
+      );
     });
     return [for (final row in rows) _group(row)];
   }
@@ -154,12 +184,14 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   @override
   Future<CustomGroup?> group(String groupId) async {
     await _userId();
-    final row = await _client
-        .from('ball_groups')
-        .select(_groupColumns)
-        .eq('id', groupId)
-        .order('position', referencedTable: 'group_balls')
-        .maybeSingle();
+    final row = await _gender.run(
+      (withGender) => _client
+          .from('ball_groups')
+          .select(_groupColumns(withGender))
+          .eq('id', groupId)
+          .order('position', referencedTable: 'group_balls')
+          .maybeSingle(),
+    );
     return row == null ? null : _group(row);
   }
 
@@ -246,19 +278,24 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     required Uint8List? png,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
   }) async {
     final path = png == null ? null : await _upload(png);
     try {
-      final row = await _client
-          .from('group_balls')
-          .insert({
-            'group_id': groupId,
-            ..._fields(name, style, color),
-            'image_path': path,
-            'position': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          })
-          .select(_ballColumns)
-          .single();
+      final position = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final row = await _gender.run(
+        (withGender) => _client
+            .from('group_balls')
+            .insert({
+              'group_id': groupId,
+              ..._fields(name, style, color),
+              if (withGender) 'gender': genderValue(gender),
+              'image_path': path,
+              'position': position,
+            })
+            .select(_ballColumns(withGender))
+            .single(),
+      );
       return _ball(row);
     } catch (_) {
       if (path != null) await _images.remove([path]);
@@ -272,6 +309,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     required String name,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
     Uint8List? png,
   }) async {
     final oldPath = _pathOf(ball);
@@ -287,12 +325,18 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
       newPath = await _upload(png, folder: row['owner'] as String);
     }
     try {
-      final row = await _client
-          .from('group_balls')
-          .update({..._fields(name, style, color), 'image_path': ?newPath})
-          .eq('id', CustomGroup.uuidOf(ball))
-          .select(_ballColumns)
-          .single();
+      final row = await _gender.run(
+        (withGender) => _client
+            .from('group_balls')
+            .update({
+              ..._fields(name, style, color),
+              if (withGender) 'gender': genderValue(gender),
+              'image_path': ?newPath,
+            })
+            .eq('id', CustomGroup.uuidOf(ball))
+            .select(_ballColumns(withGender))
+            .single(),
+      );
       if (newPath != null && oldPath != null) await _images.remove([oldPath]);
       return _ball(row);
     } catch (_) {
@@ -333,13 +377,15 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     // carry on without extras. It's left out of the other queries for that
     // reason.
     final rows = await _offline('groups:packs', () async {
-      return _client
-          .from('ball_groups')
-          .select('$_groupColumns, pack_id')
-          .not('pack_id', 'is', null)
-          .order('name')
-          .order('position', referencedTable: 'group_balls')
-          .retry(enabled: false);
+      return _gender.run(
+        (withGender) => _client
+            .from('ball_groups')
+            .select('${_groupColumns(withGender)}, pack_id')
+            .not('pack_id', 'is', null)
+            .order('name')
+            .order('position', referencedTable: 'group_balls')
+            .retry(enabled: false),
+      );
     });
     return [for (final row in rows) _group(row)];
   }
@@ -403,13 +449,15 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   @override
   Future<List<CustomBall>> ballsById(List<String> ballIds) async {
     if (ballIds.isEmpty) return const [];
-    final rows = await _client
-        .from('group_balls')
-        .select(_ballColumns)
-        .inFilter('id', [
-          for (final id in ballIds)
-            id.replaceFirst(CustomGroup.ballIdPrefix, ''),
-        ]);
+    final rows = await _gender.run(
+      (withGender) => _client
+          .from('group_balls')
+          .select(_ballColumns(withGender))
+          .inFilter('id', [
+            for (final id in ballIds)
+              id.replaceFirst(CustomGroup.ballIdPrefix, ''),
+          ]),
+    );
     return [for (final row in rows) _ball(row)];
   }
 
@@ -439,6 +487,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
           : BallImageStyle.logo,
       primaryColor: color,
       glowColor: Color.lerp(color, const Color(0xFFFFFFFF), 0.35)!,
+      gender: genderOf(row),
     );
   }
 
@@ -449,6 +498,34 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     final marker = '/${SupabaseConfig.imageBucket}/';
     final i = url.indexOf(marker);
     return i < 0 ? null : Uri.decodeComponent(url.substring(i + marker.length));
+  }
+}
+
+/// A column that may not exist yet (its migration not run). [run] sends a
+/// query with it; if the database says the column is missing, the query is
+/// sent again without it, and from then on always without it.
+class OptionalColumn {
+  final String name;
+
+  /// False once the database said the column is missing.
+  bool available = true;
+
+  OptionalColumn(this.name);
+
+  Future<T> run<T>(Future<T> Function(bool withColumn) query) async {
+    if (!available) return query(false);
+    try {
+      return await query(true);
+    } on PostgrestException catch (e) {
+      // 42703: undefined column (selects); PGRST204: a written column not in
+      // PostgREST's schema cache (inserts and updates).
+      final missing =
+          (e.code == '42703' || e.code == 'PGRST204') &&
+          e.message.contains(name);
+      if (!missing) rethrow;
+      available = false;
+      return query(false);
+    }
   }
 }
 
@@ -531,12 +608,14 @@ class AccountAwareCustomGroupRepository implements CustomGroupRepository {
     required Uint8List? png,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
   }) async => (await _active()).addBall(
     groupId: groupId,
     name: name,
     png: png,
     style: style,
     color: color,
+    gender: gender,
   );
   @override
   Future<CustomBall> updateBall(
@@ -544,12 +623,14 @@ class AccountAwareCustomGroupRepository implements CustomGroupRepository {
     required String name,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
     Uint8List? png,
   }) async => (await _active()).updateBall(
     ball,
     name: name,
     style: style,
     color: color,
+    gender: gender,
     png: png,
   );
   @override

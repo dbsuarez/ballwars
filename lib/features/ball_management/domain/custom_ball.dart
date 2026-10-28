@@ -10,6 +10,11 @@ enum BallImageStyle {
   logo,
 }
 
+/// A ball's gender, picked in the ball editor. Male and female balls always
+/// get hair from their own style pool (see BallHairPainter); none keeps the
+/// old behavior (hair only with "Random hairstyles").
+enum BallGender { none, male, female }
+
 class CustomBall {
   final String id;
   final String name;
@@ -24,6 +29,9 @@ class CustomBall {
   final double baseSpeed;
   final double mass;
 
+  /// Cosmetic: picks the ball's hair pool. Never changes the match.
+  final BallGender gender;
+
   static const double defaultBaseSpeed = 320.0;
 
   const CustomBall({
@@ -37,6 +45,7 @@ class CustomBall {
     required this.glowColor,
     this.baseSpeed = defaultBaseSpeed,
     this.mass = 1.0,
+    this.gender = BallGender.none,
   });
 
   bool get hasImage => imageBytes != null || imageUrl != null;
@@ -51,6 +60,7 @@ class CustomBall {
     Color? glowColor,
     double? baseSpeed,
     double? mass,
+    BallGender? gender,
   }) {
     return CustomBall(
       id: id,
@@ -63,6 +73,7 @@ class CustomBall {
       glowColor: glowColor ?? this.glowColor,
       baseSpeed: baseSpeed ?? this.baseSpeed,
       mass: mass ?? this.mass,
+      gender: gender ?? this.gender,
     );
   }
 }

@@ -480,6 +480,9 @@ class ReplayLink {
             'g': b.glowColor.toARGB32(),
             's': b.baseSpeed,
             'm': b.mass,
+            // Gender (cosmetic: the hair pool), only when set, so links of
+            // balls without one stay as they were.
+            if (b.gender != BallGender.none) 'x': b.gender.name,
           }),
         ),
       )
@@ -564,6 +567,17 @@ class ReplayLink {
         return null;
       }
       if (!_within(mass, 0.25, 4)) return null;
+      final rawGender = data['x'];
+      BallGender gender = BallGender.none;
+      if (rawGender != null) {
+        // Only what the app writes: "male" or "female" (none is left out).
+        if (rawGender is! String) return null;
+        final match = BallGender.values.where(
+          (g) => g != BallGender.none && g.name == rawGender,
+        );
+        if (match.isEmpty) return null;
+        gender = match.first;
+      }
       return CustomBall(
         id: 'link-$index',
         name: name,
@@ -571,6 +585,7 @@ class ReplayLink {
         glowColor: Color(data['g'] as int),
         baseSpeed: baseSpeed,
         mass: mass,
+        gender: gender,
       );
     } catch (_) {
       return null;

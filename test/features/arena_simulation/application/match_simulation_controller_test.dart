@@ -6,6 +6,7 @@ import 'package:ballwars/features/arena_simulation/domain/fan_line.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_state.dart';
+import 'package:ballwars/features/arena_simulation/presentation/ball_hair_painter.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
@@ -91,6 +92,87 @@ void main() {
       controller.state.balls.every((ball) => ball.hairstyle == null),
       isTrue,
     );
+  });
+
+  group('ball gender hair', () {
+    List<CustomBall> balls(BallGender a, BallGender b) => [
+      _twoBalls()[0].copyWith(gender: a),
+      _twoBalls()[1].copyWith(gender: b),
+    ];
+    MatchSimulationController make(
+      List<CustomBall> contestants, {
+      bool random = false,
+      int seed = 404,
+    }) => MatchSimulationController(
+      contestants,
+      arenaRadius: _arenaRadius,
+      seed: seed,
+      lookAhead: false,
+      randomizedHairstyles: random,
+    );
+
+    test('gendered balls get hair from their pool, random on or off', () {
+      for (final random in [false, true]) {
+        for (var seed = 1; seed <= 30; seed++) {
+          final c = make(
+            balls(BallGender.female, BallGender.male),
+            random: random,
+            seed: seed,
+          );
+          final female = _ball(c, 'a');
+          final male = _ball(c, 'b');
+          expect(BallHairPainter.femaleStyles, contains(female.hairstyle));
+          expect(BallHairPainter.maleStyles, contains(male.hairstyle));
+          expect(female.hairColor, isNotNull);
+          expect(male.hairColor, isNotNull);
+          expect(female.hairColor, isNot(female.config.primaryColor));
+        }
+      }
+    });
+
+    test('None balls keep today\'s hair: none, or the shuffled style', () {
+      final off = make(balls(BallGender.female, BallGender.none));
+      expect(_ball(off, 'b').hairstyle, isNull);
+      expect(_ball(off, 'b').hairColor, isNull);
+
+      final plain = make(_twoBalls(), random: true);
+      final mixed = make(
+        balls(BallGender.female, BallGender.none),
+        random: true,
+      );
+      expect(_ball(mixed, 'b').hairstyle, _ball(plain, 'b').hairstyle);
+      expect(_ball(mixed, 'b').hairColor, _ball(plain, 'b').hairColor);
+    });
+
+    test('with random hairstyles off a gendered ball keeps its look', () {
+      final first = _ball(make(balls(BallGender.female, BallGender.none)), 'a');
+      final other = _ball(
+        make(balls(BallGender.female, BallGender.none), seed: 999),
+        'a',
+      );
+      expect(other.hairstyle, first.hairstyle);
+      expect(other.hairColor, first.hairColor);
+    });
+
+    test('gender never changes the match itself', () {
+      for (final random in [false, true]) {
+        final plain = make(_twoBalls(), random: random, seed: 77);
+        final gendered = make(
+          balls(BallGender.female, BallGender.male),
+          random: random,
+          seed: 77,
+        );
+        for (var i = 0; i < 3000 && plain.state.winnerId == null; i++) {
+          plain.tick(1 / 60);
+          gendered.tick(1 / 60);
+        }
+        expect(gendered.state.winnerId, plain.state.winnerId);
+        expect(
+          gendered.state.balls.map((b) => (b.position, b.fanLines.length)),
+          plain.state.balls.map((b) => (b.position, b.fanLines.length)),
+        );
+      }
+    });
   });
 
   test('Arsenal eliminates a ball with less than one life', () {

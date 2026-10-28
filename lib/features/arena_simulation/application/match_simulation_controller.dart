@@ -11,6 +11,7 @@ import '../../settings/domain/app_settings.dart';
 import '../domain/arena_physics_engine.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
+import '../domain/hair_styles.dart';
 import '../domain/match_colors.dart';
 import '../domain/particle_system.dart';
 import '../domain/power_up.dart';
@@ -277,7 +278,8 @@ class MatchSimulationController {
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
       final angle = _rng.nextDoubleRange(0, 2 * math.pi);
-      ball.velocity = Offset(math.cos(angle), math.sin(angle)) * arenaRadius * nudgeForce;
+      ball.velocity =
+          Offset(math.cos(angle), math.sin(angle)) * arenaRadius * nudgeForce;
     }
   }
 
@@ -366,8 +368,10 @@ class MatchSimulationController {
       for (final c in contestants) c.primaryColor,
     ], background: arenaBackground);
 
-    final hairstyleOrder = List<int>.generate(20, (index) => index)
-      ..shuffle(math.Random(this.seed ^ 0x48414952));
+    final hairstyleOrder = List<int>.generate(
+      HairStyles.legacyCount,
+      (index) => index,
+    )..shuffle(math.Random(this.seed ^ 0x48414952));
     const hairPalette = <Color>[
       Color(0xFF17120F),
       Color(0xFF4B2E20),
@@ -425,8 +429,24 @@ class MatchSimulationController {
         velocity: velocity,
         radius: ballRadius,
         lineCount: 0,
-        hairstyle: randomizedHairstyles ? hairstyleOrder[i] : null,
-        hairColor: randomizedHairstyles ? assignedHairColors[i] : null,
+        // Gendered balls always wear hair from their pool; without random
+        // hairstyles it follows the ball id (no RNG either way).
+        hairstyle: HairStyles.styleFor(
+          contestants[i].gender,
+          contestants[i].id,
+          randomizedHairstyles ? hairstyleOrder[i] : null,
+          seed: this.seed,
+        ),
+        hairColor: randomizedHairstyles
+            ? assignedHairColors[i]
+            : contestants[i].gender == BallGender.none
+            ? null
+            : HairStyles.colorFor(
+                contestants[i].id,
+                contestants[i].primaryColor,
+                hairPalette,
+                _colorDistance,
+              ),
       );
     });
 
@@ -723,20 +743,19 @@ class MatchSimulationController {
 
   /// Endless/Mayhem standings: most knockouts, then fewest times eliminated, then most life.
   List<SimulationBall> _tallyRanking([Iterable<SimulationBall>? among]) {
-    return [...(among ?? _balls)]
-      ..sort((a, b) {
-        final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
-          eliminations[a.config.id] ?? 0,
-        );
-        if (knockouts != 0) return knockouts;
-        final timesEliminated = (deaths[a.config.id] ?? 0).compareTo(
-          deaths[b.config.id] ?? 0,
-        );
-        if (timesEliminated != 0) return timesEliminated;
-        final life = b.life.compareTo(a.life);
-        if (life != 0) return life;
-        return _balls.indexOf(a).compareTo(_balls.indexOf(b));
-      });
+    return [...(among ?? _balls)]..sort((a, b) {
+      final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
+        eliminations[a.config.id] ?? 0,
+      );
+      if (knockouts != 0) return knockouts;
+      final timesEliminated = (deaths[a.config.id] ?? 0).compareTo(
+        deaths[b.config.id] ?? 0,
+      );
+      if (timesEliminated != 0) return timesEliminated;
+      final life = b.life.compareTo(a.life);
+      if (life != 0) return life;
+      return _balls.indexOf(a).compareTo(_balls.indexOf(b));
+    });
   }
 
   // Used only by the admin test arena. Empty during ordinary matches.

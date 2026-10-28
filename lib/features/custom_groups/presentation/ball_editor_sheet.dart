@@ -52,6 +52,7 @@ class BallEditorSheet extends StatefulWidget {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    constraints: const BoxConstraints(maxWidth: 440),
     builder: (_) => BallEditorSheet(
       groupId: groupId,
       repository: repository,
@@ -71,6 +72,7 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   BallImageStyle _style =
       BallImageStyle.cover; // New balls: picture fills the ball.
   Color? _color;
+  BallGender _gender = BallGender.none;
   bool _working = false;
   String? _error;
 
@@ -84,6 +86,7 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
       _name.text = existing.name;
       _style = existing.imageStyle;
       _color = existing.primaryColor;
+      _gender = existing.gender;
     }
   }
 
@@ -157,12 +160,14 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
               png: png,
               style: _style,
               color: _lineColor,
+              gender: _gender,
             )
           : await widget.repository.updateBall(
               existing,
               name: name,
               style: _style,
               color: _lineColor,
+              gender: _gender,
               png: png,
             );
       if (mounted) Navigator.of(context).pop(ball);
@@ -314,6 +319,35 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
               onSelectionChanged: _working
                   ? null
                   : (s) => setState(() => _style = s.first),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'GENDER',
+              style: AppText.ui(
+                11,
+                FontWeight.w700,
+                color: c.muted,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<BallGender>(
+              key: const ValueKey('ball-gender'),
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: BallGender.none, label: Text('None')),
+                ButtonSegment(value: BallGender.male, label: Text('Male')),
+                ButtonSegment(value: BallGender.female, label: Text('Female')),
+              ],
+              selected: {_gender},
+              onSelectionChanged: _working
+                  ? null
+                  : (s) => setState(() => _gender = s.first),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Male and female balls always get a matching hairstyle.',
+              style: AppText.ui(12, FontWeight.w500, color: c.muted),
             ),
             const SizedBox(height: 20),
             Text(

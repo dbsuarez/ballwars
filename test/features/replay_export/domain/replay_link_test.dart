@@ -282,6 +282,48 @@ void main() {
       expect(parse('seed=1&balls=$two,${custom({'n': '  '})}'), isNull);
     });
 
+    test('custom balls carry their gender as x; unknown values reject', () {
+      final female = parse('seed=1&balls=$two,${custom({'x': 'female'})}')!;
+      expect(female.contestants.last.gender, BallGender.female);
+      final none = parse('seed=1&balls=$two,${custom({})}')!;
+      expect(none.contestants.last.gender, BallGender.none);
+      expect(parse('seed=1&balls=$two,${custom({'x': 'robot'})}'), isNull);
+      expect(parse('seed=1&balls=$two,${custom({'x': 'none'})}'), isNull);
+      expect(parse('seed=1&balls=$two,${custom({'x': 3})}'), isNull);
+
+      final ids = {for (final b in _presets) b.id};
+      const app = 'https://dbsuarez.github.io/ballwars/';
+      const male = CustomBall(
+        id: 'mine',
+        name: 'Juan',
+        primaryColor: Color(0xFF112233),
+        glowColor: Color(0xFF445566),
+        gender: BallGender.male,
+      );
+      const plain = CustomBall(
+        id: 'mine2',
+        name: 'Ana',
+        primaryColor: Color(0xFF112233),
+        glowColor: Color(0xFF445566),
+      );
+      final uri = ReplayLink(
+        seed: 3,
+        speedMultiplier: 1,
+        contestants: [male, plain],
+      ).toUri(presetIds: ids, appUrl: app);
+      final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
+      expect(parsed.contestants.map((b) => b.gender), [
+        BallGender.male,
+        BallGender.none,
+      ]);
+      // None is left out, so links of balls without a gender are unchanged.
+      final token = uri.queryParameters['balls']!.split(',').last.substring(2);
+      final json = utf8.decode(
+        base64Url.decode(token.padRight((token.length + 3) ~/ 4 * 4, '=')),
+      );
+      expect(json, isNot(contains('"x"')));
+    });
+
     test('oversized links are rejected before parsing', () {
       expect(
         parse('seed=1&balls=$two&pad=${'a' * ReplayLink.maxLinkLength}'),

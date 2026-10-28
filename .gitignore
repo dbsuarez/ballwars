@@ -54,3 +54,6 @@ docs/BALLWARS-HANDOFF.md
 
 # Golden test failure output
 test/**/failures/
+
+# Owner-only design handoff for Codex (not part of the repo)
+docs/BALL-WARS-RARITY-PRESETS-HANDOFF.md

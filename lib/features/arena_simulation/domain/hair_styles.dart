@@ -54,16 +54,55 @@ abstract final class HairStyles {
   /// every ball), so the whole pool shows up across matches even though the
   /// shuffle only covers 0-19, and balls of one gender still never share a
   /// style while the pool is larger than 20.
+  ///
+  /// [taken] holds the styles that balls of the same gender earlier in the
+  /// contestant order already wear: the pick moves on through the pool past
+  /// them, so two balls of one gender never repeat a style while the pool
+  /// has room (no RNG; a ball whose first pick is free keeps it).
   static int? styleFor(
     BallGender gender,
     String id,
     int? shuffled, {
     int seed = 0,
+    Set<int> taken = const {},
   }) {
     final pool = poolOf(gender);
     if (pool == null) return shuffled;
-    if (shuffled == null) return pool[hashOf(id) % pool.length];
-    return pool[(shuffled + seed % pool.length) % pool.length];
+    final start = shuffled == null
+        ? hashOf(id) % pool.length
+        : (shuffled + seed % pool.length) % pool.length;
+    for (var k = 0; k < pool.length; k++) {
+      final style = pool[(start + k) % pool.length];
+      if (!taken.contains(style)) return style;
+    }
+    return pool[start];
+  }
+
+  /// [styleFor] for every contestant in order, each gender avoiding the
+  /// styles its earlier balls wear. [shuffled] gives each index's shuffled
+  /// style, or null when "Random hairstyles" is off.
+  static List<int?> stylesFor(
+    List<CustomBall> contestants,
+    int? Function(int index) shuffled, {
+    int seed = 0,
+  }) {
+    final taken = <int>{};
+    final styles = <int?>[];
+    for (var i = 0; i < contestants.length; i++) {
+      final gender = contestants[i].gender;
+      final style = styleFor(
+        gender,
+        contestants[i].id,
+        shuffled(i),
+        seed: seed,
+        taken: taken,
+      );
+      // Pools never overlap, so one set serves every gender; None balls keep
+      // the shuffle and take nothing.
+      if (style != null && gender != BallGender.none) taken.add(style);
+      styles.add(style);
+    }
+    return styles;
   }
 
   /// A hair color for a gendered ball when "Random hairstyles" is off:

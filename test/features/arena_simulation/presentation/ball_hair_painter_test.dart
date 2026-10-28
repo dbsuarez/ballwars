@@ -84,4 +84,28 @@ void main() {
         HairStyles.styleFor(BallGender.female, 'a', 0, seed: seed),
     }, HairStyles.female.toSet());
   });
+
+  test('styleFor moves past styles its gender already took', () {
+    final first = HairStyles.styleFor(BallGender.male, 'a', 3, seed: 0)!;
+    expect(
+      HairStyles.styleFor(BallGender.male, 'a', 3, taken: {first}),
+      isNot(first),
+    );
+    expect(
+      HairStyles.styleFor(BallGender.male, 'a', 3, taken: {first}),
+      HairStyles.male[(HairStyles.male.indexOf(first) + 1) %
+          HairStyles.male.length],
+    );
+    // A full pool falls back to the first pick; None ignores taken.
+    expect(
+      HairStyles.styleFor(
+        BallGender.male,
+        'a',
+        3,
+        taken: HairStyles.male.toSet(),
+      ),
+      first,
+    );
+    expect(HairStyles.styleFor(BallGender.none, 'a', 7, taken: {7}), 7);
+  });
 }

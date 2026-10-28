@@ -141,6 +141,13 @@ class BallHairPainter {
   /// pigtails, bob and top bun, five variants each. Coordinates are in ball
   /// radii from the center; the face (eyes at x +-0.12..0.56, y -0.4..0.04)
   /// stays clear: side hair keeps to |x| > 0.6 down there.
+  /// The two sides (left, right) the long styles mirror over.
+  static const List<double> _sides = [-1.0, 1.0];
+
+  /// Fill for the ties; [_paintLong] sets its color each call, so it is never
+  /// allocated while painting.
+  static final Paint _ink = Paint();
+
   static void _paintLong(
     Canvas canvas,
     Offset c,
@@ -151,7 +158,7 @@ class BallHairPainter {
     Paint dark,
   ) {
     Offset u(double x, double y) => Offset(c.dx + x * r, c.dy + y * r);
-    final ink = Paint()..color = dark.color;
+    final ink = _ink..color = dark.color;
     void fill(Path path) {
       canvas.drawPath(path, paint);
       canvas.drawPath(path, dark);
@@ -271,7 +278,7 @@ class BallHairPainter {
             fill(frame(lenL: 0.75, parted: true));
           case 3:
             fill(frame(lenL: 0.9, fringe: -0.56, part: -0.35, flare: 0.08));
-            for (final s in [-1.0, 1.0]) {
+            for (final s in _sides) {
               ball(s * 1.0, 0.86, 0.13);
             }
           default:
@@ -333,7 +340,7 @@ class BallHairPainter {
             tie(0.95, -0.4);
         }
       case 6: // Two pigtails.
-        for (final s in [-1.0, 1.0]) {
+        for (final s in _sides) {
           switch (variant) {
             case 0:
               fill(
@@ -378,7 +385,7 @@ class BallHairPainter {
               ? frame(parted: true)
               : frame(fringe: variant.isOdd ? -0.52 : -0.6),
         );
-        for (final s in [-1.0, 1.0]) {
+        for (final s in _sides) {
           switch (variant) {
             case 1 || 3:
               tie(s * 0.95, -0.36);
@@ -400,7 +407,7 @@ class BallHairPainter {
             fill(frame(lenL: 0.1, lenR: 0.45, fringe: -0.62, part: 0.5));
           default:
             fill(frame(lenL: 0.2, fringe: -0.52));
-            for (final s in [-1.0, 1.0]) {
+            for (final s in _sides) {
               ball(s * 0.92, 0.2, 0.15);
             }
         }
@@ -417,7 +424,7 @@ class BallHairPainter {
             ball(-0.12, -1.26, 0.22);
             ball(0.16, -1.3, 0.24);
             ball(0.02, -1.45, 0.2);
-            for (final s in [-1.0, 1.0]) {
+            for (final s in _sides) {
               fill(
                 lock(
                   Offset(s * 0.86, -0.5),
@@ -430,7 +437,7 @@ class BallHairPainter {
             }
           default:
             ball(0, -1.25, 0.3);
-            for (final s in [-1.0, 1.0]) {
+            for (final s in _sides) {
               fill(
                 lock(
                   Offset(s * 0.84, -0.55),

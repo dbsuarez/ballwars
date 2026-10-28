@@ -154,6 +154,59 @@ void main() {
       expect(other.hairColor, first.hairColor);
     });
 
+    test('balls of one gender never share a style in a match', () {
+      List<CustomBall> four(BallGender gender) => [
+        for (var i = 0; i < 4; i++)
+          CustomBall(
+            id: 'group:$i',
+            name: 'G $i',
+            primaryColor: Color(0xFF203040 + i * 0x00301020),
+            glowColor: Colors.white,
+            gender: gender,
+          ),
+      ];
+      for (final gender in [BallGender.male, BallGender.female]) {
+        for (final random in [false, true]) {
+          for (var seed = 1; seed <= 200; seed++) {
+            final styles = make(
+              four(gender),
+              random: random,
+              seed: seed,
+            ).state.balls.map((b) => b.hairstyle).toList();
+            expect(
+              styles.toSet(),
+              hasLength(4),
+              reason: '$gender random=$random seed=$seed $styles',
+            );
+          }
+        }
+      }
+      // Mixed genders: each gender only avoids its own repeats; a None ball
+      // keeps its shuffled style.
+      final mixed = [
+        ...four(BallGender.male).take(2),
+        _twoBalls()[0],
+        four(BallGender.female)[3],
+      ];
+      for (var seed = 1; seed <= 50; seed++) {
+        final c = make(mixed, random: true, seed: seed);
+        final plain = make(
+          [
+            ...four(BallGender.none).take(2),
+            _twoBalls()[0],
+            four(BallGender.none)[3],
+          ],
+          random: true,
+          seed: seed,
+        );
+        expect(c.state.balls[0].hairstyle, isNot(c.state.balls[1].hairstyle));
+        expect(
+          _ball(c, _twoBalls()[0].id).hairstyle,
+          _ball(plain, _twoBalls()[0].id).hairstyle,
+        );
+      }
+    });
+
     test('gender never changes the match itself', () {
       for (final random in [false, true]) {
         final plain = make(_twoBalls(), random: random, seed: 77);

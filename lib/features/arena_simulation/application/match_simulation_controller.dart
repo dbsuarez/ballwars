@@ -398,6 +398,13 @@ class MatchSimulationController {
         availableHairColors.removeAt(contrasting < 0 ? 0 : contrasting),
       );
     }
+    // Gendered balls always wear hair from their pool; without random
+    // hairstyles it follows the ball id (no RNG either way).
+    final hairstyles = HairStyles.stylesFor(
+      contestants,
+      (i) => randomizedHairstyles ? hairstyleOrder[i] : null,
+      seed: this.seed,
+    );
     _balls = List.generate(count, (i) {
       final angle = _startAngle(i, count);
       final radial = Offset(math.cos(angle), math.sin(angle));
@@ -429,14 +436,7 @@ class MatchSimulationController {
         velocity: velocity,
         radius: ballRadius,
         lineCount: 0,
-        // Gendered balls always wear hair from their pool; without random
-        // hairstyles it follows the ball id (no RNG either way).
-        hairstyle: HairStyles.styleFor(
-          contestants[i].gender,
-          contestants[i].id,
-          randomizedHairstyles ? hairstyleOrder[i] : null,
-          seed: this.seed,
-        ),
+        hairstyle: hairstyles[i],
         hairColor: randomizedHairstyles
             ? assignedHairColors[i]
             : contestants[i].gender == BallGender.none

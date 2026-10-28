@@ -1333,45 +1333,50 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                   Container(width: 1, color: c.border),
                   Expanded(
                     child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: leave,
-                              ),
-                              const SizedBox(height: 8),
-                              ListenableBuilder(
-                                listenable: _frame,
-                                builder: (context, _) => _VersusHeader(
-                                  balls: _state.balls,
-                                  look: widget.config.look,
+                      // Landscape phones are too short for the whole panel: it scrolls there.
+                      // Where it fits, the scroll view is as tall as the panel, so nothing moves.
+                      child: SingleChildScrollView(
+                        key: const ValueKey('arena-side-panel'),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: leave,
                                 ),
-                              ),
-                              const SizedBox(height: 28),
-                              MatchStatusHeader(
-                                headline: headline,
-                                subtitle: roundLabel,
-                                dimmed: finished,
-                                align: TextAlign.start,
-                              ),
-                              const SizedBox(height: 28),
-                              scoreboard,
-                              const SizedBox(height: 28),
-                              Row(
-                                children: [
-                                  timer,
-                                  pause,
-                                  const SizedBox(width: 8),
-                                  restart,
-                                ],
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                ListenableBuilder(
+                                  listenable: _frame,
+                                  builder: (context, _) => _VersusHeader(
+                                    balls: _state.balls,
+                                    look: widget.config.look,
+                                  ),
+                                ),
+                                const SizedBox(height: 28),
+                                MatchStatusHeader(
+                                  headline: headline,
+                                  subtitle: roundLabel,
+                                  dimmed: finished,
+                                  align: TextAlign.start,
+                                ),
+                                const SizedBox(height: 28),
+                                scoreboard,
+                                const SizedBox(height: 28),
+                                Row(
+                                  children: [
+                                    timer,
+                                    pause,
+                                    const SizedBox(width: 8),
+                                    restart,
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

@@ -217,10 +217,34 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         expect(_shows('Ending after next KO'), isTrue);
         expectNoOverlap();
-        // Landscape phones already overflow vertically in every mode (outside this button's row), so
-        // only portrait must be free of layout errors.
-        final error = tester.takeException();
-        if (size.width < size.height) expect(error, isNull);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  for (final size in const [Size(800, 360), Size(844, 390)]) {
+    testWidgets(
+      'a Threads match fits a ${size.width.toInt()}x${size.height.toInt()} landscape phone, winner card included',
+      (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          _app(const MatchConfig(contestants: _balls), seed: 3),
+        );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        // The side panel scrolls on a short screen; its last row can be reached.
+        final restart = find.byKey(const ValueKey('restart-match'));
+        await tester.dragUntilVisible(
+          restart,
+          find.byKey(const ValueKey('arena-side-panel')),
+          const Offset(0, -80),
+        );
+        expect(tester.takeException(), isNull);
+        await _playUntilWinnerCard(tester);
+        expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );

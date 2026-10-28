@@ -21,6 +21,7 @@ class ScoreboardOverlay extends StatelessWidget {
   final bool compact;
   final PowerUpConfig tuning;
   final int Function(SimulationBall ball, PowerUpKind kind)? artworkTint;
+  final String? Function(SimulationBall ball, PowerUpKind kind)? iconSpriteId;
 
   /// The tier of an item a ball holds (a held custom skill has its own); null: the kind's tier in
   /// [tuning].
@@ -37,6 +38,7 @@ class ScoreboardOverlay extends StatelessWidget {
     this.compact = false,
     this.tuning = PowerUpConfig.defaults,
     this.artworkTint,
+    this.iconSpriteId,
     this.itemRarity,
   });
 
@@ -134,6 +136,8 @@ class ScoreboardOverlay extends StatelessWidget {
                                     message: item.label,
                                     child: PowerUpIcon(
                                       item,
+                                      spriteId: iconSpriteId?.call(ball, item),
+                                      useSettingsArtwork: iconSpriteId == null,
                                       size: 16,
                                       tint:
                                           artworkTint?.call(ball, item) ??
@@ -254,6 +258,12 @@ class ScoreboardOverlay extends StatelessWidget {
                                     children: [
                                       PowerUpIcon(
                                         kind,
+                                        useSettingsArtwork:
+                                            iconSpriteId == null,
+                                        spriteId: iconSpriteId?.call(
+                                          ball,
+                                          kind,
+                                        ),
                                         size: 20,
                                         tint:
                                             artworkTint?.call(ball, kind) ??

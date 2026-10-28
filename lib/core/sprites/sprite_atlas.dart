@@ -13,9 +13,14 @@ enum SpriteFit { contain, trim, fill }
 /// One sprite: its frames on the sheet and how to cut and play them.
 class SpriteDef {
   final String id;
+  final String? label;
 
   /// Frame rectangles in sheet pixels.
   final List<Rect> frames;
+
+  /// Original canvas geometry for trimmed editor exports, one entry per frame.
+  final List<Size>? sourceSizes;
+  final List<Offset>? sourceOffsets;
 
   /// The point of the output image (0..1 on each axis, from its top left)
   /// that painters place on their target point. Defaults to the center.
@@ -49,7 +54,10 @@ class SpriteDef {
 
   const SpriteDef({
     required this.id,
+    this.label,
     required this.frames,
+    this.sourceSizes,
+    this.sourceOffsets,
     this.anchor = const Offset(0.5, 0.5),
     required this.output,
     this.outputHeight,
@@ -119,6 +127,12 @@ class SpriteAtlas {
 
   static SpriteDef _parseSprite(String id, Object? v) {
     if (v is! Map) throw FormatException('Sprite $id must be an object');
+    if (v['label'] != null &&
+        (v['label'] is! String ||
+            (v['label'] as String).trim().isEmpty ||
+            (v['label'] as String).length > 80)) {
+      throw FormatException('Sprite $id label must contain 1 to 80 characters');
+    }
     final framesRaw = v['frames'];
     if (framesRaw is! List) {
       throw FormatException('Sprite $id needs a "frames" list');
@@ -197,9 +211,22 @@ class SpriteAtlas {
     }
     return SpriteDef(
       id: id,
+      label: v['label'] is String ? v['label'] as String : null,
       padding: padding,
       trimCutPadding: cutPadding,
       frames: frames,
+      sourceSizes: v['sourceSizes'] == null
+          ? null
+          : [
+              for (final s in v['sourceSizes'] as List)
+                Size((s[0] as num).toDouble(), (s[1] as num).toDouble()),
+            ],
+      sourceOffsets: v['sourceOffsets'] == null
+          ? null
+          : [
+              for (final s in v['sourceOffsets'] as List)
+                Offset((s[0] as num).toDouble(), (s[1] as num).toDouble()),
+            ],
       anchor: anchor,
       output: output,
       outputHeight: outputHeight as int?,
@@ -224,10 +251,39 @@ class SpriteAtlas {
       );
     }
     for (final def in sprites.values) {
+      if (def.sourceSizes != null || def.sourceOffsets != null) {
+        if (def.sourceSizes?.length != def.frames.length ||
+            def.sourceOffsets?.length != def.frames.length) {
+          out.add('${def.id} trimmed geometry must match its frame count');
+        } else {
+          for (var i = 0; i < def.frames.length; i++) {
+            final size = def.sourceSizes![i],
+                offset = def.sourceOffsets![i],
+                f = def.frames[i];
+            if (!size.width.isFinite ||
+                !size.height.isFinite ||
+                size.width <= 0 ||
+                size.height <= 0 ||
+                offset.dx < 0 ||
+                offset.dy < 0 ||
+                !offset.dx.isFinite ||
+                !offset.dy.isFinite ||
+                offset.dx + f.width > size.width ||
+                offset.dy + f.height > size.height) {
+              out.add('${def.id} frame ${i + 1} has invalid trimmed geometry');
+            }
+          }
+        }
+      }
       if (def.frames.isEmpty) out.add('${def.id} has no frames');
       for (var i = 0; i < def.frames.length; i++) {
         final f = def.frames[i];
-        if (f.width <= 0 || f.height <= 0) {
+        if (!f.left.isFinite ||
+            !f.top.isFinite ||
+            !f.width.isFinite ||
+            !f.height.isFinite ||
+            f.width <= 0 ||
+            f.height <= 0) {
           out.add('${def.id} frame ${i + 1} has no area');
         } else if (f.left < 0 ||
             f.top < 0 ||
@@ -238,7 +294,8 @@ class SpriteAtlas {
       }
       for (var i = 0; i < def.frames.length; i++) {
         for (var j = i + 1; j < def.frames.length; j++) {
-          if (def.frames[i].overlaps(def.frames[j])) {
+          if (def.frames[i] != def.frames[j] &&
+              def.frames[i].overlaps(def.frames[j])) {
             out.add('${def.id} frames ${i + 1} and ${j + 1} overlap');
           }
         }

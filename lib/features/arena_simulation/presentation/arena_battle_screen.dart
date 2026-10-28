@@ -828,6 +828,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final scoreboard = ListenableBuilder(
       listenable: _frame,
       builder: (context, _) => ScoreboardOverlay(
+        iconSpriteId: (ball, kind) =>
+            _state.powerUps?.visualSkill(kind, ball: ball).iconSpriteId,
         artworkTint: (ball, kind) =>
             _state.powerUps?.artworkTint(kind, ball: ball) ?? 0xFFFFFFFF,
         itemRarity: (ball, kind) =>
@@ -1082,6 +1084,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       winner: _winnerBall!,
                       loser: _loserBall!,
                       move: _controller.winningMove ?? 'Collision',
+                      skill: _controller.skillLibrary
+                          .all(_controller.tuning)
+                          .where((s) => s.name == _controller.winningMove)
+                          .firstOrNull,
                       effectSprites:
                           _controller.skillLibrary
                               .all(_controller.tuning)

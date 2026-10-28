@@ -249,7 +249,18 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Add approved player rarity presets, per-mode Custom settings, live tier odds and immutable match tuning. See [rarity presets](RARITY-PRESETS.md).
 - [x] Verify rarity presets with 390px Cards/List UI tests, per-mode settings, invalid input, seeded odds and historical tuning defaults. Full suite: 724 passed; static analysis and release web build passed (2026-10-28).
 - [ ] Hands-on browser and Android acceptance of rarity preset controls.
-- [ ] Implement the in-app sprite importer (Plan 2); choose an unused migration number after `022_ball_gender.sql`.
+- [x] Implement the first sprite importer: single icons, grid animations/separate icons, Aseprite/TexturePacker JSON, optimized uploads, skill artwork slots, offline cache and missing-art fallback. Migration: `023_sprite_atlases.sql`.
+- [x] Add checkerboard transparency preview, opaque-background warning, frame-isolation validation and optimized-size confirmation.
+- [x] Production migration `023_sprite_atlases.sql`: user confirmed applied in Supabase on 2026-10-28.
+- [x] Replace uploaded artwork in place with stable sprite IDs, multi-sprite mapping, removal/affected-skill warnings, stale-edit protection and cleanup only after successful publication. See [Sprites](SPRITES.md#replace-artwork-without-reassigning-skills).
+- [x] Replacement verification: 759 tests pass, static analysis clean and release web build succeeds (2026-10-28). Production replacement acceptance remains an owner check.
+- [x] Add `.bwsprites` backup/export and restore: embedded artwork, manifests, original IDs, checksums, contents preview, safe conflict defaults and partial-failure retries. No additional migration required.
+- [x] Add library search, Assigned/Unassigned filters, searchable static/animated artwork pickers, clear buttons and upload names in selection/assignment/shell labels.
+- [x] Backup/search verification: 770 Flutter tests pass, browser download bridge test passes, static analysis clean and release web build succeeds (2026-10-28). Real Android/browser file dialogs and cross-device restore remain acceptance checks.
+- [x] Complete remaining sprite functionality: smooth/pixel resizing and actual optimized comparison, preview backgrounds and ball colors, existing-atlas editing, friendly per-sprite names, frame order/exclusion, timing, anchors, reset and detailed blank/transparency diagnostics. Real-device acceptance remains separate.
+- [x] Sprite completion verification: 777 tests pass, static analysis clean, browser download test passes and release web build succeeds (2026-10-28); inspected the comparison preview at 390 px. Release version: v1.14.26.
+- [x] Sprite importer verification: 751 tests pass, static analysis clean and release web build succeeds (2026-10-28). Phone-sized upload UI was rendered and inspected; actual browser/Android uploads and cross-device acceptance remain pending.
+- [ ] Complete sprite importer production acceptance and the grouped follow-ups in [Sprites](SPRITES.md#follow-up-roadmap).
 
 ### Follow-up polish (2026-10-27)
 

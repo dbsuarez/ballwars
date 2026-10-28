@@ -38,6 +38,7 @@ class GripPreviewDialog extends StatefulWidget {
     this.tint = 0xFFFFFFFF,
     this.useSprite = true,
     this.displayScale = 1,
+    this.spriteId,
   });
 
   final PowerUpKind kind;
@@ -46,6 +47,7 @@ class GripPreviewDialog extends StatefulWidget {
   final bool useSprite;
   final double displayScale;
   final GripValues grip;
+  final String? spriteId;
 
   static Future<GripValues?> show(
     BuildContext context, {
@@ -55,6 +57,7 @@ class GripPreviewDialog extends StatefulWidget {
     int tint = 0xFFFFFFFF,
     bool useSprite = true,
     double displayScale = 1,
+    String? spriteId,
   }) => showDialog<GripValues>(
     context: context,
     builder: (_) => GripPreviewDialog(
@@ -64,6 +67,7 @@ class GripPreviewDialog extends StatefulWidget {
       tint: tint,
       useSprite: useSprite,
       displayScale: displayScale,
+      spriteId: spriteId,
     ),
   );
 
@@ -134,6 +138,7 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
               facingRight: facingRight,
               ballColor: colors.primary,
               spritesLoaded: loaded,
+              spriteId: widget.spriteId,
             ),
           ),
         ),
@@ -234,6 +239,7 @@ class _GripPreviewPainter extends CustomPainter {
     required this.facingRight,
     required this.ballColor,
     required this.spritesLoaded,
+    this.spriteId,
   });
 
   final PowerUpKind kind;
@@ -247,6 +253,7 @@ class _GripPreviewPainter extends CustomPainter {
 
   /// Only repaints the views once the sprites arrive.
   final bool spritesLoaded;
+  final String? spriteId;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -284,6 +291,7 @@ class _GripPreviewPainter extends CustomPainter {
       useWeaponSprite: (_, _) => useSprite,
       artworkTint: (_, _) => tint,
       artworkKind: (_, _) => artwork,
+      iconSpriteId: (_, _) => spriteId,
       weaponDisplayScale: (_, _) => displayScale,
       weaponGripInset: (_, _) => grip.inset,
       weaponGripSide: (_, _) => grip.side,
@@ -324,5 +332,6 @@ class _GripPreviewPainter extends CustomPainter {
       old.displayScale != displayScale ||
       old.facingRight != facingRight ||
       old.ballColor != ballColor ||
-      old.spritesLoaded != spritesLoaded;
+      old.spritesLoaded != spritesLoaded ||
+      old.spriteId != spriteId;
 }

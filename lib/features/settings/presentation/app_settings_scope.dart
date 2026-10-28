@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import '../../replay_export/data/short_link_repository.dart';
 import '../data/app_settings_repository.dart';
 import '../domain/app_settings.dart';
+import '../../sprites/data/sprite_atlas_repository.dart';
 
 /// Makes the app-wide settings (headline, theme) and the admin services
 /// available below the app root; widgets rebuild when the settings change.
@@ -13,6 +14,7 @@ class AppSettingsScope extends InheritedNotifier<ValueNotifier<AppSettings>> {
 
   /// Short share links (`?r=<code>`); null falls back to long links.
   final ShortLinkRepository? shortLinks;
+  final SpriteAtlasRepository? sprites;
 
   const AppSettingsScope({
     super.key,
@@ -20,6 +22,7 @@ class AppSettingsScope extends InheritedNotifier<ValueNotifier<AppSettings>> {
     this.repository,
     this.adminAuth,
     this.shortLinks,
+    this.sprites,
     required super.child,
   }) : super(notifier: settings);
 
@@ -27,7 +30,8 @@ class AppSettingsScope extends InheritedNotifier<ValueNotifier<AppSettings>> {
       context.dependOnInheritedWidgetOfExactType<AppSettingsScope>();
 
   /// The current settings (defaults when there's no scope).
-  static AppSettings of(BuildContext context) => _scope(context)?.notifier?.value ?? AppSettings.defaults;
+  static AppSettings of(BuildContext context) =>
+      _scope(context)?.notifier?.value ?? AppSettings.defaults;
 
   static AppSettingsScope? maybeScope(BuildContext context) => _scope(context);
 }

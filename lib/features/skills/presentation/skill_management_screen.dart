@@ -21,6 +21,7 @@ import '../../settings/presentation/app_settings_scope.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
 import 'grip_preview_dialog.dart';
+import '../../sprites/presentation/sprites_screen.dart';
 import 'skill_artwork_tint.dart';
 
 class SkillManagementScreen extends StatefulWidget {
@@ -396,6 +397,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               skill.baseKind,
               size: 38,
               tint: skill.spriteTint,
+              spriteId: skill.iconSpriteId,
+              useSettingsArtwork: false,
             ),
             title: Text(
               skill.name,
@@ -1013,6 +1016,26 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         appBar: AppBar(
           title: const Text('Skill Management'),
           actions: [
+            if (AppSettingsScope.maybeScope(context)?.sprites
+                case final repository?)
+              IconButton(
+                key: const ValueKey('manage-sprites'),
+                tooltip: 'Sprites',
+                icon: const Icon(Icons.photo_library_outlined),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => SpritesScreen(
+                        repository: repository,
+                        library: _library,
+                        tuning: _tuning,
+                      ),
+                    ),
+                  );
+                  if (mounted) setState(() {});
+                },
+              ),
             IconButton(
               key: const ValueKey('import-skill-library'),
               tooltip: 'Import versioned JSON',
@@ -1302,6 +1325,9 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   /// Shell settings (gun skills): Default (null) / On / Off, the sprite id (null: brass) and rest.
   late bool? _shellEnabled = widget.skill.shellEnabled;
+  late String? _iconSpriteId = widget.skill.iconSpriteId;
+  late String? _projectileSpriteId = widget.skill.projectileSpriteId;
+  late String? _impactSpriteId = widget.skill.impactSpriteId;
   late String? _shellSprite = widget.skill.shellSprite;
   late bool _shellRandomRest = widget.skill.shellRandomRest;
   late SkillVisualMode _sprite = widget.skill.spriteMode;
@@ -1456,6 +1482,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   static String _shellSpriteLabel(String? id) {
     if (id == null) return 'Brass shell (default)';
     if (!SpriteRegistry.has(id)) return '$id (not loaded, brass shell)';
+    if (id.startsWith('custom.')) return SpriteRegistry.displayLabel(id);
     final dot = id.indexOf('.');
     final group = switch (id.substring(0, dot)) {
       'projectile' => 'Projectile',
@@ -1585,6 +1612,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('shellSize', defaults.shellSize);
       number('shellCount', defaults.shellCount);
       _shellEnabled = defaults.shellEnabled;
+      _iconSpriteId = defaults.iconSpriteId;
+      _projectileSpriteId = defaults.projectileSpriteId;
+      _impactSpriteId = defaults.impactSpriteId;
       _shellSprite = defaults.shellSprite;
       _shellRandomRest = defaults.shellRandomRest;
     });
@@ -1617,6 +1647,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     winner: winner,
                     loser: loser,
                     move: skill.name,
+                    skill: skill,
                     visualMove: skill.displayKind.label,
                     artworkTint: skill.spriteTint,
                     effectSprites: skill.usesSpriteEffects(
@@ -1770,6 +1801,9 @@ class _SkillEditorState extends State<_SkillEditor> {
       artworkKind: _artwork,
       payloadSkillId: _payload,
       shellEnabled: _shellEnabled,
+      iconSpriteId: _iconSpriteId,
+      projectileSpriteId: _projectileSpriteId,
+      impactSpriteId: _impactSpriteId,
       shellSprite: _shellSprite,
       shellSize: _double('shellSize'),
       shellCount: _int('shellCount'),
@@ -1851,6 +1885,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       context,
       kind: widget.skill.baseKind,
       artwork: _artwork ?? widget.skill.baseKind,
+      spriteId: _iconSpriteId,
       tint: _spriteTint,
       useSprite: _sprite == SkillVisualMode.sprite,
       displayScale: _double('weaponDisplayScale') ?? 1,
@@ -2961,6 +2996,49 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'Appearance',
                         'Preview equipped artwork and projectiles at a shared reference size.',
                       ),
+                      for (final slot in [
+                        (
+                          'Icon / held artwork',
+                          _iconSpriteId,
+                          (String? v) => _iconSpriteId = v,
+                        ),
+                        (
+                          'Projectile artwork',
+                          _projectileSpriteId,
+                          (String? v) => _projectileSpriteId = v,
+                        ),
+                        (
+                          'Impact / effect artwork',
+                          _impactSpriteId,
+                          (String? v) => _impactSpriteId = v,
+                        ),
+                      ])
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: SpriteThumbnail(id: slot.$2),
+                          title: Text(slot.$1),
+                          subtitle: Text(
+                            slot.$2 == null
+                                ? 'Built-in art'
+                                : SpriteRegistry.has(slot.$2!)
+                                ? SpriteRegistry.displayLabel(slot.$2!)
+                                : 'Missing sprite - using built-in art',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            final picked = await selectSkillSprite(
+                              context,
+                              title: slot.$1,
+                              current: slot.$2,
+                            );
+                            if (picked != null && mounted) {
+                              setState(
+                                () => slot.$3(picked.isEmpty ? null : picked),
+                              );
+                            }
+                          },
+                        ),
+                      const SizedBox(height: 12),
                       _fixedRow(
                         'Artwork tint',
                         Wrap(
@@ -3048,6 +3126,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           Expanded(
                             child: _VisualModePreview(
                               label: 'Equipped item',
+                              spriteId: _iconSpriteId,
                               tint: _spriteTint,
                               kind: widget.skill.baseKind,
                               mode: _sprite,
@@ -3061,6 +3140,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                               label: _usesProjectileDelivery
                                   ? 'Projectile'
                                   : 'Impact',
+                              spriteId: _usesProjectileDelivery
+                                  ? _projectileSpriteId
+                                  : _impactSpriteId,
                               kind: widget.skill.baseKind,
                               mode: _usesProjectileDelivery ? _sprite : _effect,
                               impact: true,
@@ -3398,6 +3480,8 @@ class _SkillPreviewDialogState extends State<_SkillPreviewDialog> {
               widget.skill.baseKind,
               size: 64,
               tint: widget.skill.spriteTint,
+              spriteId: widget.skill.iconSpriteId,
+              useSettingsArtwork: false,
             ),
           ),
         ),
@@ -3602,6 +3686,7 @@ class _VisualModePreview extends StatelessWidget {
     this.impact = false,
     this.scale = 1,
     this.tint = 0xFFFFFFFF,
+    this.spriteId,
   });
 
   final String label;
@@ -3610,6 +3695,7 @@ class _VisualModePreview extends StatelessWidget {
   final bool impact;
   final double scale;
   final int tint;
+  final String? spriteId;
 
   @override
   Widget build(BuildContext context) {
@@ -3651,6 +3737,8 @@ class _VisualModePreview extends StatelessWidget {
                         size: visualSize,
                         projectile: impact,
                         tint: tint,
+                        spriteId: spriteId,
+                        useSettingsArtwork: false,
                       )
                     : SkillArtworkTint.widget(
                         tint,

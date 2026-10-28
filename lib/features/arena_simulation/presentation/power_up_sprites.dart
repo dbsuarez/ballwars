@@ -297,6 +297,10 @@ class PowerUpIcon extends StatelessWidget {
   final double size;
   final bool projectile;
   final int? tint;
+  final String? spriteId;
+
+  /// False for an explicit draft/replay skill, so null really restores built-in art.
+  final bool useSettingsArtwork;
 
   const PowerUpIcon(
     this.kind, {
@@ -304,6 +308,8 @@ class PowerUpIcon extends StatelessWidget {
     this.size = 32,
     this.projectile = false,
     this.tint,
+    this.spriteId,
+    this.useSettingsArtwork = true,
   });
 
   /// The art [kind]'s shot shows: its projectile sprite, or its icon when it
@@ -321,12 +327,27 @@ class PowerUpIcon extends StatelessWidget {
           AppSettingsScope.of(context).skillLibrary
               .builtIn(kind, AppSettingsScope.of(context).powerUps)
               .spriteTint,
-      CustomPaint(
-        size: Size.square(size),
-        painter: _IconPainter(
-          kind,
-          projectile ? _projectileArtwork(kind) : PowerUpSprites.of(kind),
-        ),
+      ValueListenableBuilder<int>(
+        valueListenable: SpriteRegistry.revision,
+        builder: (context, _, _) {
+          final settings = AppSettingsScope.of(context);
+          final skill = settings.skillLibrary.builtIn(kind, settings.powerUps);
+          final id =
+              spriteId ??
+              (useSettingsArtwork
+                  ? (projectile ? skill.projectileSpriteId : skill.iconSpriteId)
+                  : null);
+          return CustomPaint(
+            size: Size.square(size),
+            painter: _IconPainter(
+              kind,
+              (id == null ? null : SpriteRegistry.frame(id)) ??
+                  (projectile
+                      ? _projectileArtwork(kind)
+                      : PowerUpSprites.of(kind)),
+            ),
+          );
+        },
       ),
     ),
   );

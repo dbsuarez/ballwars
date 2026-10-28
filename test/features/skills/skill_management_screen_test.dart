@@ -8,6 +8,9 @@ import 'package:ballwars/features/settings/domain/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/rendering.dart';
+import 'dart:ui' as ui;
+import 'package:ballwars/core/sprites/sprite_registry.dart';
+import 'package:ballwars/core/sprites/sprite_import.dart';
 
 Future<void> _revealEditor(WidgetTester tester, Finder target) async {
   if (target.hitTestable().evaluate().isNotEmpty) return;
@@ -68,6 +71,69 @@ class _LineRecorder implements Canvas {
 }
 
 void main() {
+  testWidgets(
+    'uploaded impact artwork saves from Appearance and restore defaults clears the slot',
+    (tester) async {
+      await tester.runAsync(() async {
+        final r = ui.PictureRecorder();
+        ui.Canvas(r).drawPaint(ui.Paint()..color = Colors.green);
+        final picture = r.endRecording();
+        final image = await picture.toImage(16, 16);
+        await SpriteRegistry.register(
+          SpriteImport.grid(sheet: 'a.png', width: 16, height: 16),
+          image,
+          idPrefix: 'custom.editor',
+        );
+        image.dispose();
+        picture.dispose();
+      });
+      addTearDown(() => SpriteRegistry.unregister('custom.editor'));
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (result) async => saved = result,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, find.text('Impact / effect artwork'));
+      await tester.tap(find.text('Impact / effect artwork'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('sprite'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        saved!.library
+            .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+            .impactSpriteId,
+        'custom.editor.sprite',
+      );
+      final restore = find.byKey(const ValueKey('restore-skill-defaults'));
+      await _revealEditor(tester, restore);
+      await tester.tap(restore);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        saved!.library
+            .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+            .impactSpriteId,
+        isNull,
+      );
+    },
+  );
   testWidgets('Global: Default effect visuals comes back with Save Library', (
     tester,
   ) async {

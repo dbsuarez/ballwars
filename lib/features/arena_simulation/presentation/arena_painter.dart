@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import '../../../core/sprites/sprite_registry.dart';
 import 'package:flutter/material.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_state.dart';
@@ -67,8 +68,8 @@ class ArenaPainter extends CustomPainter {
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
     this.showHpBars = false,
-    super.repaint,
-  });
+    Listenable? repaint,
+  }) : super(repaint: Listenable.merge([repaint, SpriteRegistry.revision]));
 
   /// A thin HP bar above each ball (cosmetic).
   final bool showHpBars;
@@ -663,6 +664,19 @@ class ArenaPainter extends CustomPainter {
           ) ??
           true,
       step: state.step,
+      iconSpriteId: (kind, slot) => state.powerUps
+          ?.visualSkill(
+            kind,
+            ball: ball,
+            skillId: slot < 0
+                ? null
+                : slot == 0
+                ? ball.heldSkillId
+                : ball.heldSecondarySkillId,
+          )
+          .iconSpriteId,
+      impactSpriteId: (kind) =>
+          state.powerUps?.visualSkill(kind, ball: ball).impactSpriteId,
       artworkTint: (kind, slot) =>
           state.powerUps?.artworkTint(
             kind,

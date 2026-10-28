@@ -25,8 +25,19 @@ class SpriteRegistry {
   static Future<void>? _loading;
   static final Map<String, _CutSprite> _sprites = {};
   static final Map<String, Set<String>> _customIds = {};
+  static final Map<String, String> _collectionLabels = {};
+  static final Map<String, String> _spriteLabels = {};
+  static String spriteLabel(String id) =>
+      _spriteLabels[id] ?? id.split('.').last;
+  static String? collectionLabel(String id) => _collectionLabels[id];
+  static String displayLabel(String id) {
+    final label = collectionLabel(id), name = spriteLabel(id);
+    return label == null ? name : '$label / ${name.replaceAll('-', ' ')}';
+  }
+
   static final Map<String, String> _owners = {};
   static final List<String> _problems = [];
+  static final ValueNotifier<int> revision = ValueNotifier(0);
 
   static int _generation = 0;
 
@@ -91,6 +102,127 @@ class SpriteRegistry {
   /// and for unknown ids. One map lookup, no allocation.
   static Offset anchor(String id) => _sprites[id]?.anchor ?? center;
 
+  /// Pack normalized frames for an owner upload. Rendering does not edit the
+  /// owner's file; only the optimized PNG and new frame metadata are uploaded.
+  static Future<({SpriteAtlas atlas, Uint8List bytes})> normalizeUpload(
+    SpriteAtlas atlas,
+    ui.Image sheet, {
+    required int frameSize,
+    FilterQuality filterQuality = FilterQuality.none,
+  }) async {
+    if (frameSize != 128 && frameSize != 256) {
+      throw ArgumentError('Frame size must be 128 or 256.');
+    }
+    final count = atlas.sprites.values.fold<int>(
+      0,
+      (n, s) => n + s.frames.length,
+    );
+    if (count < 1 || count > 256 || atlas.sprites.length > 64) {
+      throw const FormatException(
+        'Use 1 to 64 sprites and at most 256 frames.',
+      );
+    }
+    final problems = atlas.problems(
+      sheetSize: Size(sheet.width.toDouble(), sheet.height.toDouble()),
+    );
+    if (problems.isNotEmpty) throw FormatException(problems.join('\n'));
+    final columns = math.sqrt(count).ceil(),
+        rows = (count / math.sqrt(count).ceil()).ceil();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final definitions = <String, SpriteDef>{};
+    final images = <ui.Image>[];
+    var index = 0;
+    try {
+      for (final s in atlas.sprites.values) {
+        // Never upscale small sources. A fixed cell merely adds transparent padding.
+        final maxSource = s.sourceSizes == null
+            ? s.frames.map((f) => math.max(f.width, f.height)).reduce(math.max)
+            : s.sourceSizes!
+                  .map((z) => math.max(z.width, z.height))
+                  .reduce(math.max);
+        final output = math.max(8, math.min(frameSize, maxSource.ceil() + 4));
+        final normalized = SpriteDef(
+          id: s.id,
+          label: s.label,
+          frames: s.frames,
+          output: output,
+          fit: s.fit,
+          anchor: s.anchor,
+          sourceSizes: s.sourceSizes,
+          sourceOffsets: s.sourceOffsets,
+          padding: 2,
+          stepsPerFrame: s.stepsPerFrame,
+        );
+        final cuts = await _cutSprite(
+          normalized,
+          sheet,
+          filterQuality: filterQuality,
+        );
+        images.addAll(cuts);
+        final frames = <Rect>[];
+        for (final cut in cuts) {
+          final x = (index % columns) * frameSize,
+              y = (index ~/ columns) * frameSize;
+          canvas.drawImage(
+            cut,
+            Offset(
+              x + (frameSize - cut.width) / 2,
+              y + (frameSize - cut.height) / 2,
+            ),
+            Paint()..filterQuality = FilterQuality.none,
+          );
+          frames.add(
+            Rect.fromLTWH(
+              x + (frameSize - cut.width) / 2,
+              y + (frameSize - cut.height) / 2,
+              cut.width.toDouble(),
+              cut.height.toDouble(),
+            ),
+          );
+          index++;
+        }
+        definitions[s.id] = SpriteDef(
+          id: s.id,
+          label: s.label,
+          frames: frames,
+          output: output,
+          fit: SpriteFit.fill,
+          padding: 0,
+          anchor: s.anchor,
+          stepsPerFrame: s.stepsPerFrame,
+        );
+      }
+      final picture = recorder.endRecording();
+      ui.Image? packed;
+      try {
+        packed = await picture.toImage(columns * frameSize, rows * frameSize);
+        final data = await packed.toByteData(format: ui.ImageByteFormat.png);
+        final bytes = data!.buffer.asUint8List();
+        if (bytes.length > 4194304) {
+          throw const FormatException(
+            'Optimized sheet exceeds 4 MB. Split it into smaller uploads.',
+          );
+        }
+        return (
+          atlas: SpriteAtlas(
+            sheet: 'optimized.png',
+            sheetSize: Size(packed.width.toDouble(), packed.height.toDouble()),
+            sprites: definitions,
+          ),
+          bytes: bytes,
+        );
+      } finally {
+        packed?.dispose();
+        picture.dispose();
+      }
+    } finally {
+      for (final image in images) {
+        image.dispose();
+      }
+    }
+  }
+
   /// Where a [width] x [height] image is drawn so that its [anchor] point
   /// lands on [target]. With [center] it is exactly
   /// `Rect.fromCenter(center: target, ...)`.
@@ -126,6 +258,8 @@ class SpriteRegistry {
     }
     _sprites.clear();
     _customIds.clear();
+    _collectionLabels.clear();
+    _spriteLabels.clear();
     _owners.clear();
     _problems.clear();
   }
@@ -139,6 +273,7 @@ class SpriteRegistry {
     SpriteAtlas atlas,
     ui.Image sheet, {
     required String idPrefix,
+    String? label,
   }) async {
     if (!idPrefix.startsWith('custom.') ||
         idPrefix.length == 'custom.'.length) {
@@ -189,9 +324,14 @@ class SpriteRegistry {
     cut.forEach((id, sprite) {
       final full = '$idPrefix.$id';
       _sprites[full] = sprite;
+      if (label != null) _collectionLabels[full] = label;
+      if (atlas.sprites[id]?.label case final String name) {
+        _spriteLabels[full] = name;
+      }
       added.add(full);
     });
     _customIds[idPrefix] = added;
+    revision.value++;
   }
 
   /// Removes the sprites registered under [idPrefix] and frees their images.
@@ -200,7 +340,10 @@ class SpriteRegistry {
     if (old == null) return;
     for (final id in old) {
       _sprites.remove(id)?.dispose();
+      _collectionLabels.remove(id);
+      _spriteLabels.remove(id);
     }
+    revision.value++;
   }
 
   /// Adds one bundled sprite (a single frame) that the app draws in code
@@ -404,8 +547,9 @@ class SpriteRegistry {
 
   static Future<List<ui.Image>> _cutSprite(
     SpriteDef def,
-    ui.Image sheet,
-  ) async {
+    ui.Image sheet, {
+    FilterQuality filterQuality = FilterQuality.none,
+  }) async {
     final size = def.output;
     final height = def.height;
     final pad = def.padding.toDouble();
@@ -427,7 +571,8 @@ class SpriteRegistry {
         : 0.0;
     final frames = <ui.Image>[];
     try {
-      for (final source in sources) {
+      for (var frameIndex = 0; frameIndex < sources.length; frameIndex++) {
+        final source = sources[frameIndex];
         if (def.fit == SpriteFit.trim) {
           frames.add(
             await _trimmed(
@@ -437,12 +582,24 @@ class SpriteRegistry {
               height,
               def.padding,
               def.trimCutPadding,
+              filterQuality: filterQuality,
             ),
           );
           continue;
         }
         final Rect dest;
-        if (def.sharedBand) {
+        if (def.sourceSizes != null && def.sourceOffsets != null) {
+          final original = def.sourceSizes![frameIndex];
+          final offset = def.sourceOffsets![frameIndex];
+          final box = _contain(original, inner);
+          final scale = box.width / original.width;
+          dest = Rect.fromLTWH(
+            box.left + offset.dx * scale,
+            box.top + offset.dy * scale,
+            source.width * scale,
+            source.height * scale,
+          );
+        } else if (def.sharedBand) {
           // One scale for the whole sprite; each frame sits at its offset
           // inside the union band so the animation does not jump.
           final bandTop = (size - union.height * sharedScale) / 2;
@@ -457,7 +614,16 @@ class SpriteRegistry {
         } else {
           dest = _contain(source.size, inner);
         }
-        frames.add(await _draw(sheet, source, dest, size, height));
+        frames.add(
+          await _draw(
+            sheet,
+            source,
+            dest,
+            size,
+            height,
+            filterQuality: filterQuality,
+          ),
+        );
       }
     } catch (_) {
       for (final f in frames) {
@@ -481,14 +647,15 @@ class SpriteRegistry {
     Rect source,
     Rect dest,
     int width,
-    int height,
-  ) async {
+    int height, {
+    FilterQuality filterQuality = FilterQuality.none,
+  }) async {
     final recorder = ui.PictureRecorder();
     Canvas(recorder).drawImageRect(
       image,
       source,
       dest,
-      Paint()..filterQuality = FilterQuality.none,
+      Paint()..filterQuality = filterQuality,
     );
     final picture = recorder.endRecording();
     try {
@@ -509,8 +676,9 @@ class SpriteRegistry {
     int width,
     int height,
     int padding,
-    int cutPadding,
-  ) async {
+    int cutPadding, {
+    FilterQuality filterQuality = FilterQuality.none,
+  }) async {
     final full = Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
     final cut = await _draw(
       image,
@@ -518,6 +686,7 @@ class SpriteRegistry {
       _contain(source.size, full.deflate(cutPadding.toDouble())),
       width,
       height,
+      filterQuality: filterQuality,
     );
     try {
       final bytes = await cut.toByteData(format: ui.ImageByteFormat.rawRgba);
@@ -530,6 +699,7 @@ class SpriteRegistry {
         _contain(visible.size, inner),
         width,
         height,
+        filterQuality: filterQuality,
       );
       cut.dispose();
       return fitted;

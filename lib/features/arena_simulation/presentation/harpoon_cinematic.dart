@@ -13,6 +13,7 @@ import 'power_up_sprites.dart';
 import 'lightning_strike_painter.dart';
 import 'power_up_painter.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
+import '../../skills/domain/skill_library.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
 class HarpoonCinematic extends StatefulWidget {
@@ -27,6 +28,7 @@ class HarpoonCinematic extends StatefulWidget {
     this.visualMove,
     this.artworkTint = 0xFFFFFFFF,
     this.effectSprites = true,
+    this.skill,
   });
 
   /// Draws [image] [half] in half-size with its sprite [anchor]
@@ -65,6 +67,7 @@ class HarpoonCinematic extends StatefulWidget {
   final String? visualMove;
   final int artworkTint;
   final bool effectSprites;
+  final SkillDefinition? skill;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -197,6 +200,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                           profile: profile,
                           artworkTint: widget.artworkTint,
                           effectSprites: widget.effectSprites,
+                          skill: widget.skill,
                         ),
                       ),
                     ),
@@ -327,6 +331,7 @@ class _FinisherPainter extends CustomPainter {
     required this.profile,
     this.artworkTint = 0xFFFFFFFF,
     this.effectSprites = true,
+    this.skill,
   });
 
   final CustomBall winner;
@@ -341,6 +346,7 @@ class _FinisherPainter extends CustomPainter {
   final FinisherProfile profile;
   final int artworkTint;
   final bool effectSprites;
+  final SkillDefinition? skill;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -369,6 +375,25 @@ class _FinisherPainter extends CustomPainter {
     final from = winnerCenter + Offset(radius * 0.65, -radius * 0.05);
     final to = Offset.lerp(from, loserCenter, hookProgress)!;
     final kind = _kind;
+    final customId = skill?.projectileSpriteId ?? skill?.iconSpriteId;
+    final custom =
+        customId == null || skill?.spriteMode == SkillVisualMode.vector
+        ? null
+        : SpriteRegistry.frameAt(customId, (hookProgress * 90).floor());
+    if (custom != null && hookProgress > 0) {
+      HarpoonCinematic.paintRaster(
+        canvas,
+        custom,
+        to,
+        radius * .8,
+        anchor: SpriteRegistry.anchor(customId!),
+        rotation: math.atan2(
+          loserCenter.dy - from.dy,
+          loserCenter.dx - from.dx,
+        ),
+      );
+      return;
+    }
     final arenaTrap = switch (profile.move) {
       'Laser Gate' => ArenaThemeHazardKind.laserGate,
       'Quicksand' => ArenaThemeHazardKind.quicksand,
@@ -1526,6 +1551,20 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintImpact(Canvas canvas, Offset center, double progress) {
+    final id = skill?.impactSpriteId;
+    final custom = id == null || !effectSprites
+        ? null
+        : SpriteRegistry.frameAtProgress(id, progress);
+    if (custom != null) {
+      HarpoonCinematic.paintRaster(
+        canvas,
+        custom,
+        center,
+        radius * 1.8,
+        anchor: SpriteRegistry.anchor(id!),
+      );
+      return;
+    }
     final alpha = (1 - progress).clamp(0.0, 1.0);
     final rays = Paint()
       ..color = profile.accent.withValues(alpha: alpha)

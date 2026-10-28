@@ -488,6 +488,12 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                       winner: _balls[index],
                       loser: _balls[1 - index],
                       move: kind.label,
+                      skill: widget.initialSkill?.baseKind == kind
+                          ? widget.initialSkill
+                          : _match?.state.powerUps?.visualSkill(
+                              kind,
+                              ball: _match!.state.balls[index],
+                            ),
                       effectSprites:
                           (widget.initialSkill?.baseKind == kind
                                   ? widget.initialSkill
@@ -607,6 +613,15 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     opacity: enabled ? 1 : 0.35,
                     child: PowerUpIcon(
                       item,
+                      useSettingsArtwork: false,
+                      spriteId: widget.initialSkill?.baseKind == item
+                          ? widget.initialSkill!.iconSpriteId
+                          : _match?.state.powerUps
+                                ?.visualSkill(
+                                  item,
+                                  ball: _match!.state.balls[ballIndex],
+                                )
+                                .iconSpriteId,
                       size: compact ? 27 : 32,
                       tint: widget.initialSkill?.baseKind == item
                           ? widget.initialSkill!.spriteTint
@@ -999,6 +1014,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           child: item != null
               ? PowerUpIcon(
                   item,
+                  useSettingsArtwork: false,
+                  spriteId: widget.initialSkill?.baseKind == item
+                      ? widget.initialSkill!.iconSpriteId
+                      : _match?.state.powerUps?.visualSkill(item).iconSpriteId,
                   size: 30,
                   tint: widget.initialSkill?.baseKind == item
                       ? widget.initialSkill!.spriteTint

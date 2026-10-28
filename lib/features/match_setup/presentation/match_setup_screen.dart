@@ -2089,7 +2089,13 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PowerUpIcon(skill.displayKind, size: 40, tint: skill.spriteTint),
+              PowerUpIcon(
+                skill.displayKind,
+                size: 40,
+                tint: skill.spriteTint,
+                spriteId: skill.iconSpriteId,
+                useSettingsArtwork: false,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

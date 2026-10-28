@@ -22,6 +22,44 @@ import '../../skills/presentation/skill_artwork_tint.dart';
 class PowerUpPainter {
   PowerUpPainter._();
 
+  static ui.Image? skillSprite(String? slot, String builtIn, int step) =>
+      (slot == null ? null : SpriteRegistry.frameAt(slot, step)) ??
+      SpriteRegistry.frameAt(builtIn, step);
+
+  static Offset skillAnchor(String? slot, String builtIn) =>
+      SpriteRegistry.anchor(
+        slot != null && SpriteRegistry.has(slot) ? slot : builtIn,
+      );
+
+  static bool _customEffect(
+    Canvas canvas,
+    SkillDefinition skill,
+    Offset center,
+    double half,
+    int step, {
+    bool enabled = true,
+    bool projectile = false,
+    double angle = 0,
+    String? spriteId,
+  }) {
+    final id =
+        spriteId ??
+        (projectile ? skill.projectileSpriteId : skill.impactSpriteId);
+    final image = id == null || !enabled
+        ? null
+        : SpriteRegistry.frameAt(id, step);
+    if (image == null) return false;
+    _drawEffect(
+      canvas,
+      image,
+      center,
+      half,
+      angle,
+      anchor: SpriteRegistry.anchor(id!),
+    );
+    return true;
+  }
+
   // Rate overrides: these call sites play a sprite slower than its manifest
   // `stepsPerFrame`, which ArenaEffectLibrary (finishers, goldens) uses for
   // the same sprite. Both looks are kept as they were.
@@ -381,6 +419,22 @@ class PowerUpPainter {
       );
       try {
         final visualRadius = r * p.effectDisplayScale(PowerUpKind.molotov);
+        if (_customEffect(
+          canvas,
+          p.visualSkill(PowerUpKind.molotov, ball: fire.owner),
+          fire.position,
+          fire.radius,
+          state.step,
+          enabled:
+              showEffects &&
+              p.usesEffectSprite(
+                PowerUpKind.molotov,
+                ball: fire.owner,
+                globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+              ),
+        )) {
+          continue;
+        }
         final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;
         final pulse = 0.92 + 0.08 * math.sin(state.step * 0.35);
         canvas.drawCircle(
@@ -450,6 +504,21 @@ class PowerUpPainter {
       );
       try {
         final visualRadius = r * p.effectDisplayScale(PowerUpKind.fireWall);
+        if (_customEffect(
+          canvas,
+          p.visualSkill(PowerUpKind.fireWall, ball: wall.owner),
+          wall.center,
+          visualRadius * 3,
+          state.step,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.fireWall,
+            ball: wall.owner,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
+          angle: wall.angle,
+        )) {
+          continue;
+        }
         final tangent = Offset.fromDirection(wall.angle);
         for (var i = 0; i < 4; i++) {
           final flame =
@@ -501,6 +570,20 @@ class PowerUpPainter {
             r * p.effectDisplayScale(PowerUpKind.lightningStrikes);
         if (strike.flashLeft <= 0) continue;
         final target = strike.target.position;
+        if (_customEffect(
+          canvas,
+          p.visualSkill(PowerUpKind.lightningStrikes, ball: strike.owner),
+          target,
+          visualRadius * 2.5,
+          8 - strike.flashLeft,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.lightningStrikes,
+            ball: strike.owner,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
+        )) {
+          continue;
+        }
         if (p.usesEffectSprite(
               PowerUpKind.lightningStrikes,
               ball: strike.owner,
@@ -561,6 +644,20 @@ class PowerUpPainter {
       try {
         final visualRadius = r * p.effectDisplayScale(PowerUpKind.earthquake);
         if (quake.flashLeft <= 0) continue;
+        if (_customEffect(
+          canvas,
+          p.visualSkill(PowerUpKind.earthquake, ball: quake.owner),
+          Offset.zero,
+          arenaRadius,
+          state.step,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.earthquake,
+            ball: quake.owner,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
+        )) {
+          continue;
+        }
         final progress = 1 - quake.flashLeft / 10.0;
         for (var i = 0; i < 3; i++) {
           canvas.drawCircle(
@@ -792,6 +889,31 @@ class PowerUpPainter {
                 : p.effectDisplayScale(e.kind!, skillId: e.skillId));
         final t = e.age / PowerUpTuning.explosionShowSteps;
         final fade = (1 - t).clamp(0.0, 1.0);
+        final customId = e.kind == null
+            ? null
+            : p.visualSkill(e.kind!, skillId: e.skillId).impactSpriteId;
+        final custom =
+            customId == null ||
+                !showEffects ||
+                !p.usesEffectSprite(
+                  e.kind!,
+                  skillId: e.skillId,
+                  globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+                )
+            ? null
+            : SpriteRegistry.frameAtProgress(customId, t);
+        if (custom != null) {
+          _drawEffect(
+            canvas,
+            custom,
+            e.position,
+            visualRadius,
+            0,
+            opacity: fade,
+            anchor: SpriteRegistry.anchor(customId!),
+          );
+          continue;
+        }
         if (e.kind == PowerUpKind.rocketLauncher &&
             !p.usesEffectSprite(
               PowerUpKind.rocketLauncher,
@@ -968,6 +1090,9 @@ class PowerUpPainter {
                 (0.96 + 0.08 * pulse) *
                 p.pickupDisplayScale(item.kind, skillId: item.skillId),
             useSprite: p.usesSprite(item.kind, skillId: item.skillId),
+            spriteId: p
+                .visualSkill(item.kind, skillId: item.skillId)
+                .iconSpriteId,
           );
         } else {
           _paintToken(
@@ -984,6 +1109,10 @@ class PowerUpPainter {
             )?.color,
             useSprite: p.usesSprite(item.kind, skillId: item.skillId),
             whiteBackground: whitePickupBackgrounds,
+            spriteId: p
+                .visualSkill(item.kind, skillId: item.skillId)
+                .iconSpriteId,
+            step: state.step,
           );
         }
       } finally {
@@ -1008,6 +1137,20 @@ class PowerUpPainter {
         canvas.save();
         canvas.translate(anchor.dx, anchor.dy);
         canvas.rotate(portalRotationFor(portal.position));
+        if (_customEffect(
+          canvas,
+          p.visualSkill(PowerUpKind.portal),
+          Offset.zero,
+          trapRadius * 2,
+          state.step,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.portal,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
+        )) {
+          canvas.restore();
+          continue;
+        }
         final sprite =
             p.usesEffectSprite(
               PowerUpKind.portal,
@@ -1065,7 +1208,22 @@ class PowerUpPainter {
           final angle = math.atan2(base.dy, base.dx);
           final radial = Offset(math.cos(angle), math.sin(angle));
           final tangent = Offset(-radial.dy, radial.dx);
-          _paintBoundarySpike(canvas, base, radial, tangent, trapRadius);
+          final skill = p.visualSkill(PowerUpKind.spikeWall);
+          if (!_customEffect(
+            canvas,
+            skill,
+            base - radial * trapRadius * .35,
+            trapRadius,
+            state.step,
+            spriteId: skill.impactSpriteId ?? skill.iconSpriteId,
+            enabled: p.usesEffectSprite(
+              PowerUpKind.spikeWall,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            ),
+            angle: angle + math.pi / 2,
+          )) {
+            _paintBoundarySpike(canvas, base, radial, tangent, trapRadius);
+          }
         }
       } finally {
         SkillArtworkTint.end(canvas);
@@ -1078,7 +1236,21 @@ class PowerUpPainter {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.stickyGoo);
         final pulse =
             0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
-        _paintCurvedGooStrip(canvas, goo, arenaRadius, trapRadius, pulse);
+        _paintCurvedGooStrip(
+          canvas,
+          goo,
+          arenaRadius,
+          trapRadius,
+          pulse,
+          spriteId:
+              p.usesEffectSprite(
+                PowerUpKind.stickyGoo,
+                globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+              )
+              ? p.visualSkill(PowerUpKind.stickyGoo).impactSpriteId
+              : null,
+          step: state.step,
+        );
       } finally {
         SkillArtworkTint.end(canvas);
       }
@@ -1096,6 +1268,14 @@ class PowerUpPainter {
           trapRadius,
           pulse,
           tint: const Color(0xFF669B22),
+          spriteId:
+              p.usesEffectSprite(
+                PowerUpKind.poisonSwamp,
+                globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+              )
+              ? p.visualSkill(PowerUpKind.poisonSwamp).impactSpriteId
+              : null,
+          step: state.step,
         );
         for (var i = 0; i < 5; i++) {
           final angle =
@@ -1133,6 +1313,7 @@ class PowerUpPainter {
           bomb.position,
           trapRadius,
           useSprite: p.usesSprite(bomb.kind),
+          spriteId: p.visualSkill(bomb.kind, ball: bomb.owner).iconSpriteId,
         );
         canvas.drawLine(
           bomb.position + Offset(-trapRadius * 0.65, trapRadius * 0.78),
@@ -1212,6 +1393,22 @@ class PowerUpPainter {
         );
         try {
           final shotRadius = r * shot.renderScale;
+          final customId = p.projectileVisualSkill(shot).projectileSpriteId;
+          final custom =
+              customId == null || !p.usesSprite(shot.kind, projectile: shot)
+              ? null
+              : SpriteRegistry.frameAt(customId, state.step);
+          if (custom != null) {
+            _drawSprite(
+              canvas,
+              custom,
+              shot.position,
+              shotRadius,
+              math.atan2(shot.velocity.dy, shot.velocity.dx),
+              anchor: SpriteRegistry.anchor(customId!),
+            );
+            continue;
+          }
           if (shot.kind == PowerUpKind.hook) {
             // The hook flying out on its chain.
             _paintChain(canvas, shot.owner.position, shot.position);
@@ -1512,6 +1709,21 @@ class PowerUpPainter {
       try {
         // Two quick strokes across the cut, fading out.
         final fade = (1 - m.age / PowerUpTuning.slashShowSteps).clamp(0.0, 1.0);
+        if (_customEffect(
+          canvas,
+          p.visualSkill(m.kind, skillId: m.skillId),
+          m.position,
+          r * 1.8 * p.effectDisplayScale(m.kind, skillId: m.skillId),
+          m.age,
+          enabled: p.usesEffectSprite(
+            m.kind,
+            skillId: m.skillId,
+            globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+          ),
+          angle: m.angle,
+        )) {
+          continue;
+        }
         final sprite =
             p.usesEffectSprite(
               m.kind,
@@ -1604,6 +1816,20 @@ class PowerUpPainter {
         final center = tornadoVisualCenter(target);
         final half =
             target.radius * 1.65 * p.effectDisplayScale(PowerUpKind.tornado);
+        if (_customEffect(
+          canvas,
+          p.visualSkill(PowerUpKind.tornado, ball: tornado.owner),
+          center,
+          half,
+          state.step,
+          enabled: p.usesEffectSprite(
+            PowerUpKind.tornado,
+            ball: tornado.owner,
+            globalSprite: globalEffectSprite,
+          ),
+        )) {
+          continue;
+        }
         final frame =
             p.usesEffectSprite(
               PowerUpKind.tornado,
@@ -1821,8 +2047,10 @@ class PowerUpPainter {
     double r,
     double pulse, {
     Color? tint,
+    String? spriteId,
+    int step = 0,
   }) {
-    final sprite = SpriteRegistry.frame(PowerUpSprites.stickyGooRimId);
+    final sprite = skillSprite(spriteId, PowerUpSprites.stickyGooRimId, step);
     if (sprite == null || goo.position.distance == 0) return;
     const slices = 56;
     final centerAngle = math.atan2(goo.position.dy, goo.position.dx);
@@ -2103,6 +2331,8 @@ class PowerUpPainter {
     Color? ring,
     bool useSprite = true,
     bool whiteBackground = true,
+    String? spriteId,
+    int step = 0,
   }) {
     final color = ring ?? colorOf(kind);
     canvas.drawCircle(
@@ -2134,7 +2364,9 @@ class PowerUpPainter {
           0.4 + 0.6 * ringAlpha,
         )!,
     );
-    final sprite = useSprite ? PowerUpSprites.of(kind) : null;
+    final sprite = useSprite
+        ? skillSprite(spriteId, PowerUpSprites.iconId(kind), step)
+        : null;
     if (sprite == null) {
       drawGlyph(canvas, kind, c, r * 0.62);
     } else {
@@ -2144,7 +2376,7 @@ class PowerUpPainter {
         c,
         r * 0.68,
         0,
-        anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(kind)),
+        anchor: skillAnchor(spriteId, PowerUpSprites.iconId(kind)),
       );
     }
   }
@@ -2157,8 +2389,11 @@ class PowerUpPainter {
     Offset center,
     double radius, {
     bool useSprite = true,
+    String? spriteId,
   }) {
-    final sprite = useSprite ? PowerUpSprites.of(kind) : null;
+    final sprite = useSprite
+        ? skillSprite(spriteId, PowerUpSprites.iconId(kind), 0)
+        : null;
     if (sprite == null) {
       drawGlyph(canvas, kind, center, radius * 0.9);
     } else {
@@ -2168,7 +2403,7 @@ class PowerUpPainter {
         center,
         radius * 0.95,
         0,
-        anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(kind)),
+        anchor: skillAnchor(spriteId, PowerUpSprites.iconId(kind)),
       );
     }
   }
@@ -2465,7 +2700,26 @@ class PowerUpPainter {
     double Function(PowerUpKind kind)? handEffectScale,
     Color Function(PowerUpKind kind)? handEffectColor,
     PowerUpKind Function(PowerUpKind kind, int slot)? artworkKind,
+    String? Function(PowerUpKind kind, int slot)? iconSpriteId,
+    String? Function(PowerUpKind kind)? impactSpriteId,
   }) {
+    // Custom status art surrounds its affected ball, without changing physics.
+    for (final kind in ball.activeEffectSkillIds.keys) {
+      final id = impactSpriteId?.call(kind);
+      final image = id == null || !(useEffectSprite?.call(kind) ?? true)
+          ? null
+          : SpriteRegistry.frameAt(id, step);
+      if (image != null) {
+        _drawEffect(
+          canvas,
+          image,
+          ball.position,
+          ball.radius * (effectDisplayScale?.call(kind) ?? 1),
+          0,
+          anchor: SpriteRegistry.anchor(id!),
+        );
+      }
+    }
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       SkillArtworkTint.begin(
         canvas,
@@ -2504,7 +2758,14 @@ class PowerUpPainter {
                   ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
                 ) ??
                 true)
-            ? PowerUpSprites.of(PowerUpKind.orbitingFlail)
+            ? skillSprite(
+                iconSpriteId?.call(
+                  PowerUpKind.orbitingFlail,
+                  ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+                ),
+                PowerUpSprites.iconId(PowerUpKind.orbitingFlail),
+                step,
+              )
             : null;
         if (sprite == null) {
           drawGlyph(
@@ -2533,7 +2794,11 @@ class PowerUpPainter {
                     ) ??
                     1),
             -step * 0.34,
-            anchor: SpriteRegistry.anchor(
+            anchor: skillAnchor(
+              iconSpriteId?.call(
+                PowerUpKind.orbitingFlail,
+                ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+              ),
               PowerUpSprites.iconId(PowerUpKind.orbitingFlail),
             ),
           );
@@ -3087,6 +3352,8 @@ class PowerUpPainter {
             handEffectScale: handEffectScale?.call(weapon) ?? 1,
             handEffectColor: handEffectColor?.call(weapon),
             artwork: artworkKind?.call(weapon, slot) ?? weapon,
+            spriteId: iconSpriteId?.call(weapon, slot),
+            step: step,
           );
         }
       } finally {
@@ -3149,6 +3416,8 @@ class PowerUpPainter {
     double handEffectScale = 1,
     Color? handEffectColor,
     PowerUpKind? artwork,
+    String? spriteId,
+    int step = 0,
   }) {
     // [artwork]: the weapon picture to show (a skill can look like another weapon); [held] keeps the
     // behavior-specific drawing.
@@ -3156,7 +3425,8 @@ class PowerUpPainter {
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
     if (held == PowerUpKind.energyWave && firedHoldLeft > 0) return;
-    if (held == PowerUpKind.fireWall) {
+    if (held == PowerUpKind.fireWall &&
+        (spriteId == null || !SpriteRegistry.has(spriteId))) {
       for (final side in const [-1.0, 1.0]) {
         final hand = ball.position + Offset(side * ball.radius * 0.82, 0);
         final flame = SpriteRegistry.frameAt(
@@ -3185,7 +3455,9 @@ class PowerUpPainter {
       }
       return;
     }
-    final sprite = useSprite ? PowerUpSprites.of(art) : null;
+    final sprite = useSprite
+        ? skillSprite(spriteId, PowerUpSprites.iconId(art), step)
+        : null;
     if (held == PowerUpKind.shield) {
       final angle = heldAngle(ball, weapon: held, slot: slot);
       canvas.drawArc(
@@ -3211,7 +3483,7 @@ class PowerUpPainter {
           angle +
               math.pi / 2 +
               gripRotation.clamp(-180.0, 180.0) * math.pi / 180,
-          anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(art)),
+          anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
         );
       } else {
         drawGlyph(
@@ -3265,7 +3537,7 @@ class PowerUpPainter {
       iconAngle: _iconAngle[art] ?? 0,
       flip: dir.dx < 0,
       opacity: 1 - drop * drop,
-      anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(art)),
+      anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
     );
   }
 

@@ -1,5 +1,157 @@
 # Sprites
 
+## In-app uploads (admin)
+
+Apply `supabase/migrations/023_sprite_atlases.sql` in the Supabase SQL Editor
+before using shared uploads. Migration 022 is for ball gender and is unchanged.
+The public sprite bucket permits uploads/deletes only through an admin session.
+
+1. Open **Skill Management > Sprites** (photo-library button), then **Import sprites**.
+2. **Sheet:** choose PNG or WebP. A single Kage Bunshin icon uses the default
+   **1 x 1** grid. Name the upload. Inspect transparency on the checkerboard;
+   fully opaque images show a background warning.
+3. Select **Icon / held (128 px)** or **Projectile / effect (256 px)**. The app
+   packs optimized frames into a PNG before uploading. Transparency, proportions
+   and animation offsets are preserved, using nearest-neighbor sampling for
+   pixel art. Small artwork is not upscaled. Confirmation shows original and
+   optimized dimensions and file sizes. The original file is untouched.
+4. **Slices:** set rows, columns and optional cell inset. Choose **One animation**
+   for four animation frames or **Separate icons** for four independent icons.
+   Frames read left to right, then top to bottom. Art touching internal cell
+   edges is flagged and prevents Save. **Trim to clean edges** searches inward
+   for a transparent separator; inspect the boxes before saving. This changes
+   cut metadata rather than source pixels.
+5. Alternatively import Aseprite hash/array JSON or TexturePacker JSON. Tags,
+   average timing and trimmed canvas offsets are read. Export without rotation.
+   Numbered TexturePacker frames group by name.
+6. **Sprites:** choose playback speed, fit and anchor. **Preview:** play the
+   selected sprite against an arena reference. Tabs retain unsaved edits.
+7. **Save sprites**, review optimized size, then **Upload**. Failures display a
+   retryable error and retain the draft.
+8. Edit the intended skill > **Appearance** > choose **Icon / held artwork**,
+   **Projectile artwork**, or **Impact / effect artwork**, then **Save** the skill.
+   Uploading alone does not change a skill. **Built-in art** clears a slot;
+   Restore defaults also clears uploaded assignments. Built-in files are preserved.
+
+Source limits: 16 MB, 8192 pixels per side, 16 megapixels. Optimized uploads:
+4 MB, 4096 x 4096 pixels, at most 64 sprites and 256 frames. Invalid cuts,
+disguised JPEGs and rotated frames are refused before upload.
+
+Startup loads uploaded art in the background. Manifests and sheets are cached
+for offline play. Skills and replay snapshots retain sprite IDs. Missing or
+deleted sprites fall back to built-in art without changing gameplay. The library
+shows affected skills before deleting an upload. Uploaded art is publicly readable.
+
+### Replace artwork without reassigning skills
+
+Open **Sprites > the upload's actions menu > Replace artwork** and choose a new
+sheet. Single-icon uploads retain the existing sprite name automatically. For
+multiple sprites, use **Sprites > Preserve existing assignments** to match each
+old name to a sprite in the replacement sheet. Matching names are preselected;
+renamed artwork can be mapped back to an existing name without changing its ID.
+Unmatched new sprites are added alongside the preserved names.
+
+The final confirmation lists removed sprites and affected skills, and explains
+that older replays also use the replacement art or built-in fallback. Cancel
+leaves the current upload unchanged. A failed upload/update preserves the old
+sheet; a successful replacement publishes a fresh sheet URL and refreshes the
+local registry/cache. Concurrent changes are rejected so an outdated editor
+cannot overwrite someone else's replacement. No additional migration is needed.
+
+### Backup and restore the sprite library
+
+Open **Sprites > Backup / restore** (the backup icon in the top bar).
+
+- **Export:** select the uploads to include, choose **Prepare backup**, then
+  **Save backup file**. The resulting `.bwsprites` file is versioned JSON with
+  embedded PNG/WebP sheets, animation manifests, SHA-256 image checksums and
+  original sprite IDs. It contains no external download URLs or account tokens.
+  Cached artwork can be exported offline. A failed download aborts preparation
+  rather than producing an incomplete backup.
+- **Restore:** open the file to validate it and preview upload names, sizes,
+  sprite contents and conflicts before making any changes. Missing uploads
+  default to **Restore with original IDs**. Identical entries default to **Skip**;
+  conflicting IDs also default to **Skip**, with **Replace existing artwork**
+  available explicitly. Same-name uploads with different IDs remain separate.
+- The final confirmation names replacements, removed sprites and affected skills.
+  Other uploads remain intact. Each upload is published independently; completed
+  uploads stay restored if another fails. The result lists failures, and **Retry
+  selected entries** retries failures without re-uploading completed entries.
+- Backups contain uploaded artwork, not skill/game settings or built-in sprites.
+  Stable IDs preserve artwork assignments when those skills still exist; restoring
+  artwork does not recreate deleted skills. Existing admin permissions apply.
+
+Limits: at most 64 uploads, 32 MB of embedded image data, and a 48 MB backup file.
+Each restored upload still obeys the normal image, manifest and frame limits.
+Missing entries are inserted with their original UUID; an ID created by someone
+else after review causes a visible conflict rather than overwriting their data.
+No new migration is required beyond 023.
+
+### Find and select artwork
+
+The library searches upload and sprite names, with **All**, **Assigned**, and
+**Unassigned** filters and a clear-search button. Artwork selection dialogs search
+upload/sprite names, filter **All / Static / Animated**, show upload names and frame
+counts beside thumbnails, and keep the current selection visible. UUIDs are
+available in tooltips for troubleshooting rather than used as the primary label.
+Shell artwork choices and assigned-sprite labels also use the upload names.
+
+### Follow-up roadmap
+
+Recorded for later, outside the first importer release:
+
+**Library management**
+
+- [x] Replace an atlas in place while preserving sprite IDs and assignments;
+  warn about removed/renamed sprites and affected skills.
+  Verified stable-ID mapping, removal confirmation, failed-update cleanup and
+  stale-edit rejection; full regression suite: 759 tests pass (2026-10-28).
+- [x] Export/backup and restore uploaded sheets and manifests, with integrity checks,
+  preview, conflict choices, original IDs and retryable per-entry failures.
+- [x] Search/filter the library and show friendly upload names in artwork pickers,
+  shell choices and assigned-sprite labels.
+- [x] Backup/search automated verification: 770 Flutter tests, browser download
+  bridge test, clean static analysis and release web build (2026-10-28).
+
+**Import and preview improvements**
+
+- [x] Pixel-art vs smooth resizing, with an actual decoded optimized comparison.
+- [x] Dark, light and checkerboard backgrounds plus a preview ball color picker.
+- [x] Per-sprite names, frame order/exclusion, timing, anchor sliders and reset.
+- [x] Per-frame transparency, partial alpha, visible bounds, edge pixels and explicit blank-frame inclusion/exclusion.
+
+**Edit and preview workflow:** choose **Edit sprites** from an upload's actions
+menu to load its current sheet, or continue editing a new import. In **Sprites**,
+expand a sprite to rename it, change playback speed and anchor, drag frames into
+playback order, or exclude individual frames. Blank frames block Save until
+excluded or explicitly allowed. Reset affects only that sprite's edits. Friendly
+names are saved separately from stable assignment IDs during replacement.
+
+On **Sheet**, select Pixel art (nearest-neighbor) or Smooth resizing. On **Preview**,
+choose a background and ball color, then **Generate optimized comparison** to
+compare the original cut with the actual encoded upload. Edits mark a comparison
+outdated; generate it again before relying on it. Animation can pause/replay.
+Preview colors/backgrounds are local inspection controls and do not recolor the
+saved artwork. Existing optimized PNGs keep their original pixels when only
+metadata is edited; choosing a smaller maximum size or Smooth creates a new
+optimized image. The owner's source file remains untouched.
+
+The owner supplies source artwork under `docs/ai_generated/`. Keep these originals
+unchanged in Git; app uploads and optimized runtime sheets are managed through the
+Sprites importer. Developer raster editing still follows the PhotoCraft workflow.
+
+**Production acceptance**
+
+- [x] Sprite completion automated checks: 777 tests, clean static analysis,
+  browser download bridge test and release web build; comparison preview inspected
+  at phone width (2026-10-28, v1.14.26).
+- [x] Apply migration 023 in production (user confirmed 2026-10-28).
+- [x] Automated verification: 751 tests, clean static analysis and successful release web build (2026-10-28); rendered and inspected the 390 px import screen.
+- [ ] Import the owner's Kage Bunshin icon; verify live arena and replay artwork.
+- [ ] Verify browser/Android file pickers, cross-device download and offline reopening.
+- [ ] Verify real browser backup downloads and Android save/open dialogs, then
+  restore a backup on a second device with the same skill library.
+
 For a developer adding or fixing a sprite in Ball Wars. Every bundled sprite
 (power-up icons, effects, projectiles, animations) is cut at start-up from a
 sheet PNG in `assets/sprites/`, following a JSON manifest next to it. Nothing

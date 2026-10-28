@@ -1,0 +1,100 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:ballwars/core/sprites/sprite_atlas.dart';
+import 'package:ballwars/core/sprites/sprite_import.dart';
+import 'package:ballwars/core/sprites/sprite_registry.dart';
+import 'package:ballwars/features/sprites/application/custom_sprite_loader.dart';
+import 'package:ballwars/features/sprites/data/sprite_atlas_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+class FakeSpriteRepository implements SpriteAtlasRepository {
+  List<CustomAtlas> items = [];
+  bool fails = false;
+  @override
+  Future<List<CustomAtlas>> list() async {
+    if (fails) throw StateError('offline');
+    return items;
+  }
+
+  @override
+  Future<void> delete(String id) async => items.removeWhere((a) => a.id == id);
+  @override
+  Future<CustomAtlas> save({
+    String? id,
+    DateTime? expectedUpdatedAt,
+    bool restoreMissing = false,
+    required String name,
+    required Uint8List sheet,
+    required String contentType,
+    required SpriteAtlas atlas,
+  }) async => throw UnimplementedError();
+}
+
+CustomAtlas custom(String id) => CustomAtlas(
+  id: id,
+  name: id,
+  sheetUrl: 'https://example.test/$id.png',
+  sheetPath: '$id/a.png',
+  atlas: SpriteImport.grid(sheet: '$id.png', width: 16, height: 16),
+  updatedAt: DateTime.utc(2026),
+);
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(SpriteRegistry.resetForTest);
+  test('custom atlas round trip retains geometry', () {
+    final a = custom('first');
+    expect(CustomAtlas.fromJson(a.toJson()).toJson(), a.toJson());
+  });
+  test(
+    'two atlases register; corrupt one is isolated; deletion unregisters',
+    () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder).drawCircle(
+          const ui.Offset(8, 8),
+          4,
+          ui.Paint()..color = const ui.Color(0xffff0000),
+        );
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(16, 16);
+        final bytes = (await image.toByteData(
+          format: ui.ImageByteFormat.png,
+        ))!.buffer.asUint8List();
+        image.dispose();
+        picture.dispose();
+        final repo = FakeSpriteRepository()
+          ..items = [custom('first'), custom('bad'), custom('second')];
+        final loader = CustomSpriteLoader(
+          repo,
+          fetch: (u) async => u.path.contains('bad') ? Uint8List(4) : bytes,
+        );
+        await loader.load();
+        expect(SpriteRegistry.has('custom.first.sprite'), isTrue);
+        expect(SpriteRegistry.has('custom.second.sprite'), isTrue);
+        expect(loader.problems, hasLength(1));
+        repo.items = [custom('second')];
+        await loader.load();
+        expect(SpriteRegistry.has('custom.first.sprite'), isFalse);
+        repo.fails = true;
+        await loader.load();
+        expect(SpriteRegistry.has('custom.second.sprite'), isTrue);
+      });
+    },
+  );
+  test(
+    'oversized and disguised JPEG are refused before decode or upload',
+    () async {
+      await expectLater(
+        validateSpriteSheet(Uint8List(4194305), 'image/png'),
+        throwsFormatException,
+      );
+      await expectLater(
+        validateSpriteSheet(
+          Uint8List.fromList([255, 216, 255, 0]),
+          'image/png',
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+}

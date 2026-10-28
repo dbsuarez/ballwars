@@ -9,6 +9,7 @@ import 'core/offline/offline_store.dart';
 import 'features/custom_groups/data/custom_group_repository.dart';
 import 'features/replay_export/data/short_link_repository.dart';
 import 'features/settings/data/app_settings_repository.dart';
+import 'features/sprites/data/sprite_atlas_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +58,7 @@ Future<void> main() async {
         writer: admin.client,
       ),
       adminAuth: admin,
+      sprites: SupabaseSpriteAtlasRepository(client, writer: admin.client),
       shortLinks: SupabaseShortLinkRepository(client),
       syncOffline: true,
     ),

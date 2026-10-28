@@ -178,6 +178,10 @@ class PowerUpSystem {
           .spriteMode ==
       SkillVisualMode.sprite;
 
+  /// Includes the payload's artwork for composed weapons.
+  SkillDefinition projectileVisualSkill(Projectile projectile) =>
+      _composedProjectiles[projectile] ?? visualSkill(projectile.kind);
+
   int artworkTint(
     PowerUpKind kind, {
     String? skillId,

@@ -138,6 +138,9 @@ class SkillDefinition {
     this.rarity,
     this.description = '',
     this.shellEnabled,
+    this.iconSpriteId,
+    this.projectileSpriteId,
+    this.impactSpriteId,
     this.shellSprite,
     this.shellSize = 1,
     this.shellCount = 1,
@@ -258,6 +261,9 @@ class SkillDefinition {
 
   /// The [SpriteRegistry] id its casings are drawn with. Null (or an id that isn't loaded): the brass
   /// vector shell.
+  final String? iconSpriteId;
+  final String? projectileSpriteId;
+  final String? impactSpriteId;
   final String? shellSprite;
 
   /// Casing size, times the brass shell's size (0.25 to 10).
@@ -420,6 +426,9 @@ class SkillDefinition {
     Object? rarity = _unset,
     String? description,
     Object? shellEnabled = _unset,
+    Object? iconSpriteId = _unset,
+    Object? projectileSpriteId = _unset,
+    Object? impactSpriteId = _unset,
     Object? shellSprite = _unset,
     double? shellSize,
     int? shellCount,
@@ -504,6 +513,15 @@ class SkillDefinition {
     shellEnabled: identical(shellEnabled, _unset)
         ? this.shellEnabled
         : shellEnabled as bool?,
+    iconSpriteId: identical(iconSpriteId, _unset)
+        ? this.iconSpriteId
+        : iconSpriteId as String?,
+    projectileSpriteId: identical(projectileSpriteId, _unset)
+        ? this.projectileSpriteId
+        : projectileSpriteId as String?,
+    impactSpriteId: identical(impactSpriteId, _unset)
+        ? this.impactSpriteId
+        : impactSpriteId as String?,
     shellSprite: identical(shellSprite, _unset)
         ? this.shellSprite
         : shellSprite as String?,
@@ -582,6 +600,9 @@ class SkillDefinition {
     if (description.isNotEmpty) 'description': description,
     // Shell settings are left out at their defaults, so replay snapshots stay small.
     if (shellEnabled != null) 'shell': shellEnabled,
+    if (iconSpriteId != null) 'icon_sprite': iconSpriteId,
+    if (projectileSpriteId != null) 'projectile_sprite': projectileSpriteId,
+    if (impactSpriteId != null) 'impact_sprite': impactSpriteId,
     if (shellSprite != null) 'shell_sprite': shellSprite,
     if (shellSize != 1) 'shell_size': shellSize,
     if (shellCount != 1) 'shell_count': shellCount,
@@ -702,6 +723,15 @@ class SkillDefinition {
           ? value['description'] as String
           : '',
       shellEnabled: value['shell'] is bool ? value['shell'] as bool : null,
+      iconSpriteId: value['icon_sprite'] is String
+          ? value['icon_sprite'] as String
+          : null,
+      projectileSpriteId: value['projectile_sprite'] is String
+          ? value['projectile_sprite'] as String
+          : null,
+      impactSpriteId: value['impact_sprite'] is String
+          ? value['impact_sprite'] as String
+          : null,
       shellSprite: value['shell_sprite'] is String
           ? value['shell_sprite'] as String
           : null,
@@ -765,7 +795,10 @@ class SkillDefinition {
     payloadSkillId: _cleanReference(payloadSkillId),
     rarity: custom && !baseKind.isTrap ? rarity : null,
     description: cleanDescription(description),
-    shellSprite: _cleanReference(shellSprite),
+    iconSpriteId: _cleanSpriteReference(iconSpriteId),
+    projectileSpriteId: _cleanSpriteReference(projectileSpriteId),
+    impactSpriteId: _cleanSpriteReference(impactSpriteId),
+    shellSprite: _cleanSpriteReference(shellSprite),
     shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 10) : 1,
     shellCount: shellCount.clamp(1, 20),
   );
@@ -785,6 +818,11 @@ class SkillDefinition {
     final trimmed = id?.trim() ?? '';
     if (trimmed.isEmpty || trimmed.length > 80) return null;
     return trimmed;
+  }
+
+  static String? _cleanSpriteReference(String? id) {
+    final clean = id?.trim() ?? '';
+    return clean.isEmpty || clean.length > 128 ? null : clean;
   }
 
   List<String> get compatibilityIssues {

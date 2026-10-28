@@ -1,5 +1,42 @@
 # CLAUDE.md
 
+## Sprite importer (2026-10-28)
+
+- Sprite implementation is complete: library Edit sprites loads existing sheets;
+  per-sprite names/order/exclusions/timing/anchors/reset and transparency/blank
+  diagnostics are in Sprites. Pixel-art/Smooth resizing is baked into encoded PNGs;
+  Preview generates and decodes the actual upload for comparison with background
+  and ball-color controls. Existing optimized PNG metadata edits preserve pixels.
+- SpriteDef.label stores friendly names independently of assignment IDs. Runtime
+  SpriteRegistry labels, backup serialization, replacement and normalization retain it.
+
+- Sprite backups: library top-bar Backup / restore opens Export/Restore tabs.
+  `.bwsprites` version 1 JSON embeds sheets/manifests/UUIDs and SHA-256 image hashes;
+  64 uploads / 32 MB image data / 48 MB file limit. No external URLs are restored.
+  Missing UUIDs use insert-only `restoreMissing`; conflicts default Skip, explicit
+  replacements retain the existing optimistic revision guard. Partial results and
+  retry are visible. Built-in art and skill settings are outside this backup.
+- Library search filters assigned/unassigned uploads; artwork picker searches
+  upload/sprite names and filters static/animated. Registry registration now accepts
+  a display label populated by CustomSpriteLoader; UUIDs remain stable internal IDs.
+
+- Library actions now include Replace artwork. The importer maps new sprite names
+  onto old IDs; single icons preserve their ID automatically. Replacements use a
+  conditional update on `updated_at`, publish a new immutable sheet URL, and only
+  then clean up the old file. Failed updates remove only the new unused upload.
+
+- Admin: Skill Management > Sprites. PNG/WebP single icons, grid slicing or
+  Aseprite/TexturePacker JSON; optimization to 128 px icon/held frames or 256 px
+  projectile/effect frames before upload, checkerboard, bleed validation, animation preview.
+- New migration `023_sprite_atlases.sql` creates the public sprite bucket and
+  admin-write manifests table. User confirmed applied in production on 2026-10-28.
+- CustomSpriteLoader runs in the background, caches manifests/sheets with OfflineStore,
+  registers `custom.<atlas UUID>.<sprite name>` and notifies painters.
+- SkillDefinition slots: `iconSpriteId`, `projectileSpriteId`, `impactSpriteId`;
+  saved in full/compact libraries and replay snapshots. Missing art falls back to
+  bundled art. Source file is never replaced. See docs/SPRITES.md for owner workflow,
+  limits, follow-up improvements and outstanding real-device acceptance.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project

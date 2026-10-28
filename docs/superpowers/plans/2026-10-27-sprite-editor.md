@@ -1,5 +1,32 @@
 # Sprite Importer ("Sprite Editor") Implementation Plan
 
+## Execution status (2026-10-28)
+
+The first importer is implemented. The current owner guide and grouped remaining
+work are in [SPRITES.md](../../SPRITES.md); the checklist below preserves the
+original implementation recipe rather than a production acceptance claim.
+
+- [x] Single PNG/WebP icons, animated grids or separate grid icons.
+- [x] Aseprite hash/array and TexturePacker JSON, trimmed canvas offsets,
+  rotation rejection and transparent-edge isolation checks.
+- [x] Owner-requested pre-upload optimization: icon/held frames at most 128 px;
+  projectile/effect frames at most 256 px. Original files preserved.
+- [x] Admin storage/repository, offline cache and background registration.
+- [x] Full/compact skill sprite slots, editor pickers, arena and finisher rendering.
+- [x] Tabbed importer, animation preview, checkerboard, background warning,
+  affected-skill deletion confirmation, visible save failures and retry.
+- [x] Migration is **023_sprite_atlases.sql**, not the originally proposed 022.
+  User confirmed it ran in Supabase on 2026-10-28.
+- [ ] Browser/Android/cross-device and offline production acceptance.
+- [x] Replace an atlas in place with stable-ID mapping, removal warnings and
+  optimistic concurrency protection; no additional migration required.
+- [x] Add `.bwsprites` export/restore with original IDs, integrity validation,
+  contents/conflict preview and partial-failure retries.
+- [x] Add library and picker search/filter plus human-readable upload names.
+- [x] Complete per-sprite names/frame order/timing/anchors, frame diagnostics and
+  blank-frame controls, preview backgrounds/ball colors and smooth resizing with
+  actual optimized comparison. Existing atlas metadata can be edited directly.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let the admin attach new sprite artwork to the game from inside the app: upload a sheet (with an Aseprite or TexturePacker JSON when there is one), slice it, preview it on the real arena, and attach it to a skill's icon / held weapon, its projectile, its impact effect, or a built-in's artwork. Everyone then sees it in matches, replays and videos.
@@ -15,8 +42,8 @@
 ## Global Constraints
 
 - Admin only: uploads and atlas writes are gated by `is_admin()` RLS and by the separate admin client (`SupabaseAdminAuth.client`), like settings.
-- The app never edits pixels: it slices, previews and attaches. (The AGENTS.md PhotoCraft rule covers edits Claude/Codex make to repository art; owner uploads are the owner's own art.)
-- Upload limits: PNG or WebP, at most 4 MB and 4096 x 4096 px; at most 64 sprites and 256 frames per atlas.
+- The app slices, previews, optimizes and attaches owner uploads; the owner requested automatic runtime resizing on 2026-10-28. Original files stay untouched. The AGENTS.md PhotoCraft rule still governs developer raster editing in the repository.
+- Source limits: PNG/WebP, 16 MB, 8192 px per side and 16 megapixels. Optimized uploads: at most 4 MB and 4096 x 4096 px; at most 64 sprites and 256 frames per atlas. Icon/held frames max 128 px; projectile/effect frames max 256 px.
 - Every screen is 440 px wide on wide screens like Settings (`ColoredBox > Center > ConstrainedBox(maxWidth: 440) > Scaffold`); the slicing view may scroll/zoom inside it.
 - Long editors use grouped tabs; fixed LABEL | CONTROL rows; right-aligned numbers; save failures are shown, never silent; UI text has no en or em dashes.
 - Rendering only: no change to simulation, RNG draws or match outcomes; sprite choices are cosmetic.

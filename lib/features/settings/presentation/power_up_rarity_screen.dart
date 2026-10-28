@@ -73,7 +73,7 @@ class _PowerUpRarityScreenState extends State<PowerUpRarityScreen> {
         ),
       for (final skill in custom)
         ListTile(
-          leading: PowerUpIcon(skill.displayKind, tint: skill.spriteTint),
+          leading: PowerUpIcon(skill.displayKind, tint: skill.spriteTint, spriteId: skill.iconSpriteId),
           title: Align(
             alignment: Alignment.centerLeft,
             child: PowerUpName(

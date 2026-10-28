@@ -26,6 +26,8 @@ import 'features/settings/data/app_settings_repository.dart';
 import 'features/settings/domain/app_settings.dart';
 import 'features/settings/presentation/app_settings_scope.dart';
 import 'features/settings/presentation/settings_screen.dart';
+import 'features/sprites/data/sprite_atlas_repository.dart';
+import 'features/sprites/application/custom_sprite_loader.dart';
 
 class BallWarsApp extends StatefulWidget {
   /// User-made groups (Supabase); null hides My Groups (e.g. in tests).
@@ -37,6 +39,7 @@ class BallWarsApp extends StatefulWidget {
   /// App-wide settings and the admin login; null keeps the defaults.
   final AppSettingsRepository? settingsRepository;
   final AdminAuth? adminAuth;
+  final SpriteAtlasRepository? sprites;
 
   /// Short share links; null shares long links only.
   final ShortLinkRepository? shortLinks;
@@ -51,6 +54,7 @@ class BallWarsApp extends StatefulWidget {
     this.adminGroups,
     this.settingsRepository,
     this.adminAuth,
+    this.sprites,
     this.shortLinks,
     this.syncOffline = false,
   });
@@ -77,6 +81,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
     super.initState();
     // The admin's music choice applies to every player's matches.
     _settings.addListener(_applyMusic);
+    if (widget.sprites != null) CustomSpriteLoader(widget.sprites!).load();
   }
 
   void _applyMusic() {
@@ -131,6 +136,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
       repository: widget.settingsRepository,
       adminAuth: widget.adminAuth,
       shortLinks: widget.shortLinks,
+      sprites: widget.sprites,
       child: ValueListenableBuilder<AppSettings>(
         valueListenable: _settings,
         builder: (context, settings, _) => MaterialApp(

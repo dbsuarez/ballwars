@@ -41,6 +41,20 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
   fail('Editor control not found: $target');
 }
 
+/// Scrolls the Global tab until [target] is built and on screen.
+Future<void> _revealGlobal(WidgetTester tester, Finder target) async {
+  final scrollable = find
+      .descendant(
+        of: find.byKey(const ValueKey('skill-global-settings')),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(target, 120, scrollable: scrollable);
+  await tester.pumpAndSettle();
+}
+
 /// Records the straight lines drawn (the preview's hand crosshair); every
 /// other call is ignored.
 class _LineRecorder implements Canvas {
@@ -81,6 +95,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(Tab, 'Global'));
     await tester.pumpAndSettle();
+    await _revealGlobal(
+      tester,
+      find.byKey(const ValueKey('global-effect-visuals')),
+    );
     await tester.tap(find.byKey(const ValueKey('global-effect-visuals')));
     await tester.pumpAndSettle();
     await tester.tap(find.text(EffectRenderMode.vector.label).last);
@@ -136,6 +154,146 @@ void main() {
         findsOneWidget,
       );
       expect(saved, isNull);
+    },
+  );
+
+  testWidgets(
+    'Global: Apply to all skills asks first, then sets each skill and saves with Save Library',
+    (tester) async {
+      const tuning = PowerUpConfig.defaults;
+      final custom = SkillLibrary.defaults.create('Zap', PowerUpKind.pistol);
+      final initial = SkillLibrary.defaults.withDefinition(custom, tuning);
+      final count = initial.all(tuning).length;
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async => saved = await Navigator.of(context)
+                  .push<SkillManagementResult>(
+                    MaterialPageRoute(
+                      builder: (_) => SkillManagementScreen(
+                        initial: initial,
+                        tuning: tuning,
+                      ),
+                    ),
+                  ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Global'));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('global-effect-display-scale'));
+      await _revealGlobal(tester, field);
+      await tester.enterText(field, '1.5');
+      await tester.pumpAndSettle();
+      final apply = find.byKey(
+        const ValueKey('apply-all-effect-display-scale'),
+      );
+      await _revealGlobal(tester, apply);
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          "Set 1.5x on all $count skills? This changes each skill's own value.",
+        ),
+        findsOneWidget,
+      );
+      // Cancel changes nothing.
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('apply-all-confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Set 1.5x on all $count skills.'),
+        findsOneWidget,
+      );
+
+      // A value out of range can't be applied.
+      final shake = find.byKey(const ValueKey('global-screen-shake'));
+      await _revealGlobal(tester, shake);
+      await tester.enterText(shake, '5');
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ButtonStyleButton>(
+              find.byKey(const ValueKey('apply-all-screen-shake')),
+            )
+            .enabled,
+        isFalse,
+      );
+
+      await tester.tap(find.text('Save Library'));
+      await tester.pumpAndSettle();
+      final library = saved!.library;
+      for (final skill in library.all(tuning)) {
+        expect(skill.effectDisplayScale, 1.5, reason: skill.id);
+        expect(skill.screenShake, isNot(5), reason: skill.id);
+      }
+      expect(library.skillsSetEffectDisplayScale, isTrue);
+      expect(library.custom.single.name, 'Zap');
+    },
+  );
+
+  testWidgets(
+    'Global: the sprite size switches disable the matching fields in every skill',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (_) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Global'));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('global-weapon-display-scale'));
+      await _revealGlobal(tester, field);
+      await tester.enterText(field, '2');
+      final toggle = find.byKey(
+        const ValueKey('skills-set-weapon-display-scale'),
+      );
+      await _revealGlobal(tester, toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Every weapon in hand is drawn at this size'),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(Tab, 'Weapons'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      final scale = find.byKey(
+        const ValueKey('skill-field-weaponDisplayScale'),
+      );
+      await _revealEditor(tester, scale);
+      expect(tester.widget<TextField>(scale).enabled, isFalse);
+      expect(
+        find.textContaining('Using the global equipped artwork size (2.0x)'),
+        findsOneWidget,
+      );
+      final pickup = find.byKey(
+        const ValueKey('skill-field-pickupDisplayScale'),
+      );
+      await _revealEditor(tester, pickup);
+      expect(tester.widget<TextField>(pickup).enabled, isTrue);
     },
   );
 

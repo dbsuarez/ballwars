@@ -247,7 +247,7 @@ class PowerUpPainter {
         );
         try {
           final visualRadius =
-              r * p.visualSkill(PowerUpKind.busterSword).effectDisplayScale;
+              r * p.effectDisplayScale(PowerUpKind.busterSword);
           for (var i = 0; i < attack.hitsShown; i++) {
             final angle = i * math.pi / 4 + attack.age * 0.035;
             final direction = Offset.fromDirection(angle);
@@ -275,8 +275,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.sniperRifle, ball: flash.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.sniperRifle).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.sniperRifle);
         final fade = (1 - flash.age / 24).clamp(0.0, 1.0);
         final from = flash.owner.position;
         final to = flash.target.position;
@@ -318,7 +317,7 @@ class PowerUpPainter {
       );
       try {
         final visualRadius =
-            r * p.visualSkill(PowerUpKind.omegaTendrils).effectDisplayScale;
+            r * p.effectDisplayScale(PowerUpKind.omegaTendrils);
         final from = tendril.owner.position;
         final to = tendril.target.position;
         final delta = to - from;
@@ -381,8 +380,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.molotov, ball: fire.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.molotov).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.molotov);
         final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;
         final pulse = 0.92 + 0.08 * math.sin(state.step * 0.35);
         canvas.drawCircle(
@@ -451,8 +449,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.fireWall, ball: wall.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.fireWall).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.fireWall);
         final tangent = Offset.fromDirection(wall.angle);
         for (var i = 0; i < 4; i++) {
           final flame =
@@ -501,7 +498,7 @@ class PowerUpPainter {
       );
       try {
         final visualRadius =
-            r * p.visualSkill(PowerUpKind.lightningStrikes).effectDisplayScale;
+            r * p.effectDisplayScale(PowerUpKind.lightningStrikes);
         if (strike.flashLeft <= 0) continue;
         final target = strike.target.position;
         if (p.usesEffectSprite(
@@ -562,8 +559,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.earthquake, ball: quake.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.earthquake).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.earthquake);
         if (quake.flashLeft <= 0) continue;
         final progress = 1 - quake.flashLeft / 10.0;
         for (var i = 0; i < 3; i++) {
@@ -588,8 +584,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.energyWave, ball: attack.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.energyWave);
         final charge = (attack.age / EnergyWaveAttack.chargeSteps).clamp(
           0.0,
           1.0,
@@ -655,8 +650,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.energyWave, ball: wave.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.energyWave);
         final initial = wave.end - wave.start;
         final progress = EnergyWaveAttack.sweepProgress(wave.age);
         final startAngle =
@@ -733,8 +727,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.flamethrower, ball: cone.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.flamethrower).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.flamethrower);
         final direction = Offset.fromDirection(cone.angle);
         final normal = Offset(-direction.dy, direction.dx);
         for (var i = 0; i < 7; i++) {
@@ -796,9 +789,7 @@ class PowerUpPainter {
             e.radius *
             (e.kind == null
                 ? 1
-                : p
-                      .visualSkill(e.kind!, skillId: e.skillId)
-                      .effectDisplayScale);
+                : p.effectDisplayScale(e.kind!, skillId: e.skillId));
         final t = e.age / PowerUpTuning.explosionShowSteps;
         final fade = (1 - t).clamp(0.0, 1.0);
         if (e.kind == PowerUpKind.rocketLauncher &&
@@ -975,9 +966,7 @@ class PowerUpPainter {
             item.position,
             r *
                 (0.96 + 0.08 * pulse) *
-                p
-                    .visualSkill(item.kind, skillId: item.skillId)
-                    .pickupDisplayScale,
+                p.pickupDisplayScale(item.kind, skillId: item.skillId),
             useSprite: p.usesSprite(item.kind, skillId: item.skillId),
           );
         } else {
@@ -987,9 +976,7 @@ class PowerUpPainter {
             item.position,
             r *
                 (0.90 + 0.20 * pulse) *
-                p
-                    .visualSkill(item.kind, skillId: item.skillId)
-                    .pickupDisplayScale,
+                p.pickupDisplayScale(item.kind, skillId: item.skillId),
             0.35 + 0.65 * pulse,
             ring: SkillLibrary.rarityOf(
               p.visualSkill(item.kind, skillId: item.skillId),
@@ -1030,8 +1017,7 @@ class PowerUpPainter {
     for (final portal in p.portals) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.portal));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.portal).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.portal);
         final pulse =
             0.5 +
             0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
@@ -1085,8 +1071,7 @@ class PowerUpPainter {
     for (final wall in p.spikeWalls) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.spikeWall));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.spikeWall).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.spikeWall);
         final spacing = trapRadius * 0.96;
         for (final rawBase in wall.spikePositions(spacing)) {
           // Old/replayed walls may have been spawned slightly farther inward.
@@ -1109,8 +1094,7 @@ class PowerUpPainter {
     for (final goo in p.stickyGoo) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.stickyGoo));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.stickyGoo).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.stickyGoo);
         final pulse =
             0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
         _paintCurvedGooStrip(canvas, goo, arenaRadius, trapRadius, pulse);
@@ -1121,8 +1105,7 @@ class PowerUpPainter {
     for (final swamp in p.poisonSwamps) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.poisonSwamp));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.poisonSwamp).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.poisonSwamp);
         final pulse =
             0.92 + 0.06 * math.sin((state.step - swamp.spawnStep) * 0.1);
         _paintCurvedGooStrip(
@@ -1159,7 +1142,7 @@ class PowerUpPainter {
         p.artworkTint(bomb.kind, ball: bomb.owner),
       );
       try {
-        final trapRadius = r * p.visualSkill(bomb.kind).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(bomb.kind);
         // Armed traps sit directly on the arena instead of looking like pickup
         // balls. The short owner-colored footing preserves ownership feedback.
         final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
@@ -1639,9 +1622,7 @@ class PowerUpPainter {
         }
         final center = tornadoVisualCenter(target);
         final half =
-            target.radius *
-            1.65 *
-            p.visualSkill(PowerUpKind.tornado).effectDisplayScale;
+            target.radius * 1.65 * p.effectDisplayScale(PowerUpKind.tornado);
         final frame =
             p.usesEffectSprite(
               PowerUpKind.tornado,

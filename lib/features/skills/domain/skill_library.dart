@@ -761,6 +761,12 @@ class SkillLibrary {
     this.skillsSetCallout = true,
     this.screenShake = defaultScreenShake,
     this.skillsSetScreenShake = true,
+    this.weaponDisplayScale = 1,
+    this.skillsSetWeaponDisplayScale = true,
+    this.pickupDisplayScale = 1,
+    this.skillsSetPickupDisplayScale = true,
+    this.effectDisplayScale = 1,
+    this.skillsSetEffectDisplayScale = true,
   });
 
   final int version;
@@ -782,6 +788,17 @@ class SkillLibrary {
   final double screenShake;
   final bool skillsSetScreenShake;
   static const double defaultScreenShake = 0.3;
+
+  /// Global sprite sizes (0.25..3): the equipped weapon, the field pickup and the effect artwork. Each is
+  /// used for every skill while its "Let each skill set its own" switch is off; on (the default), each
+  /// skill's own [SkillDefinition.weaponDisplayScale] / [SkillDefinition.pickupDisplayScale] /
+  /// [SkillDefinition.effectDisplayScale] applies. Read them through [weaponDisplayScaleFor] etc.
+  final double weaponDisplayScale;
+  final bool skillsSetWeaponDisplayScale;
+  final double pickupDisplayScale;
+  final bool skillsSetPickupDisplayScale;
+  final double effectDisplayScale;
+  final bool skillsSetEffectDisplayScale;
 
   /// [skill]'s tier: a custom skill's own [SkillDefinition.rarity], else its base kind's tier in
   /// [tuning]. Null for traps, which have no tier. Every tier color, label, callout and spawn weight
@@ -818,12 +835,36 @@ class SkillLibrary {
   double calloutSecondsFor(SkillDefinition skill) =>
       skillsSetCallout ? skill.bubbleDurationSeconds : calloutSeconds;
 
+  /// [skill]'s held weapon size.
+  double weaponDisplayScaleFor(SkillDefinition skill) =>
+      skillsSetWeaponDisplayScale
+      ? skill.weaponDisplayScale
+      : weaponDisplayScale;
+
+  /// [skill]'s size lying in the arena.
+  double pickupDisplayScaleFor(SkillDefinition skill) =>
+      skillsSetPickupDisplayScale
+      ? skill.pickupDisplayScale
+      : pickupDisplayScale;
+
+  /// [skill]'s effect artwork size.
+  double effectDisplayScaleFor(SkillDefinition skill) =>
+      skillsSetEffectDisplayScale
+      ? skill.effectDisplayScale
+      : effectDisplayScale;
+
   /// A copy with the global settings changed.
   SkillLibrary withGlobal({
     double? calloutSeconds,
     bool? skillsSetCallout,
     double? screenShake,
     bool? skillsSetScreenShake,
+    double? weaponDisplayScale,
+    bool? skillsSetWeaponDisplayScale,
+    double? pickupDisplayScale,
+    bool? skillsSetPickupDisplayScale,
+    double? effectDisplayScale,
+    bool? skillsSetEffectDisplayScale,
   }) => SkillLibrary(
     version: version,
     overrides: overrides,
@@ -832,10 +873,91 @@ class SkillLibrary {
     skillsSetCallout: skillsSetCallout ?? this.skillsSetCallout,
     screenShake: (screenShake ?? this.screenShake).clamp(0, 1),
     skillsSetScreenShake: skillsSetScreenShake ?? this.skillsSetScreenShake,
+    weaponDisplayScale: (weaponDisplayScale ?? this.weaponDisplayScale).clamp(
+      0.25,
+      3,
+    ),
+    skillsSetWeaponDisplayScale:
+        skillsSetWeaponDisplayScale ?? this.skillsSetWeaponDisplayScale,
+    pickupDisplayScale: (pickupDisplayScale ?? this.pickupDisplayScale).clamp(
+      0.25,
+      3,
+    ),
+    skillsSetPickupDisplayScale:
+        skillsSetPickupDisplayScale ?? this.skillsSetPickupDisplayScale,
+    effectDisplayScale: (effectDisplayScale ?? this.effectDisplayScale).clamp(
+      0.25,
+      3,
+    ),
+    skillsSetEffectDisplayScale:
+        skillsSetEffectDisplayScale ?? this.skillsSetEffectDisplayScale,
   );
+
+  /// A copy with other skills, keeping the global settings.
+  SkillLibrary _withSkills({
+    Map<String, SkillDefinition>? overrides,
+    List<SkillDefinition>? custom,
+  }) => SkillLibrary(
+    version: version,
+    overrides: overrides ?? this.overrides,
+    custom: custom ?? this.custom,
+    calloutSeconds: calloutSeconds,
+    skillsSetCallout: skillsSetCallout,
+    screenShake: screenShake,
+    skillsSetScreenShake: skillsSetScreenShake,
+    weaponDisplayScale: weaponDisplayScale,
+    skillsSetWeaponDisplayScale: skillsSetWeaponDisplayScale,
+    pickupDisplayScale: pickupDisplayScale,
+    skillsSetPickupDisplayScale: skillsSetPickupDisplayScale,
+    effectDisplayScale: effectDisplayScale,
+    skillsSetEffectDisplayScale: skillsSetEffectDisplayScale,
+  );
+
+  /// Writes the given values into every skill's own fields ("Apply to all skills" in the Global tab):
+  /// each built-in through an override made from [builtIn], each custom skill in place. Null leaves that
+  /// field alone; with no values this library is returned as is. Values are clamped like the editor's.
+  /// Unlike the global switches this changes each skill, so it stays when a switch is turned back on.
+  SkillLibrary applyToAll(
+    PowerUpConfig tuning, {
+    double? calloutSeconds,
+    double? screenShake,
+    double? weaponDisplayScale,
+    double? pickupDisplayScale,
+    double? effectDisplayScale,
+  }) {
+    if (calloutSeconds == null &&
+        screenShake == null &&
+        weaponDisplayScale == null &&
+        pickupDisplayScale == null &&
+        effectDisplayScale == null) {
+      return this;
+    }
+    SkillDefinition apply(SkillDefinition skill) => skill.copyWith(
+      bubbleDurationSeconds: calloutSeconds,
+      screenShake: screenShake,
+      weaponDisplayScale: weaponDisplayScale,
+      pickupDisplayScale: pickupDisplayScale,
+      effectDisplayScale: effectDisplayScale,
+    );
+    var result = this;
+    for (final kind in PowerUpKind.values) {
+      result = result.withDefinition(
+        apply(result.builtIn(kind, tuning)),
+        tuning,
+      );
+    }
+    return result._withSkills(
+      custom: List.unmodifiable([
+        for (final skill in result.custom) apply(skill).validated(),
+      ]),
+    );
+  }
 
   static const SkillLibrary defaults = SkillLibrary();
   static const int currentVersion = 2;
+
+  /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
+  static const int compactVersion = 3;
   static const int maxImportCharacters = 1000000;
   static const int maxImportedDefinitions = 512;
   static const int maxReplayCharacters = 48000;
@@ -846,7 +968,13 @@ class SkillLibrary {
       calloutSeconds == defaultCalloutSeconds &&
       skillsSetCallout &&
       screenShake == defaultScreenShake &&
-      skillsSetScreenShake;
+      skillsSetScreenShake &&
+      weaponDisplayScale == 1 &&
+      skillsSetWeaponDisplayScale &&
+      pickupDisplayScale == 1 &&
+      skillsSetPickupDisplayScale &&
+      effectDisplayScale == 1 &&
+      skillsSetEffectDisplayScale;
 
   SkillDefinition builtIn(PowerUpKind kind, PowerUpConfig tuning) =>
       overrides['builtin.${kind.name}'] ?? _defaultFor(kind, tuning);
@@ -885,15 +1013,7 @@ class SkillLibrary {
       } else {
         next[index] = valid;
       }
-      return SkillLibrary(
-        version: version,
-        overrides: overrides,
-        custom: List.unmodifiable(next),
-        calloutSeconds: calloutSeconds,
-        skillsSetCallout: skillsSetCallout,
-        screenShake: screenShake,
-        skillsSetScreenShake: skillsSetScreenShake,
-      );
+      return _withSkills(custom: List.unmodifiable(next));
     }
     final next = Map<String, SkillDefinition>.of(overrides);
     // Compare with immutable factory defaults. [tuning] may already contain
@@ -905,15 +1025,7 @@ class SkillLibrary {
     } else {
       next[valid.id] = valid;
     }
-    return SkillLibrary(
-      version: version,
-      overrides: Map.unmodifiable(next),
-      custom: custom,
-      calloutSeconds: calloutSeconds,
-      skillsSetCallout: skillsSetCallout,
-      screenShake: screenShake,
-      skillsSetScreenShake: skillsSetScreenShake,
-    );
+    return _withSkills(overrides: Map.unmodifiable(next));
   }
 
   /// Built-in weapons that fire separate projectiles, so another skill can fire them. Beams, sprays and
@@ -994,14 +1106,8 @@ class SkillLibrary {
     );
   }
 
-  SkillLibrary removeCustom(String id) => SkillLibrary(
-    version: version,
-    overrides: overrides,
+  SkillLibrary removeCustom(String id) => _withSkills(
     custom: List.unmodifiable(custom.where((item) => item.id != id)),
-    calloutSeconds: calloutSeconds,
-    skillsSetCallout: skillsSetCallout,
-    screenShake: screenShake,
-    skillsSetScreenShake: skillsSetScreenShake,
   );
 
   SkillDefinition duplicate(SkillDefinition source, String name) {
@@ -1193,7 +1299,81 @@ class SkillLibrary {
     if (!skillsSetCallout) 'skills_set_callout': false,
     if (screenShake != defaultScreenShake) 'screen_shake': screenShake,
     if (!skillsSetScreenShake) 'skills_set_screen_shake': false,
+    if (weaponDisplayScale != 1) 'weapon_display_scale': weaponDisplayScale,
+    if (!skillsSetWeaponDisplayScale) 'skills_set_weapon_display_scale': false,
+    if (pickupDisplayScale != 1) 'pickup_display_scale': pickupDisplayScale,
+    if (!skillsSetPickupDisplayScale) 'skills_set_pickup_display_scale': false,
+    if (effectDisplayScale != 1) 'effect_display_scale': effectDisplayScale,
+    if (!skillsSetEffectDisplayScale) 'skills_set_effect_display_scale': false,
   };
+
+  /// [toJson] with each built-in override stored as a diff against its factory default
+  /// (`_defaultFor(kind, PowerUpConfig.defaults)`): `id` and `base`, then only the keys whose value
+  /// differs (a key the default has and the override lacks is written as null). Marked
+  /// [compactVersion], which apps from before it reject instead of misreading; [SkillLibrary.fromJson]
+  /// reads both forms to the same library. Used for replay snapshots; saved libraries keep [toJson].
+  Map<String, Object?> toCompactJson() => {
+    ...toJson(),
+    'version': compactVersion,
+    'overrides': {
+      for (final entry in overrides.entries) entry.key: _diff(entry.value),
+    },
+    'custom': [for (final item in custom) _diff(item)],
+  };
+
+  /// What [_diff] compares [skill] with: a built-in's factory default, or for a custom skill a
+  /// bare definition with the constructor's defaults.
+  static Map<String, Object?> _baseline(PowerUpKind kind, Map skill) =>
+      skill['custom'] == true
+      ? SkillDefinition(
+          id: '${skill['id']}',
+          name: '${skill['name']}',
+          baseKind: kind,
+          custom: true,
+        ).toJson()
+      : _defaultFor(kind, PowerUpConfig.defaults).toJson();
+
+  static Map<String, Object?> _diff(SkillDefinition skill) {
+    final full = skill.toJson();
+    final base = _baseline(skill.baseKind, full);
+    return {
+      'id': full['id'],
+      'name': full['name'],
+      'base': full['base'],
+      if (skill.custom) 'custom': true,
+      for (final entry in full.entries)
+        if (!const {'id', 'name', 'base', 'custom'}.contains(entry.key) &&
+            jsonEncode(entry.value) != jsonEncode(base[entry.key]))
+          entry.key: entry.value,
+      for (final key in base.keys)
+        if (!full.containsKey(key)) key: null,
+    };
+  }
+
+  /// A compact skill ([toCompactJson]) laid over its baseline, as the full JSON
+  /// [SkillDefinition.fromJson] reads. Anything that isn't a diff of a known kind is returned as
+  /// is, so it fails the usual checks.
+  static Object? _expand(Object? raw) {
+    if (raw is! Map) return raw;
+    final kind = PowerUpKind.values
+        .where((candidate) => candidate.name == raw['base'])
+        .firstOrNull;
+    if (kind == null || raw['id'] is! String) return raw;
+    final merged = <String, Object?>{..._baseline(kind, raw)};
+    for (final entry in raw.entries) {
+      if (entry.value == null) {
+        merged.remove(entry.key);
+      } else {
+        merged['${entry.key}'] = entry.value;
+      }
+    }
+    return merged;
+  }
+
+  static bool _isCompact(Map value) {
+    final version = value['version'];
+    return version is num && version.toInt() >= compactVersion;
+  }
 
   /// Whether [stored] (this library as the server returned it) holds the
   /// same skills. Postgres jsonb sorts object keys, so the JSON text order
@@ -1217,9 +1397,12 @@ class SkillLibrary {
   /// Immutable skill snapshot embedded in replay links. The replay keeps the
   /// exact definitions that were active when it was created, so later admin
   /// edits cannot change an old match.
+  ///
+  /// The snapshot is the compact form ([toCompactJson]): each built-in override keeps only what
+  /// differs from the built-in default, so a library with every built-in edited still fits.
   String? encodeReplay() {
     if (isDefault) return null;
-    final source = jsonEncode(toJson());
+    final source = jsonEncode(toCompactJson());
     if (source.length > maxReplayCharacters) {
       throw const FormatException('The active skill snapshot is too large.');
     }
@@ -1244,9 +1427,12 @@ class SkillLibrary {
     if (value is! Map) return defaults;
     final overrides = <String, SkillDefinition>{};
     final rawOverrides = value['overrides'];
+    final compact = _isCompact(value);
     if (rawOverrides is Map) {
       for (final entry in rawOverrides.entries) {
-        final definition = SkillDefinition.fromJson(entry.value);
+        final definition = SkillDefinition.fromJson(
+          compact ? _expand(entry.value) : entry.value,
+        );
         if (entry.key is String && definition != null && !definition.custom) {
           overrides[entry.key as String] = definition.yell.isEmpty
               ? definition.copyWith(yell: _defaultYellFor(definition.baseKind))
@@ -1258,7 +1444,9 @@ class SkillLibrary {
     final rawCustom = value['custom'];
     if (rawCustom is List) {
       for (final raw in rawCustom) {
-        final definition = SkillDefinition.fromJson(raw);
+        final definition = SkillDefinition.fromJson(
+          compact ? _expand(raw) : raw,
+        );
         if (definition != null && definition.custom) {
           final restored = _composeLegacyCustom(
             definition.yell.isEmpty && !definition.isComposed
@@ -1273,6 +1461,11 @@ class SkillLibrary {
     }
     final callout = value['callout_seconds'];
     final shake = value['screen_shake'];
+    double scale(String key) {
+      final raw = value[key];
+      return raw is num && raw.isFinite ? raw.toDouble().clamp(0.25, 3) : 1;
+    }
+
     return SkillLibrary(
       version: currentVersion,
       overrides: Map.unmodifiable(overrides),
@@ -1285,6 +1478,15 @@ class SkillLibrary {
           ? shake.toDouble().clamp(0, 1)
           : defaultScreenShake,
       skillsSetScreenShake: value['skills_set_screen_shake'] as bool? ?? true,
+      weaponDisplayScale: scale('weapon_display_scale'),
+      skillsSetWeaponDisplayScale:
+          value['skills_set_weapon_display_scale'] as bool? ?? true,
+      pickupDisplayScale: scale('pickup_display_scale'),
+      skillsSetPickupDisplayScale:
+          value['skills_set_pickup_display_scale'] as bool? ?? true,
+      effectDisplayScale: scale('effect_display_scale'),
+      skillsSetEffectDisplayScale:
+          value['skills_set_effect_display_scale'] as bool? ?? true,
     );
   }
 
@@ -1305,11 +1507,12 @@ class SkillLibrary {
     final version = decoded['version'];
     if (version is! num ||
         version.toInt() < 1 ||
-        version.toInt() > currentVersion) {
+        version.toInt() > compactVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected 1-$currentVersion.',
+        'Unsupported skill-library version. Expected 1-$compactVersion.',
       );
     }
+    final compact = _isCompact(decoded);
     final overrides = decoded['overrides'];
     final custom = decoded['custom'];
     if (overrides is! Map || custom is! List) {
@@ -1321,13 +1524,15 @@ class SkillLibrary {
       );
     }
     for (final entry in overrides.entries) {
-      final skill = SkillDefinition.fromJson(entry.value);
+      final skill = SkillDefinition.fromJson(
+        compact ? _expand(entry.value) : entry.value,
+      );
       if (entry.key is! String || skill == null || skill.custom) {
         throw const FormatException('An override definition is invalid.');
       }
     }
     for (final value in custom) {
-      final skill = SkillDefinition.fromJson(value);
+      final skill = SkillDefinition.fromJson(compact ? _expand(value) : value);
       if (skill == null || !skill.custom) {
         throw const FormatException('A custom skill definition is invalid.');
       }

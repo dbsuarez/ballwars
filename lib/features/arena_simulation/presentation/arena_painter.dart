@@ -616,9 +616,7 @@ class ArenaPainter extends CustomPainter {
           ) ??
           true,
       displayScale:
-          state.powerUps
-              ?.visualSkill(PowerUpKind.speed, ball: ball)
-              .effectDisplayScale ??
+          state.powerUps?.effectDisplayScale(PowerUpKind.speed, ball: ball) ??
           1,
     );
 
@@ -696,17 +694,13 @@ class ArenaPainter extends CustomPainter {
       firedWeaponHoldLeft: (kind) =>
           state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
       weaponDisplayScale: (kind, slot) =>
-          state.powerUps
-              ?.visualSkill(
-                kind,
-                skillId: slot == 0
-                    ? ball.heldSkillId
-                    : ball.heldSecondarySkillId,
-              )
-              .weaponDisplayScale ??
+          state.powerUps?.weaponDisplayScale(
+            kind,
+            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+          ) ??
           1,
       effectDisplayScale: (kind) =>
-          state.powerUps?.visualSkill(kind, ball: ball).effectDisplayScale ?? 1,
+          state.powerUps?.effectDisplayScale(kind, ball: ball) ?? 1,
       weaponGripInset: (kind, slot) =>
           state.powerUps
               ?.visualSkill(

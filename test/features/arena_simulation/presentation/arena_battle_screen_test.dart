@@ -596,7 +596,8 @@ void main() {
       var library = SkillLibrary.defaults;
       for (
         var i = 0;
-        jsonEncode(library.toJson()).length <= SkillLibrary.maxReplayCharacters;
+        jsonEncode(library.toCompactJson()).length <=
+            SkillLibrary.maxReplayCharacters;
         i++
       ) {
         library = library.withDefinition(

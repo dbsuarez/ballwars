@@ -205,8 +205,26 @@ class PowerUpSystem {
   }
 
   String skillName(PowerUpKind kind) => visualSkill(kind).name;
-  double weaponDisplayScale(PowerUpKind kind, {SimulationBall? ball}) =>
-      visualSkill(kind, ball: ball).weaponDisplayScale;
+
+  /// Sprite sizes as drawn: the skill's own, or the library's global value while its "Let each
+  /// skill set its own" switch is off ([SkillLibrary.weaponDisplayScaleFor] etc.).
+  double weaponDisplayScale(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+    String? skillId,
+  }) => match.skillLibrary.weaponDisplayScaleFor(
+    visualSkill(kind, ball: ball, skillId: skillId),
+  );
+  double pickupDisplayScale(PowerUpKind kind, {String? skillId}) => match
+      .skillLibrary
+      .pickupDisplayScaleFor(visualSkill(kind, skillId: skillId));
+  double effectDisplayScale(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+    String? skillId,
+  }) => effectDisplayScaleOf(visualSkill(kind, ball: ball, skillId: skillId));
+  double effectDisplayScaleOf(SkillDefinition skill) =>
+      match.skillLibrary.effectDisplayScaleFor(skill);
   double handEffectScale(PowerUpKind kind, {SimulationBall? ball}) =>
       visualSkill(kind, ball: ball).handEffectScale;
   Color handEffectColor(PowerUpKind kind, {SimulationBall? ball}) =>
@@ -796,10 +814,7 @@ class PowerUpSystem {
     match.state.particles.spawnSparkle(
       origin: ball.position,
       rng: rng,
-      displayScale: visualSkill(
-        PowerUpKind.friedChicken,
-        ball: ball,
-      ).effectDisplayScale,
+      displayScale: effectDisplayScale(PowerUpKind.friedChicken, ball: ball),
     );
     _skillYell(ball, PowerUpKind.friedChicken, 'FEAST MODE!');
   }
@@ -1551,10 +1566,7 @@ class PowerUpSystem {
     match.state.particles.spawnSparkle(
       origin: ball.position,
       rng: rng,
-      displayScale: visualSkill(
-        PowerUpKind.apple,
-        ball: ball,
-      ).effectDisplayScale,
+      displayScale: effectDisplayScale(PowerUpKind.apple, ball: ball),
     );
   }
 
@@ -2197,7 +2209,7 @@ class PowerUpSystem {
         color: Color(skill.effectColor),
         accent: const Color(0xFFFFFFFF),
         count: 7 + (match.skillLibrary.screenShakeFor(skill) * 10).round(),
-        displayScale: skill.effectDisplayScale,
+        displayScale: effectDisplayScaleOf(skill),
       );
       if (match.skillLibrary.screenShakeFor(skill) > 0) {
         weaponImpacts.add(
@@ -3379,7 +3391,7 @@ class PowerUpSystem {
       color: Color(impactSkill.effectColor),
       accent: impactAccent,
       count: 7 + (kind.impactWeight * 10).round(),
-      displayScale: impactSkill.effectDisplayScale,
+      displayScale: effectDisplayScaleOf(impactSkill),
     );
     weaponImpacts.add(
       WeaponImpact(

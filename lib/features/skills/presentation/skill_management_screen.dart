@@ -624,6 +624,55 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   late final TextEditingController _shakeText = TextEditingController(
     text: _formatSeconds(_library.screenShake),
   );
+  late final TextEditingController _weaponScaleText = TextEditingController(
+    text: _formatSeconds(_library.weaponDisplayScale),
+  );
+  late final TextEditingController _pickupScaleText = TextEditingController(
+    text: _formatSeconds(_library.pickupDisplayScale),
+  );
+  late final TextEditingController _effectScaleText = TextEditingController(
+    text: _formatSeconds(_library.effectDisplayScale),
+  );
+
+  /// "Apply to all skills": after a confirmation, writes the value into every skill's own field
+  /// ([SkillLibrary.applyToAll] through [apply]). Saved with Save library like any edit.
+  Future<void> _applyToAll(
+    String shown,
+    SkillLibrary Function(SkillLibrary library) apply,
+  ) async {
+    final count = _library.all(_tuning).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apply to all skills'),
+        content: Text(
+          "Set $shown on all $count skills? This changes each skill's own value.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('apply-all-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _library = apply(_library));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            'Set $shown on all $count skills. Save library to keep it.',
+          ),
+        ),
+      );
+  }
 
   /// One global setting: a number for every skill, and "Let each skill set its own".
   Widget _globalCard({
@@ -639,6 +688,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     required String globalNote,
     required void Function(double value) onValue,
     required void Function(bool value) onSkillsSetOwn,
+    required Key applyKey,
+    required String Function(double value) shown,
+    required SkillLibrary Function(SkillLibrary library, double value)
+    applyToAll,
   }) {
     final c = BallWarsColors.of(context);
     final typed = double.tryParse(controller.text.trim());
@@ -696,6 +749,23 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               value: skillsSetOwn,
               onChanged: (value) => setState(() => onSkillsSetOwn(value)),
             ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  key: applyKey,
+                  onPressed: error != null
+                      ? null
+                      : () => _applyToAll(
+                          shown(typed!),
+                          (library) => applyToAll(library, typed),
+                        ),
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('Apply to all skills'),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -733,6 +803,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           onValue: (v) => _library = _library.withGlobal(calloutSeconds: v),
           onSkillsSetOwn: (v) =>
               _library = _library.withGlobal(skillsSetCallout: v),
+          applyKey: const ValueKey('apply-all-callout-seconds'),
+          shown: (v) => '${_formatSeconds(v)} s',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, calloutSeconds: v),
         ),
         Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -808,6 +882,73 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           onValue: (v) => _library = _library.withGlobal(screenShake: v),
           onSkillsSetOwn: (v) =>
               _library = _library.withGlobal(skillsSetScreenShake: v),
+          applyKey: const ValueKey('apply-all-screen-shake'),
+          shown: _formatSeconds,
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, screenShake: v),
+        ),
+        _globalCard(
+          label: 'Equipped artwork size',
+          fieldKey: const ValueKey('global-weapon-display-scale'),
+          switchKey: const ValueKey('skills-set-weapon-display-scale'),
+          controller: _weaponScaleText,
+          suffix: 'x',
+          min: 0.25,
+          max: 3,
+          skillsSetOwn: _library.skillsSetWeaponDisplayScale,
+          ownNote:
+              'Each weapon uses its own equipped display scale (Appearance). This value is not used.',
+          globalNote:
+              'Every weapon in hand is drawn at this size. The equipped display scale in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(weaponDisplayScale: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetWeaponDisplayScale: v),
+          applyKey: const ValueKey('apply-all-weapon-display-scale'),
+          shown: (v) => '${_formatSeconds(v)}x',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, weaponDisplayScale: v),
+        ),
+        _globalCard(
+          label: 'Pickup artwork size',
+          fieldKey: const ValueKey('global-pickup-display-scale'),
+          switchKey: const ValueKey('skills-set-pickup-display-scale'),
+          controller: _pickupScaleText,
+          suffix: 'x',
+          min: 0.25,
+          max: 3,
+          skillsSetOwn: _library.skillsSetPickupDisplayScale,
+          ownNote:
+              'Each skill uses its own pickup artwork scale (Appearance). This value is not used.',
+          globalNote:
+              'Every pickup in the arena is drawn at this size. The pickup artwork scale in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(pickupDisplayScale: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetPickupDisplayScale: v),
+          applyKey: const ValueKey('apply-all-pickup-display-scale'),
+          shown: (v) => '${_formatSeconds(v)}x',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, pickupDisplayScale: v),
+        ),
+        _globalCard(
+          label: 'Effect artwork size',
+          fieldKey: const ValueKey('global-effect-display-scale'),
+          switchKey: const ValueKey('skills-set-effect-display-scale'),
+          controller: _effectScaleText,
+          suffix: 'x',
+          min: 0.25,
+          max: 3,
+          skillsSetOwn: _library.skillsSetEffectDisplayScale,
+          ownNote:
+              'Each skill uses its own effect artwork scale (Appearance). This value is not used.',
+          globalNote:
+              'Every effect is drawn at this size. The effect artwork scale in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(effectDisplayScale: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetEffectDisplayScale: v),
+          applyKey: const ValueKey('apply-all-effect-display-scale'),
+          shown: (v) => '${_formatSeconds(v)}x',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, effectDisplayScale: v),
         ),
       ],
     );
@@ -2726,6 +2867,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'weaponDisplayScale',
                           'Equipped display scale',
                           suffix: 'x',
+                          enabled: widget.library.skillsSetWeaponDisplayScale,
+                          disabledNote:
+                              'Using the global equipped artwork size (${widget.library.weaponDisplayScale}x). '
+                              'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                         _number(
                           'weaponGripInset',
@@ -2768,6 +2913,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'pickupDisplayScale',
                         'Pickup artwork scale',
                         suffix: 'x',
+                        enabled: widget.library.skillsSetPickupDisplayScale,
+                        disabledNote:
+                            'Using the global pickup artwork size (${widget.library.pickupDisplayScale}x). '
+                            'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                       ),
                       if (widget.skill.isComposed ||
                           !const [
@@ -2778,6 +2927,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'effectDisplayScale',
                           'Effect artwork scale',
                           suffix: 'x',
+                          enabled: widget.library.skillsSetEffectDisplayScale,
+                          disabledNote:
+                              'Using the global effect artwork size (${widget.library.effectDisplayScale}x). '
+                              'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                       const SizedBox(height: 8),
                       _fixedRow(

@@ -7,6 +7,7 @@ import 'package:ballwars/features/skills/presentation/skill_management_screen.da
 import 'package:ballwars/features/settings/domain/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/rendering.dart';
 
 Future<void> _revealEditor(WidgetTester tester, Finder target) async {
   if (target.hitTestable().evaluate().isNotEmpty) return;
@@ -38,6 +39,18 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
     }
   }
   fail('Editor control not found: $target');
+}
+
+/// Records the straight lines drawn (the preview's hand crosshair); every
+/// other call is ignored.
+class _LineRecorder implements Canvas {
+  final List<(Offset, Offset)> lines = [];
+
+  @override
+  void drawLine(Offset p1, Offset p2, Paint paint) => lines.add((p1, p2));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }
 
 void main() {
@@ -674,15 +687,45 @@ void main() {
     await slide('side', -0.5);
     await slide('rotation', 30);
     expect(tester.takeException(), isNull);
-    // A crosshair marks the hand in both views (red lines).
-    for (final key in const ['right', 'left']) {
-      expect(
-        tester.renderObject(find.byKey(ValueKey('grip-preview-$key'))),
-        paints
-          ..line(color: const Color(0xFFE53935))
-          ..line(color: const Color(0xFFE53935)),
-      );
+    // A crosshair marks the hand in both views (red lines), at the standard
+    // grip point: it stays put however the sliders move.
+    void expectMarker() {
+      for (final (key, right) in const [('right', true), ('left', false)]) {
+        final finder = find.byKey(ValueKey('grip-preview-$key'));
+        final s = tester.getSize(finder).shortestSide;
+        final r = s * 0.16;
+        final sign = right ? 1 : -1;
+        // Pistol: 1.2r ahead - 0.45r back, 0.3r down (mirrored sideways).
+        final hand = Offset(
+          tester.getSize(finder).width * (right ? 0.36 : 0.64) +
+              sign * 0.75 * r,
+          tester.getSize(finder).height / 2 + 0.3 * r,
+        );
+        final arm = r * 0.3;
+        final rec = _LineRecorder();
+        final box = tester.renderObject<RenderCustomPaint>(finder);
+        box.painter!.paint(rec, box.size);
+        expect(rec.lines, hasLength(2));
+        for (final (i, want) in [
+          (hand - Offset(arm, 0), hand + Offset(arm, 0)),
+          (hand - Offset(0, arm), hand + Offset(0, arm)),
+        ].indexed) {
+          expect(rec.lines[i].$1.dx, closeTo(want.$1.dx, 1e-6));
+          expect(rec.lines[i].$1.dy, closeTo(want.$1.dy, 1e-6));
+          expect(rec.lines[i].$2.dx, closeTo(want.$2.dx, 1e-6));
+          expect(rec.lines[i].$2.dy, closeTo(want.$2.dy, 1e-6));
+        }
+      }
     }
+
+    expectMarker();
+    await slide('inset', -1);
+    await slide('side', 1);
+    await slide('rotation', -90);
+    expectMarker();
+    await slide('inset', 0.4);
+    await slide('side', -0.5);
+    await slide('rotation', 30);
     // Forward/back can go negative (push the weapon out).
     await slide('inset', -0.5);
     await slide('inset', 0.4);

@@ -178,6 +178,10 @@ void paintSmiley(
 /// hand and a second hand on the lower free side; an unarmed smiley carries a
 /// relaxed hand on each side. Draw this after [PowerUpPainter.paintBallEffects]
 /// so the grip sits visibly over the weapon.
+///
+/// The hand stays at the kind's standard grip point. [weaponGripInset],
+/// [weaponGripSide] and [weaponGripRotation] are accepted for callers that
+/// pass the sprite's grip, but they do not move the hand.
 void paintHands(
   Canvas canvas,
   SimulationBall ball, {
@@ -209,17 +213,10 @@ void paintHands(
         ball,
         weapon: weapon,
         slot: slot,
-        gripInset: weaponGripInset?.call(weapon, slot),
-        gripSide: weaponGripSide?.call(weapon, slot) ?? 0,
       );
-      // The hand grips the sprite as drawn, so it turns with the grip
-      // rotation (a shield's hand stays on the ball's rim).
-      final angle = weapon == PowerUpKind.shield
-          ? aim
-          : PowerUpPainter.heldSpriteAngle(
-              aim,
-              weaponGripRotation?.call(weapon, slot) ?? 0,
-            );
+      // The hand stays at the standard grip point; the skill's own grip
+      // values only slide the weapon sprite relative to it.
+      final angle = aim;
       final dir = _unit(angle);
       _paintHandAt(
         canvas,
@@ -242,19 +239,7 @@ void paintHands(
   }
 
   final aim = PowerUpPainter.heldAngle(ball);
-  final angle = held == PowerUpKind.shield
-      ? aim
-      : PowerUpPainter.heldSpriteAngle(
-          aim,
-          weaponGripRotation?.call(held, 0) ?? 0,
-        );
-  final grip = gripHandPosition(
-    ball,
-    gripInset: weaponGripInset?.call(held, 0),
-    gripSide: weaponGripSide?.call(held, 0) ?? 0,
-    gripRotation: weaponGripRotation?.call(held, 0) ?? 0,
-  );
-  _paintHandAt(canvas, grip, r, gripAngle: angle);
+  _paintHandAt(canvas, gripHandPosition(ball), r, gripAngle: aim);
 
   final freeA = aim - 2.3;
   final freeB = aim + 2.3;
@@ -262,30 +247,19 @@ void paintHands(
   _paintHandAt(canvas, ball.position + _unit(freeAngle) * (r * 0.98), r);
 }
 
-/// Where [paintHands] puts the gripping hand of a ball's single held item.
-/// The grip preview marks this spot so a hilt can be lined up with it.
-Offset gripHandPosition(
-  SimulationBall ball, {
-  double? gripInset,
-  double gripSide = 0,
-  double gripRotation = 0,
-}) {
+/// Where [paintHands] puts the gripping hand of a ball's single held item:
+/// the standard grip point of the weapon's kind, whatever grip values the skill
+/// sets (those slide the sprite relative to the hand). The grip preview marks
+/// this spot so a hilt can be lined up with it.
+Offset gripHandPosition(SimulationBall ball) {
   final held = ball.held;
   if (held == null) return ball.position;
   final r = ball.radius;
   final aim = PowerUpPainter.heldAngle(ball);
-  // Flipping follows the aim; the grip then turns with the drawn sprite.
   final flipped = math.cos(aim) < 0;
-  final angle = held == PowerUpKind.shield
-      ? aim
-      : PowerUpPainter.heldSpriteAngle(aim, gripRotation);
-  final dir = _unit(angle);
+  final dir = _unit(aim);
   final side = Offset(-dir.dy, dir.dx);
-  final weaponCenter = PowerUpPainter.heldCenter(
-    ball,
-    gripInset: gripInset,
-    gripSide: gripSide,
-  );
+  final weaponCenter = PowerUpPainter.heldCenter(ball);
   if (held == PowerUpKind.shield) {
     return ball.position + dir * (r * 0.95);
   } else if (held.isBlade ||

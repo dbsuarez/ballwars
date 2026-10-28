@@ -297,13 +297,8 @@ class _GripPreviewPainter extends CustomPainter {
       weaponGripRotation: (_, _) => grip.rotation,
     );
     if (kind.isWeapon) {
-      // Crosshair at the gripping hand: line the hilt up with it.
-      final mark = gripHandPosition(
-        ball,
-        gripInset: grip.inset,
-        gripSide: grip.side,
-        gripRotation: grip.rotation,
-      );
+      // Crosshair at the (fixed) gripping hand: slide the hilt onto it.
+      final mark = gripHandPosition(ball);
       final arm = radius * 0.3;
       canvas.drawLine(
         mark - Offset(arm, 0),

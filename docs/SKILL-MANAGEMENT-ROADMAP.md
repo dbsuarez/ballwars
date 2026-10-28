@@ -238,6 +238,14 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Final completion checks
 
+### Continuation from Claude (2026-10-28)
+
+- [x] Production migration `022_ball_gender.sql`: user confirmed applied in Supabase.
+- [x] Add approved player rarity presets, per-mode Custom settings, live tier odds and immutable match tuning. See [rarity presets](RARITY-PRESETS.md).
+- [x] Verify rarity presets with 390px Cards/List UI tests, per-mode settings, invalid input, seeded odds and historical tuning defaults. Full suite: 724 passed; static analysis and release web build passed (2026-10-28).
+- [ ] Hands-on browser and Android acceptance of rarity preset controls.
+- [ ] Implement the in-app sprite importer (Plan 2); choose an unused migration number after `022_ball_gender.sql`.
+
 ### Follow-up polish (2026-10-27)
 
 - [x] Split Edit Skill into Identity (including behavior), Damage & Timing, Appearance, and Callouts & Sounds tabs, retaining draft values and persistent preview actions.

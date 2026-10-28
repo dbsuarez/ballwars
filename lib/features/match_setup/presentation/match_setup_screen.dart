@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../arena_simulation/domain/power_up.dart';
@@ -21,6 +22,8 @@ import '../../skills/domain/skill_library.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../domain/match_config.dart';
 import '../domain/pickup_count.dart';
+import '../domain/rarity_preset.dart';
+import 'rarity_preset_panel.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
 /// your own groups, mixing categories freely, then start the battle.
@@ -97,6 +100,67 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _automaticSpeedUp = true;
   bool _showEffects = true;
   EffectRenderMode? _effectRenderMode;
+  RarityPreset _rarityPreset = RarityPreset.balanced;
+  List<String>? _customRarityDraft;
+  int _rarityGeneration = 0;
+
+  List<String> get _customRarityValues =>
+      _customRarityDraft ??
+      [
+        for (final weight in RarityWeights.fromTuning(
+          AppSettingsScope.of(context).powerUps,
+        ).values)
+          weight.toString(),
+      ];
+
+  RarityWeights? get _rarityWeights {
+    final custom = RarityWeights.parse(_customRarityValues);
+    if (_rarityPreset == RarityPreset.custom) return custom;
+    return _rarityPreset.resolve(custom ?? RarityWeights([40, 30, 20, 10]));
+  }
+
+  PowerUpConfig get _matchTuning =>
+      _rarityWeights!.applyTo(AppSettingsScope.of(context).powerUps);
+
+  RaritySpawnOdds? get _rarityOdds => _rarityWeights == null
+      ? null
+      : RaritySpawnOdds.calculate(
+          tuning: AppSettingsScope.of(
+            context,
+          ).skillLibrary.applyTo(_matchTuning),
+          library: AppSettingsScope.of(context).skillLibrary,
+          builtIns: _powerUps,
+          customIds: _customChoice,
+        );
+
+  String? get _rarityError {
+    if (_mode == MatchMode.threads) return null;
+    if (_rarityWeights == null) {
+      return 'Use weights from 0 to 100, with at least one above zero.';
+    }
+    final odds = _rarityOdds!;
+    return odds.hasPickups && !odds.weighted
+        ? 'Give at least one enabled pickup tier a weight above zero.'
+        : null;
+  }
+
+  void _changeRarityWeight(int index, String value) {
+    _update(
+      () => _customRarityDraft = [..._customRarityValues]..[index] = value,
+    );
+    if (RarityWeights.parse(_customRarityValues) != null) {
+      _writeProfile('rarity-custom', jsonEncode(_customRarityValues));
+    }
+  }
+
+  void _resetRarityWeights() {
+    _update(() {
+      _customRarityDraft = ['40', '30', '20', '10'];
+      _rarityGeneration++;
+    });
+    _writeProfile('rarity-custom', jsonEncode(_customRarityValues));
+  }
+
   WallSparkSize _wallSparkSize = WallSparkSize.normal;
   BallSize _ballSize = BallSize.medium;
   MatchMode _mode = MatchMode.threads;
@@ -214,6 +278,26 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             ? widget.initialMayhem && profileMode == MatchMode.arsenal
             : (profileMode == MatchMode.arsenal &&
                   await DevicePrefs.read('mayhem') == '1'));
+    final rarityName = await _readProfile(
+      profileMode,
+      'rarity-preset',
+      mayhem: profileMayhem,
+    );
+    final rarityCustom = await _readProfile(
+      profileMode,
+      'rarity-custom',
+      mayhem: profileMayhem,
+    );
+    List<String>? customRarity;
+    try {
+      final decoded = jsonDecode(rarityCustom ?? 'null');
+      if (decoded is List && decoded.length == 4) {
+        final strings = decoded.map((v) => '$v').toList();
+        if (RarityWeights.parse(strings) != null) customRarity = strings;
+      }
+    } on FormatException {
+      /* Invalid old preferences fall back to admin seeds. */
+    }
     final effectVisuals = await _readProfile(
       profileMode,
       'effect-visuals',
@@ -342,6 +426,13 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           .firstOrNull;
       _powerUps = _modePowerUps[_activeProfileId];
       _showEffects = effects != '0';
+      _rarityPreset =
+          RarityPreset.values
+              .where((preset) => preset.name == rarityName)
+              .firstOrNull ??
+          RarityPreset.balanced;
+      _customRarityDraft = customRarity;
+      _rarityGeneration++;
       _effectRenderMode = EffectRenderMode.values
           .where((mode) => mode.name == effectVisuals)
           .firstOrNull;
@@ -564,9 +655,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     });
   }
 
-  bool get _canStart => _mayhem
-      ? _selected.length == 6
-      : _selected.length >= 2 && _selected.length <= _maxBalls;
+  bool get _canStart =>
+      _rarityError == null &&
+      (_mayhem
+          ? _selected.length == 6
+          : _selected.length >= 2 && _selected.length <= _maxBalls);
 
   void _start() {
     if (!_canStart) return;
@@ -604,7 +697,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode == MatchMode.threads
             ? PowerUpConfig.defaults
-            : AppSettingsScope.of(context).powerUps,
+            : _matchTuning,
         skillLibrary: _mode == MatchMode.threads
             ? SkillLibrary.defaults
             : AppSettingsScope.of(context).skillLibrary,
@@ -1141,6 +1234,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             ),
           ),
           const SizedBox(height: 6),
+          if (_rarityError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _rarityError!,
+                key: const ValueKey('match-rarity-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           Row(
             children: [
               OutlinedButton.icon(
@@ -1433,6 +1535,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             },
           ),
         ]),
+      if (tab == 0 && _mode != MatchMode.threads)
+        RarityPresetPanel(
+          key: ValueKey('rarity-panel-$_activeProfileId-$_rarityGeneration'),
+          preset: _rarityPreset,
+          customValues: _customRarityValues,
+          onPreset: (preset) {
+            _update(() => _rarityPreset = preset);
+            _writeProfile('rarity-preset', preset.name);
+          },
+          onWeight: _changeRarityWeight,
+          onReset: _resetRarityWeights,
+          odds: _rarityOdds,
+          error: _rarityError,
+          trapStartSeconds:
+              AppSettingsScope.of(context).powerUps.trapStartSteps / 60,
+        ),
       if (tab == 1)
         _settingsGroup('Appearance', [
           _choice<EffectRenderMode?>(

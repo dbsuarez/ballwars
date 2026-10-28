@@ -871,7 +871,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Pickups: All'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Traps'));
+    await tester.tap(find.widgetWithText(Tab, 'Traps'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('arena-theme-trap-card')), findsOneWidget);

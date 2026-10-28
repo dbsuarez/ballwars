@@ -22,5 +22,5 @@ Every call I made on your behalf while building `owner-backlog` (2026-10-28), in
 
 - **Web build, partial weapon selection:** open a share link with only some weapons chosen, including a pickup past the 32nd. The Chrome test environment wouldn't load the link tests, so the BigInt fix is only covered by the desktop test run.
 - **Linux CI and the golden images:** the new Shadow Clone icon cell was regenerated on Windows. Push the branch (a `test.yml` workflow runs the tests on Linux for any non-master branch, no deploy) and look at the result before merging to master.
-- **Database:** run `supabase/migrations/022_ball_gender.sql` in the Supabase SQL editor. Until you do, saving a ball works but forgets its gender.
+- **Database:** `supabase/migrations/022_ball_gender.sql` was applied in Supabase, confirmed by the owner on 2026-10-28. Deployment was not independently queried.
 - **Phone:** the End battle row at about 300 px wide, and the landscape fix, were checked with the test font, not on a real phone.

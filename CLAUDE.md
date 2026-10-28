@@ -16,6 +16,8 @@ Design docs (read them before larger changes):
 
 ## Commands
 
+Rarity presets: new Arsenal/All-Out/Mayhem matches default to Balanced (40/30/20/10), selected in Match Settings > Gameplay. Preferences and Custom weights are separate per mode. Player weights are frozen in `MatchConfig.tuning`; the legacy `PowerUpConfig` defaults stay 50/45/40/35 for historical links. The selector/RNG order is unchanged. See `docs/RARITY-PRESETS.md` for scope and preview assumptions. The owner confirmed production migration `022_ball_gender.sql` was applied on 2026-10-28.
+
 ```bash
 flutter pub get
 flutter run -d chrome                 # primary target

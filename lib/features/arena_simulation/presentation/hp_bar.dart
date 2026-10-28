@@ -2,6 +2,17 @@ import 'package:flutter/painting.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
 
+/// How full an HP bar is: above 50% [high], above 25% [medium], else [low]. Painting picks its cached
+/// Paint by this, not by comparing colors.
+enum HpLevel {
+  high(HpBar.green),
+  medium(HpBar.amber),
+  low(HpBar.red);
+
+  const HpLevel(this.color);
+  final Color color;
+}
+
 /// The optional HP bar drawn above a ball (cosmetic): a dark track, a fill in green, amber or red, and in
 /// Arsenal a gold segment for life past full (from apples) up to the match's max life.
 class HpBar {
@@ -20,9 +31,11 @@ class HpBar {
   /// Arsenal life past full, from 0 (full or less) to 1 (the match's max life).
   final double overflow;
 
-  final Color color;
+  final HpLevel level;
 
-  const HpBar(this.track, this.ratio, this.overflow, this.color);
+  const HpBar(this.track, this.ratio, this.overflow, this.level);
+
+  Color get color => level.color;
 
   Rect get fill =>
       Rect.fromLTWH(track.left, track.top, track.width * ratio, track.height);
@@ -52,14 +65,11 @@ class HpBar {
       if (bar == null) continue;
       canvas.drawRect(bar.track, _track);
       if (bar.ratio > 0) {
-        canvas.drawRect(
-          bar.fill,
-          bar.color == green
-              ? _green
-              : bar.color == amber
-              ? _amber
-              : _red,
-        );
+        canvas.drawRect(bar.fill, switch (bar.level) {
+          HpLevel.high => _green,
+          HpLevel.medium => _amber,
+          HpLevel.low => _red,
+        });
       }
       if (bar.overflow > 0) canvas.drawRect(bar.goldRect, _gold);
     }
@@ -89,10 +99,10 @@ HpBar? hpBarFor(SimulationBall ball, {required double maxLife}) {
       overflow = ((ball.life - full) / (maxLife - full)).clamp(0.0, 1.0);
     }
   }
-  final color = ratio > 0.5
-      ? HpBar.green
+  final level = ratio > 0.5
+      ? HpLevel.high
       : ratio > 0.25
-      ? HpBar.amber
-      : HpBar.red;
-  return HpBar(track, ratio, overflow, color);
+      ? HpLevel.medium
+      : HpLevel.low;
+  return HpBar(track, ratio, overflow, level);
 }

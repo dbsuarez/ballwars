@@ -44,9 +44,41 @@ void _place(MatchSimulationController match) {
     ..radius = 30;
 }
 
+/// The arena background at the spot [_pixelAbove] samples for [ball]: the same frame with every fan
+/// line gone and [ball] moved away, so nothing but the arena is drawn there.
+Future<Color> _backgroundAbove(
+  MatchSimulationController match,
+  SimulationBall ball,
+) async {
+  final spot = ball.position;
+  final radius = ball.radius;
+  final eliminated = ball.isEliminated;
+  for (final b in match.state.balls) {
+    b.fanLines.clear();
+  }
+  ball
+    ..position = const Offset(0, 180)
+    ..isEliminated = false;
+  final color = await _pixelAt(match, spot, radius, showHpBars: true);
+  ball
+    ..position = spot
+    ..isEliminated = eliminated;
+  return color;
+}
+
 Future<Color> _pixelAbove(
   MatchSimulationController match,
   SimulationBall ball, {
+  required bool showHpBars,
+  double dx = 0,
+}) =>
+    _pixelAt(match, ball.position, ball.radius, showHpBars: showHpBars, dx: dx);
+
+/// The pixel where the HP bar of a ball of [radius] at [spot] sits (moved by [dx]).
+Future<Color> _pixelAt(
+  MatchSimulationController match,
+  Offset spot,
+  double radius, {
   required bool showHpBars,
   double dx = 0,
 }) async {
@@ -62,8 +94,8 @@ Future<Color> _pixelAbove(
   ).paint(Canvas(recorder), const Size(520, 520));
   final image = await recorder.endRecording().toImage(520, 520);
   final bytes = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
-  final x = (260 + ball.position.dx + dx).floor();
-  final y = (260 + ball.position.dy - ball.radius * 1.35).floor();
+  final x = (260 + spot.dx + dx).floor();
+  final y = (260 + spot.dy - radius * 1.35).floor();
   final i = (y * 520 + x) * 4;
   image.dispose();
   return Color.fromARGB(
@@ -97,15 +129,18 @@ void main() {
       var bar = hpBarFor(ball, maxLife: 150)!;
       expect(bar.ratio, 1);
       expect(bar.color, HpBar.green);
+      expect(bar.level, HpLevel.high);
       expect(bar.overflow, 0);
       ball.lineCount = (ball.startLines * 0.4).round();
       bar = hpBarFor(ball, maxLife: 150)!;
       expect(bar.ratio, closeTo(ball.lineCount / ball.startLines, 1e-9));
       expect(bar.color, HpBar.amber);
+      expect(bar.level, HpLevel.medium);
       expect(bar.fill.width, closeTo(bar.track.width * bar.ratio, 1e-9));
       expect(bar.fill.left, bar.track.left);
       ball.lineCount = (ball.startLines * 0.2).round();
       expect(hpBarFor(ball, maxLife: 150)!.color, HpBar.red);
+      expect(hpBarFor(ball, maxLife: 150)!.level, HpLevel.low);
     });
 
     test('Arsenal fills by life, with a gold segment past full life', () {
@@ -139,6 +174,12 @@ void main() {
     });
   });
 
+  test('each level has its own color', () {
+    expect(HpLevel.high.color, HpBar.green);
+    expect(HpLevel.medium.color, HpBar.amber);
+    expect(HpLevel.low.color, HpBar.red);
+  });
+
   group('ArenaPainter HP bars', () {
     test('draws a green bar above each healthy ball when on', () async {
       final match = _match(MatchMode.threads);
@@ -152,10 +193,9 @@ void main() {
       final match = _match(MatchMode.threads);
       _place(match);
       final ball = match.state.balls.first;
-      expect(
-        await _pixelAbove(match, ball, showHpBars: false),
-        isNot(HpBar.green),
-      );
+      final background = await _backgroundAbove(match, ball);
+      expect(background, isNot(HpBar.green));
+      expect(await _pixelAbove(match, ball, showHpBars: false), background);
     });
 
     test('the empty part shows the track, red when low', () async {
@@ -177,10 +217,9 @@ void main() {
       final match = _match(MatchMode.threads);
       _place(match);
       final ball = match.state.balls.first..isEliminated = true;
-      expect(
-        await _pixelAbove(match, ball, showHpBars: true),
-        isNot(HpBar.green),
-      );
+      final background = await _backgroundAbove(match, ball);
+      expect(background, isNot(HpBar.green));
+      expect(await _pixelAbove(match, ball, showHpBars: true), background);
     });
   });
 }

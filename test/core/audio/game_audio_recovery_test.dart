@@ -8,12 +8,24 @@ import 'package:ballwars/core/offline/offline_store.dart';
 class _Player extends Fake implements AudioPlayer {
   final calls = <String>[];
   bool fail = false;
+  String? preparedSource;
+  int sourceLoads = 0;
   Completer<void>? blocked;
   @override
   PlayerState get state => PlayerState.stopped;
   @override
   dynamic noSuchMethod(Invocation invocation) {
     final method = invocation.memberName;
+    if (method == #setSource) {
+      preparedSource =
+          (invocation.positionalArguments.first as AssetSource).path;
+      sourceLoads++;
+    }
+    if (method == #resume && preparedSource != null) {
+      calls.add(preparedSource!);
+      if (fail) return Future<void>.error(StateError('lost native handle'));
+      return blocked?.future ?? Future<void>.value();
+    }
     if (method == #play) {
       calls.add((invocation.positionalArguments.first as AssetSource).path);
       if (fail) return Future<void>.error(StateError('lost native handle'));
@@ -49,11 +61,34 @@ void main() {
     };
   });
   tearDown(() async {
+    await audio.setMusicOn(true);
     audio.enabled = false;
     audio.resetEffects();
     await _flush();
     GameAudio.playerFactory = null;
   });
+
+  test(
+    'preparation is silent and repeat hits reuse the prepared source',
+    () async {
+      await audio.setMusicOn(false);
+      await audio.prepareMatchAudio();
+      expect(players, hasLength(45));
+      expect(players.every((p) => p.calls.isEmpty), isTrue);
+      expect(players.every((p) => p.sourceLoads == 1), isTrue);
+      audio.whistle();
+      await _flush();
+      audio.whistle();
+      await _flush();
+      await audio.prepareMatchAudio();
+      expect(players, hasLength(45));
+      expect(players.every((p) => p.sourceLoads == 1), isTrue);
+      expect(
+        players.expand((p) => p.calls).where((c) => c == 'sounds/whistle.wav'),
+        hasLength(2),
+      );
+    },
+  );
 
   test(
     'restart restores bounce without relying on a previous player',

@@ -224,6 +224,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Aim Tornado before casting; show wind effects on the ball's hands instead of mounting the tornado artwork.
 - [x] Add reusable configurable hand-effect visuals (effect, scale, color, duration) and migrate Firewall and Tornado to them.
 - [x] Add countdown SFX and delay match BGM until the countdown completes.
+- [x] Prepare reusable SFX voices and selected match BGM before countdown; retain prepared sources between rounds. Show Getting Ready only while preparation is pending, with bounded failure recovery. Physical-device audio latency still requires browser/Android listening checks.
 
 ## Phase 12 - Match setup information architecture and ball hair (2026-10-27)
 

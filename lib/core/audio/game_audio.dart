@@ -81,6 +81,7 @@ class GameAudio with WidgetsBindingObserver {
 
   final Map<String, _Voices> _voices = {};
   AudioPlayer? _music;
+  String? _preparedMusicAsset;
   AudioPlayer? _menu;
   AudioPlayer? _preview;
   String? _previewing;
@@ -292,6 +293,46 @@ class GameAudio with WidgetsBindingObserver {
     }
   }
 
+  /// Prepare reusable voices before the countdown, rather than decoding on impact.
+  /// A failed device handle is logged and replaced by the normal playback path.
+  Future<void> prepareMatchAudio() async {
+    if (!enabled) return;
+    final tasks = <Future<void>>[];
+    if (_effectsOn) {
+      for (final name in const [
+        'bounce',
+        'bounce_slow',
+        'collide',
+        'collide_slow',
+        'out',
+        'win',
+        'whistle',
+        'shot',
+        'shotgun',
+        'gatling',
+        'slash',
+        'shield',
+        'bomb',
+        'pickup',
+        'hit',
+      ]) {
+        tasks.add(_voices.putIfAbsent(name, () => _Voices(name)).prepare());
+      }
+    }
+    if (_musicOn) {
+      _queueMusic(() async {
+        final music = _music ??= _newPlayer();
+        if (_preparedMusicAsset != _track.asset) {
+          await music.setReleaseMode(ReleaseMode.loop);
+          await music.setSource(AssetSource(_track.asset));
+          _preparedMusicAsset = _track.asset;
+        }
+      });
+      tasks.add(_musicQueue);
+    }
+    await Future.wait(tasks);
+  }
+
   // Power-ups (Arsenal / All-Out). Rapid repeats (gatling, pellets) are thinned out.
   void shot() => _play('shot', 0.45, gap: 50);
 
@@ -473,14 +514,14 @@ class GameAudio with WidgetsBindingObserver {
         (_slow ? _musicVolume * 0.45 : _musicVolume) * _musicLevel,
       );
       if (!wanted()) return;
-      if (!restart && music.state == PlayerState.paused) {
-        await music.resume();
-      } else {
-        await music.play(
-          AssetSource(_track.asset),
-          volume: (_slow ? _musicVolume * 0.45 : _musicVolume) * _musicLevel,
-        );
+      final sourceChanged = _preparedMusicAsset != _track.asset;
+      if (sourceChanged) {
+        await music.setSource(AssetSource(_track.asset));
+        _preparedMusicAsset = _track.asset;
       }
+      if (!wanted()) return;
+      if (restart || sourceChanged) await music.seek(Duration.zero);
+      await music.resume();
       if (!wanted() && (!_playMusic || !_musicWanted || _musicPausedByUser)) {
         await music.pause();
       }
@@ -564,6 +605,7 @@ class GameAudio with WidgetsBindingObserver {
           debugPrint('GameAudio music: $e');
           final failed = _music;
           _music = null;
+          _preparedMusicAsset = null;
           if (failed != null) _guard(failed.dispose);
         });
   }
@@ -579,10 +621,37 @@ class _Voices {
   final List<AudioPlayer> _players = [];
   final Set<AudioPlayer> _busy = {};
   bool _disposed = false;
+  final Map<AudioPlayer, Future<void>> _prepared = {};
   int _next = 0;
   static const int _count = 3;
 
   _Voices(this.name);
+
+  Future<void> _prepare(AudioPlayer player) =>
+      _prepared.putIfAbsent(player, () async {
+        await player.setPlayerMode(PlayerMode.mediaPlayer);
+        await player.setReleaseMode(ReleaseMode.stop);
+        await player.setSource(AssetSource('sounds/$name.wav'));
+      });
+
+  Future<void> prepare() async {
+    if (_disposed) return;
+    while (_players.length < _count) {
+      _players.add(GameAudio._newPlayer());
+    }
+    await Future.wait(
+      _players.toList().map((player) async {
+        try {
+          await _prepare(player).timeout(const Duration(seconds: 4));
+        } catch (error) {
+          _players.remove(player);
+          _prepared.remove(player);
+          GameAudio._guard(player.dispose);
+          debugPrint('GameAudio prepare $name: $error');
+        }
+      }),
+    );
+  }
 
   void play(double volume) {
     if (_disposed) return;
@@ -602,21 +671,16 @@ class _Voices {
     _busy.add(player);
     GameAudio._guard(() async {
       try {
-        // Keep reusable media players on both platforms. Low-latency native
-        // sound handles have gone silent after repeated match/restart cycles.
-        await player
-            .setReleaseMode(ReleaseMode.stop)
-            .timeout(const Duration(seconds: 3));
+        await _prepare(player).timeout(const Duration(seconds: 4));
         if (_disposed) return;
-        await player
-            .play(
-              AssetSource('sounds/$name.wav'),
-              volume: volume,
-              mode: PlayerMode.mediaPlayer,
-            )
-            .timeout(const Duration(seconds: 3));
+        await player.setVolume(volume);
+        // stop mode retains the decoded source. Seek also restarts an overlapping
+        // voice without changing its source or rebuilding a native sound handle.
+        await player.seek(Duration.zero);
+        await player.resume().timeout(const Duration(seconds: 3));
       } catch (_) {
         _players.remove(player);
+        _prepared.remove(player);
         try {
           await player.dispose();
         } catch (_) {}

@@ -158,6 +158,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   bool _started = false;
   double _startCountdown = 3;
   int _countdownBeat = 3;
+  bool _audioPreparing = false;
 
   @override
   void didChangeDependencies() {
@@ -243,9 +244,15 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _heardCuts = 0;
     _heardKnockouts = 0;
     _heardGatling = 0;
-    _audio.resetEffects();
-    _audio.interaction('countdown');
     _matchGeneration++;
+    final generation = _matchGeneration;
+    _audioPreparing = true;
+    _audio.prepareMatchAudio().whenComplete(() {
+      if (!mounted || generation != _matchGeneration) return;
+      setState(() => _audioPreparing = false);
+      _skipNextDelta = true;
+      _audio.interaction('countdown');
+    });
     if (widget.config.mode != MatchMode.threads) {
       PowerUpSprites.load().then((_) {
         if (mounted) setState(() {});
@@ -266,6 +273,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     var dt = (elapsed - _lastElapsed).inMicroseconds / 1e6;
     _lastElapsed = elapsed;
     if (dt <= 0 || _isPaused || !_foreground) return;
+
+    if (_audioPreparing) return;
 
     if (_startCountdown > 0) {
       final before = _startCountdown;
@@ -935,7 +944,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          'ROUND START',
+                                          _audioPreparing
+                                              ? 'GETTING READY'
+                                              : 'ROUND START',
                                           style: AppText.ui(
                                             15,
                                             FontWeight.w900,
@@ -943,7 +954,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                           ),
                                         ),
                                         Text(
-                                          '${_startCountdown.ceil()}',
+                                          _audioPreparing
+                                              ? '...'
+                                              : '${_startCountdown.ceil()}',
                                           key: const ValueKey(
                                             'round-start-countdown',
                                           ),

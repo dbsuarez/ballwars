@@ -374,6 +374,46 @@ void main() {
     );
   });
 
+  testWidgets(
+    'HP bars toggle is passed to matches and remembered per match type',
+    (tester) async {
+      await pumpSetup(tester);
+      await openSettings(tester);
+      await tester.tap(find.text('Appearance').first);
+      await tester.pumpAndSettle();
+      final setting = find.byKey(const ValueKey('setting-HP bars'));
+      await tester.ensureVisible(setting);
+      expect(
+        find.descendant(of: setting, matching: find.text('Off')),
+        findsOneWidget,
+      );
+      await tester.tap(setting);
+      await tester.pump();
+      await closeSettings(tester);
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.showHpBars, isTrue);
+      final threads = await tester.runAsync(
+        () => DevicePrefs.read('match-threads-hp-bars'),
+      );
+      expect(threads, '1');
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpSetup(tester);
+      await openSettings(tester);
+      await tester.tap(find.text('Appearance').first);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('setting-HP bars')),
+          matching: find.text('On'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('Yes or No lets the user ask a question', (tester) async {
     await pumpSetup(tester);
     expect(find.widgetWithText(TextField, 'Your question'), findsNothing);
@@ -433,6 +473,140 @@ void main() {
       expect(allOut, isNull);
     },
   );
+
+  testWidgets(
+    'custom skill cards show their own description, else the generated text',
+    (tester) async {
+      final described = SkillLibrary.defaults
+          .create('Story Blade', PowerUpKind.knife)
+          .copyWith(description: 'A long tale of cuts. ' * 7);
+      final plain = SkillLibrary.defaults.create(
+        'Plain Blade',
+        PowerUpKind.knife,
+      );
+      var library = SkillLibrary.defaults;
+      for (final skill in [described, plain]) {
+        library = library.withDefinition(skill, PowerUpConfig.defaults);
+      }
+      final text = library.custom.first.description;
+      expect(text.length, lessThanOrEqualTo(160));
+      await pumpSetup(tester, skillLibrary: library);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await openSettings(tester);
+      await tester.tap(find.text('Pickups: All'));
+      await tester.pumpAndSettle();
+
+      final card = find.byKey(ValueKey('selection-card-${described.id}'));
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      final shown = tester.widget<Text>(
+        find.descendant(of: card, matching: find.text(text)),
+      );
+      expect(shown.maxLines, 2);
+      expect(shown.overflow, TextOverflow.ellipsis);
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.textContaining('Custom weapon based on'),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester.getSize(card).height,
+        tester
+            .getSize(find.byKey(const ValueKey('selection-card-knife')))
+            .height,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(ValueKey('selection-card-${plain.id}')),
+          matching: find.text('Custom weapon based on Knife.'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('Pickups count includes spawnable custom skills', (tester) async {
+    final a = SkillLibrary.defaults.create('Alpha Blade', PowerUpKind.knife);
+    final b = SkillLibrary.defaults.create('Beta Blade', PowerUpKind.knife);
+    final off = SkillLibrary.defaults
+        .create('Gamma Blade', PowerUpKind.knife)
+        .copyWith(enabled: false);
+    var library = SkillLibrary.defaults;
+    for (final skill in [a, b, off]) {
+      library = library.withDefinition(skill, PowerUpConfig.defaults);
+    }
+    final builtIns = PowerUpKind.values.where((k) => !k.isTrap).length;
+    await pumpSetup(tester, skillLibrary: library);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await openSettings(tester);
+    expect(find.textContaining('/ all pickups'), findsOneWidget);
+    expect(find.text('Pickups: All'), findsOneWidget);
+
+    await tester.tap(find.text('Pickups: All'));
+    await tester.pumpAndSettle();
+    final card = find.byKey(ValueKey('selection-card-${a.id}'));
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    await tester.tap(card);
+    await tester.pump();
+    final pistol = find.byKey(const ValueKey('selection-card-pistol'));
+    await tester.ensureVisible(pistol);
+    await tester.pumpAndSettle();
+    await tester.tap(pistol);
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    await closeSettings(tester);
+    expect(find.textContaining('/ $builtIns pickups'), findsOneWidget);
+    await openSettings(tester);
+    // Built-ins on: all but pistol; custom on: only Beta (Gamma is disabled).
+    expect(
+      find.text('Pickups: ${builtIns - 1 + 1} of ${builtIns + 2}'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a custom skill card shows its own tier label and color', (
+    tester,
+  ) async {
+    final kutsilyo = SkillLibrary.withOwnRarity(
+      SkillLibrary.defaults.create('Kutsilyo', PowerUpKind.knife),
+      PowerUpRarity.special,
+      PowerUpConfig.defaults,
+    );
+    final library = SkillLibrary.defaults.withDefinition(
+      kutsilyo,
+      PowerUpConfig.defaults,
+    );
+    await pumpSetup(tester, skillLibrary: library);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await openSettings(tester);
+    await tester.tap(find.text('Pickups: All'));
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(ValueKey('selection-card-${kutsilyo.id}'));
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    final name = find.descendant(of: card, matching: find.text('Kutsilyo'));
+    expect(tester.widget<Text>(name).style?.color, PowerUpRarity.special.color);
+    expect(
+      find.descendant(of: card, matching: find.text('Special')),
+      findsOneWidget,
+    );
+    // The built-in Knife keeps its own Normal tier.
+    final knife = find.byKey(const ValueKey('selection-card-knife'));
+    await tester.ensureVisible(knife);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: knife, matching: find.text('Normal')),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'weapon cards toggle selections; select all works; Done needs at least one',
@@ -533,6 +707,15 @@ void main() {
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       expect(find.text('Pickups: All'), findsOneWidget);
+      // Everything on is stored as '' (all), so kinds added later start on.
+      final saved = await tester.runAsync(
+        () async => (
+          await DevicePrefs.read('power-ups-arsenal'),
+          await DevicePrefs.read('power-ups-count-arsenal'),
+        ),
+      );
+      expect(saved!.$1, '');
+      expect(saved.$2, '${PowerUpKind.values.length}');
       await closeSettings(tester);
 
       await tester.tap(find.byIcon(Icons.shuffle));
@@ -541,6 +724,55 @@ void main() {
       expect(started!.powerUps, isNull);
     },
   );
+  testWidgets(
+    'a weapons pref saved with every one of 48 kinds loads as all, Shadow Clone included',
+    (tester) async {
+      await tester.runAsync(
+        () => DevicePrefs.write(
+          'power-ups-arsenal',
+          PowerUpKind.values.take(48).map((k) => k.name).join(','),
+        ),
+      );
+      await pumpSetup(tester);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await openSettings(tester);
+      expect(find.text('Pickups: All'), findsOneWidget);
+      await closeSettings(tester);
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, isNull);
+    },
+  );
+
+  test('weapons pref: all, legacy and explicit choices', () {
+    final first48 = PowerUpKind.values.take(48).toSet();
+    expect(powerUpsPref(null), '');
+    expect(powerUpsFromPref('', PowerUpKind.values.length), isNull);
+    expect(powerUpsFromPref(null, null), isNull);
+    // Legacy (no count): all 48 kinds of the time means all.
+    expect(powerUpsFromPref(powerUpsPref(first48), null), isNull);
+    // Legacy with one unchecked: stays explicit, and later kinds stay off.
+    final withoutPistol = powerUpsFromPref(
+      powerUpsPref(first48..remove(PowerUpKind.pistol)),
+      null,
+    )!;
+    expect(withoutPistol, isNot(contains(PowerUpKind.pistol)));
+    expect(withoutPistol, contains(PowerUpKind.knife));
+    expect(withoutPistol, isNot(contains(PowerUpKind.shadowClone)));
+    expect(
+      withoutPistol,
+      containsAll(PowerUpKind.values.where((k) => k.isTrap)),
+    );
+    // Saved with the current count: a set missing the newest kind stays explicit.
+    final noClone = PowerUpKind.values.toSet()..remove(PowerUpKind.shadowClone);
+    expect(
+      powerUpsFromPref(powerUpsPref(noClone), PowerUpKind.values.length),
+      noClone,
+    );
+  });
+
   testWidgets(
     'settings start collapsed and power-up lists are independent by mode',
     (tester) async {
@@ -679,6 +911,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('selection-card-apple')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey('selection-card-shadowClone'),
+        skipOffstage: false,
+      ),
       findsOneWidget,
     );
   });

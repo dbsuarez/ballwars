@@ -90,6 +90,7 @@ class PowerUpConfig {
     PowerUpKind.flamethrower,
     PowerUpKind.busterSword,
     PowerUpKind.ragingDemon,
+    PowerUpKind.shadowClone,
   ];
 
   /// Everything the admin can change, in the order Settings shows it.
@@ -304,6 +305,15 @@ class PowerUpConfig {
       24,
       min: 1,
       max: 60,
+      integer: true,
+    ),
+    TuningField(
+      'shadowCloneCount',
+      'Shadow clones',
+      _guns,
+      3,
+      min: 1,
+      max: 6,
       integer: true,
     ),
     TuningField(
@@ -630,6 +640,7 @@ class PowerUpConfig {
   int get gatlingRounds => value('rounds').toInt();
   int get bowArrows => value('arrows').toInt();
   int get ragingDemonHits => value('ragingDemonHits').toInt();
+  int get shadowCloneCount => value('shadowCloneCount').toInt();
 
   /// Arsenal life lost per hit of [kind] (0 for kinds that do no damage).
   double arenaDamage(PowerUpKind kind) => _byId.containsKey('dmg.${kind.name}')
@@ -736,10 +747,14 @@ class PowerUpConfig {
       var config = PowerUpConfig.defaults;
       final tiers = json['_tiers'];
       if (tiers != null) {
-        if (tiers is! String || tiers.length != PowerUpKind.values.length) {
+        // Shorter lists come from links made before newer kinds existed: those keep their
+        // default tier (ReplayLink leaves them out of the pool anyway).
+        if (tiers is! String ||
+            tiers.isEmpty ||
+            tiers.length > PowerUpKind.values.length) {
           return null;
         }
-        for (final kind in PowerUpKind.values) {
+        for (final kind in PowerUpKind.values.take(tiers.length)) {
           final digit = tiers[kind.index];
           if (kind.isTrap) {
             if (digit != '-') return null;

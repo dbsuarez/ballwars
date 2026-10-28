@@ -438,6 +438,12 @@ class _HomeScreenState extends State<_HomeScreen> {
     final handsOnPictures = await DevicePrefs.read('hands-on-pictures') == '1';
     final whitePickupBackgrounds =
         await DevicePrefs.read('white-pickup-backgrounds') != '0';
+    // The viewer's own HP bars choice for that match type (cosmetic, not in links).
+    final hpBars =
+        await DevicePrefs.read(
+          'match-${link.mayhem ? 'mayhem' : link.mode.id}-hp-bars',
+        ) ==
+        '1';
     final wallSparkSize =
         WallSparkSize.byId(await DevicePrefs.read('wall-spark-size')) ??
         WallSparkSize.normal;
@@ -474,11 +480,13 @@ class _HomeScreenState extends State<_HomeScreen> {
             randomizedHairstyles: link.randomizedHairstyles,
             look: look,
             handsOnPictures: handsOnPictures,
+            showHpBars: hpBars,
             whitePickupBackgrounds: whitePickupBackgrounds,
             wallSparkSize: wallSparkSize,
           ),
           seed: link.seed,
           nudgeSteps: link.nudgeSteps,
+          endStep: link.endStep,
         ),
       ),
     );

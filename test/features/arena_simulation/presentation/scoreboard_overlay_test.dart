@@ -6,6 +6,9 @@ import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites
 import 'package:ballwars/features/arena_simulation/presentation/scoreboard_overlay.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
 
 SimulationBall _ball(String id, int lines) => SimulationBall(
   config: CustomBall(
@@ -21,6 +24,69 @@ SimulationBall _ball(String id, int lines) => SimulationBall(
 );
 
 void main() {
+  testWidgets('a held custom skill shows its own tier color in the strip', (
+    tester,
+  ) async {
+    const tuning = PowerUpConfig.defaults;
+    final kutsilyo = SkillLibrary.withOwnRarity(
+      SkillLibrary.defaults.create('Kutsilyo', PowerUpKind.knife),
+      PowerUpRarity.special,
+      tuning,
+    );
+    final controller = MatchSimulationController(
+      const [
+        CustomBall(
+          id: 'a',
+          name: 'A',
+          primaryColor: Colors.red,
+          glowColor: Colors.pink,
+        ),
+        CustomBall(
+          id: 'b',
+          name: 'B',
+          primaryColor: Colors.blue,
+          glowColor: Colors.cyan,
+        ),
+      ],
+      arenaRadius: 260,
+      seed: 1,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+      skillLibrary: SkillLibrary.defaults.withDefinition(kutsilyo, tuning),
+    );
+    final [a, b] = controller.state.balls;
+    a
+      ..held = PowerUpKind.knife
+      ..heldSkillId = kutsilyo.id;
+    b.held = PowerUpKind.knife;
+
+    Color? colorIn(String id) => tester
+        .widget<Text>(
+          find.descendant(
+            of: find.byKey(ValueKey('equipment-strip-$id')),
+            matching: find.text('Knife'),
+          ),
+        )
+        .style
+        ?.color;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ScoreboardOverlay(
+            balls: [a, b],
+            mode: MatchMode.arsenal,
+            itemRarity: (ball, kind) =>
+                controller.powerUps!.itemRarity(kind, ball: ball),
+          ),
+        ),
+      ),
+    );
+    expect(colorIn('a'), PowerUpRarity.special.color);
+    // The built-in Knife keeps its Normal tier.
+    expect(colorIn('b'), PowerUpRarity.normal.color);
+  });
+
   testWidgets('shows each ball with its lines, and round wins in a series', (
     tester,
   ) async {

@@ -74,7 +74,11 @@ class PowerUpSprites {
   static const stickyGooRimId = 'effect.stickyGooRim';
 
   /// Kinds with no sheet art: their icons are drawn from [pixelIcons].
-  static const pixelArtOnly = {PowerUpKind.vampire, PowerUpKind.repulsor};
+  static const pixelArtOnly = {
+    PowerUpKind.vampire,
+    PowerUpKind.repulsor,
+    PowerUpKind.shadowClone,
+  };
 
   static final List<String> _iconIds = [
     for (final k in PowerUpKind.values) 'powerup.${k.name}',

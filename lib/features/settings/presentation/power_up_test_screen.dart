@@ -16,6 +16,8 @@ import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_canvas.dart';
+import '../../arena_simulation/presentation/arena_preview.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -69,6 +71,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   int _heardBallHits = 0;
   double _speed = 1;
   MatchMode _mode = MatchMode.arsenal;
+
+  /// The arena picked in the bottom bar; null follows the admin's setting.
+  ArenaDecoration? _arenaChoice;
   String _layout = 'Separated';
   final _motion = [_TestMotion.moving, _TestMotion.moving];
   final _randomStart = math.Random();
@@ -134,6 +139,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   Future<void> _loadRememberedChoices() async {
+    final savedArena = await DevicePrefs.read('power-test-arena');
+    _arenaChoice = ArenaDecoration.values
+        .where((d) => d.name == savedArena)
+        .firstOrNull;
     for (var i = 0; i < 2; i++) {
       final raw = await DevicePrefs.read('power-test-item-$i');
       final remembered = PowerUpKind.values
@@ -201,7 +210,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       slowMotionLines: 0,
       endlessBattle: _endless,
       dualWield: true,
-      arenaDecoration: settings.arenaDecoration,
+      arenaDecoration: _arenaChoice ?? settings.arenaDecoration,
     );
     _match!.powerUps!.automaticSpawning = _randomSpawns;
     final balls = _match!.state.balls;
@@ -676,13 +685,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         rimInset: 0,
                         rimAngle: 0,
                         look: BallLook.faces,
+                        showHpBars: true,
                         arenaTitle: AppSettingsScope.of(context).arenaTitle,
                         arenaSubtitle: AppSettingsScope.of(
                           context,
                         ).arenaSubtitle,
-                        arenaDecoration: AppSettingsScope.of(
-                          context,
-                        ).arenaDecoration,
+                        arenaDecoration:
+                            _arenaChoice ??
+                            AppSettingsScope.of(context).arenaDecoration,
                         projectileRenderMode: AppSettingsScope.of(
                           context,
                         ).projectileRenderMode,
@@ -1099,11 +1109,78 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
+  Future<void> _changeArena() async {
+    final c = BallWarsColors.of(context);
+    final active = _arenaChoice ?? AppSettingsScope.of(context).arenaDecoration;
+    final picked = await showModalBottomSheet<ArenaDecoration>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 440),
+      builder: (sheetContext) => SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final d in ArenaDecoration.values)
+              InkWell(
+                key: ValueKey('test-arena-${d.name}'),
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => Navigator.pop(sheetContext, d),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: SizedBox(
+                    width: 112,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          children: [
+                            ArenaPreview(decoration: d, size: 96),
+                            if (d == active)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Icon(
+                                  Icons.check_circle,
+                                  size: 22,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(d.label, style: TextStyle(color: c.text)),
+                        Text(
+                          d.hazardCaption,
+                          style: TextStyle(fontSize: 10, color: c.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    DevicePrefs.write('power-test-arena', picked.name);
+    setState(() {
+      _arenaChoice = picked;
+      _reset();
+    });
+  }
+
   Widget _playback() {
     final match = _match!;
     final finished = match.state.status == MatchStatus.finished;
     const speeds = [0.5, 1.0, 2.0];
     final nextSpeed = speeds[(speeds.indexOf(_speed) + 1) % speeds.length];
+    final arenaLabel =
+        (_arenaChoice ?? AppSettingsScope.of(context).arenaDecoration).label;
     final playbackLabel = finished
         ? 'Replay'
         : _paused
@@ -1157,6 +1234,22 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     icon: const Icon(Icons.speed, size: 18),
                     label: Text(
                       '${_speed == _speed.roundToDouble() ? _speed.toInt() : _speed}×',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Tooltip(
+                    message: 'Change arena: $arenaLabel',
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('test-arena'),
+                      onPressed: _changeArena,
+                      icon: const Icon(Icons.stadium_outlined, size: 18),
+                      label: Text(
+                        arenaLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ),

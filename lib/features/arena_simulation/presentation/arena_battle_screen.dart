@@ -40,11 +40,15 @@ class ArenaBattleScreen extends StatefulWidget {
   /// Unstuck nudges of a replayed match (steps), repeated in its first round.
   final List<int> nudgeSteps;
 
+  /// End battle step of a replayed endless match, repeated in its first round.
+  final int? endStep;
+
   const ArenaBattleScreen({
     super.key,
     required this.config,
     this.seed,
     this.nudgeSteps = const [],
+    this.endStep,
   });
 
   @override
@@ -169,8 +173,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Seed of the first round: the link's seed, until Play again starts fresh matches.
   late int? _seedBase = widget.seed;
 
+  /// True while the current round is a replay (the Replay button, or a match opened from a link or
+  /// the saved replays list, in its first round): there is nothing new to save. Play again, New match
+  /// and the next round of a series start new matches and clear it.
+  bool _watchingReplay = false;
+
   /// Starts a match. [replaySeed] re-runs a finished match exactly (Replay); it isn't counted again.
-  void _initMatch({int? replaySeed, List<int> replayNudges = const []}) {
+  void _initMatch({
+    int? replaySeed,
+    List<int> replayNudges = const [],
+    int? replayEndStep,
+  }) {
     // A fixed seed (replay link) gives each round its own fixed seed.
     final seed =
         replaySeed ?? (_seedBase == null ? null : _seedBase! + _round - 1);
@@ -203,8 +216,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       nudgeSteps: replaySeed != null
           ? replayNudges
           : (_seedBase != null && _round == 1 ? widget.nudgeSteps : const []),
+      // And its End battle step, the same way.
+      endAfterKnockoutStep: replaySeed != null
+          ? replayEndStep
+          : (_seedBase != null && _round == 1 ? widget.endStep : null),
     );
     _roundCounted = replaySeed != null;
+    _watchingReplay = replaySeed != null || (_seedBase != null && _round == 1);
     _startCountdown = 3;
     _countdownBeat = 3;
     _state = _controller.state;
@@ -457,7 +475,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Copies a link that replays this exact match in the web app: a short
   /// `?r=<code>` link when the server is reachable, else the long one.
   Future<void> _copyReplayLink() async {
-    Uri link = _replayUri();
+    final long = _replayUriOrExplain();
+    if (long == null) return;
+    Uri link = long;
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
       try {
@@ -483,6 +503,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     effectRenderMode: widget.config.effectRenderMode,
     seed: _controller.seed,
     nudgeSteps: _controller.nudgeSteps,
+    endStep: _controller.endStep,
     speedMultiplier: widget.config.speedMultiplier,
     automaticSpeedUp: widget.config.automaticSpeedUp,
     showEffects: _showEffects,
@@ -507,9 +528,26 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     skillLibrary: widget.config.skillLibrary,
   ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
 
+  /// [_replayUri], or null after telling the user why there is none: the custom skill snapshot is
+  /// over `SkillLibrary.maxReplayCharacters`.
+  Uri? _replayUriOrExplain() {
+    try {
+      return _replayUri();
+    } on FormatException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Too many custom skills to share this replay'),
+        ),
+      );
+      return null;
+    }
+  }
+
   Future<void> _saveReplay() async {
+    final uri = _replayUriOrExplain();
+    if (uri == null) return;
     await SavedReplayStore.add(
-      _replayUri(),
+      uri,
       contestantNames: widget.config.contestants.map((ball) => ball.name),
     );
     if (!mounted) return;
@@ -545,15 +583,102 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _controller.requestNudge();
   }
 
+  /// End battle (endless, not Mayhem): the match ends at the next knockout with the usual finish. The
+  /// step is recorded with the match, so replays and videos end at the same knockout.
+  void _endBattle() {
+    _audio.click();
+    setState(_controller.requestEndAfterKnockout);
+  }
+
+  /// Width the bottom-right audio buttons take (three 44 px buttons, two gaps, a margin).
+  static const double _audioButtonsWidth = 148;
+
+  /// Room the bottom-left row needs for Unstuck plus a labeled End battle, measured with the
+  /// button text style and the text scale so the longest label ("Ending after next KO") always
+  /// fits; narrower, End battle is an icon with its label in the tooltip.
+  double _endBattleLabelWidth(BuildContext context) {
+    final theme = Theme.of(context);
+    final style =
+        theme.outlinedButtonTheme.style?.textStyle?.resolve(const {}) ??
+        theme.textTheme.labelLarge;
+    final scaler = MediaQuery.textScalerOf(context);
+    double width(String text) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final w = painter.width;
+      painter.dispose();
+      return w;
+    }
+
+    // Each labeled button: 10 px padding on both sides, an 18 px icon and an 8 px gap; 8 px
+    // between the buttons, and a little slack for rounding.
+    const chrome = 20 + 18 + 8;
+    return width('Unstuck') +
+        width('Ending after next KO') +
+        2 * chrome +
+        8 +
+        8;
+  }
+
+  /// End battle: enabled until pressed. "Ending after next KO" once the request is in force (a replay
+  /// with a recorded end step shows it only from that step, and can't be ended by hand).
+  Widget _endBattleButton({required bool compact}) => ListenableBuilder(
+    listenable: _frame,
+    builder: (context, _) {
+      final endStep = _controller.endStep;
+      final ending = endStep == null
+          ? _controller.endRequested
+          : _controller.stepCount >= endStep;
+      final label = ending ? 'Ending after next KO' : 'End battle';
+      final onPressed = _state.winnerId != null || _controller.endRequested
+          ? null
+          : _endBattle;
+      final style = OutlinedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        minimumSize: const Size(40, 36),
+      );
+      return Tooltip(
+        message: compact ? label : 'End the battle after the next knockout',
+        child: compact
+            ? OutlinedButton(
+                key: const ValueKey('arena-end-battle'),
+                onPressed: onPressed,
+                style: style,
+                child: Icon(
+                  ending ? Icons.hourglass_bottom_rounded : Icons.flag_rounded,
+                  size: 18,
+                ),
+              )
+            : OutlinedButton.icon(
+                key: const ValueKey('arena-end-battle'),
+                onPressed: onPressed,
+                icon: const Icon(Icons.flag_rounded, size: 18),
+                label: Text(label),
+                style: style,
+              ),
+      );
+    },
+  );
+
   /// Replay: watch the match that just ended again, exactly as it played (same seed; the round isn't
   /// counted twice).
   void _replay() {
     _audio.click();
     final seed = _controller.seed;
     final nudges = _controller.nudgeSteps;
+    final endStep = _controller.endStep;
     setState(() {
       _isPaused = false;
-      _initMatch(replaySeed: seed, replayNudges: nudges);
+      _initMatch(
+        replaySeed: seed,
+        replayNudges: nudges,
+        replayEndStep: endStep,
+      );
     });
   }
 
@@ -705,6 +830,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       builder: (context, _) => ScoreboardOverlay(
         artworkTint: (ball, kind) =>
             _state.powerUps?.artworkTint(kind, ball: ball) ?? 0xFFFFFFFF,
+        itemRarity: (ball, kind) =>
+            _state.powerUps?.itemRarity(kind, ball: ball) ??
+            widget.config.tuning.rarityOf(kind),
         tuning: widget.config.tuning,
         mode: widget.config.mode,
         compact:
@@ -763,6 +891,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               repaint: _frame,
                               look: widget.config.look,
                               handsOnPictures: widget.config.handsOnPictures,
+                              showHpBars: widget.config.showHpBars,
                               whitePickupBackgrounds:
                                   widget.config.whitePickupBackgrounds,
                               projectileRenderMode:
@@ -827,17 +956,41 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         Positioned(
                           bottom: 0,
                           left: 0,
-                          child: Tooltip(
-                            message: 'Unstuck: push every ball in a random direction',
-                            child: OutlinedButton.icon(
-                              key: const ValueKey('arena-unstuck'),
-                              onPressed: finished ? null : _unstuck,
-                              icon: const Icon(Icons.open_with_rounded, size: 18),
-                              label: const Text('Unstuck'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
-                              ),
+                          // Leaves room for the three audio buttons at the bottom right.
+                          right: _audioButtonsWidth,
+                          child: LayoutBuilder(
+                            builder: (context, box) => Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message:
+                                      'Unstuck: push every ball in a random direction',
+                                  child: OutlinedButton.icon(
+                                    key: const ValueKey('arena-unstuck'),
+                                    onPressed: finished ? null : _unstuck,
+                                    icon: const Icon(
+                                      Icons.open_with_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Unstuck'),
+                                    style: OutlinedButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (widget.config.endlessBattle &&
+                                    !widget.config.mayhem) ...[
+                                  const SizedBox(width: 8),
+                                  _endBattleButton(
+                                    compact:
+                                        box.maxWidth <
+                                        _endBattleLabelWidth(context),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
@@ -1008,6 +1161,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 contestants: widget.config.contestants,
                                 seed: _controller.seed,
                                 nudgeSteps: _controller.nudgeSteps,
+                                endStep: _controller.endStep,
                                 arenaRadius: _arenaRadius,
                                 speedMultiplier: widget.config.speedMultiplier,
                                 automaticSpeedUp:
@@ -1022,6 +1176,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 ballScale: widget.config.ballSize.scale,
                                 mode: widget.config.mode,
                                 look: widget.config.look,
+                                showHpBars: widget.config.showHpBars,
                                 powerUps: widget.config.powerUps,
                                 customSkills: widget.config.customSkills,
                                 tuning: widget.config.tuning,
@@ -1057,10 +1212,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         _audio.click();
                         _copyReplayLink();
                       },
-                      onSaveReplay: () {
-                        _audio.click();
-                        _saveReplay();
-                      },
+                      onSaveReplay: _watchingReplay
+                          ? null
+                          : () {
+                              _audio.click();
+                              _saveReplay();
+                            },
                       onReplay: _replay,
                       onReplayFinisher:
                           _finishersOn &&
@@ -1176,45 +1333,50 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                   Container(width: 1, color: c.border),
                   Expanded(
                     child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: leave,
-                              ),
-                              const SizedBox(height: 8),
-                              ListenableBuilder(
-                                listenable: _frame,
-                                builder: (context, _) => _VersusHeader(
-                                  balls: _state.balls,
-                                  look: widget.config.look,
+                      // Landscape phones are too short for the whole panel: it scrolls there.
+                      // Where it fits, the scroll view is as tall as the panel, so nothing moves.
+                      child: SingleChildScrollView(
+                        key: const ValueKey('arena-side-panel'),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: leave,
                                 ),
-                              ),
-                              const SizedBox(height: 28),
-                              MatchStatusHeader(
-                                headline: headline,
-                                subtitle: roundLabel,
-                                dimmed: finished,
-                                align: TextAlign.start,
-                              ),
-                              const SizedBox(height: 28),
-                              scoreboard,
-                              const SizedBox(height: 28),
-                              Row(
-                                children: [
-                                  timer,
-                                  pause,
-                                  const SizedBox(width: 8),
-                                  restart,
-                                ],
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                ListenableBuilder(
+                                  listenable: _frame,
+                                  builder: (context, _) => _VersusHeader(
+                                    balls: _state.balls,
+                                    look: widget.config.look,
+                                  ),
+                                ),
+                                const SizedBox(height: 28),
+                                MatchStatusHeader(
+                                  headline: headline,
+                                  subtitle: roundLabel,
+                                  dimmed: finished,
+                                  align: TextAlign.start,
+                                ),
+                                const SizedBox(height: 28),
+                                scoreboard,
+                                const SizedBox(height: 28),
+                                Row(
+                                  children: [
+                                    timer,
+                                    pause,
+                                    const SizedBox(width: 8),
+                                    restart,
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

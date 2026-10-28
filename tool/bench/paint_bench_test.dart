@@ -25,7 +25,13 @@ void main() {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
       paintWatch.start();
-      ArenaPainter(state: c.state, arenaRadius: 300, rimAngle: 0).paint(canvas, const Size(side, side));
+      // --dart-define=HP_BARS=true measures with the HP bars on.
+      ArenaPainter(
+        state: c.state,
+        arenaRadius: 300,
+        rimAngle: 0,
+        showHpBars: const bool.fromEnvironment('HP_BARS'),
+      ).paint(canvas, const Size(side, side));
       final picture = recorder.endRecording();
       paintWatch.stop();
       if (i % 4 == 0) {

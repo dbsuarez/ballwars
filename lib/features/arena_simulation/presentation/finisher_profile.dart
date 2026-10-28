@@ -478,6 +478,15 @@ class FinisherProfile {
       style: FinisherStyle.barrage,
       symbol: 'R',
     ),
+    'Shadow Clone': FinisherProfile(
+      move: 'Shadow Clone',
+      yell: 'KAGE BUNSHIN NO JUTSU!',
+      impactYell: 'FINISHED!',
+      color: Color(0xFF14121C),
+      accent: Color(0xFF8E7CFF),
+      style: FinisherStyle.barrage,
+      symbol: 'S',
+    ),
     'Collision': FinisherProfile(
       move: 'Collision',
       yell: 'FULL SPEED!',

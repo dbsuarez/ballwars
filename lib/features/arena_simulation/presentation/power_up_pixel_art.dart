@@ -815,4 +815,23 @@ const Map<PowerUpKind, List<String>> pixelIcons = {
     '......KKKK......',
     '................',
   ],
+  // A ball with two shadow copies behind it.
+  PowerUpKind.shadowClone: [
+    '................',
+    '................',
+    '..KKKK....KKKK..',
+    '.KDDDDK..KDDDDK.',
+    'KDDDDKKKKKKDDDDK',
+    'KDGDKWWWWWWKDGDK',
+    'KDDKWWWWWWWWKDDK',
+    'KDDKWWKWWKWWKDDK',
+    '.KKWWWKWWKWWWKK.',
+    '..KWWWWWWWWWWK..',
+    '..KWWWWWWWWWWK..',
+    '..KWWKWWWWKWWK..',
+    '...KWWKKKKWWK...',
+    '....KWWWWWWK....',
+    '.....KKKKKK.....',
+    '................',
+  ],
 };

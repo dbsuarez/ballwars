@@ -19,6 +19,7 @@ import '../../settings/presentation/power_up_test_screen.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
+import 'grip_preview_dialog.dart';
 import 'skill_artwork_tint.dart';
 
 class SkillManagementScreen extends StatefulWidget {
@@ -158,6 +159,23 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
   }
 
+  /// A built-in's tier lives in the tuning (`tier.<kind>`); a custom skill keeps its own, so editing it
+  /// never changes the built-in it is based on. An unchanged custom tier keeps following its base kind.
+  (SkillDefinition, PowerUpConfig) _applyRarity(
+    SkillDefinition original,
+    _SkillEditResult edited,
+  ) {
+    final rarity = edited.rarity;
+    if (rarity == null) return (edited.skill, _tuning);
+    if (!edited.skill.custom) {
+      return (edited.skill, _tuning.withRarity(original.baseKind, rarity));
+    }
+    if (rarity == SkillLibrary.rarityOf(original, _tuning)) {
+      return (edited.skill, _tuning);
+    }
+    return (SkillLibrary.withOwnRarity(edited.skill, rarity, _tuning), _tuning);
+  }
+
   Future<void> _edit(SkillDefinition skill) async {
     final edited = await showModalBottomSheet<_SkillEditResult>(
       context: context,
@@ -167,14 +185,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         skill: skill,
         library: _library,
         tuning: _tuning,
-        rarity: _tuning.rarityOf(skill.baseKind),
+        rarity: SkillLibrary.rarityOf(skill, _tuning),
         onSave: widget.onSave == null
             ? null
             : (edited) async {
-                final tuning = edited.rarity == null
-                    ? _tuning
-                    : _tuning.withRarity(skill.baseKind, edited.rarity!);
-                final library = _library.withDefinition(edited.skill, tuning);
+                final (definition, tuning) = _applyRarity(skill, edited);
+                final library = _library.withDefinition(definition, tuning);
                 await widget.onSave!(
                   SkillManagementResult(
                     library: library,
@@ -193,10 +209,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
     if (edited == null || !mounted) return;
     setState(() {
-      if (edited.rarity != null) {
-        _tuning = _tuning.withRarity(skill.baseKind, edited.rarity!);
-      }
-      _library = _library.withDefinition(edited.skill, _tuning);
+      final (definition, tuning) = _applyRarity(skill, edited);
+      _tuning = tuning;
+      _library = _library.withDefinition(definition, _tuning);
     });
   }
 
@@ -349,7 +364,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             skill.resolvedCategory == SkillCategory.trap ||
                 skill.resolvedCategory == SkillCategory.arenaTrap
             ? 'Special'
-            : _tuning.rarityOf(skill.baseKind)!.label;
+            : SkillLibrary.rarityOf(skill, _tuning)!.label;
         final details = <String>[
           tierLabel,
           if (skill.custom) skill.enabled ? 'Active' : 'Inactive',
@@ -360,6 +375,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             '${skill.projectileCount} projectiles',
           if (skill.maxBounces != null) '${skill.maxBounces} bounce',
         ];
+        // A custom skill's own description, else the generated note.
+        final note = skill.custom && skill.description.isNotEmpty
+            ? skill.description
+            : skill.custom && skill.enabled
+            ? 'Independent skill using ${skill.baseKind.label} artwork'
+            : null;
         return Card(
           child: ListTile(
             minVerticalPadding: 12,
@@ -376,16 +397,18 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                     skill.resolvedCategory == SkillCategory.trap ||
                         skill.resolvedCategory == SkillCategory.arenaTrap
                     ? const Color(0xFFFFD54F)
-                    : _tuning.rarityOf(skill.baseKind)?.color,
+                    : SkillLibrary.rarityOf(skill, _tuning)?.color,
                 fontWeight: FontWeight.w700,
               ),
             ),
             subtitle: Text(
               '${_categoryLabel(skill.resolvedCategory)}'
               '${details.isEmpty ? "" : " • ${details.join(" • ")}"}'
-              '${skill.custom && skill.enabled ? "\nIndependent skill using ${skill.baseKind.label} artwork" : ""}',
+              '${note == null ? "" : "\n$note"}',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            isThreeLine: skill.custom && skill.enabled,
+            isThreeLine: note != null,
             trailing: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') _edit(skill);
@@ -739,10 +762,15 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                         ),
                         items: [
                           for (final mode in EffectRenderMode.values)
-                            DropdownMenuItem(value: mode, child: Text(mode.label)),
+                            DropdownMenuItem(
+                              value: mode,
+                              child: Text(mode.label),
+                            ),
                         ],
                         onChanged: (mode) {
-                          if (mode != null) setState(() => _effectVisuals = mode);
+                          if (mode != null) {
+                            setState(() => _effectVisuals = mode);
+                          }
                         },
                       ),
                     ),
@@ -753,7 +781,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   'Sprite artwork or the lightweight vector look for projectiles, explosions and freeze. '
                   'Used by skills whose Effect visuals is "Use global setting"; a skill set to Sprite or Vector '
                   'keeps its own. Players can also pick their own in Match Setup > Appearance.',
-                  style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.35),
+                  style: AppText.ui(
+                    12,
+                    FontWeight.w500,
+                    color: c.muted,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -1061,6 +1094,12 @@ class _SkillEditorState extends State<_SkillEditor> {
     'weaponGripInset': TextEditingController(
       text: '${widget.skill.weaponGripInset}',
     ),
+    'weaponGripSide': TextEditingController(
+      text: '${widget.skill.weaponGripSide}',
+    ),
+    'weaponGripRotation': TextEditingController(
+      text: '${widget.skill.weaponGripRotation}',
+    ),
     'effectStrength': TextEditingController(
       text: '${widget.skill.effectStrength}',
     ),
@@ -1097,6 +1136,7 @@ class _SkillEditorState extends State<_SkillEditor> {
         text: '${widget.skill.triggerIntervalSeconds}',
       ),
     'knockback': TextEditingController(text: '${widget.skill.knockback}'),
+    'meleeReach': TextEditingController(text: '${widget.skill.meleeReach}'),
     'bubbleDuration': TextEditingController(
       text: '${widget.skill.bubbleDurationSeconds}',
     ),
@@ -1132,6 +1172,9 @@ class _SkillEditorState extends State<_SkillEditor> {
         .toUpperCase(),
   );
   late final _yell = TextEditingController(text: widget.skill.yell);
+  late final _description = TextEditingController(
+    text: widget.skill.description,
+  );
   late final _sound = TextEditingController(text: widget.skill.soundCue);
   late int _handColor = widget.skill.handEffectColor;
   late int _spriteTint = widget.skill.spriteTint;
@@ -1142,6 +1185,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     _name.dispose();
     _sound.dispose();
     _yell.dispose();
+    _description.dispose();
     _effectColor.dispose();
     for (final controller in _numbers.values) {
       controller.dispose();
@@ -1172,6 +1216,17 @@ class _SkillEditorState extends State<_SkillEditor> {
   bool get _showsFreezeSettings =>
       _usesEffect(SkillEffectType.freeze) ||
       (!widget.skill.isComposed && widget.skill.baseKind == PowerUpKind.freeze);
+
+  /// Strikes on a bump (and so can have a melee reach): a collision trigger, a blade, the orbiting
+  /// flail or a shield, matching the match's contact rules.
+  bool get _strikesOnContact =>
+      (_trigger == SkillTrigger.collision &&
+          _targeting != null &&
+          _delivery != null &&
+          _effectType != null) ||
+      widget.skill.baseKind.isBlade ||
+      widget.skill.baseKind == PowerUpKind.orbitingFlail ||
+      widget.skill.baseKind == PowerUpKind.shield;
 
   bool get _usesProjectileDelivery =>
       _delivery == SkillDelivery.projectile ||
@@ -1270,12 +1325,15 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('pickupDisplayScale', defaults.pickupDisplayScale);
       number('effectDisplayScale', defaults.effectDisplayScale);
       number('weaponGripInset', defaults.weaponGripInset);
+      number('weaponGripSide', defaults.weaponGripSide);
+      number('weaponGripRotation', defaults.weaponGripRotation);
       number('effectStrength', defaults.effectStrength);
       number('healing', defaults.healing);
       number('shieldHits', defaults.shieldHits);
       number('frozenDamageMultiplier', defaults.frozenDamageMultiplier);
       number('frozenCollisionDamage', defaults.frozenCollisionDamage);
       number('knockback', defaults.knockback);
+      number('meleeReach', defaults.meleeReach);
       number('repeatCount', defaults.repeatCount);
       number('repeatInterval', defaults.repeatIntervalSeconds);
       number('startDelay', defaults.startDelaySeconds);
@@ -1406,6 +1464,9 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
     return widget.skill.copyWith(
       name: _name.text.trim(),
+      description: widget.skill.custom
+          ? SkillDefinition.cleanDescription(_description.text)
+          : null,
       enabled: _enabled,
       category: _category,
       arsenalDamage: _double('arsenal'),
@@ -1427,12 +1488,15 @@ class _SkillEditorState extends State<_SkillEditor> {
       pickupDisplayScale: _double('pickupDisplayScale'),
       effectDisplayScale: _double('effectDisplayScale'),
       weaponGripInset: _double('weaponGripInset'),
+      weaponGripSide: _double('weaponGripSide'),
+      weaponGripRotation: _double('weaponGripRotation'),
       effectStrength: _double('effectStrength'),
       healing: _double('healing'),
       shieldHits: _int('shieldHits'),
       frozenDamageMultiplier: _double('frozenDamageMultiplier'),
       frozenCollisionDamage: _double('frozenCollisionDamage'),
       knockback: _double('knockback'),
+      meleeReach: _double('meleeReach'),
       spriteMode: _sprite,
       effectMode: _effect,
       useGlobalEffectVisuals: _globalEffectVisuals,
@@ -1470,9 +1534,12 @@ class _SkillEditorState extends State<_SkillEditor> {
     'pickupDisplayScale': (0.25, 3),
     'effectDisplayScale': (0.25, 3),
     'weaponGripInset': (0, 1.5),
+    'weaponGripSide': (-1.5, 1.5),
+    'weaponGripRotation': (-180, 180),
     'projectileSize': (0.1, 5),
     'screenShake': (0, 1),
     'knockback': (0, 100),
+    'meleeReach': (0, 3),
     'range': (0.05, 12),
     'arsenal': (0, 500),
     'allOut': (0, 360),
@@ -1500,6 +1567,13 @@ class _SkillEditorState extends State<_SkillEditor> {
     'handEffectDuration': (0.1, 10),
   };
 
+  /// Number fields that may go below zero.
+  static const _signedKeys = {
+    'projectileSpin',
+    'weaponGripSide',
+    'weaponGripRotation',
+  };
+
   static const _wholeNumberKeys = {
     'count',
     'allOut',
@@ -1520,11 +1594,41 @@ class _SkillEditorState extends State<_SkillEditor> {
     );
   }
 
+  Future<void> _previewGrip() async {
+    final result = await GripPreviewDialog.show(
+      context,
+      kind: widget.skill.baseKind,
+      artwork: _artwork ?? widget.skill.baseKind,
+      tint: _spriteTint,
+      useSprite: _sprite == SkillVisualMode.sprite,
+      displayScale: _double('weaponDisplayScale') ?? 1,
+      grip: GripValues(
+        inset: _double('weaponGripInset') ?? 0,
+        side: _double('weaponGripSide') ?? 0,
+        rotation: _double('weaponGripRotation') ?? 0,
+      ),
+    );
+    if (result == null || !mounted) return;
+    // Whole numbers without decimals ("20", not "20.00"); radii keep two.
+    String text(double v) {
+      final rounded = double.parse(v.toStringAsFixed(2));
+      return rounded == rounded.roundToDouble()
+          ? '${rounded.round()}'
+          : rounded.toStringAsFixed(2);
+    }
+
+    setState(() {
+      _numbers['weaponGripInset']!.text = text(result.inset);
+      _numbers['weaponGripSide']!.text = text(result.side);
+      _numbers['weaponGripRotation']!.text = '${result.rotation.round()}';
+    });
+  }
+
   String? _numberError(String key) {
     final raw = _numbers[key]?.text ?? '';
     final value = double.tryParse(raw);
     if (value == null || !value.isFinite) return 'Enter a number';
-    if (value < 0 && key != 'projectileSpin') return 'Must be zero or more';
+    if (value < 0 && !_signedKeys.contains(key)) return 'Must be zero or more';
     if (_wholeNumberKeys.contains(key) && value != value.roundToDouble()) {
       return 'Use a whole number';
     }
@@ -1562,10 +1666,16 @@ class _SkillEditorState extends State<_SkillEditor> {
           items: [
             DropdownMenuItem<PowerUpKind?>(
               value: null,
-              child: option(widget.skill.baseKind, 'Own look (${widget.skill.baseKind.label})'),
+              child: option(
+                widget.skill.baseKind,
+                'Own look (${widget.skill.baseKind.label})',
+              ),
             ),
             for (final kind in PowerUpKind.values.where((k) => k.isWeapon))
-              DropdownMenuItem<PowerUpKind?>(value: kind, child: option(kind, kind.label)),
+              DropdownMenuItem<PowerUpKind?>(
+                value: kind,
+                child: option(kind, kind.label),
+              ),
           ],
           onChanged: (value) => setState(() => _artwork = value),
         ),
@@ -1586,13 +1696,18 @@ class _SkillEditorState extends State<_SkillEditor> {
                 value: candidate.id,
                 child: option(
                   candidate.baseKind,
-                  candidate.custom ? candidate.name : '${candidate.name} (built-in)',
+                  candidate.custom
+                      ? candidate.name
+                      : '${candidate.name} (built-in)',
                 ),
               ),
             if (_payload != null && !known)
               DropdownMenuItem<String?>(
                 value: _payload,
-                child: Text('Missing: $_payload', overflow: TextOverflow.ellipsis),
+                child: Text(
+                  'Missing: $_payload',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
           ],
           onChanged: (value) => setState(() => _payload = value),
@@ -1678,6 +1793,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     String? suffix,
     bool enabled = true,
     String? disabledNote,
+    String? helper,
   }) {
     final wholeNumber = _wholeNumberKeys.contains(key);
     final limits = _limits[key];
@@ -1701,6 +1817,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     textAlign: TextAlign.right,
                     keyboardType: TextInputType.numberWithOptions(
                       decimal: !wholeNumber,
+                      signed: _signedKeys.contains(key),
                     ),
                     inputFormatters: wholeNumber
                         ? [FilteringTextInputFormatter.digitsOnly]
@@ -1749,7 +1866,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                       isDense: true,
                       border: const OutlineInputBorder(),
                       errorText: _numberError(key),
-                      helperText: enabled ? null : disabledNote,
+                      helperText: enabled ? helper : disabledNote,
                       helperMaxLines: 3,
                     ),
                     onChanged: (_) => setState(() {}),
@@ -1765,8 +1882,11 @@ class _SkillEditorState extends State<_SkillEditor> {
                   'pickupDisplayScale',
                   'effectDisplayScale',
                   'weaponGripInset',
+                  'weaponGripSide',
+                  'weaponGripRotation',
                   'projectileSize',
                   'handEffectScale',
+                  'meleeReach',
                 ].contains(key))
               Slider(
                 value: value.clamp(limits.$1, limits.$2),
@@ -1921,6 +2041,21 @@ class _SkillEditorState extends State<_SkillEditor> {
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
+                      if (widget.skill.custom)
+                        _fixedRow(
+                          'Description',
+                          TextField(
+                            key: const ValueKey('skill-description'),
+                            controller: _description,
+                            maxLength: SkillDefinition.maxDescriptionLength,
+                            minLines: 2,
+                            maxLines: 3,
+                            keyboardType: TextInputType.text,
+                            decoration: const InputDecoration(
+                              hintText: 'Shown on the skill card',
+                            ),
+                          ),
+                        ),
                       _fixedRow(
                         'Category',
                         DropdownButtonFormField<SkillCategory>(
@@ -1961,9 +2096,12 @@ class _SkillEditorState extends State<_SkillEditor> {
                             isExpanded: true,
                             key: const ValueKey('skill-item-rarity'),
                             initialValue: _rarity,
-                            decoration: const InputDecoration(
-                              helperText:
-                                  'Controls how often this weapon or power-up appears.',
+                            decoration: InputDecoration(
+                              helperText: widget.skill.custom
+                                  ? 'This skill\'s own tier: its color and how often it appears. '
+                                        'The built-in ${widget.skill.baseKind.label} keeps its own.'
+                                  : 'Controls how often this weapon or power-up appears.',
+                              helperMaxLines: 3,
                             ),
                             items: [
                               for (final rarity in PowerUpRarity.values)
@@ -1972,8 +2110,18 @@ class _SkillEditorState extends State<_SkillEditor> {
                                   child: Text(rarity.label),
                                 ),
                             ],
-                            onChanged: (value) =>
-                                setState(() => _rarity = value),
+                            onChanged: (value) => setState(() {
+                              // A custom skill's callout style moves with its tier unless it was set
+                              // apart from the tier.
+                              if (widget.skill.custom &&
+                                  value != null &&
+                                  _rarity != null &&
+                                  _calloutStyle.index == _rarity!.index) {
+                                _calloutStyle =
+                                    SkillCalloutStyle.values[value.index];
+                              }
+                              _rarity = value;
+                            }),
                           ),
                         ),
                       ],
@@ -2410,6 +2558,16 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ),
                         ),
                       _number('knockback', 'Knockback strength', suffix: 'x'),
+                      if (_strikesOnContact)
+                        _number(
+                          'meleeReach',
+                          'Melee reach',
+                          suffix: 'ball radii',
+                          helper:
+                              widget.skill.baseKind == PowerUpKind.orbitingFlail
+                              ? 'The flail already reaches about 1.7 ball radii; higher values extend it.'
+                              : null,
+                        ),
                       if (widget.skill.baseKind == PowerUpKind.fireWall ||
                           widget.skill.baseKind == PowerUpKind.tornado) ...[
                         _number(
@@ -2570,9 +2728,32 @@ class _SkillEditorState extends State<_SkillEditor> {
                         ),
                         _number(
                           'weaponGripInset',
-                          'Grip inset',
+                          'Grip forward/back',
                           suffix: 'ball radius',
                         ),
+                        _number(
+                          'weaponGripSide',
+                          'Grip sideways',
+                          suffix: 'ball radius',
+                        ),
+                        _number(
+                          'weaponGripRotation',
+                          'Grip rotation',
+                          suffix: 'degrees',
+                        ),
+                        if (widget.skill.baseKind.isWeapon)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: OutlinedButton.icon(
+                                key: const ValueKey('skill-grip-preview'),
+                                onPressed: _previewGrip,
+                                icon: const Icon(Icons.pan_tool_alt_outlined),
+                                label: const Text('Preview grip'),
+                              ),
+                            ),
+                          ),
                       ],
                       if (_usesProjectileDelivery)
                         _number(

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/sprites/sprite_registry.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_painter.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_pixel_art.dart';
@@ -104,6 +105,42 @@ void main() {
       expect(recorder.endRecording(), isNotNull);
     },
   );
+
+  test('shadow clones draw the owner body once per clone in every look', () {
+    final c = MatchSimulationController(
+      _balls,
+      arenaRadius: 260,
+      seed: 1,
+      mode: MatchMode.arsenal,
+      lookAhead: false,
+    );
+    final [owner, target] = c.state.balls;
+    final attack = ShadowCloneAttack(owner: owner, target: target, clones: 3);
+    c.powerUps!.shadowCloneAttacks.add(attack);
+    for (final age in [0, 6, 20, 30, 60, 70]) {
+      attack.age = age;
+      if (age >= 60) attack.vanishAt = 58;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final drawn = <SimulationBall>[];
+      PowerUpPainter.paintShadowClones(
+        canvas,
+        c.state,
+        paintBody: (_, ball) => drawn.add(ball),
+      );
+      expect(drawn, age == 0 || age == 70 ? isEmpty : hasLength(3));
+      expect(drawn.every((ball) => identical(ball, owner)), isTrue);
+      for (final look in BallLook.values) {
+        ArenaPainter(
+          state: c.state,
+          arenaRadius: 260,
+          rimAngle: 0,
+          look: look,
+        ).paint(canvas, const Size(600, 600));
+      }
+      expect(recorder.endRecording(), isNotNull);
+    }
+  });
 
   test('every power-up has its own glyph color', () {
     final colors = {

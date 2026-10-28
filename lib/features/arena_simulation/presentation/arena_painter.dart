@@ -12,6 +12,7 @@ import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
 import 'ball_face_expression.dart';
+import 'hp_bar.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../settings/domain/app_settings.dart';
 
@@ -65,8 +66,12 @@ class ArenaPainter extends CustomPainter {
     this.background = const Color(0xFF0A0A0B),
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
+    this.showHpBars = false,
     super.repaint,
   });
+
+  /// A thin HP bar above each ball (cosmetic).
+  final bool showHpBars;
 
   /// Pictures, or smiley faces (cosmetic).
   final BallLook look;
@@ -106,6 +111,17 @@ class ArenaPainter extends CustomPainter {
       if (ball.isEliminated) continue;
       _paintSingleBall(canvas, ball);
     }
+    PowerUpPainter.paintShadowClones(canvas, state, paintBody: _paintBody);
+    // After every ball, so the bars sit on top.
+    if (showHpBars) {
+      HpBar.paintAll(
+        canvas,
+        state.balls,
+        maxLife:
+            state.powerUps?.match.tuning.arenaMaxLife ??
+            PowerUpTuning.arenaMaxLife,
+      );
+    }
     PowerUpPainter.paintTornadoOverlays(
       canvas,
       state,
@@ -114,6 +130,30 @@ class ArenaPainter extends CustomPainter {
     _paintFloatingText(canvas);
 
     canvas.restore();
+  }
+
+  /// The ball's body in the chosen [look] (also drawn for its shadow clones).
+  void _paintBody(Canvas canvas, SimulationBall ball) {
+    if (look == BallLook.faces) {
+      paintSmiley(canvas, ball, faceHealth(ball), state.balls);
+    } else {
+      BallFacePainter.paint(
+        canvas,
+        ball.position,
+        ball.radius,
+        ball.config,
+        ball.cachedUiImage,
+      );
+      if (look == BallLook.both) {
+        paintSmiley(
+          canvas,
+          ball,
+          faceHealth(ball),
+          state.balls,
+          backgroundAlpha: 0.38,
+        );
+      }
+    }
   }
 
   void _paintBackground(Canvas canvas) {
@@ -596,27 +636,24 @@ class ArenaPainter extends CustomPainter {
       );
     }
 
-    if (look == BallLook.faces) {
-      paintSmiley(canvas, ball, faceHealth(ball), state.balls);
-    } else {
-      BallFacePainter.paint(
-        canvas,
-        ball.position,
-        ball.radius,
-        ball.config,
-        ball.cachedUiImage,
-      );
-      if (look == BallLook.both) {
-        paintSmiley(
-          canvas,
-          ball,
-          faceHealth(ball),
-          state.balls,
-          backgroundAlpha: 0.38,
-        );
-      }
-    }
+    _paintBody(canvas, ball);
     BallHairPainter.paint(canvas, ball);
+    double gripSide(PowerUpKind kind, int slot) =>
+        state.powerUps
+            ?.visualSkill(
+              kind,
+              skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            )
+            .weaponGripSide ??
+        0;
+    double gripRotation(PowerUpKind kind, int slot) =>
+        state.powerUps
+            ?.visualSkill(
+              kind,
+              skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            )
+            .weaponGripRotation ??
+        0;
     PowerUpPainter.paintBallEffects(
       canvas,
       ball,
@@ -680,6 +717,8 @@ class ArenaPainter extends CustomPainter {
               )
               .weaponGripInset ??
           (kind.isBlade ? 0.2 : 0),
+      weaponGripSide: gripSide,
+      weaponGripRotation: gripRotation,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
       handEffectScale: (kind) =>
           state.powerUps?.handEffectScale(kind, ball: ball) ?? 1,
@@ -701,6 +740,8 @@ class ArenaPainter extends CustomPainter {
                 )
                 .weaponGripInset ??
             (kind.isBlade ? 0.2 : 0),
+        weaponGripSide: gripSide,
+        weaponGripRotation: gripRotation,
       );
     }
     if (ball.isGhost) canvas.restore();

@@ -20,9 +20,42 @@ import '../../settings/data/effects_prefs.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../domain/match_config.dart';
+import '../domain/pickup_count.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
 /// your own groups, mixing categories freely, then start the battle.
+/// How many [PowerUpKind]s existed before the weapons pref stored its count
+/// (`pref:power-ups-count-<profile>`): the count before Shadow Clone.
+const int legacyPowerUpPrefCount = 48;
+
+/// `pref:power-ups-<profile>` for [kinds]: '' means every kind (null), so kinds added later start on.
+@visibleForTesting
+String powerUpsPref(Set<PowerUpKind>? kinds) =>
+    kinds == null ? '' : [for (final k in kinds) k.name].join(',');
+
+/// The weapons choice saved as [saved] when [savedCount] kinds existed (null: before the count was
+/// stored, [legacyPowerUpPrefCount]). Null (every kind) when nothing is saved, for '' and for a set
+/// holding all of the first [savedCount] kinds, so kinds added since then are on. A set missing one of
+/// them stays explicit (kinds added later are then off). Traps are always on.
+@visibleForTesting
+Set<PowerUpKind>? powerUpsFromPref(String? saved, int? savedCount) {
+  final kinds = {
+    for (final name in (saved ?? '').split(','))
+      ...PowerUpKind.values.where((kind) => kind.name == name),
+  };
+  final count = (savedCount ?? legacyPowerUpPrefCount).clamp(
+    1,
+    PowerUpKind.values.length,
+  );
+  final pickups = kinds.where((kind) => !kind.isTrap).toSet();
+  final knewAll = PowerUpKind.values
+      .take(count)
+      .where((kind) => !kind.isTrap)
+      .every(pickups.contains);
+  if (kinds.isEmpty || knewAll) return null;
+  return {...pickups, ...PowerUpKind.values.where((kind) => kind.isTrap)};
+}
+
 class MatchSetupScreen extends StatefulWidget {
   /// Built-in packs; null hides them (e.g. in tests or offline builds).
   final BallPackRepository? packRepository;
@@ -69,6 +102,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   MatchMode _mode = MatchMode.threads;
   BallLook _look = BallLook.pictures;
   bool _handsOnPictures = false;
+  bool _showHpBars = false;
   bool _whitePickupBackgrounds = true;
   bool _randomizedHairstyles = false;
 
@@ -93,6 +127,26 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     if (ids.intersection(_customOff).isEmpty) return null;
     return ids.difference(_customOff);
   }
+
+  /// The pickups on and the pickups there are: built-in non-trap kinds plus spawnable custom skills.
+  /// One place for the dialog, the Pickups row and the footer, so they always agree.
+  (int, int) _pickupCounts() {
+    final custom = _spawnableCustom;
+    final customOn = custom.where((s) => !_customOff.contains(s.id)).length;
+    return pickupCount(
+      _powerUps ?? PowerUpKind.values,
+      customOn,
+      custom.length,
+    );
+  }
+
+  /// "Pickups: All", or "Pickups: n of m" counting the built-in pickups and the spawnable custom
+  /// skills that are on (traps excluded), the same number the Weapons dialog shows.
+  String _pickupsLabel() {
+    final (on, total) = _pickupCounts();
+    return on == total ? 'Pickups: All' : 'Pickups: $on of $total';
+  }
+
   VoidCallback? _refreshDrawer;
 
   void _update(VoidCallback update) {
@@ -199,6 +253,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       'hands-on-pictures',
       mayhem: profileMayhem,
     );
+    final hpBars = await _readProfile(
+      profileMode,
+      'hp-bars',
+      mayhem: profileMayhem,
+    );
     final whitePickupBackgrounds = await _readProfile(
       profileMode,
       'white-pickup-backgrounds',
@@ -243,17 +302,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final profileIds = [...MatchMode.values.map((mode) => mode.id), 'mayhem'];
     for (final profileId in profileIds) {
       final saved = await DevicePrefs.read('power-ups-$profileId') ?? legacy;
-      final kinds = {
-        for (final name in (saved ?? '').split(','))
-          ...PowerUpKind.values.where((kind) => kind.name == name),
-      };
-      _modePowerUps[profileId] =
-          kinds.isEmpty || kinds.length == PowerUpKind.values.length
-          ? null
-          : {
-              ...kinds.where((kind) => !kind.isTrap),
-              ...PowerUpKind.values.where((kind) => kind.isTrap),
-            };
+      final savedCount = int.tryParse(
+        await DevicePrefs.read('power-ups-count-$profileId') ?? '',
+      );
+      _modePowerUps[profileId] = powerUpsFromPref(saved, savedCount);
     }
     for (final profileId in profileIds) {
       final off = await DevicePrefs.read('custom-skills-off-$profileId');
@@ -275,6 +327,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _mode = mode;
       _look = look ?? BallLook.pictures;
       _handsOnPictures = handsOnPictures == '1';
+      _showHpBars = hpBars == '1';
       _whitePickupBackgrounds = whitePickupBackgrounds != '0';
       _randomizedHairstyles = randomizedHairstyles == '1';
       _dualWield = dualWield == '1';
@@ -486,9 +539,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _customOff.join(','),
     );
     _modePowerUps[_activeProfileId] = _powerUps;
+    DevicePrefs.write('power-ups-$_activeProfileId', powerUpsPref(_powerUps));
     DevicePrefs.write(
-      'power-ups-$_activeProfileId',
-      [for (final k in chosen) k.name].join(','),
+      'power-ups-count-$_activeProfileId',
+      PowerUpKind.values.length,
     );
   }
 
@@ -532,6 +586,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         finishersEnabled: _finishersOn,
         look: _look,
         handsOnPictures: _handsOnPictures,
+        showHpBars: _showHpBars,
         whitePickupBackgrounds: _whitePickupBackgrounds,
         randomizedHairstyles: _randomizedHairstyles,
         powerUps: _mode == MatchMode.threads ? null : _powerUps,
@@ -954,9 +1009,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   Widget _footer(BallWarsColors c) {
-    final pickups = _powerUps == null
+    final (pickupsOn, pickupsTotal) = _pickupCounts();
+    final pickups = pickupsOn == pickupsTotal
         ? 'all pickups'
-        : '${_powerUps!.where((kind) => !kind.isTrap).length} pickups';
+        : '$pickupsOn pickups';
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
@@ -1294,11 +1350,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           if (_mode != MatchMode.threads) ...[
             ListTile(
               leading: const Icon(Icons.auto_awesome),
-              title: Text(
-                _powerUps == null
-                    ? 'Pickups: All'
-                    : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of ${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
-              ),
+              title: Text(_pickupsLabel()),
               trailing: const Icon(Icons.chevron_right),
               onTap: _chooseWeapons,
             ),
@@ -1461,6 +1513,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             },
           ),
           _choice(
+            Icons.health_and_safety_outlined,
+            'HP bars',
+            const [false, true],
+            _showHpBars,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _showHpBars = v);
+              _writeProfile('hp-bars', v ? '1' : '0');
+            },
+          ),
+          _choice(
             Icons.circle,
             'White pickup backgrounds',
             const [true, false],
@@ -1579,7 +1642,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
   late final Set<String> _customOn = {...widget.initialCustom};
 
   List<SkillDefinition> _customIn(bool Function(SkillCategory category) test) =>
-      widget.customSkills.where((skill) => test(skill.resolvedCategory)).toList()
+      widget.customSkills
+          .where((skill) => test(skill.resolvedCategory))
+          .toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   @override
@@ -1588,8 +1653,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final powerUps = PowerUpKind.values.where((kind) => kind.isPowerUp);
     final traps = PowerUpKind.values.where((kind) => kind.isTrap);
     final selectable = PowerUpKind.values.where((kind) => !kind.isTrap);
-    final selectedCount =
-        selectable.where(_on.contains).length + _customOn.length;
+    final selectedCount = pickupCount(_on, _customOn.length, 0).$1;
     final customWeapons = _customIn((c) => c == SkillCategory.weapon);
     final customTraps = _customIn(
       (c) => c == SkillCategory.trap || c == SkillCategory.arenaTrap,
@@ -1845,6 +1909,8 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final selected = _customOn.contains(skill.id);
     final colors = Theme.of(context).colorScheme;
     final appColors = BallWarsColors.of(context);
+    // Its own tier (a custom skill's tier never follows the built-in once set).
+    final rarity = SkillLibrary.rarityOf(skill, widget.config);
     final fires = skill.payloadSkillId;
     final firedName = fires == null
         ? null
@@ -1858,8 +1924,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final details = [
       'Custom ${skill.resolvedCategory == SkillCategory.weapon ? 'weapon' : 'skill'} based on ${skill.baseKind.label}',
       if (skill.artworkKind != null) 'looks like ${skill.artworkKind!.label}',
-      if (firedName != null)
-        'fires ${skill.projectileCount ?? 1} x $firedName',
+      if (firedName != null) 'fires ${skill.projectileCount ?? 1} x $firedName',
     ].join(', ');
     return Card(
       margin: EdgeInsets.zero,
@@ -1888,15 +1953,23 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      skill.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    PowerUpName(
+                      skill.baseKind,
+                      tuning: widget.config,
+                      label: skill.name,
+                      rarity: rarity,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
+                    if (rarity != null)
+                      Text(
+                        rarity.label,
+                        style: TextStyle(fontSize: 10, color: appColors.muted),
+                      ),
                     const SizedBox(height: 4),
                     Text(
-                      '$details.',
+                      skill.description.isNotEmpty
+                          ? skill.description
+                          : '$details.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(

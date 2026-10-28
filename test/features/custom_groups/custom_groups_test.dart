@@ -8,7 +8,9 @@ import 'package:ballwars/features/ball_packs/data/ball_pack_repository.dart';
 import 'package:ballwars/features/custom_groups/data/custom_group_repository.dart';
 import 'package:ballwars/features/custom_groups/data/image_prep.dart';
 import 'package:ballwars/features/custom_groups/domain/custom_group.dart';
+import 'package:ballwars/features/custom_groups/presentation/ball_editor_sheet.dart';
 import 'package:ballwars/features/custom_groups/presentation/my_groups_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/match_setup/presentation/match_setup_screen.dart';
 import 'package:ballwars/features/replay_export/domain/replay_link.dart';
@@ -75,6 +77,7 @@ class _FakeGroups implements CustomGroupRepository {
     required String name,
     required BallImageStyle style,
     required Color color,
+    BallGender gender = BallGender.none,
     Uint8List? png,
   }) async {
     updates.add({
@@ -82,9 +85,37 @@ class _FakeGroups implements CustomGroupRepository {
       'name': name,
       'style': style,
       'color': color,
+      'gender': gender,
       'png': png,
     });
-    return ball.copyWith(name: name, imageStyle: style, primaryColor: color);
+    return ball.copyWith(
+      name: name,
+      imageStyle: style,
+      primaryColor: color,
+      gender: gender,
+    );
+  }
+
+  final List<Map<String, Object?>> added = [];
+
+  @override
+  Future<CustomBall> addBall({
+    required String groupId,
+    required String name,
+    required Uint8List? png,
+    required BallImageStyle style,
+    required Color color,
+    BallGender gender = BallGender.none,
+  }) async {
+    added.add({'group': groupId, 'name': name, 'gender': gender});
+    return CustomBall(
+      id: CustomGroup.ballId('new'),
+      name: name,
+      imageStyle: style,
+      primaryColor: color,
+      glowColor: color,
+      gender: gender,
+    );
   }
 
   @override
@@ -434,6 +465,141 @@ void main() {
       expect(find.text('Edit ball'), findsNothing);
     },
   );
+
+  testWidgets('the ball editor saves the gender when editing', (tester) async {
+    final repo = _FakeGroups([
+      CustomGroup(
+        id: 'g1',
+        name: 'Anime',
+        isPublic: true,
+        balls: [_groupBall('a', 'Goku').copyWith(gender: BallGender.male)],
+      ),
+    ]);
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(home: MyGroupsScreen(repository: repo)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Goku'));
+    await tester.pumpAndSettle();
+
+    final gender = find.byKey(const ValueKey('ball-gender'));
+    expect(gender, findsOneWidget);
+    expect(tester.widget<SegmentedButton<BallGender>>(gender).selected, {
+      BallGender.male,
+    });
+    await tester.tap(
+      find.descendant(of: gender, matching: find.text('Female')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(repo.updates.single['gender'], BallGender.female);
+  });
+
+  testWidgets('the ball editor saves the gender when adding', (tester) async {
+    final repo = _FakeGroups(const []);
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BallEditorSheet(groupId: 'g1', repository: repo),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final gender = find.byKey(const ValueKey('ball-gender'));
+    expect(tester.widget<SegmentedButton<BallGender>>(gender).selected, {
+      BallGender.none,
+    });
+    await tester.enterText(find.byType(TextField), 'Maria');
+    await tester.tap(
+      find.descendant(of: gender, matching: find.text('Female')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle();
+    expect(repo.added.single['name'], 'Maria');
+    expect(repo.added.single['gender'], BallGender.female);
+  });
+
+  group('the gender column', () {
+    test('maps both ways; missing or unknown values read as none', () {
+      for (final g in BallGender.values) {
+        expect(
+          SupabaseCustomGroupRepository.genderOf({
+            'gender': SupabaseCustomGroupRepository.genderValue(g),
+          }),
+          g,
+        );
+      }
+      expect(
+        SupabaseCustomGroupRepository.genderValue(BallGender.female),
+        'female',
+      );
+      expect(SupabaseCustomGroupRepository.genderOf({}), BallGender.none);
+      expect(
+        SupabaseCustomGroupRepository.genderOf({'gender': 'robot'}),
+        BallGender.none,
+      );
+    });
+
+    test('a missing column is retried once without it, then left out', () async {
+      final column = OptionalColumn('gender');
+      final calls = <bool>[];
+      Future<String> run(bool withColumn) async {
+        calls.add(withColumn);
+        if (withColumn) {
+          throw const PostgrestException(
+            message:
+                "Could not find the 'gender' column of 'group_balls' in the schema cache",
+            code: 'PGRST204',
+          );
+        }
+        return 'saved';
+      }
+
+      expect(await column.run(run), 'saved');
+      expect(calls, [true, false]);
+      expect(await column.run(run), 'saved');
+      expect(calls, [true, false, false]); // remembered
+    });
+
+    test('a select of the missing column is retried too', () async {
+      final column = OptionalColumn('gender');
+      final calls = <bool>[];
+      final result = await column.run((withColumn) async {
+        calls.add(withColumn);
+        if (withColumn) {
+          throw const PostgrestException(
+            message: 'column group_balls_1.gender does not exist',
+            code: '42703',
+          );
+        }
+        return 1;
+      });
+      expect(result, 1);
+      expect(calls, [true, false]);
+    });
+
+    test('other errors are not swallowed', () async {
+      final column = OptionalColumn('gender');
+      var calls = 0;
+      await expectLater(
+        column.run<int>((_) async {
+          calls++;
+          throw const PostgrestException(message: 'nope', code: '42501');
+        }),
+        throwsA(isA<PostgrestException>()),
+      );
+      expect(calls, 1);
+      expect(column.available, isTrue);
+    });
+  });
 
   // A new repository per test: it caches its first load, and a load made
   // under one test's fake clock never completes under the next one's.

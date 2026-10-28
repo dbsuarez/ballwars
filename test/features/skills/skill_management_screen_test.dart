@@ -41,21 +41,24 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
 }
 
 void main() {
-  testWidgets('Global: Default effect visuals comes back with Save Library', (tester) async {
+  testWidgets('Global: Default effect visuals comes back with Save Library', (
+    tester,
+  ) async {
     SkillManagementResult? result;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.build(AppPalettes.midnight),
         home: Builder(
           builder: (context) => TextButton(
-            onPressed: () async => result = await Navigator.of(context).push<SkillManagementResult>(
-              MaterialPageRoute(
-                builder: (_) => const SkillManagementScreen(
-                  initial: SkillLibrary.defaults,
-                  tuning: PowerUpConfig.defaults,
+            onPressed: () async => result = await Navigator.of(context)
+                .push<SkillManagementResult>(
+                  MaterialPageRoute(
+                    builder: (_) => const SkillManagementScreen(
+                      initial: SkillLibrary.defaults,
+                      tuning: PowerUpConfig.defaults,
+                    ),
+                  ),
                 ),
-              ),
-            ),
             child: const Text('open'),
           ),
         ),
@@ -74,98 +77,126 @@ void main() {
     expect(result!.effectVisuals, EffectRenderMode.vector);
   });
 
-  testWidgets('Global: switching off "Let each skill set its own" disables the callout field in every skill', (
-    tester,
-  ) async {
-    const tuning = PowerUpConfig.defaults;
-    SkillManagementResult? saved;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.build(AppPalettes.midnight),
-        home: SkillManagementScreen(
-          initial: SkillLibrary.defaults,
-          tuning: tuning,
-          onSave: (result) async => saved = result,
+  testWidgets(
+    'Global: switching off "Let each skill set its own" disables the callout field in every skill',
+    (tester) async {
+      const tuning = PowerUpConfig.defaults;
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: tuning,
+            onSave: (result) async => saved = result,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(Tab, 'Global'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const ValueKey('global-callout-seconds')), '2.5');
-    await tester.tap(find.byKey(const ValueKey('skills-set-callout')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Every skill uses this duration'), findsOneWidget);
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Global'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('global-callout-seconds')),
+        '2.5',
+      );
+      await tester.tap(find.byKey(const ValueKey('skills-set-callout')));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Every skill uses this duration'),
+        findsOneWidget,
+      );
 
-    await tester.tap(find.widgetWithText(Tab, 'Weapons'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Search skills'), 'Pistol');
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
-    await tester.pumpAndSettle();
-    final field = find.byKey(const ValueKey('skill-field-bubbleDuration'));
-    await _revealEditor(tester, field);
-    expect(tester.widget<TextField>(field).enabled, isFalse);
-    expect(find.textContaining('Using the global callout duration (2.5 s)'), findsOneWidget);
-    expect(saved, isNull);
-  });
+      await tester.tap(find.widgetWithText(Tab, 'Weapons'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('skill-field-bubbleDuration'));
+      await _revealEditor(tester, field);
+      expect(tester.widget<TextField>(field).enabled, isFalse);
+      expect(
+        find.textContaining('Using the global callout duration (2.5 s)'),
+        findsOneWidget,
+      );
+      expect(saved, isNull);
+    },
+  );
 
-  testWidgets('Combine: pick a look and a fired skill; a broken reference blocks Save and says why', (
-    tester,
-  ) async {
-    const tuning = PowerUpConfig.defaults;
-    final boom = SkillLibrary.defaults
-        .create('Boom-merang', PowerUpKind.boomerang)
-        .copyWith(returnsToOrigin: true);
-    final combo = SkillLibrary.defaults
-        .create('Knife Volley', PowerUpKind.knife)
-        .copyWith(payloadSkillId: 'custom.gone', projectileCount: 3);
-    final library = SkillLibrary.defaults
-        .withDefinition(boom, tuning)
-        .withDefinition(combo, tuning);
-    SkillManagementResult? saved;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.build(AppPalettes.midnight),
-        home: SkillManagementScreen(
-          initial: library,
-          tuning: tuning,
-          onSave: (result) async => saved = result,
+  testWidgets(
+    'Combine: pick a look and a fired skill; a broken reference blocks Save and says why',
+    (tester) async {
+      const tuning = PowerUpConfig.defaults;
+      final boom = SkillLibrary.defaults
+          .create('Boom-merang', PowerUpKind.boomerang)
+          .copyWith(returnsToOrigin: true);
+      final combo = SkillLibrary.defaults
+          .create('Knife Volley', PowerUpKind.knife)
+          .copyWith(payloadSkillId: 'custom.gone', projectileCount: 3);
+      final library = SkillLibrary.defaults
+          .withDefinition(boom, tuning)
+          .withDefinition(combo, tuning);
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: library,
+            tuning: tuning,
+            onSave: (result) async => saved = result,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(Tab, 'Custom'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Knife Volley'));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Custom'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Knife Volley'));
+      await tester.pumpAndSettle();
 
-    final problem = find.byKey(const ValueKey('skill-fires-problem'));
-    await _revealEditor(tester, problem);
-    expect(tester.widget<Text>(problem).data, contains('no longer exists'));
-    expect(tester.widget<TextButton>(find.byKey(const ValueKey('save-skill'))).onPressed, isNull);
+      final problem = find.byKey(const ValueKey('skill-fires-problem'));
+      await _revealEditor(tester, problem);
+      expect(tester.widget<Text>(problem).data, contains('no longer exists'));
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const ValueKey('save-skill')))
+            .onPressed,
+        isNull,
+      );
 
-    await _revealEditor(tester, find.byKey(const ValueKey('skill-fires')));
-    await tester.tap(find.byKey(const ValueKey('skill-fires')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Boom-merang').last);
-    await tester.pumpAndSettle();
-    expect(problem, findsNothing);
-    expect(find.textContaining('come from the skill it fires'), findsOneWidget);
+      await _revealEditor(tester, find.byKey(const ValueKey('skill-fires')));
+      await tester.tap(find.byKey(const ValueKey('skill-fires')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Boom-merang').last);
+      await tester.pumpAndSettle();
+      expect(problem, findsNothing);
+      expect(
+        find.textContaining('come from the skill it fires'),
+        findsOneWidget,
+      );
 
-    await _revealEditor(tester, find.byKey(const ValueKey('skill-looks-like')));
-    await tester.tap(find.byKey(const ValueKey('skill-looks-like')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Sword').last);
-    await tester.pumpAndSettle();
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-looks-like')),
+      );
+      await tester.tap(find.byKey(const ValueKey('skill-looks-like')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sword').last);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('save-skill')));
-    await tester.pumpAndSettle();
-    final edited = saved!.library.byId(combo.id, saved!.tuning)!;
-    expect(edited.payloadSkillId, boom.id);
-    expect(edited.artworkKind, PowerUpKind.sword);
-    expect(saved!.library.byId(boom.id, saved!.tuning)!.toJson(), library.byId(boom.id, tuning)!.toJson());
-  });
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      final edited = saved!.library.byId(combo.id, saved!.tuning)!;
+      expect(edited.payloadSkillId, boom.id);
+      expect(edited.artworkKind, PowerUpKind.sword);
+      expect(
+        saved!.library.byId(boom.id, saved!.tuning)!.toJson(),
+        library.byId(boom.id, tuning)!.toJson(),
+      );
+    },
+  );
 
   testWidgets(
     'editor saves directly, reports failures, and keeps edits for retry',
@@ -511,6 +542,159 @@ void main() {
     expect(reopened.knockback, 20);
   });
 
+  Future<bool> showsMeleeReach(
+    WidgetTester tester,
+    String skill, {
+    ValueChanged<SkillManagementResult?>? onResult,
+  }) async {
+    await tester.pumpWidget(app(onResult: onResult ?? (_) {}));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      skill,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, skill).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Damage & Timing'));
+    await tester.pumpAndSettle();
+    final editor = find.byType(ListView).last;
+    const key = ValueKey('skill-field-meleeReach');
+    for (var i = 0; i < 10 && find.byKey(key).evaluate().isEmpty; i++) {
+      await tester.drag(editor, const Offset(0, -500));
+      await tester.pumpAndSettle();
+    }
+    return find.byKey(key).evaluate().isNotEmpty;
+  }
+
+  testWidgets('a gun has no melee reach field', (tester) async {
+    expect(await showsMeleeReach(tester, 'Pistol'), isFalse);
+  });
+
+  testWidgets('the orbiting flail explains its own reach', (tester) async {
+    expect(await showsMeleeReach(tester, 'Orbiting Flail'), isTrue);
+    expect(
+      find.text(
+        'The flail already reaches about 1.7 ball radii; higher values extend it.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('melee reach is edited on contact weapons and saved', (
+    tester,
+  ) async {
+    SkillManagementResult? result;
+    expect(
+      await showsMeleeReach(
+        tester,
+        'Knife',
+        onResult: (value) => result = value,
+      ),
+      isTrue,
+    );
+    expect(find.text('Melee reach'), findsOneWidget);
+    expect(find.text('ball radii'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('skill-field-meleeReach')),
+      '1.5',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
+    await tester.pumpAndSettle();
+    final saved = result!.library.builtIn(
+      PowerUpKind.knife,
+      PowerUpConfig.defaults,
+    );
+    expect(saved.meleeReach, 1.5);
+  });
+
+  testWidgets('grip preview edits forward/back, sideways and rotation live', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SkillManagementResult? result;
+    await tester.pumpWidget(app(onResult: (value) => result = value));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Pistol',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol').first);
+    await tester.pumpAndSettle();
+
+    final button = find.byKey(const ValueKey('skill-grip-preview'));
+    await _revealEditor(tester, button);
+    for (final (key, label) in const [
+      ('weaponGripInset', 'Grip forward/back'),
+      ('weaponGripSide', 'Grip sideways'),
+      ('weaponGripRotation', 'Grip rotation'),
+    ]) {
+      await _revealEditor(tester, find.byKey(ValueKey('skill-field-$key')));
+      expect(find.text(label), findsOneWidget);
+    }
+    await _revealEditor(tester, button);
+
+    String field(String key) => tester
+        .widget<TextField>(find.byKey(ValueKey('skill-field-$key')))
+        .controller!
+        .text;
+    Future<void> slide(String key, double value) async {
+      tester
+          .widget<Slider>(find.byKey(ValueKey('grip-preview-$key')))
+          .onChanged!(value);
+      await tester.pump();
+    }
+
+    // Cancel discards.
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    final dialog = find.byKey(const ValueKey('grip-preview-dialog'));
+    expect(dialog, findsOneWidget);
+    expect(tester.getSize(dialog).width, lessThanOrEqualTo(440));
+    expect(find.byKey(const ValueKey('grip-preview-right')), findsOneWidget);
+    expect(find.byKey(const ValueKey('grip-preview-left')), findsOneWidget);
+    await slide('side', 0.5);
+    await tester.tap(find.byKey(const ValueKey('grip-preview-cancel')));
+    await tester.pumpAndSettle();
+    expect(dialog, findsNothing);
+    expect(double.parse(field('weaponGripSide')), 0);
+
+    // Done writes back.
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    await slide('inset', 0.4);
+    await slide('side', -0.5);
+    await slide('rotation', 30);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('grip-preview-done')));
+    await tester.pumpAndSettle();
+    expect(double.parse(field('weaponGripInset')), 0.4);
+    expect(double.parse(field('weaponGripSide')), -0.5);
+    expect(double.parse(field('weaponGripRotation')), 30);
+    expect(field('weaponGripInset'), '0.40');
+    expect(field('weaponGripRotation'), '30');
+
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
+    await tester.pumpAndSettle();
+    final saved = result!.library.builtIn(
+      PowerUpKind.pistol,
+      PowerUpConfig.defaults,
+    );
+    expect(saved.weaponGripInset, 0.4);
+    expect(saved.weaponGripSide, -0.5);
+    expect(saved.weaponGripRotation, 30);
+  });
+
   testWidgets('versioned JSON can be exported and imported as a draft', (
     tester,
   ) async {
@@ -542,6 +726,76 @@ void main() {
       find.text('Imported as a draft. Save to publish it.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('custom skills take a description; built-ins have no field', (
+    tester,
+  ) async {
+    final library = SkillLibrary.defaults.withDefinition(
+      SkillLibrary.defaults
+          .create('Story Pistol', PowerUpKind.pistol)
+          .copyWith(enabled: true),
+      PowerUpConfig.defaults,
+    );
+    SkillManagementResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              result = await Navigator.of(context).push<SkillManagementResult>(
+                MaterialPageRoute(
+                  builder: (_) => SkillManagementScreen(
+                    initial: library,
+                    tuning: PowerUpConfig.defaults,
+                  ),
+                ),
+              );
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // A built-in skill has no description field.
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Pistol',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol').first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('skill-description')), findsNothing);
+    Navigator.of(tester.element(find.text('Edit Pistol'))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Independent skill using Pistol artwork'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(ListTile, 'Story Pistol').first);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('skill-description'));
+    await _revealEditor(tester, field);
+    expect(tester.widget<TextField>(field).maxLength, 160);
+    await tester.enterText(field, '  Fires\ntwo  bullets.  ');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fires two bullets.'), findsOneWidget);
+    expect(
+      find.textContaining('Independent skill using Pistol artwork'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(result!.library.custom.single.description, 'Fires two bullets.');
   });
 
   testWidgets('admin can duplicate, edit and save a custom skill', (
@@ -756,6 +1010,106 @@ void main() {
     expect(result, isNotNull);
     expect(result!.tuning.rarityOf(PowerUpKind.pistol), PowerUpRarity.epic);
   });
+
+  testWidgets(
+    'a custom skill keeps its own tier apart from its base built-in, both ways',
+    (tester) async {
+      final kutsilyo = SkillLibrary.defaults.create(
+        'Kutsilyo',
+        PowerUpKind.knife,
+      );
+      final library = SkillLibrary.defaults.withDefinition(
+        kutsilyo,
+        PowerUpConfig.defaults,
+      );
+      SkillManagementResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await Navigator.of(context)
+                    .push<SkillManagementResult>(
+                      MaterialPageRoute(
+                        builder: (_) => SkillManagementScreen(
+                          initial: library,
+                          tuning: PowerUpConfig.defaults,
+                        ),
+                      ),
+                    );
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      // Kutsilyo to Special.
+      await tester.tap(find.text('Custom'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Kutsilyo'));
+      await tester.pumpAndSettle();
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-item-rarity')),
+      );
+      await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Special').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(ValueKey('skill-name-${kutsilyo.id}')))
+            .style
+            ?.color,
+        PowerUpRarity.special.color,
+      );
+
+      // The built-in Knife to Rare.
+      await tester.tap(find.widgetWithText(Tab, 'Built-in'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Weapons'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Knife',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Knife'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<DropdownButtonFormField<PowerUpRarity>>(
+              find.byKey(const ValueKey('skill-item-rarity')),
+            )
+            .initialValue,
+        PowerUpRarity.normal,
+      );
+      await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rare').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
+      await tester.pumpAndSettle();
+
+      final saved = result!;
+      expect(saved.tuning.rarityOf(PowerUpKind.knife), PowerUpRarity.rare);
+      final custom = saved.library.custom.single;
+      expect(custom.rarity, PowerUpRarity.special);
+      expect(custom.calloutStyle, SkillCalloutStyle.special);
+      expect(
+        SkillLibrary.rarityOf(custom, saved.tuning),
+        PowerUpRarity.special,
+      );
+    },
+  );
 
   testWidgets('admin can create a composed skill from scratch', (tester) async {
     await tester.pumpWidget(app());

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:characters/characters.dart';
+
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 
@@ -95,12 +97,15 @@ class SkillDefinition {
     this.pickupDisplayScale = 1,
     this.effectDisplayScale = 1,
     this.weaponGripInset = 0,
+    this.weaponGripSide = 0,
+    this.weaponGripRotation = 0,
     this.effectStrength = 1,
     this.healing = 10,
     this.shieldHits = 1,
     this.frozenDamageMultiplier = 1.5,
     this.frozenCollisionDamage = 5,
     this.knockback = 0,
+    this.meleeReach = 0,
     this.spriteMode = SkillVisualMode.sprite,
     this.effectMode = SkillVisualMode.sprite,
     this.useGlobalEffectVisuals = true,
@@ -130,7 +135,12 @@ class SkillDefinition {
     this.handEffectDurationSeconds = 0.5,
     this.artworkKind,
     this.payloadSkillId,
+    this.rarity,
+    this.description = '',
   });
+
+  /// Longest custom [description], in characters.
+  static const int maxDescriptionLength = 160;
 
   final String id;
   final String name;
@@ -157,12 +167,25 @@ class SkillDefinition {
   final double pickupDisplayScale;
   final double effectDisplayScale;
   final double weaponGripInset;
+
+  /// Moves the held weapon across the aim line, in ball radii. Positive is
+  /// the ball's right of the aim for the first hand; the second hand
+  /// (dual wield) mirrors it.
+  final double weaponGripSide;
+
+  /// Degrees added to the held sprite's drawn angle, mirrored when the
+  /// sprite flips, so a slanted sprite sits straight on both sides.
+  final double weaponGripRotation;
   final double effectStrength;
   final double healing;
   final int shieldHits;
   final double frozenDamageMultiplier;
   final double frozenCollisionDamage;
   final double knockback;
+
+  /// Contact weapons (blades, orbiting flail, shield bash, collision skills) strike an opponent up to
+  /// this many of the holder's radii beyond touching. 0: only on a bump.
+  final double meleeReach;
   final SkillVisualMode spriteMode;
   final SkillVisualMode effectMode;
   final bool useGlobalEffectVisuals;
@@ -205,6 +228,16 @@ class SkillDefinition {
   /// this skill keeps the trigger, aim, cooldown, callout and the number and spread of shots. Null: it
   /// fires its own projectile. See [SkillLibrary.resolvePayload] and [SkillLibrary.payloadProblem].
   final String? payloadSkillId;
+
+  /// A custom skill's own tier (color, callout and spawn odds). Null: it follows its base kind's tier
+  /// (`tier.<kind>` in the tuning), as custom skills did before they had one. Built-ins and traps never
+  /// keep one ([validated] drops it). Read it through [SkillLibrary.rarityOf].
+  final PowerUpRarity? rarity;
+
+  /// A custom skill's own card text (Weapons dialog, Skill Management list), plain text on one
+  /// line, at most [maxDescriptionLength] characters. Empty: the generated text is shown. Built-ins
+  /// never keep one ([validated] drops it).
+  final String description;
 
   /// Its held and arena artwork ([artworkKind], else its carrier).
   PowerUpKind get displayKind => artworkKind ?? baseKind;
@@ -305,12 +338,15 @@ class SkillDefinition {
     double? pickupDisplayScale,
     double? effectDisplayScale,
     double? weaponGripInset,
+    double? weaponGripSide,
+    double? weaponGripRotation,
     double? effectStrength,
     double? healing,
     int? shieldHits,
     double? frozenDamageMultiplier,
     double? frozenCollisionDamage,
     double? knockback,
+    double? meleeReach,
     SkillVisualMode? spriteMode,
     SkillVisualMode? effectMode,
     bool? useGlobalEffectVisuals,
@@ -340,6 +376,8 @@ class SkillDefinition {
     double? handEffectDurationSeconds,
     Object? artworkKind = _unset,
     Object? payloadSkillId = _unset,
+    Object? rarity = _unset,
+    String? description,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -366,6 +404,8 @@ class SkillDefinition {
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
     effectDisplayScale: effectDisplayScale ?? this.effectDisplayScale,
     weaponGripInset: weaponGripInset ?? this.weaponGripInset,
+    weaponGripSide: weaponGripSide ?? this.weaponGripSide,
+    weaponGripRotation: weaponGripRotation ?? this.weaponGripRotation,
     effectStrength: effectStrength ?? this.effectStrength,
     healing: healing ?? this.healing,
     shieldHits: shieldHits ?? this.shieldHits,
@@ -373,6 +413,7 @@ class SkillDefinition {
         frozenDamageMultiplier ?? this.frozenDamageMultiplier,
     frozenCollisionDamage: frozenCollisionDamage ?? this.frozenCollisionDamage,
     knockback: knockback ?? this.knockback,
+    meleeReach: meleeReach ?? this.meleeReach,
     spriteMode: spriteMode ?? this.spriteMode,
     effectMode: effectMode ?? this.effectMode,
     useGlobalEffectVisuals:
@@ -412,6 +453,8 @@ class SkillDefinition {
     payloadSkillId: identical(payloadSkillId, _unset)
         ? this.payloadSkillId
         : payloadSkillId as String?,
+    rarity: identical(rarity, _unset) ? this.rarity : rarity as PowerUpRarity?,
+    description: description ?? this.description,
   );
 
   Map<String, Object?> toJson() => {
@@ -440,12 +483,16 @@ class SkillDefinition {
     'pickup_display_scale': pickupDisplayScale,
     'effect_display_scale': effectDisplayScale,
     'weapon_grip_inset': weaponGripInset,
+    // Left out at 0 (every built-in), so replay snapshots stay small.
+    if (weaponGripSide != 0) 'weapon_grip_side': weaponGripSide,
+    if (weaponGripRotation != 0) 'weapon_grip_rotation': weaponGripRotation,
     'effect_strength': effectStrength,
     'healing': healing,
     'shield_hits': shieldHits,
     'frozen_damage_multiplier': frozenDamageMultiplier,
     'frozen_collision_damage': frozenCollisionDamage,
     'knockback': knockback,
+    if (meleeReach > 0) 'melee_reach': meleeReach,
     'sprite_mode': spriteMode.name,
     'effect_mode': effectMode.name,
     'use_global_effect_visuals': useGlobalEffectVisuals,
@@ -476,6 +523,8 @@ class SkillDefinition {
     'hand_effect_duration_seconds': handEffectDurationSeconds,
     if (artworkKind != null) 'artwork': artworkKind!.name,
     if (payloadSkillId != null) 'fires': payloadSkillId,
+    if (rarity != null) 'rarity': rarity!.name,
+    if (description.isNotEmpty) 'description': description,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -524,12 +573,15 @@ class SkillDefinition {
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,
       effectDisplayScale: decimal('effect_display_scale') ?? 1,
       weaponGripInset: decimal('weapon_grip_inset') ?? 0,
+      weaponGripSide: decimal('weapon_grip_side') ?? 0,
+      weaponGripRotation: decimal('weapon_grip_rotation') ?? 0,
       effectStrength: decimal('effect_strength') ?? 1,
       healing: decimal('healing') ?? 10,
       shieldHits: integer('shield_hits') ?? 1,
       frozenDamageMultiplier: decimal('frozen_damage_multiplier') ?? 1.5,
       frozenCollisionDamage: decimal('frozen_collision_damage') ?? 5,
       knockback: decimal('knockback') ?? 0,
+      meleeReach: decimal('melee_reach') ?? 0,
       spriteMode: enumValue(
         'sprite_mode',
         SkillVisualMode.values,
@@ -584,6 +636,10 @@ class SkillDefinition {
       handEffectDurationSeconds: decimal('hand_effect_duration_seconds') ?? 0.5,
       artworkKind: nullableEnum('artwork', PowerUpKind.values),
       payloadSkillId: value['fires'] as String?,
+      rarity: nullableEnum('rarity', PowerUpRarity.values),
+      description: value['description'] is String
+          ? value['description'] as String
+          : '',
     ).validated();
   }
 
@@ -605,12 +661,15 @@ class SkillDefinition {
     pickupDisplayScale: pickupDisplayScale.clamp(0.25, 3),
     effectDisplayScale: effectDisplayScale.clamp(0.25, 3),
     weaponGripInset: weaponGripInset.clamp(0, 1.5),
+    weaponGripSide: weaponGripSide.clamp(-1.5, 1.5),
+    weaponGripRotation: weaponGripRotation.clamp(-180.0, 180.0),
     effectStrength: effectStrength.clamp(0, 10),
     healing: healing.clamp(0, 500),
     shieldHits: shieldHits.clamp(0, 20),
     frozenDamageMultiplier: frozenDamageMultiplier.clamp(1, 5),
     frozenCollisionDamage: frozenCollisionDamage.clamp(0, 200),
     knockback: knockback.clamp(0, 100),
+    meleeReach: meleeReach.clamp(0, 3),
     bubbleDurationSeconds: bubbleDurationSeconds.clamp(0.25, 10),
     repeatCount: repeatCount.clamp(1, 10),
     repeatIntervalSeconds: repeatIntervalSeconds.clamp(0.1, 10),
@@ -627,7 +686,20 @@ class SkillDefinition {
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
     payloadSkillId: _cleanReference(payloadSkillId),
+    rarity: custom && !baseKind.isTrap ? rarity : null,
+    description: custom ? cleanDescription(description) : '',
   );
+
+  /// [text] as a card description: whitespace and newlines collapsed to single spaces, trimmed and
+  /// cut to [maxDescriptionLength] characters (grapheme clusters, as the editor's `maxLength`
+  /// counts them), so an emoji is never split.
+  static String cleanDescription(String text) {
+    final flat = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final chars = flat.characters;
+    return chars.length <= maxDescriptionLength
+        ? flat
+        : chars.take(maxDescriptionLength).toString().trimRight();
+  }
 
   static String? _cleanReference(String? id) {
     final trimmed = id?.trim() ?? '';
@@ -710,6 +782,33 @@ class SkillLibrary {
   final double screenShake;
   final bool skillsSetScreenShake;
   static const double defaultScreenShake = 0.3;
+
+  /// [skill]'s tier: a custom skill's own [SkillDefinition.rarity], else its base kind's tier in
+  /// [tuning]. Null for traps, which have no tier. Every tier color, label, callout and spawn weight
+  /// for a skill comes from here.
+  static PowerUpRarity? rarityOf(SkillDefinition skill, PowerUpConfig tuning) =>
+      skill.custom && skill.rarity != null && !skill.baseKind.isTrap
+      ? skill.rarity
+      : tuning.rarityOf(skill.baseKind);
+
+  /// [skill] (a custom skill) with its own tier [rarity]; never touches the built-in's `tier.<kind>`.
+  /// Its callout style moves with the tier when it was the old tier's style, so a skill whose callout
+  /// was set apart from its tier keeps it.
+  static SkillDefinition withOwnRarity(
+    SkillDefinition skill,
+    PowerUpRarity rarity,
+    PowerUpConfig tuning,
+  ) {
+    if (!skill.custom || skill.baseKind.isTrap) return skill;
+    final old = rarityOf(skill, tuning);
+    final followsTier = old != null && skill.calloutStyle.index == old.index;
+    return skill.copyWith(
+      rarity: rarity,
+      calloutStyle: followsTier
+          ? SkillCalloutStyle.values[rarity.index]
+          : skill.calloutStyle,
+    );
+  }
 
   /// [skill]'s impact screen shake.
   double screenShakeFor(SkillDefinition skill) =>
@@ -867,7 +966,9 @@ class SkillLibrary {
       if (next == null) return 'The skill it fires ("$id") no longer exists.';
       path.add(next.name);
       if (!seen.add(next.id)) return 'Loop: ${path.join(' → ')}.';
-      if (!firesProjectiles(next)) return '${next.name} does not fire projectiles.';
+      if (!firesProjectiles(next)) {
+        return '${next.name} does not fire projectiles.';
+      }
       id = next.payloadSkillId;
     }
     return null;
@@ -1087,7 +1188,8 @@ class SkillLibrary {
       for (final entry in overrides.entries) entry.key: entry.value.toJson(),
     },
     'custom': [for (final item in custom) item.toJson()],
-    if (calloutSeconds != defaultCalloutSeconds) 'callout_seconds': calloutSeconds,
+    if (calloutSeconds != defaultCalloutSeconds)
+      'callout_seconds': calloutSeconds,
     if (!skillsSetCallout) 'skills_set_callout': false,
     if (screenShake != defaultScreenShake) 'screen_shake': screenShake,
     if (!skillsSetScreenShake) 'skills_set_screen_shake': false,
@@ -1379,6 +1481,7 @@ class SkillLibrary {
     PowerUpKind.sniperRifle => 'ONE SHOT.',
     PowerUpKind.busterSword => 'OMNISLASH!',
     PowerUpKind.ragingDemon => 'DIE ONE THOUSAND DEATHS!',
+    PowerUpKind.shadowClone => 'KAGE BUNSHIN NO JUTSU!',
   };
 
   static String _defaultSoundFor(PowerUpKind kind) => switch (kind) {
@@ -1388,7 +1491,8 @@ class SkillLibrary {
     PowerUpKind.gatling => 'gatling',
     PowerUpKind.knife ||
     PowerUpKind.sword ||
-    PowerUpKind.orbitingFlail => 'slash',
+    PowerUpKind.orbitingFlail ||
+    PowerUpKind.shadowClone => 'slash',
     PowerUpKind.shield ||
     PowerUpKind.freeze ||
     PowerUpKind.repulsor ||

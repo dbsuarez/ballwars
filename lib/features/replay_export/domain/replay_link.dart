@@ -49,6 +49,20 @@ class ReplayLink {
   /// Unstuck nudges (steps) the match had; part of the match. `nudge=` (comma list).
   final List<int> nudgeSteps;
 
+  /// Highest step `nudge=` and `end=` accept: one hour of game time at 60 steps per second.
+  static const int maxLinkStep = 216000;
+
+  /// How many [PowerUpKind]s existed before links carried `kc=` (the count before Shadow Clone). A
+  /// power-up link without `kc` was made then, so only the first [legacyKindCount] kinds can spawn.
+  static const int legacyKindCount = 48;
+
+  /// The smallest `kc` an app can write (the count when `kc` was introduced).
+  static const int firstLinkKindCount = 49;
+
+  /// End battle: the step at which the player asked to end an endless (non-Mayhem) battle after the
+  /// next knockout; part of the match. `end=`, only with `endless=1`.
+  final int? endStep;
+
   /// Power-up modes: the power-up numbers the match was played with. Part of the match, so the changed
   /// values travel as `t=` ([PowerUpConfig.encode]); old links without it use the defaults.
   final PowerUpConfig tuning;
@@ -87,6 +101,7 @@ class ReplayLink {
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
+    this.endStep,
     this.tuning = PowerUpConfig.defaults,
     this.dualWield = false,
     this.endlessBattle = false,
@@ -100,8 +115,10 @@ class ReplayLink {
 
   static const String _weaponsPrefix = 'w.';
 
-  static int _mask(Set<PowerUpKind> kinds) =>
-      kinds.fold(0, (m, k) => m | (1 << k.index));
+  /// The `w.` bitmask of [kinds] (bit = [PowerUpKind.index]). BigInt, because on the web an int
+  /// shift past bit 31 loses bits.
+  static BigInt _mask(Set<PowerUpKind> kinds) =>
+      kinds.fold(BigInt.zero, (m, k) => m | (BigInt.one << k.index));
 
   /// Longest question kept (the rest is cut).
   static const int maxQuestionLength = 100;
@@ -149,6 +166,10 @@ class ReplayLink {
         : '&q=${Uri.encodeQueryComponent(question!)}';
     final encoded = mode == MatchMode.threads ? null : tuning.encode();
     final t = encoded == null ? '' : '&t=$encoded';
+    // Pins the kind pool: kinds added after this link was made never spawn when it plays back.
+    final kc = mode == MatchMode.threads
+        ? ''
+        : '&kc=${PowerUpKind.values.length}';
     final dw = mode != MatchMode.threads && dualWield ? '&dw=1' : '';
     final endless = mode == MatchMode.arsenal && endlessBattle
         ? '&endless=1'
@@ -175,7 +196,13 @@ class ReplayLink {
     final hair = randomizedHairstyles ? '&hair=1' : '';
     final lookToken = look == null ? '' : '&look=${look!.name}';
     final chosenCustom = customSkills;
-    final nudgeToken = nudgeSteps.isEmpty ? '' : '&nudge=${nudgeSteps.join(',')}';
+    final nudgeToken = nudgeSteps.isEmpty
+        ? ''
+        : '&nudge=${nudgeSteps.join(',')}';
+    final endToken =
+        endStep != null && mode == MatchMode.arsenal && endlessBattle && !mayhem
+        ? '&end=$endStep'
+        : '';
     final customToken = mode == MatchMode.threads || chosenCustom == null
         ? ''
         : '&cs=${(chosenCustom.toList()..sort()).join(',')}';
@@ -183,7 +210,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$kc$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
@@ -217,23 +244,40 @@ class ReplayLink {
       if (parsedMode == null) return null;
       mode = parsedMode;
     }
+    // The kinds that existed when the link was made (`kc`, strict); before `kc` there were
+    // [legacyKindCount]. Later kinds are left out of the pool so the match replays as it was played.
+    final kcText = params['kc'];
+    final kindCount = kcText == null ? legacyKindCount : int.tryParse(kcText);
+    if (kcText != null &&
+        (mode == MatchMode.threads ||
+            kindCount == null ||
+            kindCount < firstLinkKindCount ||
+            kindCount > PowerUpKind.values.length ||
+            '$kindCount' != kcText)) {
+      return null;
+    }
     Set<PowerUpKind>? powerUps;
     if (tokens.isNotEmpty && tokens.first.startsWith(_weaponsPrefix)) {
-      final mask = int.tryParse(
-        tokens.removeAt(0).substring(_weaponsPrefix.length),
-        radix: 36,
-      );
-      final all = (1 << PowerUpKind.values.length) - 1;
-      // Only with a power-up mode, never empty, no unknown kinds.
+      final text = tokens.removeAt(0).substring(_weaponsPrefix.length);
+      final mask = RegExp(r'^[0-9a-zA-Z]+$').hasMatch(text)
+          ? BigInt.tryParse(text, radix: 36)
+          : null;
+      // Only with a power-up mode, never empty, no kinds the link's app didn't have.
       if (mode == MatchMode.threads ||
           mask == null ||
-          mask <= 0 ||
-          mask & ~all != 0) {
+          mask <= BigInt.zero ||
+          mask.bitLength > kindCount!) {
         return null;
       }
       powerUps = {
         for (final k in PowerUpKind.values)
-          if (mask & (1 << k.index) != 0) k,
+          if (k.index < kindCount && (mask >> k.index).isOdd) k,
+      };
+    } else if (mode != MatchMode.threads &&
+        kindCount! < PowerUpKind.values.length) {
+      powerUps = {
+        for (final k in PowerUpKind.values)
+          if (k.index < kindCount) k,
       };
     }
     final mayhem = params['mayhem'] == '1';
@@ -259,8 +303,11 @@ class ReplayLink {
     final nudge = params['nudge'];
     if (nudge != null) {
       final steps = [for (final part in nudge.split(',')) int.tryParse(part)];
-      // Positive steps within ten minutes of game time, at most 200 of them.
-      if (steps.length > 200 || steps.any((s) => s == null || s < 1 || s > 36000)) return null;
+      // Positive steps within an hour of game time, at most 200 of them.
+      if (steps.length > 200 ||
+          steps.any((s) => s == null || s < 1 || s > maxLinkStep)) {
+        return null;
+      }
       nudgeSteps = [...steps.cast<int>()]..sort();
     }
     Set<String>? customSkills;
@@ -284,6 +331,19 @@ class ReplayLink {
             !endlessBattle ||
             tokens.length != mayhemBalls)) {
       return null;
+    }
+    int? endStep;
+    final end = params['end'];
+    if (end != null) {
+      // Only with an endless (non-Mayhem) battle; a step within an hour of game time.
+      endStep = int.tryParse(end);
+      if (!endlessBattle ||
+          mayhem ||
+          endStep == null ||
+          endStep < 1 ||
+          endStep > maxLinkStep) {
+        return null;
+      }
     }
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
@@ -362,6 +422,7 @@ class ReplayLink {
       powerUps: powerUps,
       customSkills: customSkills,
       nudgeSteps: nudgeSteps,
+      endStep: endStep,
       tuning: tuning,
       dualWield: dualWield,
       endlessBattle: endlessBattle,
@@ -419,6 +480,9 @@ class ReplayLink {
             'g': b.glowColor.toARGB32(),
             's': b.baseSpeed,
             'm': b.mass,
+            // Gender (cosmetic: the hair pool), only when set, so links of
+            // balls without one stay as they were.
+            if (b.gender != BallGender.none) 'x': b.gender.name,
           }),
         ),
       )
@@ -503,6 +567,17 @@ class ReplayLink {
         return null;
       }
       if (!_within(mass, 0.25, 4)) return null;
+      final rawGender = data['x'];
+      BallGender gender = BallGender.none;
+      if (rawGender != null) {
+        // Only what the app writes: "male" or "female" (none is left out).
+        if (rawGender is! String) return null;
+        final match = BallGender.values.where(
+          (g) => g != BallGender.none && g.name == rawGender,
+        );
+        if (match.isEmpty) return null;
+        gender = match.first;
+      }
       return CustomBall(
         id: 'link-$index',
         name: name,
@@ -510,6 +585,7 @@ class ReplayLink {
         glowColor: Color(data['g'] as int),
         baseSpeed: baseSpeed,
         mass: mass,
+        gender: gender,
       );
     } catch (_) {
       return null;

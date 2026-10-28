@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
+import 'package:characters/characters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -406,6 +407,185 @@ void main() {
           : SkillCalloutStyle.values[tuning.rarityOf(kind)!.index];
       expect(skill.calloutStyle, expected, reason: kind.label);
     }
+  });
+
+  test('grip sideways and rotation round trip, clamp and default to 0', () {
+    final base = SkillLibrary.defaults.builtIn(
+      PowerUpKind.pistol,
+      PowerUpConfig.defaults,
+    );
+    expect(base.weaponGripSide, 0);
+    expect(base.weaponGripRotation, 0);
+    final json = base
+        .copyWith(weaponGripSide: -0.6, weaponGripRotation: 37.5)
+        .toJson();
+    expect(json['weapon_grip_side'], -0.6);
+    expect(json['weapon_grip_rotation'], 37.5);
+    final decoded = SkillDefinition.fromJson(json)!;
+    expect(decoded.weaponGripSide, -0.6);
+    expect(decoded.weaponGripRotation, 37.5);
+
+    final wild = SkillDefinition.fromJson(
+      Map<String, Object?>.from(base.toJson())
+        ..['weapon_grip_side'] = 9
+        ..['weapon_grip_rotation'] = -400,
+    )!;
+    expect(wild.weaponGripSide, 1.5);
+    expect(wild.weaponGripRotation, -180);
+
+    final old = Map<String, Object?>.from(base.toJson())
+      ..remove('weapon_grip_side')
+      ..remove('weapon_grip_rotation');
+    final legacy = SkillDefinition.fromJson(old)!;
+    expect(legacy.weaponGripSide, 0);
+    expect(legacy.weaponGripRotation, 0);
+  });
+
+  test('default grips are left out of the JSON and replay snapshots', () {
+    var library = SkillLibrary.defaults;
+    library = library.withDefinition(
+      library.create('Plain Pistol', PowerUpKind.pistol),
+      PowerUpConfig.defaults,
+    );
+    for (final skill in library.all(PowerUpConfig.defaults)) {
+      expect(skill.weaponGripSide, 0, reason: skill.id);
+      expect(skill.weaponGripRotation, 0, reason: skill.id);
+      final json = skill.toJson();
+      expect(json.containsKey('weapon_grip_side'), isFalse, reason: skill.id);
+      expect(
+        json.containsKey('weapon_grip_rotation'),
+        isFalse,
+        reason: skill.id,
+      );
+    }
+    final encoded = library.encodeReplay()!;
+    final source = utf8.decode(
+      base64Url.decode(encoded.padRight((encoded.length + 3) ~/ 4 * 4, '=')),
+    );
+    expect(source, isNot(contains('weapon_grip_side')));
+    expect(source, isNot(contains('weapon_grip_rotation')));
+    final decoded = SkillLibrary.decodeReplay(encoded)!;
+    expect(decoded.custom.single.weaponGripSide, 0);
+    expect(decoded.custom.single.weaponGripRotation, 0);
+    expect(jsonEncode(decoded.toJson()), jsonEncode(library.toJson()));
+  });
+
+  test(
+    'custom description round trips, trims, caps at 160 and defaults to empty',
+    () {
+      final base = SkillLibrary.defaults.create(
+        'Story Knife',
+        PowerUpKind.knife,
+      );
+      expect(base.description, '');
+      expect(base.toJson().containsKey('description'), isFalse);
+
+      final described = base
+          .copyWith(description: '  Cuts\nthreads   twice.  ')
+          .validated();
+      expect(described.description, 'Cuts threads twice.');
+      final json = described.toJson();
+      expect(json['description'], 'Cuts threads twice.');
+      expect(
+        SkillDefinition.fromJson(json)!.description,
+        'Cuts threads twice.',
+      );
+
+      final long = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..['description'] = 'x' * 300,
+      )!;
+      expect(long.description, 'x' * 160);
+
+      final legacy = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..remove('description'),
+      )!;
+      expect(legacy.description, '');
+
+      final wrongType = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..['description'] = 42,
+      )!;
+      expect(wrongType.description, '');
+
+      final builtIn = SkillLibrary.defaults
+          .builtIn(PowerUpKind.knife, PowerUpConfig.defaults)
+          .copyWith(description: 'Not for built-ins')
+          .validated();
+      expect(builtIn.description, '');
+    },
+  );
+
+  test('descriptions are cut on characters, never inside an emoji', () {
+    // Each family emoji is one character but many UTF-16 units.
+    const family = '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}';
+    final emojis = SkillDefinition.cleanDescription(family * 200);
+    expect(emojis, family * SkillDefinition.maxDescriptionLength);
+    expect(emojis.characters.length, SkillDefinition.maxDescriptionLength);
+    // A flag (two regional indicators) right at the cut stays whole.
+    final flag = '\u{1F1F5}\u{1F1ED}';
+    final mixed = SkillDefinition.cleanDescription('a' * 159 + flag * 3);
+    expect(mixed, 'a' * 159 + flag);
+    // No lone surrogate survives the cut.
+    final lone = RegExp(r'[\uD800-\uDBFF](?![\uDC00-\uDFFF])');
+    expect(lone.hasMatch(mixed), isFalse);
+    expect(() => jsonEncode(mixed), returnsNormally);
+
+    final noSpaces = SkillDefinition.cleanDescription('word' * 100);
+    expect(noSpaces, ('word' * 100).substring(0, 160));
+  });
+
+  test('replay snapshots carry descriptions and still enforce their limit', () {
+    final description = 'd' * 160;
+    var library = SkillLibrary.defaults;
+    for (var i = 0; i < 20; i++) {
+      library = library.withDefinition(
+        library
+            .create('Story Skill $i', PowerUpKind.pistol)
+            .copyWith(description: description),
+        PowerUpConfig.defaults,
+      );
+    }
+    final encoded = library.encodeReplay()!;
+    final decoded = SkillLibrary.decodeReplay(encoded)!;
+    expect(decoded.custom, hasLength(20));
+    expect(decoded.custom.every((s) => s.description == description), isTrue);
+
+    var full = library;
+    for (
+      var i = 20;
+      jsonEncode(full.toJson()).length <= SkillLibrary.maxReplayCharacters;
+      i++
+    ) {
+      full = full.withDefinition(
+        full
+            .create('Story Skill $i', PowerUpKind.pistol)
+            .copyWith(description: description),
+        PowerUpConfig.defaults,
+      );
+    }
+    expect(full.encodeReplay, throwsFormatException);
+  });
+
+  test('melee reach round trips, clamps to 0..3 and defaults to 0', () {
+    for (final skill in SkillLibrary.defaults.all(PowerUpConfig.defaults)) {
+      expect(skill.meleeReach, 0, reason: skill.id);
+    }
+    final base = SkillLibrary.defaults.builtIn(
+      PowerUpKind.knife,
+      PowerUpConfig.defaults,
+    );
+    // Left out at 0, so existing snapshots keep their size.
+    expect(base.toJson().containsKey('melee_reach'), isFalse);
+    final json = base.copyWith(meleeReach: 1.25).toJson();
+    expect(json['melee_reach'], 1.25);
+    expect(SkillDefinition.fromJson(json)!.meleeReach, 1.25);
+    final wild = SkillDefinition.fromJson(
+      Map<String, Object?>.from(base.toJson())..['melee_reach'] = 9,
+    )!;
+    expect(wild.meleeReach, 3);
+    final negative = SkillDefinition.fromJson(
+      Map<String, Object?>.from(base.toJson())..['melee_reach'] = -2,
+    )!;
+    expect(negative.meleeReach, 0);
   });
 
   test('hilted weapons default to an inset hand grip', () {

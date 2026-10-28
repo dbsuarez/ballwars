@@ -401,20 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           children: [
                                             Text(decoration.label),
                                             Text(
-                                              switch (decoration) {
-                                                ArenaDecoration.defaultArena =>
-                                                  'Spike Wall',
-                                                ArenaDecoration.space =>
-                                                  'Gravity Well',
-                                                ArenaDecoration.desert =>
-                                                  'Quicksand',
-                                                ArenaDecoration.wilderness =>
-                                                  'Vine Snare',
-                                                ArenaDecoration.neonGrid =>
-                                                  'Laser Gate',
-                                                ArenaDecoration.chaotic =>
-                                                  'All arena traps',
-                                              },
+                                              decoration.hazardCaption,
                                               style: const TextStyle(
                                                 fontSize: 10,
                                               ),
@@ -776,52 +763,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 context,
                                               ).push<SkillManagementResult>(
                                                 MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      SkillManagementScreen(
-                                                        onSave: (result) async {
-                                                          final scope =
-                                                              AppSettingsScope.maybeScope(
-                                                                this.context,
-                                                              )!;
-                                                          final next = scope
-                                                              .notifier!
-                                                              .value
-                                                              .copyWith(
-                                                                projectileRenderMode:
-                                                                    result
-                                                                        .effectVisuals,
-                                                                explosionRenderMode:
-                                                                    result
-                                                                        .effectVisuals,
-                                                                freezeRenderMode:
-                                                                    result
-                                                                        .effectVisuals,
-                                                                skillLibrary:
-                                                                    result
-                                                                        .library,
-                                                                powerUps: result
-                                                                    .library
-                                                                    .applyTo(
-                                                                      result
-                                                                          .tuning,
-                                                                    ),
-                                                              );
-                                                          await scope
-                                                              .repository!
-                                                              .save(next);
-                                                          scope
-                                                                  .notifier!
-                                                                  .value =
-                                                              next;
-                                                        },
-                                                        initial: settings
-                                                            .skillLibrary,
-                                                        initialEffectVisuals:
-                                                            settings
-                                                                .explosionRenderMode,
-                                                        tuning:
-                                                            settings.powerUps,
-                                                      ),
+                                                  builder: (_) => SkillManagementScreen(
+                                                    onSave: (result) async {
+                                                      final scope =
+                                                          AppSettingsScope.maybeScope(
+                                                            this.context,
+                                                          )!;
+                                                      final next = scope
+                                                          .notifier!
+                                                          .value
+                                                          .copyWith(
+                                                            projectileRenderMode:
+                                                                result
+                                                                    .effectVisuals,
+                                                            explosionRenderMode:
+                                                                result
+                                                                    .effectVisuals,
+                                                            freezeRenderMode:
+                                                                result
+                                                                    .effectVisuals,
+                                                            skillLibrary:
+                                                                result.library,
+                                                            powerUps: result
+                                                                .library
+                                                                .applyTo(
+                                                                  result.tuning,
+                                                                ),
+                                                          );
+                                                      await scope.repository!
+                                                          .save(next);
+                                                      scope.notifier!.value =
+                                                          next;
+                                                    },
+                                                    initial:
+                                                        settings.skillLibrary,
+                                                    initialEffectVisuals:
+                                                        settings
+                                                            .explosionRenderMode,
+                                                    tuning: settings.powerUps,
+                                                  ),
                                                 ),
                                               );
                                           if (!mounted || result == null) {
@@ -890,27 +870,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onPressed: _busy
                                       ? null
                                       : () async {
-                                          final config =
+                                          final result =
                                               await Navigator.of(
                                                 context,
-                                              ).push<PowerUpConfig>(
+                                              ).push<PowerUpRarityResult>(
                                                 MaterialPageRoute(
                                                   builder: (_) =>
                                                       PowerUpRarityScreen(
                                                         initial:
                                                             settings.powerUps,
+                                                        skills: settings
+                                                            .skillLibrary,
                                                       ),
                                                 ),
                                               );
                                           if (!mounted ||
-                                              config == null ||
-                                              config == settings.powerUps) {
+                                              result == null ||
+                                              (result.tuning ==
+                                                      settings.powerUps &&
+                                                  identical(
+                                                    result.library,
+                                                    settings.skillLibrary,
+                                                  ))) {
                                             return;
                                           }
+                                          // Built-in tiers go to the tuning, custom skills' own
+                                          // tiers to the skill library.
                                           await _save(
                                             AppSettingsScope.of(
                                               this.context,
-                                            ).copyWith(powerUps: config),
+                                            ).copyWith(
+                                              powerUps: result.tuning,
+                                              skillLibrary: result.library,
+                                            ),
                                             done:
                                                 'Item rarities saved for everyone.',
                                           );

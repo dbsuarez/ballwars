@@ -63,6 +63,7 @@ class ReplayFramePainter {
         background: _style.background,
         rimColor: _style.text,
         look: _style.look,
+        showHpBars: _style.showHpBars,
       ).paint(canvas, const Size(_arenaSide, _arenaSide));
       canvas.restore();
     });
@@ -461,6 +462,9 @@ class ReplayStyle {
   /// Ball look (pictures or faces), as in the app.
   final BallLook look;
 
+  /// A thin HP bar above each ball, as in the app.
+  final bool showHpBars;
+
   const ReplayStyle({
     this.effectRenderMode = EffectRenderMode.sprite,
     this.headline = 'WHO WINS?',
@@ -474,5 +478,6 @@ class ReplayStyle {
     this.arenaSubtitle = 'bakbakan na',
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.look = BallLook.pictures,
+    this.showHpBars = false,
   });
 }

@@ -11,6 +11,7 @@ import '../../settings/domain/app_settings.dart';
 import '../domain/arena_physics_engine.dart';
 import '../domain/fan_line.dart';
 import '../domain/floating_text.dart';
+import '../domain/hair_styles.dart';
 import '../domain/match_colors.dart';
 import '../domain/particle_system.dart';
 import '../domain/power_up.dart';
@@ -241,10 +242,31 @@ class MatchSimulationController {
     _nudgePending = true;
   }
 
+  /// End battle (endless, non-Mayhem): the step (1-based) at which the player asked to end the match
+  /// after the next knockout; null until then. Part of the match like the nudges.
+  int? get endStep => _endStep;
+  int? _endStep;
+  bool _endPending = false;
+
+  /// Whether End battle was pressed (the match ends at the next knockout).
+  bool get endRequested => _endPending || _endStep != null;
+
+  /// End battle button: from the next step, the next knockout ends the match with the usual tally
+  /// instead of a respawn. Recorded as a step, so replays and videos end at the same knockout.
+  void requestEndAfterKnockout() {
+    if (!endlessBattle || mayhem || _status == MatchStatus.finished) return;
+    if (endRequested) return;
+    _endPending = true;
+  }
+
   /// A nudge planned for the running step: the button's (recorded now, and the look-ahead plans again)
   /// or one from a replay. Directions come from the match's seeded random source.
   void _applyNudges() {
     final step = _stepCount + 1;
+    if (_endPending) {
+      _endPending = false;
+      _endStep = step;
+    }
     if (_nudgePending) {
       _nudgePending = false;
       if (!_nudgeSteps.contains(step)) {
@@ -256,7 +278,8 @@ class MatchSimulationController {
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
       final angle = _rng.nextDoubleRange(0, 2 * math.pi);
-      ball.velocity = Offset(math.cos(angle), math.sin(angle)) * arenaRadius * nudgeForce;
+      ball.velocity =
+          Offset(math.cos(angle), math.sin(angle)) * arenaRadius * nudgeForce;
     }
   }
 
@@ -288,8 +311,10 @@ class MatchSimulationController {
     this.automaticSpeedUp = true,
     this.randomizedHairstyles = false,
     List<int> nudgeSteps = const [],
+    int? endAfterKnockoutStep,
   }) : tuning = skillLibrary.applyTo(tuning),
        _nudgeSteps = [...nudgeSteps]..sort(),
+       _endStep = endlessBattle && !mayhem ? endAfterKnockoutStep : null,
        initialArenaRadius = arenaRadius,
        seed = seed ?? DateTime.now().millisecondsSinceEpoch {
     // Same seed, setup and nudges: the steps are identical (slow motion only changes playback), so its
@@ -320,6 +345,7 @@ class MatchSimulationController {
       automaticSpeedUp: automaticSpeedUp,
       randomizedHairstyles: randomizedHairstyles,
       nudgeSteps: nudges,
+      endAfterKnockoutStep: endAfterKnockoutStep,
     );
     _predict();
     _rng = SeededRandom(this.seed);
@@ -342,8 +368,10 @@ class MatchSimulationController {
       for (final c in contestants) c.primaryColor,
     ], background: arenaBackground);
 
-    final hairstyleOrder = List<int>.generate(20, (index) => index)
-      ..shuffle(math.Random(this.seed ^ 0x48414952));
+    final hairstyleOrder = List<int>.generate(
+      HairStyles.legacyCount,
+      (index) => index,
+    )..shuffle(math.Random(this.seed ^ 0x48414952));
     const hairPalette = <Color>[
       Color(0xFF17120F),
       Color(0xFF4B2E20),
@@ -370,6 +398,13 @@ class MatchSimulationController {
         availableHairColors.removeAt(contrasting < 0 ? 0 : contrasting),
       );
     }
+    // Gendered balls always wear hair from their pool; without random
+    // hairstyles it follows the ball id (no RNG either way).
+    final hairstyles = HairStyles.stylesFor(
+      contestants,
+      (i) => randomizedHairstyles ? hairstyleOrder[i] : null,
+      seed: this.seed,
+    );
     _balls = List.generate(count, (i) {
       final angle = _startAngle(i, count);
       final radial = Offset(math.cos(angle), math.sin(angle));
@@ -401,8 +436,17 @@ class MatchSimulationController {
         velocity: velocity,
         radius: ballRadius,
         lineCount: 0,
-        hairstyle: randomizedHairstyles ? hairstyleOrder[i] : null,
-        hairColor: randomizedHairstyles ? assignedHairColors[i] : null,
+        hairstyle: hairstyles[i],
+        hairColor: randomizedHairstyles
+            ? assignedHairColors[i]
+            : contestants[i].gender == BallGender.none
+            ? null
+            : HairStyles.colorFor(
+                contestants[i].id,
+                contestants[i].primaryColor,
+                hairPalette,
+                _colorDistance,
+              ),
       );
     });
 
@@ -689,25 +733,29 @@ class MatchSimulationController {
 
   void _finishMayhem() {
     if (_status == MatchStatus.finished || _balls.isEmpty) return;
-    final ranked = [..._balls]
-      ..sort((a, b) {
-        final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
-          eliminations[a.config.id] ?? 0,
-        );
-        if (knockouts != 0) return knockouts;
-        final timesEliminated = (deaths[a.config.id] ?? 0).compareTo(
-          deaths[b.config.id] ?? 0,
-        );
-        if (timesEliminated != 0) return timesEliminated;
-        final life = b.life.compareTo(a.life);
-        if (life != 0) return life;
-        return _balls.indexOf(a).compareTo(_balls.indexOf(b));
-      });
+    final ranked = _tallyRanking();
     _winnerId = ranked.first.config.id;
     // The visual loser must match the bottom of the final KO/death/life tally.
     _lastEliminatedId = ranked.length > 1 ? ranked.last.config.id : null;
     _winningMove = 'Knockout lead';
     _status = MatchStatus.finished;
+  }
+
+  /// Endless/Mayhem standings: most knockouts, then fewest times eliminated, then most life.
+  List<SimulationBall> _tallyRanking([Iterable<SimulationBall>? among]) {
+    return [...(among ?? _balls)]..sort((a, b) {
+      final knockouts = (eliminations[b.config.id] ?? 0).compareTo(
+        eliminations[a.config.id] ?? 0,
+      );
+      if (knockouts != 0) return knockouts;
+      final timesEliminated = (deaths[a.config.id] ?? 0).compareTo(
+        deaths[b.config.id] ?? 0,
+      );
+      if (timesEliminated != 0) return timesEliminated;
+      final life = b.life.compareTo(a.life);
+      if (life != 0) return life;
+      return _balls.indexOf(a).compareTo(_balls.indexOf(b));
+    });
   }
 
   // Used only by the admin test arena. Empty during ordinary matches.
@@ -978,7 +1026,24 @@ class MatchSimulationController {
             ifAbsent: () => 1,
           );
         }
-        _respawn(ball);
+        // End battle was pressed: this knockout ends the match, so the ball stays down.
+        if (_endStep == null || _stepCount + 1 < _endStep!) _respawn(ball);
+      }
+      if (_endStep != null && _stepCount + 1 >= _endStep!) {
+        final defeated = eliminatedNow.last;
+        // The winner is the tally leader among the balls still standing (every ball knocked out this
+        // step is down); if nobody is standing, among everyone but the defeated ball.
+        final standing = _balls.where((b) => !b.isEliminated).toList();
+        _winnerId = _tallyRanking(
+          standing.isNotEmpty ? standing : _balls.where((b) => b != defeated),
+        ).first.config.id;
+        _lastEliminatedId = defeated.config.id;
+        _winningMove = _lastMove[defeated] ?? 'Collision';
+        _status = MatchStatus.finished;
+        for (final ball in _balls) {
+          ball.lineCount = ball.fanLines.length;
+        }
+        return;
       }
       eliminatedNow.clear();
     }

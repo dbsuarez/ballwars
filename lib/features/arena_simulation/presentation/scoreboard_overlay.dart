@@ -22,6 +22,11 @@ class ScoreboardOverlay extends StatelessWidget {
   final PowerUpConfig tuning;
   final int Function(SimulationBall ball, PowerUpKind kind)? artworkTint;
 
+  /// The tier of an item a ball holds (a held custom skill has its own); null: the kind's tier in
+  /// [tuning].
+  final PowerUpRarity? Function(SimulationBall ball, PowerUpKind kind)?
+  itemRarity;
+
   const ScoreboardOverlay({
     super.key,
     required this.balls,
@@ -32,7 +37,11 @@ class ScoreboardOverlay extends StatelessWidget {
     this.compact = false,
     this.tuning = PowerUpConfig.defaults,
     this.artworkTint,
+    this.itemRarity,
   });
+
+  PowerUpRarity? _rarityOf(SimulationBall ball, PowerUpKind kind) =>
+      itemRarity == null ? tuning.rarityOf(kind) : itemRarity!(ball, kind);
 
   Widget _compactCards(BuildContext context) {
     final c = BallWarsColors.of(context);
@@ -258,7 +267,7 @@ class ScoreboardOverlay extends StatelessWidget {
                                           11,
                                           FontWeight.w600,
                                           color:
-                                              tuning.rarityOf(kind)?.color ??
+                                              _rarityOf(ball, kind)?.color ??
                                               c.muted,
                                         ),
                                       ),

@@ -182,6 +182,8 @@ void paintHands(
   Canvas canvas,
   SimulationBall ball, {
   double Function(PowerUpKind kind, int slot)? weaponGripInset,
+  double Function(PowerUpKind kind, int slot)? weaponGripSide,
+  double Function(PowerUpKind kind, int slot)? weaponGripRotation,
 }) {
   final r = ball.radius;
   final held = ball.held;
@@ -202,13 +204,22 @@ void paintHands(
   if (ball.heldSecondary != null) {
     for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
       final weapon = ball.equippedWeapons[slot];
-      final angle = PowerUpPainter.heldAngle(ball, weapon: weapon, slot: slot);
+      final aim = PowerUpPainter.heldAngle(ball, weapon: weapon, slot: slot);
       final center = PowerUpPainter.heldCenter(
         ball,
         weapon: weapon,
         slot: slot,
         gripInset: weaponGripInset?.call(weapon, slot),
+        gripSide: weaponGripSide?.call(weapon, slot) ?? 0,
       );
+      // The hand grips the sprite as drawn, so it turns with the grip
+      // rotation (a shield's hand stays on the ball's rim).
+      final angle = weapon == PowerUpKind.shield
+          ? aim
+          : PowerUpPainter.heldSpriteAngle(
+              aim,
+              weaponGripRotation?.call(weapon, slot) ?? 0,
+            );
       final dir = _unit(angle);
       _paintHandAt(
         canvas,
@@ -230,12 +241,21 @@ void paintHands(
     return;
   }
 
-  final angle = PowerUpPainter.heldAngle(ball);
+  final aim = PowerUpPainter.heldAngle(ball);
+  // Flipping follows the aim; the grip then turns with the drawn sprite.
+  final flipped = math.cos(aim) < 0;
+  final angle = held == PowerUpKind.shield
+      ? aim
+      : PowerUpPainter.heldSpriteAngle(
+          aim,
+          weaponGripRotation?.call(held, 0) ?? 0,
+        );
   final dir = _unit(angle);
   final side = Offset(-dir.dy, dir.dx);
   final weaponCenter = PowerUpPainter.heldCenter(
     ball,
     gripInset: weaponGripInset?.call(held, 0),
+    gripSide: weaponGripSide?.call(held, 0) ?? 0,
   );
   final Offset grip;
   if (held == PowerUpKind.shield) {
@@ -247,13 +267,13 @@ void paintHands(
   } else {
     // The sprite flips vertically when it points left, so its local grip does
     // the same.
-    final localY = dir.dx < 0 ? -0.3 : 0.3;
+    final localY = flipped ? -0.3 : 0.3;
     grip = weaponCenter - dir * (r * 0.45) + side * (r * localY);
   }
   _paintHandAt(canvas, grip, r, gripAngle: angle);
 
-  final freeA = angle - 2.3;
-  final freeB = angle + 2.3;
+  final freeA = aim - 2.3;
+  final freeB = aim + 2.3;
   final freeAngle = math.sin(freeA) >= math.sin(freeB) ? freeA : freeB;
   _paintHandAt(canvas, ball.position + _unit(freeAngle) * (r * 0.98), r);
 }

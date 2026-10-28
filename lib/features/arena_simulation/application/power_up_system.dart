@@ -115,6 +115,7 @@ class PowerUpSystem {
   final List<SniperFlash> sniperFlashes = [];
   final List<OmnislashAttack> omnislashAttacks = [];
   final List<RagingDemonAttack> ragingDemonAttacks = [];
+  final List<ShadowCloneAttack> shadowCloneAttacks = [];
   final List<ArenaThemeHazard> arenaThemeHazards = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
@@ -184,6 +185,11 @@ class PowerUpSystem {
               ? visualSkill(kind, skillId: skillId, ball: ball)
               : _composedProjectiles[projectile] ?? visualSkill(kind))
           .spriteTint;
+
+  /// The tier of [kind] as [ball] holds or uses it: a held custom skill's own tier, else the
+  /// built-in's ([SkillLibrary.rarityOf]). Null for traps.
+  PowerUpRarity? itemRarity(PowerUpKind kind, {SimulationBall? ball}) =>
+      SkillLibrary.rarityOf(visualSkill(kind, ball: ball), _t);
 
   bool usesEffectSprite(
     PowerUpKind kind, {
@@ -302,6 +308,11 @@ class PowerUpSystem {
         _releaseEnergyWave(attack, launchAway: false);
       }
     }
+    shadowCloneAttacks.removeWhere((attack) => identical(attack.owner, ball));
+    for (final attack in shadowCloneAttacks) {
+      // The next clone picks a new victim.
+      if (identical(attack.target, ball)) attack.target = null;
+    }
   }
 
   /// Velocity of each frozen ball from before it was frozen, given back when it thaws.
@@ -382,6 +393,7 @@ class PowerUpSystem {
     _triggerPoisonSwamps();
     _pickUpTouched();
     _strikeWithOrbitingFlails();
+    _strikeWithMeleeReach();
     _sweep();
     _updateFrozen();
     _updateStunned();
@@ -747,6 +759,8 @@ class PowerUpSystem {
         _eatFriedChicken(ball);
       case PowerUpKind.ragingDemon:
         _startRagingDemon(ball);
+      case PowerUpKind.shadowClone:
+        _startShadowClone(ball);
       default:
         ball.equipWeapon(
           p.kind,
@@ -860,6 +874,56 @@ class PowerUpSystem {
     _skillYell(owner, PowerUpKind.ragingDemon, 'DIE ONE THOUSAND DEATHS!');
   }
 
+  /// Kage bunshin: time freezes for the whole sequence while the clones strike one by one
+  /// ([_updateShadowClones]).
+  void _startShadowClone(SimulationBall owner) {
+    final target = _nearestTarget(owner);
+    if (target == null) return;
+    final clones = _t.shadowCloneCount;
+    _freezeTime(ShadowCloneAttack.durationFor(clones));
+    shadowCloneAttacks.add(
+      ShadowCloneAttack(owner: owner, target: target, clones: clones),
+    );
+    _skillYell(owner, PowerUpKind.shadowClone, 'KAGE BUNSHIN NO JUTSU!');
+  }
+
+  void _updateShadowClones() {
+    for (final attack in shadowCloneAttacks.toList()) {
+      attack.age++;
+      if (attack.vanishAt == null) {
+        final current = attack.target;
+        if (current == null || !_alive(current)) {
+          attack.target = _nearestTarget(attack.owner);
+        }
+        final victim = attack.target;
+        if (victim == null || !_alive(attack.owner)) {
+          attack
+            ..target = null
+            ..vanishAt = attack.age;
+        } else if (attack.age >=
+            ShadowCloneAttack.strikeAge(attack.clonesDone)) {
+          attack.struckAt.add(attack.strikePoint(attack.clonesDone, victim));
+          attack.clonesDone++;
+          _hit(
+            victim,
+            PowerUpKind.shadowClone,
+            at: victim.position,
+            from: attack.owner,
+            scaleForCrowd: false,
+          );
+          _skillSound(PowerUpKind.shadowClone);
+          if (attack.clonesDone >= attack.clones) {
+            attack.vanishAt = attack.age;
+          } else if (!_alive(victim)) {
+            attack.target = _nearestTarget(attack.owner);
+            if (attack.target == null) attack.vanishAt = attack.age;
+          }
+        }
+      }
+      if (attack.finished) shadowCloneAttacks.remove(attack);
+    }
+  }
+
   void _updatePhaseEightAttacks() {
     for (final flash in sniperFlashes) {
       flash.age++;
@@ -924,6 +988,7 @@ class PowerUpSystem {
         ragingDemonAttacks.remove(attack);
       }
     }
+    _updateShadowClones();
   }
 
   bool? _twoHandedOverride(SkillDefinition skill) => switch (skill.handedness) {
@@ -1669,20 +1734,37 @@ class PowerUpSystem {
         .where((kind) => kind.isTrap || !claimedKinds.contains(kind))
         .toList();
     if (eligibleKinds.isEmpty && forcedKind == null) return;
-    final kind =
-        forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
-    final variants = spawnableCustom
-        .where((skill) => skill.baseKind == kind)
-        .toList();
     // The built-in itself only when it's chosen too (with everything chosen this draws as before).
-    final builtInChosen = chosen == null || chosen.contains(kind) || kind.isTrap;
-    final candidates = [
-      if (builtInChosen) match.skillLibrary.builtIn(kind, _t),
-      ...variants,
-    ];
-    final selectedSkill = forcedKind == null && variants.isNotEmpty
-        ? candidates[rng.nextInt(candidates.length)]
-        : match.skillLibrary.builtIn(kind, _t);
+    bool builtInChosen(PowerUpKind kind) =>
+        chosen == null || chosen.contains(kind) || kind.isTrap;
+    final SkillDefinition selectedSkill;
+    if (forcedKind == null &&
+        PowerUpSpawnSelector.customTiersDiffer(spawnableCustom, _t)) {
+      // A custom skill with a tier of its own spawns at that tier's odds.
+      selectedSkill = PowerUpSpawnSelector.chooseSkill(
+        eligibleKinds,
+        _t,
+        rng,
+        library: match.skillLibrary,
+        custom: spawnableCustom,
+        builtInChosen: builtInChosen,
+      );
+    } else {
+      // Every custom skill at its base kind's tier: exactly the draws from before custom tiers.
+      final kind =
+          forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
+      final variants = spawnableCustom
+          .where((skill) => skill.baseKind == kind)
+          .toList();
+      final candidates = [
+        if (builtInChosen(kind)) match.skillLibrary.builtIn(kind, _t),
+        ...variants,
+      ];
+      selectedSkill = forcedKind == null && variants.isNotEmpty
+          ? candidates[rng.nextInt(candidates.length)]
+          : match.skillLibrary.builtIn(kind, _t);
+    }
+    final kind = selectedSkill.baseKind;
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);
@@ -2119,7 +2201,10 @@ class PowerUpSystem {
       );
       if (match.skillLibrary.screenShakeFor(skill) > 0) {
         weaponImpacts.add(
-          WeaponImpact(position: target.position, strength: match.skillLibrary.screenShakeFor(skill)),
+          WeaponImpact(
+            position: target.position,
+            strength: match.skillLibrary.screenShakeFor(skill),
+          ),
         );
       }
     }
@@ -2319,6 +2404,73 @@ class PowerUpSystem {
           break;
         }
       }
+    }
+  }
+
+  /// Whether [weapon] (resolved as [skill]) strikes on contact: a collision skill, a blade, the
+  /// orbiting flail or a shield bash.
+  static bool _strikesOnContact(PowerUpKind weapon, SkillDefinition skill) =>
+      (skill.isComposed && skill.trigger == SkillTrigger.collision) ||
+      weapon.isBlade ||
+      weapon == PowerUpKind.orbitingFlail ||
+      weapon == PowerUpKind.shield;
+
+  /// Contact weapons with a [SkillDefinition.meleeReach] strike without a bump: once per step, each held
+  /// one hits the nearest opponent whose center is within both radii plus that many of the holder's
+  /// radii (ties go to the earlier ball), exactly as a bump would ([_melee] uses it up, and a shield
+  /// still bashes only an unarmed ball). Like a bump, every strike is chosen from the balls as they
+  /// stood before any of them landed, so two balls in each other's reach both hit whatever their order.
+  /// Ghosts neither strike nor get struck. A weapon that already struck on a bump this step is gone.
+  /// Draws nothing from the RNG.
+  void _strikeWithMeleeReach() {
+    final standing = [
+      for (final ball in match.state.balls)
+        if (_alive(ball) && !ball.isGhost) ball,
+    ];
+    final strikes =
+        <
+          (
+            SimulationBall attacker,
+            PowerUpKind weapon,
+            String? skillId,
+            SimulationBall target,
+          )
+        >[];
+    for (final attacker in standing) {
+      final slots = [
+        if (attacker.held case final weapon?) (weapon, attacker.heldSkillId),
+        if (attacker.heldSecondary case final weapon?)
+          (weapon, attacker.heldSecondarySkillId),
+      ];
+      for (final (weapon, skillId) in slots) {
+        final skill = _skillForId(weapon, skillId);
+        if (skill.meleeReach <= 0 || !_strikesOnContact(weapon, skill)) {
+          continue;
+        }
+        SimulationBall? nearest;
+        var best = double.infinity;
+        for (final target in standing) {
+          if (identical(attacker, target)) continue;
+          final distance = (target.position - attacker.position).distance;
+          final reach =
+              attacker.radius +
+              target.radius +
+              skill.meleeReach * attacker.radius;
+          if (distance <= reach && distance < best) {
+            best = distance;
+            nearest = target;
+          }
+        }
+        if (nearest != null) strikes.add((attacker, weapon, skillId, nearest));
+      }
+    }
+    if (strikes.isEmpty) return;
+    final heldBefore = {
+      for (final ball in standing) ball: [...ball.equippedWeapons],
+    };
+    for (final (attacker, weapon, skillId, target) in strikes) {
+      if (!attacker.equippedWeapons.contains(weapon)) continue;
+      _melee(attacker, weapon, target, heldBefore[target]!, skillId: skillId);
     }
   }
 
@@ -3099,7 +3251,10 @@ class PowerUpSystem {
               );
               if (match.skillLibrary.screenShakeFor(composed) > 0) {
                 weaponImpacts.add(
-                  WeaponImpact(position: end, strength: match.skillLibrary.screenShakeFor(composed)),
+                  WeaponImpact(
+                    position: end,
+                    strength: match.skillLibrary.screenShakeFor(composed),
+                  ),
                 );
               }
             } else {
@@ -3227,7 +3382,10 @@ class PowerUpSystem {
       displayScale: impactSkill.effectDisplayScale,
     );
     weaponImpacts.add(
-      WeaponImpact(position: impact, strength: match.skillLibrary.screenShakeFor(impactSkill)),
+      WeaponImpact(
+        position: impact,
+        strength: match.skillLibrary.screenShakeFor(impactSkill),
+      ),
     );
     var share = 1.0;
     final shielded = match.mode == MatchMode.arsenal

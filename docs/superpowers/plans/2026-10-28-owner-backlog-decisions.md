@@ -1,0 +1,26 @@
+# Owner backlog: decisions made while you slept
+
+Every call I made on your behalf while building `owner-backlog` (2026-10-28), in the order I made it, with what it costs if I got it wrong. Reversing any of them is a small change.
+
+1. **Winner of an ended endless battle** is the tally leader among the balls still standing (KOs, then fewer deaths, then life). The defeated ball is left out, because it dissolves as the loser and can't also win. If nobody is standing, everyone but the defeated ball is ranked. Cost if wrong: a ball with more KOs loses because it was the one defeated.
+2. **Replay link step limit** for `end=` and `nudge=` went from 36000 to 216000 (one hour of game time). Reason: after 10 minutes, End battle or Unstuck would write a link the app then refused to open. Cost: a slightly larger accepted range.
+3. **Replay of an ended endless battle:** the button shows "Ending after next KO" only from the recorded step, and says "End battle" (disabled) before that. Cost: none.
+4. **Phone width:** End battle becomes an icon-only button (label in the tooltip) when the bottom row is narrow. Cost: none.
+5. **Task 12 added** (cleanup) because you said "fix what you can". Cost: extra changes for you to review.
+6. **A git stash is left alone:** `stash@{0}` ("task3: accidental dart format of unrelated files", 63 files). An agent accidentally ran the formatter over the whole repo. I didn't drop it because dropping is irreversible. Cost: one stray stash; run `git stash drop` if you don't want it.
+7. **Grip sideways offset mirrors when the sprite faces left**, so facing left is an exact mirror of facing right. The existing dual-wield spread is unchanged. Cost: one sign to flip back.
+8. **Old links keep working** (Shadow Clone added a 49th pickup): every new Arsenal/All-Out link records how many pickups existed (`kc=`). A link without it counts as 48, so its pool is the original pickups and it replays as before. `t=` accepts shorter tier lists. Cost: one extra link parameter.
+9. **Your saved Weapons choice:** "everything on" is now saved as "all" plus a kind count, and an old saved set equal to the original 48 counts as "all", so Shadow Clone spawns on your device. A choice that left something unchecked stays as you made it. Cost: small.
+10. **Weapon mask in links uses BigInt**, with the same text as before, because the web version only handles 32-bit numbers there. Cost: none. Not proven in Chrome (see "Check these yourself").
+11. **Random hairstyles mapping** is `pool[(order + seed % len) % len]` instead of `pool[order % len]`, because the shuffle only covers styles 0-19 and the plain formula could never reach the female styles. No RNG. Cost: none. The old family 3 (styles 15-19, a long cut with a ponytail) now belongs to the female pool; balls with no gender still use the original 20 styles.
+12. **Spawn odds are left as per-tier shares** (see `docs/SPAWN-ODDS.md`). Special has the fewest items, so each Special item is the most common item in the game. With Shadow Clone there are 3, so Sniper and Buster Sword went from about 9% each of all spawns to about 6%, and Shadow Clone is one of the most common items. Changing it would move every built-in's odds and make old replays play differently. Cost: Special is not rarest by item; your call.
+13. **Custom skills fixed in the same pass:** custom traps still spawn when a custom skill has its own tier, and the in-match scoreboard strip shows a held custom skill's own tier color. Cost: none.
+14. **Cheap review leftovers fixed:** the 160-character description is cut on characters, share/save show a message when too many custom skills are active, same-gender balls avoid repeating a style, the arena picker marks the current arena, the pickup count lives in its own file, the landscape-phone overflow is fixed, the grip keys are omitted from snapshots when zero, and `characters` is pinned to `^1.4.0`. Cost: none.
+15. **Left as known issues** (they change how matches play, so fixing them would change replays): wrong skill picked on contact when only the second weapon slot is filled; Raging Demon not cleared on respawn in Endless Battle; grip flip angle vs sprite flip during the fire drop; Shadow Clone's freeze lasting past clones that vanish early; Shadow Clone's painting allocations; the video export length cap (10 video minutes) cutting off a very long ended endless battle. All in `docs/KNOWN-ISSUES.md`.
+
+## Check these yourself
+
+- **Web build, partial weapon selection:** open a share link with only some weapons chosen, including a pickup past the 32nd. The Chrome test environment wouldn't load the link tests, so the BigInt fix is only covered by the desktop test run.
+- **Linux CI and the golden images:** the new Shadow Clone icon cell was regenerated on Windows. Push the branch (a `test.yml` workflow runs the tests on Linux for any non-master branch, no deploy) and look at the result before merging to master.
+- **Database:** run `supabase/migrations/022_ball_gender.sql` in the Supabase SQL editor. Until you do, saving a ball works but forgets its gender.
+- **Phone:** the End battle row at about 300 px wide, and the landscape fix, were checked with the test font, not on a real phone.

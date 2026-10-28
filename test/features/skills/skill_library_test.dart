@@ -409,6 +409,23 @@ void main() {
     }
   });
 
+  test('grip forward/back accepts -1.5..1.5 and clamps beyond', () {
+    final base = SkillLibrary.defaults.builtIn(
+      PowerUpKind.pistol,
+      PowerUpConfig.defaults,
+    );
+    final pushed = SkillDefinition.fromJson(
+      base.copyWith(weaponGripInset: -0.7).toJson(),
+    )!;
+    expect(pushed.weaponGripInset, -0.7);
+    for (final (raw, want) in const [(-9, -1.5), (9, 1.5), (-1.5, -1.5)]) {
+      final wild = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..['weapon_grip_inset'] = raw,
+      )!;
+      expect(wild.weaponGripInset, want);
+    }
+  });
+
   test('grip sideways and rotation round trip, clamp and default to 0', () {
     final base = SkillLibrary.defaults.builtIn(
       PowerUpKind.pistol,

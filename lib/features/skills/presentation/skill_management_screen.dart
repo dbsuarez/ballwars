@@ -1533,7 +1533,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     'weaponDisplayScale': (0.25, 3),
     'pickupDisplayScale': (0.25, 3),
     'effectDisplayScale': (0.25, 3),
-    'weaponGripInset': (0, 1.5),
+    'weaponGripInset': (-1.5, 1.5),
     'weaponGripSide': (-1.5, 1.5),
     'weaponGripRotation': (-180, 180),
     'projectileSize': (0.1, 5),
@@ -1570,6 +1570,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   /// Number fields that may go below zero.
   static const _signedKeys = {
     'projectileSpin',
+    'weaponGripInset',
     'weaponGripSide',
     'weaponGripRotation',
   };
@@ -2730,6 +2731,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'weaponGripInset',
                           'Grip forward/back',
                           suffix: 'ball radius',
+                          helper:
+                              'Forward/back: positive pulls the weapon toward the ball, negative pushes it out.',
                         ),
                         _number(
                           'weaponGripSide',

@@ -117,6 +117,55 @@ void main() {
     }
   });
 
+  test('a negative grip forward/back pushes the weapon out along the aim', () {
+    final ball = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    expect(PowerUpPainter.heldCenter(ball), const Offset(112, 100));
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: -0.5),
+      const Offset(117, 100),
+    );
+    // 0..1.5 is unchanged (pulled in, never closer than 0.1 radii).
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: 0.5),
+      const Offset(107, 100),
+    );
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: 1.5),
+      const Offset(101, 100),
+    );
+    // Clamped at -1.5.
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: -9),
+      const Offset(127, 100),
+    );
+
+    final left = _ball(velocity: const Offset(-10, 0))
+      ..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    _expectOffset(
+      PowerUpPainter.heldCenter(left, gripInset: -0.5),
+      const Offset(83, 100),
+    );
+
+    final dual = _ball()
+      ..equipWeapon(PowerUpKind.pistol, dualWield: true)
+      ..equipWeapon(PowerUpKind.pistol, dualWield: true);
+    for (final slot in const [0, 1]) {
+      final far = PowerUpPainter.heldCenter(dual, slot: slot, gripInset: -0.5);
+      final near = PowerUpPainter.heldCenter(dual, slot: slot);
+      expect(
+        (far - dual.position).distance - (near - dual.position).distance,
+        closeTo(5, 1e-9),
+      );
+    }
+  });
+
+  test('the hand follows a pushed-out weapon', () {
+    final ball = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    final base = gripHandPosition(ball);
+    final out = gripHandPosition(ball, gripInset: -0.5);
+    _expectOffset(out - base, const Offset(5, 0));
+  });
+
   test('a shield ignores grip sideways', () {
     final ball = _ball()..equipWeapon(PowerUpKind.shield, dualWield: false);
     expect(

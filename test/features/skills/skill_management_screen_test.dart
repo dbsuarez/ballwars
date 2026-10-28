@@ -674,6 +674,18 @@ void main() {
     await slide('side', -0.5);
     await slide('rotation', 30);
     expect(tester.takeException(), isNull);
+    // A crosshair marks the hand in both views (red lines).
+    for (final key in const ['right', 'left']) {
+      expect(
+        tester.renderObject(find.byKey(ValueKey('grip-preview-$key'))),
+        paints
+          ..line(color: const Color(0xFFE53935))
+          ..line(color: const Color(0xFFE53935)),
+      );
+    }
+    // Forward/back can go negative (push the weapon out).
+    await slide('inset', -0.5);
+    await slide('inset', 0.4);
     await tester.tap(find.byKey(const ValueKey('grip-preview-done')));
     await tester.pumpAndSettle();
     expect(double.parse(field('weaponGripInset')), 0.4);

@@ -660,7 +660,7 @@ class SkillDefinition {
     weaponDisplayScale: weaponDisplayScale.clamp(0.25, 3),
     pickupDisplayScale: pickupDisplayScale.clamp(0.25, 3),
     effectDisplayScale: effectDisplayScale.clamp(0.25, 3),
-    weaponGripInset: weaponGripInset.clamp(0, 1.5),
+    weaponGripInset: weaponGripInset.clamp(-1.5, 1.5),
     weaponGripSide: weaponGripSide.clamp(-1.5, 1.5),
     weaponGripRotation: weaponGripRotation.clamp(-180.0, 180.0),
     effectStrength: effectStrength.clamp(0, 10),

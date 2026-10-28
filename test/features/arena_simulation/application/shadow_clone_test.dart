@@ -233,4 +233,31 @@ void main() {
       expect(trace(5), a);
     },
   );
+
+  test("respawn drops the owner's clones and frees a respawned target", () {
+    final match = _match();
+    final (owner, near, far) = _place(match);
+    _give(match, owner, PowerUpKind.shadowClone);
+    final system = match.powerUps!;
+    final attack = system.shadowCloneAttacks.single;
+
+    system.resetForRespawn(near);
+    expect(attack.target, isNull);
+    _run(match, 1);
+    // The next clone picks the nearest opponent again.
+    expect(attack.target, isNotNull);
+
+    system.resetForRespawn(owner);
+    expect(system.shadowCloneAttacks, isEmpty);
+    expect(far.life, 100);
+  });
+
+  test('time unfreezes when the sequence ends', () {
+    final match = _match();
+    final (owner, _, _) = _place(match);
+    _give(match, owner, PowerUpKind.shadowClone);
+    _run(match, ShadowCloneAttack.durationFor(3));
+    expect(match.powerUps!.shadowCloneAttacks, isEmpty);
+    expect(match.state.balls.every((ball) => ball.stunnedLeft == 0), isTrue);
+  });
 }

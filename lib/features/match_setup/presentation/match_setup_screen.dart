@@ -23,6 +23,38 @@ import '../domain/match_config.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
 /// your own groups, mixing categories freely, then start the battle.
+/// How many [PowerUpKind]s existed before the weapons pref stored its count
+/// (`pref:power-ups-count-<profile>`): the count before Shadow Clone.
+const int legacyPowerUpPrefCount = 48;
+
+/// `pref:power-ups-<profile>` for [kinds]: '' means every kind (null), so kinds added later start on.
+@visibleForTesting
+String powerUpsPref(Set<PowerUpKind>? kinds) =>
+    kinds == null ? '' : [for (final k in kinds) k.name].join(',');
+
+/// The weapons choice saved as [saved] when [savedCount] kinds existed (null: before the count was
+/// stored, [legacyPowerUpPrefCount]). Null (every kind) when nothing is saved, for '' and for a set
+/// holding all of the first [savedCount] kinds, so kinds added since then are on. A set missing one of
+/// them stays explicit (kinds added later are then off). Traps are always on.
+@visibleForTesting
+Set<PowerUpKind>? powerUpsFromPref(String? saved, int? savedCount) {
+  final kinds = {
+    for (final name in (saved ?? '').split(','))
+      ...PowerUpKind.values.where((kind) => kind.name == name),
+  };
+  final count = (savedCount ?? legacyPowerUpPrefCount).clamp(
+    1,
+    PowerUpKind.values.length,
+  );
+  final pickups = kinds.where((kind) => !kind.isTrap).toSet();
+  final knewAll = PowerUpKind.values
+      .take(count)
+      .where((kind) => !kind.isTrap)
+      .every(pickups.contains);
+  if (kinds.isEmpty || knewAll) return null;
+  return {...pickups, ...PowerUpKind.values.where((kind) => kind.isTrap)};
+}
+
 class MatchSetupScreen extends StatefulWidget {
   /// Built-in packs; null hides them (e.g. in tests or offline builds).
   final BallPackRepository? packRepository;
@@ -94,6 +126,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     if (ids.intersection(_customOff).isEmpty) return null;
     return ids.difference(_customOff);
   }
+
   VoidCallback? _refreshDrawer;
 
   void _update(VoidCallback update) {
@@ -249,17 +282,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final profileIds = [...MatchMode.values.map((mode) => mode.id), 'mayhem'];
     for (final profileId in profileIds) {
       final saved = await DevicePrefs.read('power-ups-$profileId') ?? legacy;
-      final kinds = {
-        for (final name in (saved ?? '').split(','))
-          ...PowerUpKind.values.where((kind) => kind.name == name),
-      };
-      _modePowerUps[profileId] =
-          kinds.isEmpty || kinds.length == PowerUpKind.values.length
-          ? null
-          : {
-              ...kinds.where((kind) => !kind.isTrap),
-              ...PowerUpKind.values.where((kind) => kind.isTrap),
-            };
+      final savedCount = int.tryParse(
+        await DevicePrefs.read('power-ups-count-$profileId') ?? '',
+      );
+      _modePowerUps[profileId] = powerUpsFromPref(saved, savedCount);
     }
     for (final profileId in profileIds) {
       final off = await DevicePrefs.read('custom-skills-off-$profileId');
@@ -493,9 +519,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _customOff.join(','),
     );
     _modePowerUps[_activeProfileId] = _powerUps;
+    DevicePrefs.write('power-ups-$_activeProfileId', powerUpsPref(_powerUps));
     DevicePrefs.write(
-      'power-ups-$_activeProfileId',
-      [for (final k in chosen) k.name].join(','),
+      'power-ups-count-$_activeProfileId',
+      PowerUpKind.values.length,
     );
   }
 
@@ -1598,7 +1625,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
   late final Set<String> _customOn = {...widget.initialCustom};
 
   List<SkillDefinition> _customIn(bool Function(SkillCategory category) test) =>
-      widget.customSkills.where((skill) => test(skill.resolvedCategory)).toList()
+      widget.customSkills
+          .where((skill) => test(skill.resolvedCategory))
+          .toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   @override
@@ -1877,8 +1906,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final details = [
       'Custom ${skill.resolvedCategory == SkillCategory.weapon ? 'weapon' : 'skill'} based on ${skill.baseKind.label}',
       if (skill.artworkKind != null) 'looks like ${skill.artworkKind!.label}',
-      if (firedName != null)
-        'fires ${skill.projectileCount ?? 1} x $firedName',
+      if (firedName != null) 'fires ${skill.projectileCount ?? 1} x $firedName',
     ].join(', ');
     return Card(
       margin: EdgeInsets.zero,

@@ -474,7 +474,7 @@ void main() {
       );
       expect(
         withBalls(
-          'm.arsenal,w.${(1 << PowerUpKind.values.length).toRadixString(36)},$a,$b',
+          'm.arsenal,w.${(BigInt.one << PowerUpKind.values.length).toRadixString(36)},$a,$b',
         ),
         isNull,
         reason: 'bits beyond the known kinds',
@@ -887,16 +887,48 @@ void main() {
       }
     });
 
-    test('a legacy w. mask is cut to the first 48 kinds', () {
-      final mask =
-          (1 << PowerUpKind.pistol.index) | (1 << PowerUpKind.knife.index);
-      final link = ReplayLink.fromUri(
-        Uri.parse(
-          'https://x.test/?seed=3&speed=1&balls=m.arsenal,w.${mask.toRadixString(36)},$a,$b',
-        ),
-        presets: _presets,
-      )!;
-      expect(link.powerUps, {PowerUpKind.pistol, PowerUpKind.knife});
+    test(
+      'an old-format w. mask still parses; bits past its kinds are rejected',
+      () {
+        // pistol (bit 0) | knife (bit 3) = 9, as the app wrote it before kc.
+        final link = ReplayLink.fromUri(
+          Uri.parse('https://x.test/?seed=3&speed=1&balls=m.arsenal,w.9,$a,$b'),
+          presets: _presets,
+        )!;
+        expect(link.powerUps, {PowerUpKind.pistol, PowerUpKind.knife});
+        final clone = (BigInt.one << PowerUpKind.shadowClone.index)
+            .toRadixString(36);
+        expect(
+          ReplayLink.fromUri(
+            Uri.parse(
+              'https://x.test/?seed=3&speed=1&balls=m.arsenal,w.$clone,$a,$b',
+            ),
+            presets: _presets,
+          ),
+          isNull,
+          reason: 'Shadow Clone did not exist before kc',
+        );
+      },
+    );
+
+    test('w. masks past bit 31 are exact (BigInt, safe on the web)', () {
+      final kinds = {
+        PowerUpKind.values[33],
+        PowerUpKind.values[40],
+        PowerUpKind.values[48],
+      };
+      final expected =
+          ((BigInt.one << 33) | (BigInt.one << 40) | (BigInt.one << 48))
+              .toRadixString(36);
+      final uri = ReplayLink(
+        seed: 4,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        mode: MatchMode.arsenal,
+        powerUps: kinds,
+      ).toUri(presetIds: _presetIds);
+      expect(uri.queryParameters['balls']!.split(',')[1], 'w.$expected');
+      expect(ReplayLink.fromUri(uri, presets: _presets)!.powerUps, kinds);
     });
 
     test('new links carry kc and round-trip with every kind', () {
@@ -942,11 +974,12 @@ void main() {
             presets: _presets,
           );
       expect(withKc('${PowerUpKind.values.length}'), isNotNull);
+      expect(withKc('${ReplayLink.firstLinkKindCount - 1}'), isNull);
       expect(withKc('${PowerUpKind.values.length + 1}'), isNull);
       expect(withKc('0'), isNull);
       expect(withKc('abc'), isNull);
       expect(withKc('048'), isNull);
-      expect(withKc('48', mode: ''), isNull, reason: 'threads has no kinds');
+      expect(withKc('49', mode: ''), isNull, reason: 'threads has no kinds');
     });
 
     test('t= tier lists longer than the kinds or empty are rejected', () {

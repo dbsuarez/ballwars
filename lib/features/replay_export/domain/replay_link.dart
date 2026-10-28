@@ -56,6 +56,9 @@ class ReplayLink {
   /// power-up link without `kc` was made then, so only the first [legacyKindCount] kinds can spawn.
   static const int legacyKindCount = 48;
 
+  /// The smallest `kc` an app can write (the count when `kc` was introduced).
+  static const int firstLinkKindCount = 49;
+
   /// End battle: the step at which the player asked to end an endless (non-Mayhem) battle after the
   /// next knockout; part of the match. `end=`, only with `endless=1`.
   final int? endStep;
@@ -112,8 +115,10 @@ class ReplayLink {
 
   static const String _weaponsPrefix = 'w.';
 
-  static int _mask(Set<PowerUpKind> kinds) =>
-      kinds.fold(0, (m, k) => m | (1 << k.index));
+  /// The `w.` bitmask of [kinds] (bit = [PowerUpKind.index]). BigInt, because on the web an int
+  /// shift past bit 31 loses bits.
+  static BigInt _mask(Set<PowerUpKind> kinds) =>
+      kinds.fold(BigInt.zero, (m, k) => m | (BigInt.one << k.index));
 
   /// Longest question kept (the rest is cut).
   static const int maxQuestionLength = 100;
@@ -239,25 +244,6 @@ class ReplayLink {
       if (parsedMode == null) return null;
       mode = parsedMode;
     }
-    Set<PowerUpKind>? powerUps;
-    if (tokens.isNotEmpty && tokens.first.startsWith(_weaponsPrefix)) {
-      final mask = int.tryParse(
-        tokens.removeAt(0).substring(_weaponsPrefix.length),
-        radix: 36,
-      );
-      final all = (1 << PowerUpKind.values.length) - 1;
-      // Only with a power-up mode, never empty, no unknown kinds.
-      if (mode == MatchMode.threads ||
-          mask == null ||
-          mask <= 0 ||
-          mask & ~all != 0) {
-        return null;
-      }
-      powerUps = {
-        for (final k in PowerUpKind.values)
-          if (mask & (1 << k.index) != 0) k,
-      };
-    }
     // The kinds that existed when the link was made (`kc`, strict); before `kc` there were
     // [legacyKindCount]. Later kinds are left out of the pool so the match replays as it was played.
     final kcText = params['kc'];
@@ -265,18 +251,34 @@ class ReplayLink {
     if (kcText != null &&
         (mode == MatchMode.threads ||
             kindCount == null ||
-            kindCount < 1 ||
+            kindCount < firstLinkKindCount ||
             kindCount > PowerUpKind.values.length ||
             '$kindCount' != kcText)) {
       return null;
     }
-    if (mode != MatchMode.threads && kindCount! < PowerUpKind.values.length) {
-      final known = powerUps ?? PowerUpKind.values.toSet();
+    Set<PowerUpKind>? powerUps;
+    if (tokens.isNotEmpty && tokens.first.startsWith(_weaponsPrefix)) {
+      final text = tokens.removeAt(0).substring(_weaponsPrefix.length);
+      final mask = RegExp(r'^[0-9a-zA-Z]+$').hasMatch(text)
+          ? BigInt.tryParse(text, radix: 36)
+          : null;
+      // Only with a power-up mode, never empty, no kinds the link's app didn't have.
+      if (mode == MatchMode.threads ||
+          mask == null ||
+          mask <= BigInt.zero ||
+          mask.bitLength > kindCount!) {
+        return null;
+      }
       powerUps = {
-        for (final k in known)
+        for (final k in PowerUpKind.values)
+          if (k.index < kindCount && (mask >> k.index).isOdd) k,
+      };
+    } else if (mode != MatchMode.threads &&
+        kindCount! < PowerUpKind.values.length) {
+      powerUps = {
+        for (final k in PowerUpKind.values)
           if (k.index < kindCount) k,
       };
-      if (powerUps.isEmpty) return null;
     }
     final mayhem = params['mayhem'] == '1';
     final mayhemSeconds = int.tryParse(params['duration'] ?? '120');

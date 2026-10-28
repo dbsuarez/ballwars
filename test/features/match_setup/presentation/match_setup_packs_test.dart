@@ -573,6 +573,15 @@ void main() {
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       expect(find.text('Pickups: All'), findsOneWidget);
+      // Everything on is stored as '' (all), so kinds added later start on.
+      final saved = await tester.runAsync(
+        () async => (
+          await DevicePrefs.read('power-ups-arsenal'),
+          await DevicePrefs.read('power-ups-count-arsenal'),
+        ),
+      );
+      expect(saved!.$1, '');
+      expect(saved.$2, '${PowerUpKind.values.length}');
       await closeSettings(tester);
 
       await tester.tap(find.byIcon(Icons.shuffle));
@@ -581,6 +590,55 @@ void main() {
       expect(started!.powerUps, isNull);
     },
   );
+  testWidgets(
+    'a weapons pref saved with every one of 48 kinds loads as all, Shadow Clone included',
+    (tester) async {
+      await tester.runAsync(
+        () => DevicePrefs.write(
+          'power-ups-arsenal',
+          PowerUpKind.values.take(48).map((k) => k.name).join(','),
+        ),
+      );
+      await pumpSetup(tester);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await openSettings(tester);
+      expect(find.text('Pickups: All'), findsOneWidget);
+      await closeSettings(tester);
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, isNull);
+    },
+  );
+
+  test('weapons pref: all, legacy and explicit choices', () {
+    final first48 = PowerUpKind.values.take(48).toSet();
+    expect(powerUpsPref(null), '');
+    expect(powerUpsFromPref('', PowerUpKind.values.length), isNull);
+    expect(powerUpsFromPref(null, null), isNull);
+    // Legacy (no count): all 48 kinds of the time means all.
+    expect(powerUpsFromPref(powerUpsPref(first48), null), isNull);
+    // Legacy with one unchecked: stays explicit, and later kinds stay off.
+    final withoutPistol = powerUpsFromPref(
+      powerUpsPref(first48..remove(PowerUpKind.pistol)),
+      null,
+    )!;
+    expect(withoutPistol, isNot(contains(PowerUpKind.pistol)));
+    expect(withoutPistol, contains(PowerUpKind.knife));
+    expect(withoutPistol, isNot(contains(PowerUpKind.shadowClone)));
+    expect(
+      withoutPistol,
+      containsAll(PowerUpKind.values.where((k) => k.isTrap)),
+    );
+    // Saved with the current count: a set missing the newest kind stays explicit.
+    final noClone = PowerUpKind.values.toSet()..remove(PowerUpKind.shadowClone);
+    expect(
+      powerUpsFromPref(powerUpsPref(noClone), PowerUpKind.values.length),
+      noClone,
+    );
+  });
+
   testWidgets(
     'settings start collapsed and power-up lists are independent by mode',
     (tester) async {

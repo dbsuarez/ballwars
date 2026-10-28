@@ -1390,17 +1390,23 @@ class _SkillEditorState extends State<_SkillEditor> {
           ].contains(widget.skill.baseKind));
 
   /// The Shell group shows for skills that shoot: a gun carrier, or a custom skill that fires
-  /// projectiles.
-  bool get _showsShellSettings =>
-      widget.skill.baseKind.isGun || _delivery == SkillDelivery.projectile;
+  /// projectiles after an aim (the only custom path that ejects casings).
+  bool get _showsShellSettings => _editsComposed
+      ? _delivery == SkillDelivery.projectile &&
+            _trigger == SkillTrigger.aimedFire
+      : widget.skill.baseKind.isGun;
+
+  /// Whether the edited values make a composed skill (trigger, targeting, delivery and effect set).
+  bool get _editsComposed =>
+      _trigger != null &&
+      _targeting != null &&
+      _delivery != null &&
+      _effectType != null;
 
   /// What "Default" means for Drops shells here (a composed or combined skill drops none).
   bool get _shellDefault =>
       SkillDefinition.defaultShellKinds.contains(widget.skill.baseKind) &&
-      !(_trigger != null &&
-          _targeting != null &&
-          _delivery != null &&
-          _effectType != null) &&
+      !_editsComposed &&
       _payload == null;
 
   /// "Brass shell (default)" (null) plus the bundled projectile, effect and animation sprites and

@@ -695,7 +695,9 @@ class SkillDefinition {
       shellSprite: value['shell_sprite'] is String
           ? value['shell_sprite'] as String
           : null,
-      shellSize: decimal('shell_size') ?? 1,
+      shellSize: value['shell_size'] is num
+          ? (value['shell_size'] as num).toDouble()
+          : 1,
       shellRandomRest: value['shell_random_rest'] is bool
           ? value['shell_random_rest'] as bool
           : true,

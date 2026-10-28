@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/application/power_up_system.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
@@ -111,6 +113,82 @@ void main() {
         reason: kind.name,
       );
     }
+  });
+
+  test('a pistol casing starts exactly where and how it always did', () {
+    final c = _match();
+    final [a, b] = c.state.balls;
+    a.held = PowerUpKind.pistol;
+    _run(c, PowerUpTuning.aimSteps - 1);
+    final from = a.position;
+    final radius = a.radius;
+    // Casings move before guns fire in a step, so a new one is exactly as ejected.
+    _run(c, 1);
+    final casing = c.powerUps!.shellCasings.single;
+    final shot = b.position - from;
+    final dir = shot / shot.distance;
+    final side = Offset(-dir.dy, dir.dx);
+    final velocity = side * radius * 1.8 - Offset(0, radius * 1.4);
+    final position = from + side * radius * 0.55;
+    expect(casing.velocity.dx, closeTo(velocity.dx, 1e-9));
+    expect(casing.velocity.dy, closeTo(velocity.dy, 1e-9));
+    expect(casing.position.dx, closeTo(position.dx, 1e-9));
+    expect(casing.position.dy, closeTo(position.dy, 1e-9));
+    expect(casing.angle, closeTo(math.atan2(side.dy, side.dx), 1e-9));
+  });
+
+  test('a shotgun or bow volley drops one casing, none when Off', () {
+    for (final kind in const [PowerUpKind.shotgun, PowerUpKind.bow]) {
+      final defaults = kind == PowerUpKind.shotgun ? 1 : 0;
+      expect(_fireOnce(kind), hasLength(defaults), reason: kind.name);
+      final on = _with([(s) => s.copyWith(shellEnabled: true)], [kind]);
+      expect(_fireOnce(kind, library: on), hasLength(1), reason: kind.name);
+      final off = _with([(s) => s.copyWith(shellEnabled: false)], [kind]);
+      expect(_fireOnce(kind, library: off), isEmpty, reason: kind.name);
+    }
+  });
+
+  test('a gatling burst still drops one casing per round', () {
+    final c = _match();
+    c.state.balls.first.held = PowerUpKind.gatling;
+    _run(c, PowerUpTuning.aimSteps);
+    _run(
+      c,
+      PowerUpTuning.gatlingIntervalSteps * (PowerUpTuning.gatlingRounds + 2),
+    );
+    expect(c.powerUps!.gatlingShots, PowerUpTuning.gatlingRounds);
+    expect(c.powerUps!.shellCasings, hasLength(PowerUpTuning.gatlingRounds));
+  });
+
+  test('a capped composed volley that fires nothing drops no casing', () {
+    var library = SkillLibrary.defaults;
+    final spray = library
+        .create('Spray', PowerUpKind.pistol)
+        .copyWith(
+          enabled: true,
+          shellEnabled: true,
+          projectileCount: 100,
+          spreadDegrees: 360,
+          projectileSpeed: 0.1,
+        );
+    library = library.withDefinition(spray, _tuning);
+    final c = _match(library: library);
+    final a = c.state.balls.first;
+    void aimAndFire() {
+      a
+        ..held = PowerUpKind.pistol
+        ..heldSkillId = spray.id;
+      _run(c, PowerUpTuning.aimSteps);
+    }
+
+    aimAndFire();
+    expect(c.powerUps!.shots, PowerUpSystem.maxComposedProjectiles);
+    expect(c.powerUps!.shellCasings, hasLength(1));
+    _run(c, PowerUpSystem.firedWeaponHoldSteps);
+    aimAndFire();
+    // Still capped: the slow shots are all in flight, so nothing fired and no casing dropped.
+    expect(c.powerUps!.shots, PowerUpSystem.maxComposedProjectiles);
+    expect(c.powerUps!.shellCasings, hasLength(1));
   });
 
   test(

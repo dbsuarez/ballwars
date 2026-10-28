@@ -1055,6 +1055,57 @@ void main() {
     expect(saved.shellSprite, isNull);
   });
 
+  testWidgets('a composed skill that is not aimed has no shell settings', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    var library = SkillLibrary.defaults;
+    final bump = library
+        .create('Bump Shot', PowerUpKind.pistol)
+        .copyWith(
+          trigger: SkillTrigger.collision,
+          delivery: SkillDelivery.instant,
+        );
+    library = library.withDefinition(bump, PowerUpConfig.defaults);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push<SkillManagementResult>(
+              MaterialPageRoute(
+                builder: (_) => SkillManagementScreen(
+                  initial: library,
+                  tuning: PowerUpConfig.defaults,
+                ),
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Custom'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Bump Shot').first);
+    await tester.pumpAndSettle();
+    // Its grip controls are on Appearance, so the tab is the right one.
+    await _revealEditor(
+      tester,
+      find.byKey(const ValueKey('skill-field-pickupDisplayScale')),
+    );
+    final list = find.byType(ListView).last;
+    for (var i = 0; i < 20; i++) {
+      expect(find.byKey(const ValueKey('skill-shell-enabled')), findsNothing);
+      await tester.drag(list, const Offset(0, -280));
+      await tester.pumpAndSettle();
+    }
+  });
+
   testWidgets('non-gun skills have no shell settings', (tester) async {
     tester.view.physicalSize = const Size(1200, 1000);
     tester.view.devicePixelRatio = 1;

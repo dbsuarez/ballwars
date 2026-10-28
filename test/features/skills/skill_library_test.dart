@@ -593,6 +593,23 @@ void main() {
       expect(old.shellRandomRest, isTrue);
     });
 
+    test('a non-numeric shell size is ignored, not thrown on', () {
+      final json = Map<String, Object?>.from(
+        builtIn(PowerUpKind.pistol).copyWith(shellSize: 2).toJson(),
+      )..['shell_size'] = 'big';
+      final skill = SkillDefinition.fromJson(json)!;
+      expect(skill.shellSize, 1);
+      final library = SkillLibrary.defaults.withDefinition(
+        builtIn(PowerUpKind.pistol).copyWith(shellSize: 2),
+        tuning,
+      );
+      final exported = library.toJson();
+      ((exported['overrides'] as Map)['builtin.pistol'] as Map)['shell_size'] =
+          'big';
+      final imported = SkillLibrary.importJson(jsonEncode(exported));
+      expect(imported.builtIn(PowerUpKind.pistol, tuning).shellSize, 1);
+    });
+
     test('shell settings survive the compact replay form', () {
       final library = SkillLibrary.defaults.withDefinition(
         builtIn(PowerUpKind.gatling).copyWith(

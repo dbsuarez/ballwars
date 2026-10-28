@@ -2082,12 +2082,13 @@ class PowerUpSystem {
           : delta / delta.distance;
       final count = (skill.projectileCount ?? 1).clamp(1, 100);
       final spread = skill.spreadDegrees ?? 0;
-      // One casing per volley, and only when the firing skill switches shells on (as before: none).
-      if (skill.shellEnabled ?? false) {
-        _ejectShellCasing(owner, baseDirection, skill);
-      }
       for (var index = 0; index < count; index++) {
         if (_composedProjectiles.length >= maxComposedProjectiles) break;
+        // One casing per volley (with its first shot, so a capped volley drops none), and only when
+        // the firing skill switches shells on (as before: none).
+        if (index == 0 && (skill.shellEnabled ?? false)) {
+          _ejectShellCasing(owner, baseDirection, skill);
+        }
         final offset = count == 1 ? 0.0 : (index / (count - 1) - 0.5) * spread;
         final radians =
             math.atan2(baseDirection.dy, baseDirection.dx) +
@@ -2739,6 +2740,7 @@ class PowerUpSystem {
     final spread = _t.shotgunSpreadRadians;
     final volley = ++_lastVolley;
     final sabotaged = _consumeGremlin(ball);
+    _ejectVolleyShell(ball, target, PowerUpKind.shotgun, sabotaged);
     for (var i = 0; i < count; i++) {
       final edge = i == 0 || i == count - 1;
       final jitter = edge
@@ -2751,8 +2753,25 @@ class PowerUpSystem {
         (count == 1 ? 0 : -spread / 2 + spread * i / (count - 1)) + jitter,
         volley: volley,
         sabotaged: sabotaged,
+        ejectsShell: false,
       );
     }
+  }
+
+  /// One casing for a whole volley (shotgun, bow), ejected along the volley's center aim, when the
+  /// held skill drops shells.
+  void _ejectVolleyShell(
+    SimulationBall ball,
+    SimulationBall target,
+    PowerUpKind kind,
+    bool sabotaged,
+  ) {
+    final skill = visualSkill(kind, ball: ball);
+    if (!skill.dropsShells) return;
+    final toTarget = target.position - ball.position;
+    final angle =
+        math.atan2(toTarget.dy, toTarget.dx) + (sabotaged ? math.pi : 0);
+    _ejectShellCasing(ball, Offset(math.cos(angle), math.sin(angle)), skill);
   }
 
   void _fireBow(SimulationBall ball, SimulationBall target) {
@@ -2763,6 +2782,7 @@ class PowerUpSystem {
     );
     final volley = ++_lastVolley;
     final sabotaged = _consumeGremlin(ball);
+    _ejectVolleyShell(ball, target, PowerUpKind.bow, sabotaged);
     for (var i = 0; i < count; i++) {
       _fire(
         ball,
@@ -2771,6 +2791,7 @@ class PowerUpSystem {
         count == 1 ? 0 : -spread / 2 + spread * i / (count - 1),
         volley: volley,
         sabotaged: sabotaged,
+        ejectsShell: false,
       );
     }
   }
@@ -3024,7 +3045,9 @@ class PowerUpSystem {
     }
   }
 
-  /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
+  /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians. It drops a
+  /// shell casing when the held skill does, unless [ejectsShell] is false (a volley ejects one itself,
+  /// [_ejectVolleyShell]).
   void _fire(
     SimulationBall ball,
     SimulationBall target,
@@ -3033,6 +3056,7 @@ class PowerUpSystem {
     int volley = 0,
     double? speedRatio,
     bool? sabotaged,
+    bool ejectsShell = true,
   }) {
     final toTarget = target.position - ball.position;
     final firesBackward = sabotaged ?? _consumeGremlin(ball);
@@ -3042,8 +3066,7 @@ class PowerUpSystem {
         (firesBackward ? math.pi : 0);
     final direction = Offset(math.cos(angle), math.sin(angle));
     final skill = visualSkill(kind, ball: ball);
-    if (skill.dropsShells &&
-        (kind != PowerUpKind.shotgun || turn.abs() < 0.001)) {
+    if (ejectsShell && skill.dropsShells) {
       _ejectShellCasing(ball, direction, skill);
     }
     projectiles.add(

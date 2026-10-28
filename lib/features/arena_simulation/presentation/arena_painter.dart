@@ -716,7 +716,7 @@ class ArenaPainter extends CustomPainter {
                     : ball.heldSecondarySkillId,
               )
               .weaponGripInset ??
-          (kind.isBlade ? 0.2 : 0),
+          PowerUpPainter.defaultGripInset(kind),
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
@@ -727,22 +727,7 @@ class ArenaPainter extends CustomPainter {
           const Color(0xFFFFFFFF),
     );
     if (look != BallLook.pictures || handsOnPictures) {
-      paintHands(
-        canvas,
-        ball,
-        weaponGripInset: (kind, slot) =>
-            state.powerUps
-                ?.visualSkill(
-                  kind,
-                  skillId: slot == 0
-                      ? ball.heldSkillId
-                      : ball.heldSecondarySkillId,
-                )
-                .weaponGripInset ??
-            (kind.isBlade ? 0.2 : 0),
-        weaponGripSide: gripSide,
-        weaponGripRotation: gripRotation,
-      );
+      paintHands(canvas, ball);
     }
     if (ball.isGhost) canvas.restore();
   }

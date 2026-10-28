@@ -179,16 +179,9 @@ void paintSmiley(
 /// relaxed hand on each side. Draw this after [PowerUpPainter.paintBallEffects]
 /// so the grip sits visibly over the weapon.
 ///
-/// The hand stays at the kind's standard grip point. [weaponGripInset],
-/// [weaponGripSide] and [weaponGripRotation] are accepted for callers that
-/// pass the sprite's grip, but they do not move the hand.
-void paintHands(
-  Canvas canvas,
-  SimulationBall ball, {
-  double Function(PowerUpKind kind, int slot)? weaponGripInset,
-  double Function(PowerUpKind kind, int slot)? weaponGripSide,
-  double Function(PowerUpKind kind, int slot)? weaponGripRotation,
-}) {
+/// The hand stays at the kind's standard grip point; a skill's own grip
+/// values only slide the weapon sprite relative to it.
+void paintHands(Canvas canvas, SimulationBall ball) {
   final r = ball.radius;
   final held = ball.held;
   if (held == null) {
@@ -214,10 +207,7 @@ void paintHands(
         weapon: weapon,
         slot: slot,
       );
-      // The hand stays at the standard grip point; the skill's own grip
-      // values only slide the weapon sprite relative to it.
-      final angle = aim;
-      final dir = _unit(angle);
+      final dir = _unit(aim);
       _paintHandAt(
         canvas,
         weapon == PowerUpKind.shield
@@ -232,7 +222,7 @@ void paintHands(
                               ? 0.65
                               : 0.5)),
         r,
-        gripAngle: angle,
+        gripAngle: aim,
       );
     }
     return;

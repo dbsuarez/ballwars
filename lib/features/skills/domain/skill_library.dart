@@ -4,6 +4,7 @@ import 'package:characters/characters.dart';
 
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
+import '../../arena_simulation/presentation/power_up_painter.dart';
 
 enum SkillVisualMode { sprite, vector }
 
@@ -1392,9 +1393,7 @@ class SkillLibrary {
       returnsToOrigin: kind == PowerUpKind.boomerang,
       trackNearestOpponent: kind == PowerUpKind.shield,
       weaponDisplayScale: 1,
-      weaponGripInset: kind.isBlade || kind == PowerUpKind.busterSword
-          ? 0.2
-          : 0,
+      weaponGripInset: PowerUpPainter.defaultGripInset(kind),
       effectStrength: switch (kind) {
         PowerUpKind.speed => tuning.speedFactor,
         PowerUpKind.overcharge => tuning.maximumPowerAmount,

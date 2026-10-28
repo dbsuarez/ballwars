@@ -2315,11 +2315,16 @@ class PowerUpPainter {
     return math.atan2(toward.dy, toward.dx) + spread;
   }
 
+  /// The built-in grip inset of [kind] (ball radii): blades and the Buster
+  /// Sword sit 0.2 in, everything else 0. Also the hand's standard grip point.
+  static double defaultGripInset(PowerUpKind kind) =>
+      kind.isBlade || kind == PowerUpKind.busterSword ? 0.2 : 0;
+
   /// Center of the held item's sprite. [gripInset] pulls it in along the
-  /// aim (ball radii, -1.5..1.5; negative pushes it out); [gripSide] moves it across the aim, to the ball's
-  /// right for slot 0 when facing right, mirrored when facing left (the
-  /// sprite flips) and for the second hand (slot 1). A shield
-  /// ignores both and keeps hugging the ball.
+  /// aim (ball radii, -1.5..1.5; negative pushes it out); [gripSide] moves
+  /// it across the aim, to the ball's right for slot 0 when facing right,
+  /// mirrored when facing left (the sprite flips) and for the second hand
+  /// (slot 1). A shield ignores both and keeps hugging the ball.
   static Offset heldCenter(
     SimulationBall ball, {
     PowerUpKind? weapon,
@@ -2330,7 +2335,7 @@ class PowerUpPainter {
     final held = weapon ?? ball.held;
     final angle = heldAngle(ball, weapon: held, slot: slot);
     final dir = Offset(math.cos(angle), math.sin(angle));
-    final defaultInset = held?.isBlade == true ? 0.2 : 0.0;
+    final defaultInset = held == null ? 0.0 : defaultGripInset(held);
     final inset = (gripInset ?? defaultInset).clamp(-1.5, 1.5);
     final baseDistance = held == PowerUpKind.shield
         ? 1.0

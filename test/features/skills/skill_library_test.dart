@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:characters/characters.dart';
@@ -406,6 +407,18 @@ void main() {
           ? SkillCalloutStyle.special
           : SkillCalloutStyle.values[tuning.rarityOf(kind)!.index];
       expect(skill.calloutStyle, expected, reason: kind.label);
+    }
+  });
+
+  test('defaultGripInset matches every built-in skill', () {
+    for (final kind in PowerUpKind.values) {
+      expect(
+        SkillLibrary.defaults
+            .builtIn(kind, PowerUpConfig.defaults)
+            .weaponGripInset,
+        PowerUpPainter.defaultGripInset(kind),
+        reason: kind.name,
+      );
     }
   });
 

@@ -474,6 +474,44 @@ void main() {
     },
   );
 
+  testWidgets('Pickups count includes spawnable custom skills', (tester) async {
+    final a = SkillLibrary.defaults.create('Alpha Blade', PowerUpKind.knife);
+    final b = SkillLibrary.defaults.create('Beta Blade', PowerUpKind.knife);
+    final off = SkillLibrary.defaults
+        .create('Gamma Blade', PowerUpKind.knife)
+        .copyWith(enabled: false);
+    var library = SkillLibrary.defaults;
+    for (final skill in [a, b, off]) {
+      library = library.withDefinition(skill, PowerUpConfig.defaults);
+    }
+    final builtIns = PowerUpKind.values.where((k) => !k.isTrap).length;
+    await pumpSetup(tester, skillLibrary: library);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await openSettings(tester);
+    expect(find.text('Pickups: All'), findsOneWidget);
+
+    await tester.tap(find.text('Pickups: All'));
+    await tester.pumpAndSettle();
+    final card = find.byKey(ValueKey('selection-card-${a.id}'));
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    await tester.tap(card);
+    await tester.pump();
+    final pistol = find.byKey(const ValueKey('selection-card-pistol'));
+    await tester.ensureVisible(pistol);
+    await tester.pumpAndSettle();
+    await tester.tap(pistol);
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    // Built-ins on: all but pistol; custom on: only Beta (Gamma is disabled).
+    expect(
+      find.text('Pickups: ${builtIns - 1 + 1} of ${builtIns + 2}'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a custom skill card shows its own tier label and color', (
     tester,
   ) async {

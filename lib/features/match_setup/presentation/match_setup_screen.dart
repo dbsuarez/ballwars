@@ -127,6 +127,21 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     return ids.difference(_customOff);
   }
 
+  /// "Pickups: All", or "Pickups: n of m" counting the built-in pickups and the spawnable custom
+  /// skills that are on (traps excluded), the same number the Weapons dialog shows.
+  String _pickupsLabel() {
+    final custom = _spawnableCustom;
+    final customOn = custom.where((s) => !_customOff.contains(s.id)).length;
+    final total =
+        PowerUpKind.values.where((kind) => !kind.isTrap).length + custom.length;
+    final on = _powerUps == null
+        ? total - custom.length + customOn
+        : _powerUps!.where((kind) => !kind.isTrap).length + customOn;
+    return _powerUps == null && customOn == custom.length
+        ? 'Pickups: All'
+        : 'Pickups: $on of $total';
+  }
+
   VoidCallback? _refreshDrawer;
 
   void _update(VoidCallback update) {
@@ -1329,11 +1344,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           if (_mode != MatchMode.threads) ...[
             ListTile(
               leading: const Icon(Icons.auto_awesome),
-              title: Text(
-                _powerUps == null
-                    ? 'Pickups: All'
-                    : 'Pickups: ${_powerUps!.where((kind) => !kind.isTrap).length} of ${PowerUpKind.values.where((kind) => !kind.isTrap).length}',
-              ),
+              title: Text(_pickupsLabel()),
               trailing: const Icon(Icons.chevron_right),
               onTap: _chooseWeapons,
             ),

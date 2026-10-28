@@ -440,6 +440,82 @@ void main() {
     expect(legacy.weaponGripRotation, 0);
   });
 
+  test(
+    'custom description round trips, trims, caps at 160 and defaults to empty',
+    () {
+      final base = SkillLibrary.defaults.create(
+        'Story Knife',
+        PowerUpKind.knife,
+      );
+      expect(base.description, '');
+      expect(base.toJson().containsKey('description'), isFalse);
+
+      final described = base
+          .copyWith(description: '  Cuts\nthreads   twice.  ')
+          .validated();
+      expect(described.description, 'Cuts threads twice.');
+      final json = described.toJson();
+      expect(json['description'], 'Cuts threads twice.');
+      expect(
+        SkillDefinition.fromJson(json)!.description,
+        'Cuts threads twice.',
+      );
+
+      final long = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..['description'] = 'x' * 300,
+      )!;
+      expect(long.description, 'x' * 160);
+
+      final legacy = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..remove('description'),
+      )!;
+      expect(legacy.description, '');
+
+      final wrongType = SkillDefinition.fromJson(
+        Map<String, Object?>.from(base.toJson())..['description'] = 42,
+      )!;
+      expect(wrongType.description, '');
+
+      final builtIn = SkillLibrary.defaults
+          .builtIn(PowerUpKind.knife, PowerUpConfig.defaults)
+          .copyWith(description: 'Not for built-ins')
+          .validated();
+      expect(builtIn.description, '');
+    },
+  );
+
+  test('replay snapshots carry descriptions and still enforce their limit', () {
+    final description = 'd' * 160;
+    var library = SkillLibrary.defaults;
+    for (var i = 0; i < 20; i++) {
+      library = library.withDefinition(
+        library
+            .create('Story Skill $i', PowerUpKind.pistol)
+            .copyWith(description: description),
+        PowerUpConfig.defaults,
+      );
+    }
+    final encoded = library.encodeReplay()!;
+    final decoded = SkillLibrary.decodeReplay(encoded)!;
+    expect(decoded.custom, hasLength(20));
+    expect(decoded.custom.every((s) => s.description == description), isTrue);
+
+    var full = library;
+    for (
+      var i = 20;
+      jsonEncode(full.toJson()).length <= SkillLibrary.maxReplayCharacters;
+      i++
+    ) {
+      full = full.withDefinition(
+        full
+            .create('Story Skill $i', PowerUpKind.pistol)
+            .copyWith(description: description),
+        PowerUpConfig.defaults,
+      );
+    }
+    expect(full.encodeReplay, throwsFormatException);
+  });
+
   test('melee reach round trips, clamps to 0..3 and defaults to 0', () {
     for (final skill in SkillLibrary.defaults.all(PowerUpConfig.defaults)) {
       expect(skill.meleeReach, 0, reason: skill.id);

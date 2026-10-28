@@ -134,7 +134,11 @@ class SkillDefinition {
     this.artworkKind,
     this.payloadSkillId,
     this.rarity,
+    this.description = '',
   });
+
+  /// Longest custom [description], in characters.
+  static const int maxDescriptionLength = 160;
 
   final String id;
   final String name;
@@ -227,6 +231,11 @@ class SkillDefinition {
   /// (`tier.<kind>` in the tuning), as custom skills did before they had one. Built-ins and traps never
   /// keep one ([validated] drops it). Read it through [SkillLibrary.rarityOf].
   final PowerUpRarity? rarity;
+
+  /// A custom skill's own card text (Weapons dialog, Skill Management list), plain text on one
+  /// line, at most [maxDescriptionLength] characters. Empty: the generated text is shown. Built-ins
+  /// never keep one ([validated] drops it).
+  final String description;
 
   /// Its held and arena artwork ([artworkKind], else its carrier).
   PowerUpKind get displayKind => artworkKind ?? baseKind;
@@ -366,6 +375,7 @@ class SkillDefinition {
     Object? artworkKind = _unset,
     Object? payloadSkillId = _unset,
     Object? rarity = _unset,
+    String? description,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -442,6 +452,7 @@ class SkillDefinition {
         ? this.payloadSkillId
         : payloadSkillId as String?,
     rarity: identical(rarity, _unset) ? this.rarity : rarity as PowerUpRarity?,
+    description: description ?? this.description,
   );
 
   Map<String, Object?> toJson() => {
@@ -510,6 +521,7 @@ class SkillDefinition {
     if (artworkKind != null) 'artwork': artworkKind!.name,
     if (payloadSkillId != null) 'fires': payloadSkillId,
     if (rarity != null) 'rarity': rarity!.name,
+    if (description.isNotEmpty) 'description': description,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -622,6 +634,9 @@ class SkillDefinition {
       artworkKind: nullableEnum('artwork', PowerUpKind.values),
       payloadSkillId: value['fires'] as String?,
       rarity: nullableEnum('rarity', PowerUpRarity.values),
+      description: value['description'] is String
+          ? value['description'] as String
+          : '',
     ).validated();
   }
 
@@ -669,7 +684,17 @@ class SkillDefinition {
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
     payloadSkillId: _cleanReference(payloadSkillId),
     rarity: custom && !baseKind.isTrap ? rarity : null,
+    description: custom ? cleanDescription(description) : '',
   );
+
+  /// [text] as a card description: whitespace and newlines collapsed to single spaces, trimmed and
+  /// cut to [maxDescriptionLength] characters.
+  static String cleanDescription(String text) {
+    final flat = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return flat.length <= maxDescriptionLength
+        ? flat
+        : flat.substring(0, maxDescriptionLength).trimRight();
+  }
 
   static String? _cleanReference(String? id) {
     final trimmed = id?.trim() ?? '';

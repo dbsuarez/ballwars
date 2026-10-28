@@ -375,6 +375,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             '${skill.projectileCount} projectiles',
           if (skill.maxBounces != null) '${skill.maxBounces} bounce',
         ];
+        // A custom skill's own description, else the generated note.
+        final note = skill.custom && skill.description.isNotEmpty
+            ? skill.description
+            : skill.custom && skill.enabled
+            ? 'Independent skill using ${skill.baseKind.label} artwork'
+            : null;
         return Card(
           child: ListTile(
             minVerticalPadding: 12,
@@ -398,9 +404,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             subtitle: Text(
               '${_categoryLabel(skill.resolvedCategory)}'
               '${details.isEmpty ? "" : " • ${details.join(" • ")}"}'
-              '${skill.custom && skill.enabled ? "\nIndependent skill using ${skill.baseKind.label} artwork" : ""}',
+              '${note == null ? "" : "\n$note"}',
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            isThreeLine: skill.custom && skill.enabled,
+            isThreeLine: note != null,
             trailing: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') _edit(skill);
@@ -1164,6 +1172,9 @@ class _SkillEditorState extends State<_SkillEditor> {
         .toUpperCase(),
   );
   late final _yell = TextEditingController(text: widget.skill.yell);
+  late final _description = TextEditingController(
+    text: widget.skill.description,
+  );
   late final _sound = TextEditingController(text: widget.skill.soundCue);
   late int _handColor = widget.skill.handEffectColor;
   late int _spriteTint = widget.skill.spriteTint;
@@ -1174,6 +1185,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     _name.dispose();
     _sound.dispose();
     _yell.dispose();
+    _description.dispose();
     _effectColor.dispose();
     for (final controller in _numbers.values) {
       controller.dispose();
@@ -1452,6 +1464,9 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
     return widget.skill.copyWith(
       name: _name.text.trim(),
+      description: widget.skill.custom
+          ? SkillDefinition.cleanDescription(_description.text)
+          : null,
       enabled: _enabled,
       category: _category,
       arsenalDamage: _double('arsenal'),
@@ -2026,6 +2041,21 @@ class _SkillEditorState extends State<_SkillEditor> {
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
+                      if (widget.skill.custom)
+                        _fixedRow(
+                          'Description',
+                          TextField(
+                            key: const ValueKey('skill-description'),
+                            controller: _description,
+                            maxLength: SkillDefinition.maxDescriptionLength,
+                            minLines: 2,
+                            maxLines: 3,
+                            keyboardType: TextInputType.text,
+                            decoration: const InputDecoration(
+                              hintText: 'Shown on the skill card',
+                            ),
+                          ),
+                        ),
                       _fixedRow(
                         'Category',
                         DropdownButtonFormField<SkillCategory>(

@@ -1980,7 +1980,9 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                       ),
                     const SizedBox(height: 4),
                     Text(
-                      '$details.',
+                      skill.description.isNotEmpty
+                          ? skill.description
+                          : '$details.',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(

@@ -474,6 +474,60 @@ void main() {
     },
   );
 
+  testWidgets(
+    'custom skill cards show their own description, else the generated text',
+    (tester) async {
+      final described = SkillLibrary.defaults
+          .create('Story Blade', PowerUpKind.knife)
+          .copyWith(description: 'A long tale of cuts. ' * 7);
+      final plain = SkillLibrary.defaults.create(
+        'Plain Blade',
+        PowerUpKind.knife,
+      );
+      var library = SkillLibrary.defaults;
+      for (final skill in [described, plain]) {
+        library = library.withDefinition(skill, PowerUpConfig.defaults);
+      }
+      final text = library.custom.first.description;
+      expect(text.length, lessThanOrEqualTo(160));
+      await pumpSetup(tester, skillLibrary: library);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await openSettings(tester);
+      await tester.tap(find.text('Pickups: All'));
+      await tester.pumpAndSettle();
+
+      final card = find.byKey(ValueKey('selection-card-${described.id}'));
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      final shown = tester.widget<Text>(
+        find.descendant(of: card, matching: find.text(text)),
+      );
+      expect(shown.maxLines, 2);
+      expect(shown.overflow, TextOverflow.ellipsis);
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.textContaining('Custom weapon based on'),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester.getSize(card).height,
+        tester
+            .getSize(find.byKey(const ValueKey('selection-card-knife')))
+            .height,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(ValueKey('selection-card-${plain.id}')),
+          matching: find.text('Custom weapon based on Knife.'),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('Pickups count includes spawnable custom skills', (tester) async {
     final a = SkillLibrary.defaults.create('Alpha Blade', PowerUpKind.knife);
     final b = SkillLibrary.defaults.create('Beta Blade', PowerUpKind.knife);

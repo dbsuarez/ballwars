@@ -728,6 +728,76 @@ void main() {
     );
   });
 
+  testWidgets('custom skills take a description; built-ins have no field', (
+    tester,
+  ) async {
+    final library = SkillLibrary.defaults.withDefinition(
+      SkillLibrary.defaults
+          .create('Story Pistol', PowerUpKind.pistol)
+          .copyWith(enabled: true),
+      PowerUpConfig.defaults,
+    );
+    SkillManagementResult? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              result = await Navigator.of(context).push<SkillManagementResult>(
+                MaterialPageRoute(
+                  builder: (_) => SkillManagementScreen(
+                    initial: library,
+                    tuning: PowerUpConfig.defaults,
+                  ),
+                ),
+              );
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // A built-in skill has no description field.
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Pistol',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol').first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('skill-description')), findsNothing);
+    Navigator.of(tester.element(find.text('Edit Pistol'))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Independent skill using Pistol artwork'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(ListTile, 'Story Pistol').first);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('skill-description'));
+    await _revealEditor(tester, field);
+    expect(tester.widget<TextField>(field).maxLength, 160);
+    await tester.enterText(field, '  Fires\ntwo  bullets.  ');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fires two bullets.'), findsOneWidget);
+    expect(
+      find.textContaining('Independent skill using Pistol artwork'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(result!.library.custom.single.description, 'Fires two bullets.');
+  });
+
   testWidgets('admin can duplicate, edit and save a custom skill', (
     tester,
   ) async {
@@ -982,6 +1052,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Kutsilyo'));
       await tester.pumpAndSettle();
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-item-rarity')),
+      );
       await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Special').last);

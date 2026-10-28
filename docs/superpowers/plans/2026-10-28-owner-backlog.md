@@ -167,7 +167,7 @@ Rules:
 
 Owner's words:
 - "playing a replay should remove the save replay at the end, saving a reply of a replay is not right"
-- "custom skills does not respect the tiring system. The color coding is not respected in all places like in the weapon selection menu."
+- "custom skills does not respect the tiering system. The color coding is not respected in all places like in the weapon selection menu."
 - "built-in knife (normal) and custom kutsilyo (special), they are sharing the rarity setting so when I change one the other changes too, and custom skill is not shown in rarity editor legacy."
 
 ### Task 8: No "Save replay" when watching a replay
@@ -211,3 +211,23 @@ Owner: "let me add my custom description for custom skills."
 - [ ] **Step 1: Failing tests**: JSON round trip and 160-char limit; old JSON reads ''; the editor saves the text; the Weapons dialog card shows it (2 lines max, ellipsis, same card height); empty falls back to the generated description.
 - [ ] **Step 2: Implement**. UI text plain `-`. Descriptions travel with the skill snapshot in replay links (`skills=`), so check the snapshot size limit still holds with a 160-char description (`SkillLibrary.maxReplayCharacters`).
 - [ ] **Step 3: Run** focused then full tests. **Commit** `feat: custom descriptions for custom skills`; CLAUDE.md.
+
+### Task 12: Cleanup (owner: "fix what you can")
+
+Small fixes collected from the reviews. No simulation behavior changes (replays must not change): the two older simulation bugs found along the way are only documented, see the end.
+
+- [ ] **Battle screen on a landscape phone** (800x360, 844x390): a vertical RenderFlex overflow appears in every mode (pre-existing). Find the widget that overflows in `arena_battle_screen.dart` (header/arena/scoreboard layout when the height is small) and make it fit (scroll, shrink or hide secondary text), without changing portrait or wide layouts. Make the landscape test strict: no exception at all (drop the `takeException` swallowing).
+- [ ] **End battle button**: at a bottom-row width of about 300-310 px the labeled "Ending after next KO" can overflow horizontally; make the icon-only switch cover it (test at those widths).
+- [ ] **Custom description cut**: `SkillLibrary.cleanDescription` cuts with `substring(0, 160)` (UTF-16 units); cut on characters (grapheme clusters via `package:characters`) so an emoji is never split and no lone surrogate reaches `Text` or JSON; tests with an emoji-heavy and a long no-space description.
+- [ ] **Share/Save with too many custom skills**: `_replayUri()` (`arena_battle_screen.dart` at the copy-link and save-replay handlers) throws `FormatException` over the snapshot limit and the user sees nothing: catch it and show a SnackBar ("Too many custom skills to share this replay"), no crash, no partial copy; test.
+- [ ] **Hair**: two balls of the same gender in one match can repeat a style: offset by the ball's rank among its gender (no RNG, replay-stable, existing None balls unchanged, tests); `BallHairPainter._paintLong`: remove per-frame list/Paint allocations (const lists, reuse the existing paint).
+- [ ] **HP bar**: choose the Paint by an explicit level instead of comparing colors; strengthen the "off" and "eliminated" painter tests to assert the expected background pixel, not just `isNot(green)`.
+- [ ] **Arena picker**: mark the active arena in the sheet (check icon); share one hazard-caption helper between `settings_screen.dart` and `power_up_test_screen.dart` (and Match Setup if it has the same switch).
+- [ ] **Pickups helper**: move `pickupCount` out of `match_setup_screen.dart` into a small domain file (e.g. `match_setup/domain/pickup_count.dart`) with its own unit tests.
+- [ ] **Run** `flutter analyze` and the full `flutter test`; commit as small commits (one per bullet group), messages ending with the Co-Authored-By line; update CLAUDE.md where behavior is documented.
+
+Documented only (simulation behavior, would change replays), add to `docs/KNOWN-ISSUES.md`:
+- `PowerUpSystem.onContact` pairs held slots with skill ids by position and can pick the wrong skill when only the second slot is filled.
+- Raging Demon attacks are not cleared in `resetForRespawn` in Endless Battle.
+- Special-tier spawn odds are per-tier shares (see `docs/SPAWN-ODDS.md`).
+- Grip flip uses the pre-recoil angle while the sprite flip uses the post-recoil angle (a few frames near a vertical aim during the fired-weapon drop).

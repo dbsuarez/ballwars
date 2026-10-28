@@ -35,8 +35,12 @@ class _Auth implements AdminAuth {
   Future<void> signOut() async {}
 }
 
-Widget _app(bool admin, {SkillDefinition? initialSkill}) => AppSettingsScope(
-  settings: ValueNotifier(AppSettings.defaults),
+Widget _app(
+  bool admin, {
+  SkillDefinition? initialSkill,
+  SkillLibrary? library,
+}) => AppSettingsScope(
+  settings: ValueNotifier(AppSettings.defaults.copyWith(skillLibrary: library)),
   adminAuth: _Auth(admin),
   child: MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
@@ -45,6 +49,73 @@ Widget _app(bool admin, {SkillDefinition? initialSkill}) => AppSettingsScope(
 );
 
 void main() {
+  testWidgets(
+    'custom knife and built-in knife keep separate identities in both slots and picker',
+    (tester) async {
+      final previous = OfflineStore.instance;
+      OfflineStore.instance = MemoryOfflineStore();
+      addTearDown(() => OfflineStore.instance = previous);
+      final knife = SkillLibrary.defaults.builtIn(
+        PowerUpKind.knife,
+        AppSettings.defaults.powerUps,
+      );
+      final custom = SkillLibrary.defaults
+          .duplicate(knife, 'Kutsilyo')
+          .copyWith(arsenalDamage: 31);
+      final library = SkillLibrary.defaults.withDefinition(
+        custom,
+        AppSettings.defaults.powerUps,
+      );
+      await tester.pumpWidget(
+        _app(true, initialSkill: custom, library: library),
+      );
+      await tester.pumpAndSettle();
+      final second = find.byKey(const ValueKey('choose-weapon-2-0'));
+      await tester.longPress(second);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'knife');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('power-test-item-knife')));
+      await tester.pumpAndSettle();
+      var ball = tester
+          .widget<ArenaCanvas>(find.byType(ArenaCanvas))
+          .state
+          .balls
+          .first;
+      expect(ball.heldSkillId, custom.id);
+      expect(ball.heldSecondarySkillId, knife.id);
+      await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+      await tester.pump();
+      expect(ball.heldSkillId, custom.id);
+      expect(ball.heldSecondarySkillId, knife.id);
+      await tester.tap(find.byKey(const ValueKey('clear-loadout-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('choose-item-0')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Kutsilyo');
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Kutsilyo'), findsOneWidget);
+      await tester.tap(find.byKey(ValueKey('power-test-skill-${custom.id}')));
+      await tester.pumpAndSettle();
+      await tester.longPress(second);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'knife');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('power-test-item-knife')));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(_app(true, library: library));
+      await tester.pumpAndSettle();
+      ball = tester
+          .widget<ArenaCanvas>(find.byType(ArenaCanvas))
+          .state
+          .balls
+          .first;
+      expect(ball.heldSkillId, custom.id);
+      expect(ball.heldSecondarySkillId, knife.id);
+    },
+  );
   testWidgets('test arena rejects unauthenticated users', (tester) async {
     await tester.pumpWidget(_app(false));
     await tester.pumpAndSettle();

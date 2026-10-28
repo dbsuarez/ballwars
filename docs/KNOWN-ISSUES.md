@@ -1,6 +1,13 @@
 # Known issues
 
-Resolution log, updated 2026-10-28. The simulation fixes below apply to new matches and revision-2 replay links. Existing links without a revision marker retain revision-1 behavior so recorded matches stay reproducible. New links carry a `v.2` token; older apps reject those links rather than replaying them with different rules.
+Resolution log, updated 2026-10-28. Simulation fixes apply from the revision named below. Existing unversioned, `v.2` and `v.3` links keep their respective rules. New links carry `v.3`; older apps reject unknown versions rather than replaying them differently.
+
+### Same-carrier custom skills in Live Arena and dual wield
+
+- [x] Live Arena stores and remembers each slot's exact skill ID, lists custom/draft skills in their resolved category, and resolves icons/finishers by slot identity.
+- [x] Revision 3 removes the fallback that inferred a lone custom variant from a pickup's base kind. Explicit custom IDs remain independent of built-ins.
+- [x] Revision 3 keys fired-item hold/discard by skill ID as well as carrier, so firing a built-in does not discard an unused custom variant in the other hand.
+- [x] Arena held artwork and match equipment labels/icons respect actual slot IDs, including a secondary-only loadout.
 
 ## Simulation (changing these changes replays)
 

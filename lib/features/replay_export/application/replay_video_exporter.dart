@@ -74,7 +74,7 @@ class ReplayVideoExporter {
   /// receives 0..1; throws [ExportCancelled] once [isCancelled] returns true.
   Future<String> export({
     required List<CustomBall> contestants,
-    int simulationRevision = 2,
+    int simulationRevision = 3,
     required int seed,
     required double arenaRadius,
     double speedMultiplier = 1.0,

@@ -195,14 +195,22 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
             if (i < original.frames.length &&
                 _inspect(original.frames[i]).blank)
               '${_edits[original.id]?.name ?? original.id} frame ${i + 1} is blank. Exclude it or enable Allow blank frames.',
-    if (_metadata == null && _loadedAtlas == null && _rgba != null)
-      ...SpriteImport.edgeProblems(
-        atlas,
-        _rgba!,
-        _image!.width,
-        _image!.height,
-      ),
   ];
+  List<String> _edgeWarnings(SpriteAtlas? atlas) =>
+      atlas == null ||
+          _metadata != null ||
+          _loadedAtlas != null ||
+          _rgba == null ||
+          atlas
+              .problems(
+                sheetSize: Size(
+                  _image!.width.toDouble(),
+                  _image!.height.toDouble(),
+                ),
+              )
+              .isNotEmpty
+      ? []
+      : SpriteImport.edgeProblems(atlas, _rgba!, _image!.width, _image!.height);
 
   Future<void> _pick() async {
     try {
@@ -774,11 +782,15 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
                                   ),
                                 ),
                               ),
-                            if (issue != null)
-                              Text(
-                                issue,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
+                            for (final warning in _edgeWarnings(atlas))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  '$warning Review the preview; you can still save if the cut looks correct.',
+                                  key: ValueKey('sprite-edge-warning-$warning'),
+                                  style: const TextStyle(
+                                    color: Color(0xffffc66d),
+                                  ),
                                 ),
                               ),
                           ],

@@ -302,22 +302,22 @@ class SpriteImport {
     for (final s in atlas.sprites.values) {
       for (var i = 0; i < s.frames.length; i++) {
         final f = s.frames[i];
-        var touched = false;
+        final touched = <String>{};
         for (var x = f.left.toInt(); x < f.right; x++) {
-          if ((f.top > 0 && opaque(x, f.top.toInt())) ||
-              (f.bottom < height && opaque(x, f.bottom.toInt() - 1))) {
-            touched = true;
+          if (f.top > 0 && opaque(x, f.top.toInt())) touched.add('top');
+          if (f.bottom < height && opaque(x, f.bottom.toInt() - 1)) {
+            touched.add('bottom');
           }
         }
         for (var y = f.top.toInt(); y < f.bottom; y++) {
-          if ((f.left > 0 && opaque(f.left.toInt(), y)) ||
-              (f.right < width && opaque(f.right.toInt() - 1, y))) {
-            touched = true;
+          if (f.left > 0 && opaque(f.left.toInt(), y)) touched.add('left');
+          if (f.right < width && opaque(f.right.toInt() - 1, y)) {
+            touched.add('right');
           }
         }
-        if (touched) {
+        if (touched.isNotEmpty && !s.bleedOk) {
           problems.add(
-            '${s.id} frame ${i + 1} touches a cell edge. Add transparent gutters or adjust inset.',
+            '${s.id} frame ${i + 1} has visible pixels on its ${touched.join(" / ")} cell edge. This can be intentional.',
           );
         }
       }

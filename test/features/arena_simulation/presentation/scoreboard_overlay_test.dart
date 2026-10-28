@@ -1,3 +1,4 @@
+import 'dart:ui' show PictureRecorder;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
@@ -9,6 +10,7 @@ import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/arena_simulation/application/match_simulation_controller.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
+import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
 
 SimulationBall _ball(String id, int lines) => SimulationBall(
   config: CustomBall(
@@ -24,6 +26,64 @@ SimulationBall _ball(String id, int lines) => SimulationBall(
 );
 
 void main() {
+  testWidgets(
+    'real match strip resolves both same-kind weapons by their own IDs',
+    (tester) async {
+      final knife = SkillLibrary.defaults.builtIn(
+        PowerUpKind.knife,
+        PowerUpConfig.defaults,
+      );
+      final custom = SkillLibrary.defaults
+          .duplicate(knife, 'Kutsilyo')
+          .copyWith(spriteTint: 0xffffcc00);
+      final library = SkillLibrary.defaults.withDefinition(
+        custom,
+        PowerUpConfig.defaults,
+      );
+      final ball = _ball('a', 5)
+        ..held = PowerUpKind.knife
+        ..heldSkillId = custom.id
+        ..heldSecondary = PowerUpKind.knife
+        ..heldSecondarySkillId = knife.id;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ScoreboardOverlay(
+              balls: [ball],
+              mode: MatchMode.arsenal,
+              skillById: (id) => library.byId(id, PowerUpConfig.defaults),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Kutsilyo'), findsOneWidget);
+      expect(find.text('Knife'), findsOneWidget);
+      final icons = tester
+          .widgetList<PowerUpIcon>(find.byType(PowerUpIcon))
+          .toList();
+      expect(icons.map((icon) => icon.tint), [
+        custom.spriteTint,
+        knife.spriteTint,
+      ]);
+    },
+  );
+  test('secondary-only equipment artwork keeps its actual slot index', () {
+    final ball = _ball('a', 5)..heldSecondary = PowerUpKind.knife;
+    final slots = <int>[];
+    final recorder = PictureRecorder();
+    PowerUpPainter.paintBallEffects(
+      Canvas(recorder),
+      ball,
+      artworkTint: (_, slot) {
+        slots.add(slot);
+        return 0xffffffff;
+      },
+      useWeaponSprite: (_, _) => false,
+    );
+    recorder.endRecording().dispose();
+    expect(slots, [1]);
+  });
   testWidgets('a held custom skill shows its own tier color in the strip', (
     tester,
   ) async {

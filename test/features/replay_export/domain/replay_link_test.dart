@@ -64,7 +64,7 @@ void main() {
   test(
     'simulation revision preserves legacy links and rejects unknown rules',
     () {
-      for (final revision in [1, 2]) {
+      for (final revision in [1, 2, 3]) {
         final encoded = ReplayLink(
           simulationRevision: revision,
           seed: 7,
@@ -75,13 +75,16 @@ void main() {
         expect(decoded, isNotNull);
         expect(decoded!.simulationRevision, revision);
         expect(
-          decoded.toUri(presetIds: _presetIds).toString().contains('v.2'),
-          revision == 2,
+          decoded
+              .toUri(presetIds: _presetIds)
+              .toString()
+              .contains('v.$revision'),
+          revision >= 2,
         );
         if (revision == 2) {
           expect(
             ReplayLink.fromUri(
-              Uri.parse(encoded.toString().replaceFirst('v.2', 'v.3')),
+              Uri.parse(encoded.toString().replaceFirst('v.2', 'v.99')),
               presets: _presets,
             ),
             isNull,
@@ -249,7 +252,7 @@ void main() {
 
     expect(
       uri.toString(),
-      contains('balls=v.2,k.streaming/netflix,p.preset-usa'),
+      contains('balls=v.3,k.streaming/netflix,p.preset-usa'),
     );
     expect(ReplayLink.usesPacks(uri), isTrue);
     // Without the packs loaded the link can't be resolved...
@@ -374,7 +377,7 @@ void main() {
       contestants: [_presets[0], _presets[1]],
       mode: MatchMode.allOut,
     ).toUri(presetIds: ids, appUrl: app);
-    expect(uri.queryParameters['balls'], startsWith('v.2,m.allout,'));
+    expect(uri.queryParameters['balls'], startsWith('v.3,m.allout,'));
     final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
     expect(parsed.mode, MatchMode.allOut);
     expect(parsed.contestants, hasLength(2));
@@ -515,7 +518,7 @@ void main() {
         powerUps: {PowerUpKind.knife, PowerUpKind.mine},
       ).toUri(presetIds: ids, appUrl: app);
       final tokens = some.queryParameters['balls']!.split(',');
-      expect(tokens[0], 'v.2');
+      expect(tokens[0], 'v.3');
       expect(tokens[1], 'm.arsenal');
       expect(tokens[2], startsWith('w.'));
       expect(ReplayLink.fromUri(some, presets: _presets)!.powerUps, {

@@ -286,8 +286,12 @@ class PowerUpSystem {
       visualSkill(kind, ball: ball).range;
 
   void _skillYell(SimulationBall ball, PowerUpKind kind, String fallback) {
-    _startCastingArtwork(ball, visualSkill(kind, ball: ball));
     final skill = match.skillLibrary.activeFor(kind, _t);
+    // Composed/custom activations use _announceSkill with their explicit definition.
+    _startCastingArtwork(
+      ball,
+      match.simulationRevision >= 3 ? skill : visualSkill(kind, ball: ball),
+    );
     final custom = skill.yell.trim();
     _yell(
       ball,
@@ -410,7 +414,18 @@ class PowerUpSystem {
   /// The skill of the gatling a ball's burst came from, for its casings.
   final Map<SimulationBall, SkillDefinition> _burstShellSkill = {};
   final Map<SimulationBall, int> _burstVolley = {};
-  final Map<SimulationBall, Map<PowerUpKind, int>> _firedWeaponHold = {};
+  final Map<SimulationBall, Map<({PowerUpKind kind, String? id}), int>>
+  _firedWeaponHold = {};
+  ({PowerUpKind kind, String? id}) _holdKey(
+    SimulationBall ball,
+    PowerUpKind kind,
+    String? id,
+  ) => (
+    kind: kind,
+    id: match.simulationRevision < 3
+        ? null
+        : id ?? _equippedSkillId(ball, kind) ?? 'builtin.${kind.name}',
+  );
   final Map<SimulationBall, int> _shieldedVolley = {};
 
   // The damage label of the last volley that hit each ball, so a volley's hits add up in one label.
@@ -428,8 +443,11 @@ class PowerUpSystem {
   /// Fired weapons stay visible for half a second so recoil reads clearly.
   static const int firedWeaponHoldSteps = 30;
 
-  int firedWeaponHoldLeft(SimulationBall ball, PowerUpKind kind) =>
-      _firedWeaponHold[ball]?[kind] ?? 0;
+  int firedWeaponHoldLeft(
+    SimulationBall ball,
+    PowerUpKind kind, {
+    String? skillId,
+  }) => _firedWeaponHold[ball]?[_holdKey(ball, kind, skillId)] ?? 0;
 
   /// Pick-up radius of a field power-up: a little smaller than the balls, so it follows the ball size.
   late final double fieldRadius =
@@ -445,8 +463,8 @@ class PowerUpSystem {
   bool automaticSpawning = true;
 
   /// Place a selected item using the real spawn rules in the admin test arena.
-  void spawnTestItem(PowerUpKind kind) =>
-      _spawn(match.stepCount + 1, forcedKind: kind);
+  void spawnTestItem(PowerUpKind kind, {String? skillId}) =>
+      _spawn(match.stepCount + 1, forcedKind: kind, forcedSkillId: skillId);
 
   /// Deploys the selected arena decoration's environmental hazard in tests.
   void spawnTestArenaHazard() => _spawnArenaThemeHazard(match.stepCount + 1);
@@ -693,8 +711,13 @@ class PowerUpSystem {
     SimulationBall ball,
     PowerUpKind kind, {
     int steps = firedWeaponHoldSteps,
+    String? skillId,
   }) {
-    (_firedWeaponHold[ball] ??= {})[kind] = kind == PowerUpKind.fireWall
+    (_firedWeaponHold[ball] ??= {})[_holdKey(
+      ball,
+      kind,
+      skillId,
+    )] = kind == PowerUpKind.fireWall
         ? (visualSkill(kind, ball: ball).handEffectDurationSeconds * 60).round()
         : steps;
   }
@@ -709,8 +732,16 @@ class PowerUpSystem {
           held[kind] = left;
           continue;
         }
-        while (ball.equippedWeapons.contains(kind)) {
-          ball.removeWeapon(kind);
+        while ((ball.held == kind.kind &&
+                (kind.id == null ||
+                    (ball.heldSkillId ?? 'builtin.${kind.kind.name}') ==
+                        kind.id)) ||
+            (ball.heldSecondary == kind.kind &&
+                (kind.id == null ||
+                    (ball.heldSecondarySkillId ??
+                            'builtin.${kind.kind.name}') ==
+                        kind.id))) {
+          ball.removeWeapon(kind.kind, skillId: kind.id);
         }
         held.remove(kind);
       }
@@ -728,7 +759,7 @@ class PowerUpSystem {
     final activeSkill = p.skillId != null
         ? match.skillLibrary.byId(p.skillId!, _t) ??
               match.skillLibrary.builtIn(p.kind, _t)
-        : matchingCustom.length == 1
+        : match.simulationRevision < 3 && matchingCustom.length == 1
         ? matchingCustom.single
         : match.skillLibrary.builtIn(p.kind, _t);
     if (activeSkill.resolvedCategory != SkillCategory.weapon) {
@@ -848,6 +879,11 @@ class PowerUpSystem {
       case PowerUpKind.shadowClone:
         _startShadowClone(ball);
       default:
+        if (match.simulationRevision >= 3) {
+          _firedWeaponHold[ball]?.remove(
+            _holdKey(ball, p.kind, activeSkill.id),
+          );
+        }
         ball.equipWeapon(
           p.kind,
           dualWield: match.dualWield,
@@ -1528,7 +1564,10 @@ class PowerUpSystem {
     final composed = _skillForId(weapon, skillId);
     if (composed.isComposed && composed.trigger == SkillTrigger.collision) {
       _executeComposed(attacker, composed, primary: target);
-      attacker.removeWeapon(weapon);
+      attacker.removeWeapon(
+        weapon,
+        skillId: match.simulationRevision >= 3 ? skillId : null,
+      );
       return;
     }
     final PowerUpKind kind;
@@ -1552,7 +1591,10 @@ class PowerUpSystem {
     } else {
       return;
     }
-    attacker.removeWeapon(weapon);
+    attacker.removeWeapon(
+      weapon,
+      skillId: match.simulationRevision >= 3 ? skillId : null,
+    );
     final toAttacker = attacker.position - target.position;
     final distance = toAttacker.distance;
     final at = distance > 0
@@ -1569,7 +1611,13 @@ class PowerUpSystem {
         ),
       );
     }
-    _hit(target, kind, at: at, from: attacker);
+    _hit(
+      target,
+      kind,
+      at: at,
+      from: attacker,
+      skillId: match.simulationRevision >= 3 ? composed.id : null,
+    );
   }
 
   String? _equippedSkillId(SimulationBall ball, PowerUpKind weapon) {
@@ -1839,7 +1887,7 @@ class PowerUpSystem {
   /// Spawns one of the chosen kinds at a random spot in the emptiest quadrant of the arena (the one with
   /// the fewest power-ups and armed mines, a seeded pick among ties), away from the rim and the center
   /// and clear of balls and other power-ups. Skipped when 10 tries find no clear spot.
-  void _spawn(int number, {PowerUpKind? forcedKind}) {
+  void _spawn(int number, {PowerUpKind? forcedKind, String? forcedSkillId}) {
     // Uniform over the chosen kinds; with all of them chosen this draws exactly as with none chosen.
     final chosen = match.powerUpKinds;
     // Custom skills are chosen on their own (null: every active one); one can spawn even when its base
@@ -1872,7 +1920,15 @@ class PowerUpSystem {
     bool builtInChosen(PowerUpKind kind) =>
         chosen == null || chosen.contains(kind) || kind.isTrap;
     final SkillDefinition selectedSkill;
-    if (forcedKind == null &&
+    if (forcedSkillId != null) {
+      final requested = match.skillLibrary.byId(forcedSkillId, _t);
+      if (requested == null || requested.baseKind != forcedKind) {
+        throw StateError(
+          'The selected test skill is no longer available. Choose it again.',
+        );
+      }
+      selectedSkill = requested;
+    } else if (forcedKind == null &&
         PowerUpSpawnSelector.customTiersDiffer(spawnableCustom, _t)) {
       // A custom skill with a tier of its own spawns at that tier's odds.
       selectedSkill = PowerUpSpawnSelector.chooseSkill(
@@ -2672,7 +2728,7 @@ class PowerUpSystem {
             : weapon.isGun;
         return canAim &&
             (weapon != PowerUpKind.energyWave || energyWaveAttacks.isEmpty) &&
-            !(_firedWeaponHold[ball]?.containsKey(weapon) ?? false);
+            firedWeaponHoldLeft(ball, weapon, skillId: entry.skillId) == 0;
       }).toList();
       if (!bursting && guns.isEmpty) continue;
       final target = _nearestTarget(ball);
@@ -2701,7 +2757,7 @@ class PowerUpSystem {
       } else {
         for (final entry in guns) {
           final kind = entry.kind;
-          _holdFiredWeapon(ball, kind);
+          _holdFiredWeapon(ball, kind, skillId: entry.skillId);
           final composed = _skillForId(kind, entry.skillId);
           // A skill that fires another skill (any combination) or a composed aimed skill.
           final payload = match.skillLibrary.resolvePayload(composed, _t);
@@ -3657,6 +3713,7 @@ class PowerUpSystem {
     int volley = 0,
     bool unavoidable = false,
     bool scaleForCrowd = true,
+    String? skillId,
   }) {
     if (target.isGhost && !unavoidable) return;
     if (target.magneticFieldLeft > 0 && !unavoidable) {
@@ -3668,7 +3725,7 @@ class PowerUpSystem {
     target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
     final impact = at ?? target.position;
     final (_, impactAccent) = _impactColors(kind);
-    final impactSkill = visualSkill(kind, ball: from);
+    final impactSkill = visualSkill(kind, ball: from, skillId: skillId);
     match.state.particles.spawnImpact(
       origin: impact,
       rng: rng,

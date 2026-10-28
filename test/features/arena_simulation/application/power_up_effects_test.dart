@@ -80,11 +80,33 @@ void _run(MatchSimulationController c, int steps) {
 }
 
 /// Puts a power-up of [kind] under [ball] and runs one step, so the ball picks it up.
-void _give(MatchSimulationController c, SimulationBall ball, PowerUpKind kind) {
+void _give(
+  MatchSimulationController c,
+  SimulationBall ball,
+  PowerUpKind kind, {
+  String? skillId,
+}) {
   c.powerUps!.field.add(
-    FieldPowerUp(kind: kind, position: ball.position, spawnStep: 0),
+    FieldPowerUp(
+      kind: kind,
+      skillId: skillId,
+      position: ball.position,
+      spawnStep: 0,
+    ),
   );
   _run(c, 1);
+}
+
+/// These fixtures intentionally request a custom definition, not its built-in carrier.
+void _giveCustom(
+  MatchSimulationController c,
+  SimulationBall ball,
+  PowerUpKind kind,
+) {
+  final skill = c.skillLibrary.custom.singleWhere(
+    (skill) => skill.baseKind == kind,
+  );
+  _give(c, ball, kind, skillId: skill.id);
 }
 
 /// Sends [a] and [b] at each other from just apart, and runs until they bump (at most 30 steps).
@@ -218,7 +240,7 @@ void main() {
     final owner = c.state.balls.first;
     final target = c.state.balls.last;
 
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
 
     expect(target.life, _life - 17);
     expect(c.powerUps!.skillSounds, isNotEmpty);
@@ -262,7 +284,7 @@ void main() {
       ),
     );
     final owner = c.state.balls.first;
-    _give(c, owner, PowerUpKind.pistol);
+    _giveCustom(c, owner, PowerUpKind.pistol);
     owner.aimLeft = 1;
 
     _run(c, 1);
@@ -303,7 +325,7 @@ void main() {
       ),
     );
     final [owner, target] = c.state.balls;
-    _give(c, owner, PowerUpKind.boomerang);
+    _giveCustom(c, owner, PowerUpKind.boomerang);
     expect(owner.heldSkillId, boom.id);
     owner.aimLeft = 1;
 
@@ -339,7 +361,7 @@ void main() {
     final owner = c.state.balls.first;
     final target = c.state.balls.last;
 
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
     expect(target.life, _life - 7);
     expect(target.speedLeft, greaterThan(0));
 
@@ -368,7 +390,7 @@ void main() {
       ),
     );
     final [owner, target] = c.state.balls;
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
     expect(target.life, _life);
     _run(c, 30);
     expect(target.life, _life - 4);
@@ -397,17 +419,17 @@ void main() {
     final owner = c.state.balls.first;
     final target = c.state.balls.last;
 
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
     expect(target.life, _life);
     _run(c, 6);
     expect(target.life, _life - 8);
 
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
     _run(c, 6);
     expect(target.life, _life - 8);
 
     _run(c, 48);
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
     _run(c, 6);
     expect(target.life, _life - 16);
   });
@@ -432,7 +454,7 @@ void main() {
     );
     c.powerUps!.automaticSpawning = false;
     for (var i = 0; i < 80; i++) {
-      _give(c, c.state.balls.first, PowerUpKind.apple);
+      _giveCustom(c, c.state.balls.first, PowerUpKind.apple);
     }
 
     expect(
@@ -466,7 +488,7 @@ void main() {
     ahead.position = const Offset(120, 0);
     above.position = const Offset(0, 150);
 
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
 
     expect(ahead.life, _life - 9 * 2.25);
     expect(above.life, _life);
@@ -497,7 +519,7 @@ void main() {
     atRim.position = const Offset(210, 0);
     center.position = const Offset(0, 40);
 
-    _give(c, owner, PowerUpKind.apple);
+    _giveCustom(c, owner, PowerUpKind.apple);
 
     expect(atRim.life, _life - 11 * 2.25);
     expect(center.life, _life);
@@ -527,7 +549,7 @@ void main() {
       owner.position = Offset.zero;
       close.position = const Offset(130, 0);
       far.position = const Offset(230, 0);
-      _give(c, owner, PowerUpKind.apple);
+      _giveCustom(c, owner, PowerUpKind.apple);
       expect(close.life, _life - 6 * 2.25, reason: delivery.name);
       expect(far.life, _life, reason: delivery.name);
     }
@@ -563,7 +585,7 @@ void main() {
     final dot = _match(
       skillLibrary: libraryFor(SkillEffectType.damageOverTime),
     );
-    _give(dot, dot.state.balls.first, PowerUpKind.apple);
+    _giveCustom(dot, dot.state.balls.first, PowerUpKind.apple);
     _run(dot, 30);
     expect(dot.state.balls.last.life, _life - 6);
 
@@ -573,21 +595,21 @@ void main() {
         targeting: SkillTargeting.self,
       ),
     );
-    _give(shield, shield.state.balls.first, PowerUpKind.apple);
+    _giveCustom(shield, shield.state.balls.first, PowerUpKind.apple);
     expect(shield.state.balls.first.goldenArmorHits, 2);
 
     final pull = _match(skillLibrary: libraryFor(SkillEffectType.pull));
-    _give(pull, pull.state.balls.first, PowerUpKind.apple);
+    _giveCustom(pull, pull.state.balls.first, PowerUpKind.apple);
     expect(pull.state.balls.last.velocity.dx, lessThan(0));
 
     final teleport = _match(skillLibrary: libraryFor(SkillEffectType.teleport));
     final teleportTarget = teleport.state.balls.last;
     final beforeTeleport = teleportTarget.position;
-    _give(teleport, teleport.state.balls.first, PowerUpKind.apple);
+    _giveCustom(teleport, teleport.state.balls.first, PowerUpKind.apple);
     expect(teleportTarget.position, isNot(beforeTeleport));
 
     final stun = _match(skillLibrary: libraryFor(SkillEffectType.stun));
-    _give(stun, stun.state.balls.first, PowerUpKind.apple);
+    _giveCustom(stun, stun.state.balls.first, PowerUpKind.apple);
     expect(stun.state.balls.last.stunnedLeft, 59);
     expect(stun.state.balls.last.velocity, Offset.zero);
 
@@ -598,7 +620,7 @@ void main() {
         targeting: SkillTargeting.self,
       ),
     );
-    _give(equip, equip.state.balls.first, PowerUpKind.pistol);
+    _giveCustom(equip, equip.state.balls.first, PowerUpKind.pistol);
     expect(equip.state.balls.first.held, PowerUpKind.pistol);
 
     final disarm = _match(
@@ -608,7 +630,7 @@ void main() {
       ),
     );
     disarm.state.balls.first.held = PowerUpKind.shield;
-    _give(disarm, disarm.state.balls.first, PowerUpKind.apple);
+    _giveCustom(disarm, disarm.state.balls.first, PowerUpKind.apple);
     expect(disarm.state.balls.first.equippedWeapons, isEmpty);
   });
 
@@ -1054,7 +1076,7 @@ void main() {
       ),
     );
     final first = heavyPistol.state.balls.first;
-    _give(heavyPistol, first, PowerUpKind.pistol);
+    _give(heavyPistol, first, PowerUpKind.pistol, skillId: pistol.id);
     _give(heavyPistol, first, PowerUpKind.sword);
     expect(first.equippedWeapons, [PowerUpKind.sword]);
 
@@ -1069,7 +1091,12 @@ void main() {
       ),
     );
     final second = lightLauncher.state.balls.first;
-    _give(lightLauncher, second, PowerUpKind.rocketLauncher);
+    _give(
+      lightLauncher,
+      second,
+      PowerUpKind.rocketLauncher,
+      skillId: launcher.id,
+    );
     _give(lightLauncher, second, PowerUpKind.sword);
     expect(second.equippedWeapons, [
       PowerUpKind.rocketLauncher,

@@ -2789,7 +2789,7 @@ class PowerUpPainter {
     int Function(PowerUpKind kind, int slot)? artworkTint,
     bool Function(PowerUpKind kind)? useEffectSprite,
     double? incomingAttackAngle,
-    int Function(PowerUpKind kind)? firedWeaponHoldLeft,
+    int Function(PowerUpKind kind, int slot)? firedWeaponHoldLeft,
     double Function(PowerUpKind kind, int slot)? weaponDisplayScale,
     double Function(PowerUpKind kind)? effectDisplayScale,
     double Function(PowerUpKind kind, int slot)? weaponGripInset,
@@ -2803,6 +2803,7 @@ class PowerUpPainter {
     String? Function(PowerUpKind kind, int slot)? iconSpriteId,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
+      final flailSlot = ball.held == PowerUpKind.orbitingFlail ? 0 : 1;
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.orbitingFlail, -1) ?? 0xFFFFFFFF,
@@ -2835,16 +2836,10 @@ class PowerUpPainter {
             ..strokeWidth = math.max(2, ball.radius * 0.1),
         );
         final sprite =
-            (useWeaponSprite?.call(
-                  PowerUpKind.orbitingFlail,
-                  ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
-                ) ??
+            (useWeaponSprite?.call(PowerUpKind.orbitingFlail, flailSlot) ??
                 true)
             ? skillSprite(
-                iconSpriteId?.call(
-                  PowerUpKind.orbitingFlail,
-                  ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
-                ),
+                iconSpriteId?.call(PowerUpKind.orbitingFlail, flailSlot),
                 PowerUpSprites.iconId(PowerUpKind.orbitingFlail),
                 step,
               )
@@ -2858,7 +2853,7 @@ class PowerUpPainter {
                 0.42 *
                 (weaponDisplayScale?.call(
                       PowerUpKind.orbitingFlail,
-                      ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+                      flailSlot,
                     ) ??
                     1),
           );
@@ -2872,15 +2867,12 @@ class PowerUpPainter {
                 0.9 *
                 (weaponDisplayScale?.call(
                       PowerUpKind.orbitingFlail,
-                      ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
+                      flailSlot,
                     ) ??
                     1),
             -step * 0.34,
             anchor: skillAnchor(
-              iconSpriteId?.call(
-                PowerUpKind.orbitingFlail,
-                ball.equippedWeapons.indexOf(PowerUpKind.orbitingFlail),
-              ),
+              iconSpriteId?.call(PowerUpKind.orbitingFlail, flailSlot),
               PowerUpSprites.iconId(PowerUpKind.orbitingFlail),
             ),
           );
@@ -3412,20 +3404,21 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    for (var slot = 0; slot < ball.equippedWeapons.length; slot++) {
+    for (var slot = 0; slot < 2; slot++) {
+      final weapon = slot == 0 ? ball.held : ball.heldSecondary;
+      if (weapon == null) continue;
       SkillArtworkTint.begin(
         canvas,
-        artworkTint?.call(ball.equippedWeapons[slot], slot) ?? 0xFFFFFFFF,
+        artworkTint?.call(weapon, slot) ?? 0xFFFFFFFF,
       );
       try {
-        final weapon = ball.equippedWeapons[slot];
         if (weapon != PowerUpKind.orbitingFlail) {
           _paintHeldWeapon(
             canvas,
             ball,
             weapon,
             slot,
-            firedHoldLeft: firedWeaponHoldLeft?.call(weapon) ?? 0,
+            firedHoldLeft: firedWeaponHoldLeft?.call(weapon, slot) ?? 0,
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),

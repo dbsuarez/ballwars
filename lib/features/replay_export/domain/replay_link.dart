@@ -86,7 +86,7 @@ class ReplayLink {
   final BallLook? look;
 
   const ReplayLink({
-    this.simulationRevision = 2,
+    this.simulationRevision = 3,
     required this.seed,
     required this.speedMultiplier,
     this.automaticSpeedUp = true,
@@ -153,7 +153,7 @@ class ReplayLink {
     });
     final chosen = powerUps;
     final tokens = [
-      if (simulationRevision >= 2) 'v.2',
+      if (simulationRevision >= 2) 'v.$simulationRevision',
       if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
       if (mode != MatchMode.threads &&
           chosen != null &&
@@ -243,8 +243,8 @@ class ReplayLink {
     var simulationRevision = 1;
     if (tokens.isNotEmpty && tokens.first.startsWith('v.')) {
       final marker = tokens.removeAt(0);
-      if (marker != 'v.2') return null;
-      simulationRevision = 2;
+      if (marker != 'v.2' && marker != 'v.3') return null;
+      simulationRevision = marker == 'v.3' ? 3 : 2;
     }
     if (tokens.isNotEmpty && tokens.first.startsWith(_modePrefix)) {
       final parsedMode = MatchMode.byId(

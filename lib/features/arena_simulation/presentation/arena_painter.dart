@@ -716,8 +716,13 @@ class ArenaPainter extends CustomPainter {
           ) ??
           true,
       incomingAttackAngle: PowerUpPainter.incomingAttackAngle(state, ball),
-      firedWeaponHoldLeft: (kind) =>
-          state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
+      firedWeaponHoldLeft: (kind, slot) =>
+          state.powerUps?.firedWeaponHoldLeft(
+            ball,
+            kind,
+            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+          ) ??
+          0,
       weaponDisplayScale: (kind, slot) =>
           state.powerUps?.weaponDisplayScale(
             kind,

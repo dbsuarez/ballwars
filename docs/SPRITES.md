@@ -18,9 +18,13 @@ The public sprite bucket permits uploads/deletes only through an admin session.
 4. **Slices:** set rows, columns and optional cell inset. Choose **One animation**
    for four animation frames or **Separate icons** for four independent icons.
    Frames read left to right, then top to bottom. Art touching internal cell
-   edges is flagged and prevents Save. **Trim to clean edges** searches inward
+   edges produces a non-blocking warning naming the affected frame and side.
+   You can save after visually confirming the cut is correct. **Trim to clean edges** searches inward
    for a transparent separator; inspect the boxes before saving. This changes
    cut metadata rather than source pixels.
+   Invalid formats/dimensions, out-of-bounds cuts and unacknowledged blank frames
+   still block Save. The supplied Golden Energy Burst sheet's six pixels on
+   frame 3's left edge are covered by an actual upload regression test.
 5. Alternatively import Aseprite hash/array JSON or TexturePacker JSON. Tags,
    average timing and trimmed canvas offsets are read. Export without rotation.
    Numbered TexturePacker frames group by name.

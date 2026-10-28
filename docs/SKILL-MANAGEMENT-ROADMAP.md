@@ -292,6 +292,9 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 ## Current position
 
 2026-10-28 post-sprite follow-up:
+- [x] Fix custom-skill selection/remembering and independent dual-wield slot IDs in Live Arena; include saved and unsaved draft skills in their proper picker categories.
+- [x] Fix shared pickup/discard and match-artwork/equipment identity for same-carrier custom variants; preserve older replay rules through revision 3 links.
+- [x] Downgrade sprite edge contacts to non-blocking warnings with frame/side details; retain malformed-image, bounds, size and blank-frame validation. Verify the supplied four-frame Golden Energy Burst upload.
 - [x] Add independent casting artwork, size, timed duration and Follow active move; Energy Wave supports charge/beam casting and clears automatically at move end.
 - [x] Add saved sprite opacity to previews, normalization metadata, backup/restore and game/finisher drawing so effects can blend with the ball.
 - [x] Add saved artwork-facing options in Edit Skill and Preview grip, shared with arena drawing; respect the shield's sideways grip setting.

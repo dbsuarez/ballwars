@@ -116,6 +116,58 @@ Future<void> revealImport(
 
 void main() {
   testWidgets(
+    'golden burst edge contact warns but does not block a valid four-frame upload',
+    (tester) async {
+      final picker = Picker();
+      FilePicker.platform = picker;
+      picker.bytes = File(
+        'docs/ai_generated/Four-Frame Golden Energy Burst Sprite Sheet.png',
+      ).readAsBytesSync();
+      final repo = Repo();
+      await tester.pumpWidget(
+        MaterialApp(home: SpriteImportScreen(repository: repo)),
+      );
+      await pick(tester, picker);
+      await tester.tap(find.widgetWithText(Tab, 'Slices'));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byTooltip('Increase Columns'));
+        await tester.pumpAndSettle();
+      }
+      await revealImport(tester, 'slices', find.text('Trim to clean edges'));
+      await tester.tap(find.text('Trim to clean edges'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('save-sprite-upload')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      await revealImport(
+        tester,
+        'slices',
+        find.textContaining('frame 3 has visible pixels'),
+      );
+      expect(find.textContaining('left cell edge'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('save-sprite-upload')));
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(
+          () async => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.text('Upload').evaluate().isNotEmpty) break;
+      }
+      expect(find.text('Upload'), findsOneWidget);
+      await tester.tap(find.text('Upload'));
+      await tester.pumpAndSettle();
+      expect(repo.saved!.sprites.values.single.frames, hasLength(4));
+      expect(repo.saved!.sprites.values.single.output, lessThanOrEqualTo(128));
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'blank animation frames require explicit inclusion or exclusion',
     (tester) async {
       final bytes = await tester.runAsync(() async {

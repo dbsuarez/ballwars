@@ -84,15 +84,19 @@ class SimulationBall {
     }
   }
 
-  void removeWeapon(PowerUpKind weapon) {
-    if (held == weapon) {
+  void removeWeapon(PowerUpKind weapon, {String? skillId}) {
+    if (held == weapon &&
+        (skillId == null ||
+            (heldSkillId ?? 'builtin.${weapon.name}') == skillId)) {
       held = heldSecondary;
       heldSkillId = heldSecondarySkillId;
       heldTwoHanded = heldSecondaryTwoHanded;
       heldSecondary = null;
       heldSecondarySkillId = null;
       heldSecondaryTwoHanded = false;
-    } else if (heldSecondary == weapon) {
+    } else if (heldSecondary == weapon &&
+        (skillId == null ||
+            (heldSecondarySkillId ?? 'builtin.${weapon.name}') == skillId)) {
       heldSecondary = null;
       heldSecondarySkillId = null;
       heldSecondaryTwoHanded = false;

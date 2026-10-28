@@ -18,7 +18,6 @@ import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_canvas.dart';
 import '../../arena_simulation/presentation/arena_selection_dialog.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
-import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
@@ -84,6 +83,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     ...PowerUpKind.values.where((kind) => kind.isTrap).take(3),
   ];
   final _pickerTabs = [0, 0];
+  final _skillIds = List.generate(2, (_) => List<String?>.filled(3, null));
+  final _trapSkillIds = List<String?>.filled(3, null);
+  bool _missingRememberedSkill = false;
+  SkillDefinition? _selection(PowerUpKind? kind, String? id) => kind == null
+      ? null
+      : id == null
+      ? _match!.skillLibrary.builtIn(kind, _match!.tuning)
+      : _match!.skillLibrary.byId(id, _match!.tuning);
 
   @override
   void initState() {
@@ -118,12 +125,15 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       if (category == SkillCategory.weapon) {
         _items[0] = initialSkill.baseKind;
         _savedItems[0] = initialSkill.baseKind;
+        _skillIds[0][0] = initialSkill.id;
         _pickerTabs[0] = 0;
       } else if (category == SkillCategory.powerUp) {
         _powerUps[0] = initialSkill.baseKind;
+        _skillIds[0][2] = initialSkill.id;
         _pickerTabs[0] = 1;
       } else {
         _arenaTraps[0] = initialSkill.baseKind;
+        _trapSkillIds[0] = initialSkill.id;
         _pickerTabs[0] = 2;
       }
     }
@@ -135,9 +145,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         _reset();
       }
     });
+    if (allowed && _missingRememberedSkill && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Some remembered skills are no longer available. Their test slots were cleared.',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _loadRememberedChoices() async {
+    final settings = AppSettingsScope.of(context);
+    final library = widget.initialSkill == null
+        ? settings.skillLibrary
+        : settings.skillLibrary.withDefinition(
+            widget.initialSkill!,
+            settings.powerUps,
+          );
     final savedArena = await DevicePrefs.read('power-test-arena');
     _arenaChoice = ArenaDecoration.values
         .where((d) => d.name == savedArena)
@@ -163,10 +189,42 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       _powerUps[i] = _rememberedKind(
         await DevicePrefs.read('power-test-power-$i'),
       );
+      for (var slot = 0; slot < 3; slot++) {
+        final key = const ['item', 'secondary', 'power'][slot];
+        final id = await DevicePrefs.read('power-test-$key-$i-skill-id');
+        if (id == null || id == 'none') continue;
+        final skill = library.byId(id, settings.powerUps);
+        if (skill != null &&
+            skill.resolvedCategory ==
+                (slot == 2 ? SkillCategory.powerUp : SkillCategory.weapon)) {
+          _skillIds[i][slot] = id;
+          if (slot == 0) _savedItems[i] = skill.baseKind;
+          if (slot == 1) _secondaryWeapons[i] = skill.baseKind;
+          if (slot == 2) _powerUps[i] = skill.baseKind;
+        } else {
+          _missingRememberedSkill = true;
+          if (slot == 0) _savedItems[i] = null;
+          if (slot == 1) _secondaryWeapons[i] = null;
+          if (slot == 2) _powerUps[i] = null;
+        }
+      }
     }
     for (var i = 0; i < _arenaTraps.length; i++) {
       final saved = await DevicePrefs.read('power-test-trap-$i');
       if (saved != null) _arenaTraps[i] = _rememberedKind(saved);
+      final id = await DevicePrefs.read('power-test-trap-$i-skill-id');
+      if (id != null && id != 'none') {
+        final skill = library.byId(id, settings.powerUps);
+        if (skill != null &&
+            (skill.resolvedCategory == SkillCategory.trap ||
+                skill.resolvedCategory == SkillCategory.arenaTrap)) {
+          _trapSkillIds[i] = id;
+          _arenaTraps[i] = skill.baseKind;
+        } else {
+          _missingRememberedSkill = true;
+          _arenaTraps[i] = null;
+        }
+      }
     }
     // Migrate the original one-slot preference into the first slot.
     final legacyTrap = _rememberedKind(
@@ -310,11 +368,13 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  void _applyItem(int index, PowerUpKind kind) {
+  void _applyItem(int index, PowerUpKind kind, {String? skillId}) {
     final match = _match!;
     final ball = match.state.balls[index];
-    if (kind.isTrap) {
-      match.powerUps!.spawnTestItem(kind);
+    final skill = _selection(kind, skillId)!;
+    if (skill.resolvedCategory == SkillCategory.trap ||
+        skill.resolvedCategory == SkillCategory.arenaTrap) {
+      match.powerUps!.spawnTestItem(kind, skillId: skill.id);
     } else {
       match.powerUps!.pickUp(
         ball,
@@ -322,9 +382,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           kind: kind,
           position: ball.position,
           spawnStep: match.stepCount,
-          skillId: widget.initialSkill?.baseKind == kind
-              ? widget.initialSkill!.id
-              : null,
+          skillId: skill.id,
         ),
       );
     }
@@ -333,12 +391,43 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   void _reapplyLoadout(int index) {
     final ball = _match!.state.balls[index];
     _match!.powerUps!.resetForRespawn(ball);
-    for (final kind in [
+    final kinds = [
       _savedItems[index],
       _secondaryWeapons[index],
       _powerUps[index],
-    ]) {
-      if (kind != null) _applyItem(index, kind);
+    ];
+    for (var slot = 0; slot < kinds.length; slot++) {
+      final kind = kinds[slot];
+      if (kind != null) {
+        _replaceLoadoutItem(index, slot, kind, skillId: _skillIds[index][slot]);
+      }
+    }
+  }
+
+  void _replaceLoadoutItem(
+    int index,
+    int slot,
+    PowerUpKind kind, {
+    String? skillId,
+  }) {
+    final ball = _match!.state.balls[index];
+    if (slot == 0) {
+      ball.held = null;
+      ball.heldSkillId = null;
+      ball.heldTwoHanded = false;
+    } else if (slot == 1) {
+      ball.heldSecondary = null;
+      ball.heldSecondarySkillId = null;
+      ball.heldSecondaryTwoHanded = false;
+    }
+    final primaryEmpty = ball.held == null;
+    _applyItem(index, kind, skillId: skillId);
+    if (slot == 1 && primaryEmpty && ball.held != null && !ball.heldTwoHanded) {
+      ball.heldSecondary = ball.held;
+      ball.heldSecondarySkillId = ball.heldSkillId;
+      ball.heldSecondaryTwoHanded = false;
+      ball.held = null;
+      ball.heldSkillId = null;
     }
   }
 
@@ -396,21 +485,26 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     final current = category == 0
         ? (secondary ? _secondaryWeapons[index] : _savedItems[index])
         : _powerUps[index];
+    final slot = category == 0 ? (secondary ? 1 : 0) : 2;
     final selected = await showModalBottomSheet<Object>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _ItemPicker(
+        library: _match!.skillLibrary,
         tuning: _match!.tuning,
         initialTab: category,
         selected: current,
+        selectedId: _skillIds[index][slot],
         lockedTab: category,
         onTabChanged: (_) {},
       ),
     );
     if (!mounted || selected == null) return;
     setState(() {
-      final kind = selected is PowerUpKind ? selected : null;
+      final skill = selected is SkillDefinition ? selected : null;
+      final kind = skill?.baseKind;
+      _skillIds[index][slot] = skill?.id;
       if (category == 0 && secondary) {
         _secondaryWeapons[index] = kind;
         DevicePrefs.write('power-test-secondary-$index', kind?.name ?? 'none');
@@ -425,8 +519,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       if (kind == null) {
         _reapplyLoadout(index);
       } else {
-        _applyItem(index, kind);
+        _replaceLoadoutItem(index, slot, kind, skillId: skill!.id);
       }
+      final key = category == 0 ? (secondary ? 'secondary' : 'item') : 'power';
+      DevicePrefs.write('power-test-$key-$index-skill-id', skill?.id ?? 'none');
     });
   }
 
@@ -436,16 +532,21 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _ItemPicker(
+        library: _match!.skillLibrary,
         tuning: _match!.tuning,
         initialTab: 2,
         selected: _arenaTraps[slot],
+        selectedId: _trapSkillIds[slot],
         lockedTab: 2,
         onTabChanged: (_) {},
       ),
     );
     if (!mounted || selected == null) return;
     setState(() {
-      _arenaTraps[slot] = selected is PowerUpKind ? selected : null;
+      final skill = selected is SkillDefinition ? selected : null;
+      _arenaTraps[slot] = skill?.baseKind;
+      _trapSkillIds[slot] = skill?.id;
+      DevicePrefs.write('power-test-trap-$slot-skill-id', skill?.id ?? 'none');
       DevicePrefs.write(
         'power-test-trap-$slot',
         _arenaTraps[slot]?.name ?? 'none',
@@ -456,7 +557,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 
   void _rearmTrap(int slot) {
     final trap = _arenaTraps[slot];
-    if (trap != null) _applyItem(0, trap);
+    if (trap != null) _applyItem(0, trap, skillId: _trapSkillIds[slot]);
   }
 
   void _rearmAllTraps() {
@@ -465,9 +566,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     }
   }
 
-  Future<void> _previewFinisher(int index, [PowerUpKind? selected]) async {
+  Future<void> _previewFinisher(
+    int index, [
+    PowerUpKind? selected,
+    String? skillId,
+  ]) async {
     final kind = selected ?? _savedItems[index];
     if (kind == null) return;
+    final skill = _selection(kind, skillId ?? _skillIds[index][0])!;
     setState(() {
       _paused = true;
       _ticker.stop();
@@ -487,35 +593,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     child: HarpoonCinematic(
                       winner: _balls[index],
                       loser: _balls[1 - index],
-                      move: kind.label,
-                      skill: widget.initialSkill?.baseKind == kind
-                          ? widget.initialSkill
-                          : _match?.state.powerUps?.visualSkill(
-                              kind,
-                              ball: _match!.state.balls[index],
-                            ),
-                      effectSprites:
-                          (widget.initialSkill?.baseKind == kind
-                                  ? widget.initialSkill
-                                  : _match?.skillLibrary.builtIn(
-                                      kind,
-                                      _match!.tuning,
-                                    ))
-                              ?.usesSpriteEffects(
-                                globalSprite:
-                                    AppSettingsScope.of(
-                                      context,
-                                    ).explosionRenderMode ==
-                                    EffectRenderMode.sprite,
-                              ) ??
-                          true,
-                      artworkTint: widget.initialSkill?.baseKind == kind
-                          ? widget.initialSkill!.spriteTint
-                          : _match?.state.powerUps?.artworkTint(
-                                  kind,
-                                  ball: _match!.state.balls[index],
-                                ) ??
-                                0xFFFFFFFF,
+                      move: skill.name,
+                      skill: skill,
+                      effectSprites: skill.usesSpriteEffects(
+                        globalSprite:
+                            AppSettingsScope.of(context).explosionRenderMode ==
+                            EffectRenderMode.sprite,
+                      ),
+                      artworkTint: skill.spriteTint,
                       onHookFired: () => _launchSound(profile),
                       onImpact: () => _impactSound(profile),
                       onFinished: () {
@@ -576,13 +661,14 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   ) {
     final compact = MediaQuery.sizeOf(context).width < 600;
     final cellSize = compact ? 36.0 : 42.0;
-    final enabled = item != null && item.dealsDamage(_match!.tuning);
+    final skill = _selection(item, _skillIds[ballIndex][slot]);
+    final enabled = skill?.canDamage ?? false;
     final ball = ballIndex == 0 ? 'A' : 'B';
     final label = item == null
         ? 'Ball $ball $slotLabel: empty'
         : enabled
-        ? 'Preview ${item.label} finisher for Ball $ball'
-        : '${item.label} has no finisher';
+        ? 'Preview ${skill!.name} finisher for Ball $ball'
+        : '${skill?.name ?? item.label} has no finisher';
     return Tooltip(
       message: label,
       child: Semantics(
@@ -591,7 +677,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         enabled: enabled,
         child: InkWell(
           key: ValueKey('finisher-preview-$ballIndex-$slot'),
-          onTap: enabled ? () => _previewFinisher(ballIndex, item) : null,
+          onTap: enabled
+              ? () => _previewFinisher(ballIndex, item, skill!.id)
+              : null,
           borderRadius: BorderRadius.circular(6),
           child: Container(
             width: cellSize,
@@ -614,22 +702,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     child: PowerUpIcon(
                       item,
                       useSettingsArtwork: false,
-                      spriteId: widget.initialSkill?.baseKind == item
-                          ? widget.initialSkill!.iconSpriteId
-                          : _match?.state.powerUps
-                                ?.visualSkill(
-                                  item,
-                                  ball: _match!.state.balls[ballIndex],
-                                )
-                                .iconSpriteId,
+                      spriteId: skill?.iconSpriteId,
                       size: compact ? 27 : 32,
-                      tint: widget.initialSkill?.baseKind == item
-                          ? widget.initialSkill!.spriteTint
-                          : _match?.state.powerUps?.artworkTint(
-                                  item,
-                                  ball: _match!.state.balls[ballIndex],
-                                ) ??
-                                0xFFFFFFFF,
+                      tint: skill?.spriteTint ?? 0xFFFFFFFF,
                     ),
                   ),
           ),
@@ -826,6 +901,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         clearKey: ValueKey('clear-weapon-1-$i'),
                         label: 'Weapon 1',
                         item: _savedItems[i],
+                        skillId: _skillIds[i][0],
                         onChoose: () => _chooseLoadoutItem(i, 0),
                         onRearm: () => _rearmItem(i, _savedItems[i]),
                         onClear: () => _clearLoadoutSlot(i, 0),
@@ -838,9 +914,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         clearKey: ValueKey('clear-weapon-2-$i'),
                         label: 'Weapon 2',
                         item: _secondaryWeapons[i],
+                        skillId: _skillIds[i][1],
                         onChoose: () =>
                             _chooseLoadoutItem(i, 0, secondary: true),
-                        onRearm: () => _rearmItem(i, _secondaryWeapons[i]),
+                        onRearm: () =>
+                            _rearmItem(i, _secondaryWeapons[i], slot: 1),
                         onClear: () => _clearLoadoutSlot(i, 1),
                       ),
                     ),
@@ -851,8 +929,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         clearKey: ValueKey('clear-power-$i'),
                         label: 'Power-up',
                         item: _powerUps[i],
+                        skillId: _skillIds[i][2],
                         onChoose: () => _chooseLoadoutItem(i, 1),
-                        onRearm: () => _rearmItem(i, _powerUps[i]),
+                        onRearm: () => _rearmItem(i, _powerUps[i], slot: 2),
                         onClear: () => _clearLoadoutSlot(i, 2),
                       ),
                     ),
@@ -892,6 +971,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                       clearKey: ValueKey('clear-arena-trap-$i'),
                       label: 'Trap ${i + 1}',
                       item: _arenaTraps[i],
+                      skillId: _trapSkillIds[i],
                       onChoose: () => _chooseTrap(i),
                       onRearm: () => setState(() => _rearmTrap(i)),
                       onClear: () => _clearTrap(i),
@@ -905,13 +985,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     ),
   );
 
-  void _rearmItem(int index, PowerUpKind? item) {
+  void _rearmItem(int index, PowerUpKind? item, {int slot = 0}) {
     if (item == null) return;
-    setState(() => _applyItem(index, item));
+    setState(
+      () => _replaceLoadoutItem(
+        index,
+        slot,
+        item,
+        skillId: _skillIds[index][slot],
+      ),
+    );
   }
 
   void _clearLoadoutSlot(int index, int slot) {
     setState(() {
+      _skillIds[index][slot] = null;
+      DevicePrefs.write(
+        'power-test-${const ['item', 'secondary', 'power'][slot]}-$index-skill-id',
+        'none',
+      );
       if (slot == 0) {
         _savedItems[index] = null;
         DevicePrefs.write('power-test-item-$index', 'none');
@@ -928,6 +1020,13 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 
   void _clearLoadout(int index) {
     setState(() {
+      for (var slot = 0; slot < 3; slot++) {
+        _skillIds[index][slot] = null;
+        DevicePrefs.write(
+          'power-test-${const ['item', 'secondary', 'power'][slot]}-$index-skill-id',
+          'none',
+        );
+      }
       _savedItems[index] = null;
       _secondaryWeapons[index] = null;
       _powerUps[index] = null;
@@ -941,6 +1040,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   void _clearTrap(int slot) {
     setState(() {
       _arenaTraps[slot] = null;
+      _trapSkillIds[slot] = null;
+      DevicePrefs.write('power-test-trap-$slot-skill-id', 'none');
       DevicePrefs.write('power-test-trap-$slot', 'none');
       _reset();
     });
@@ -950,6 +1051,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     setState(() {
       for (var i = 0; i < _arenaTraps.length; i++) {
         _arenaTraps[i] = null;
+        _trapSkillIds[i] = null;
+        DevicePrefs.write('power-test-trap-$i-skill-id', 'none');
         DevicePrefs.write('power-test-trap-$i', 'none');
       }
       _reset();
@@ -961,6 +1064,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     required Key clearKey,
     required String label,
     required PowerUpKind? item,
+    String? skillId,
     required VoidCallback onChoose,
     required VoidCallback onRearm,
     required VoidCallback onClear,
@@ -971,6 +1075,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           key: buttonKey,
           label: label,
           item: item,
+          skillId: skillId,
           onTap: item == null ? onChoose : onRearm,
           onLongPress: onChoose,
         ),
@@ -991,16 +1096,17 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     Key? key,
     required String label,
     required PowerUpKind? item,
+    String? skillId,
     required VoidCallback onTap,
     required VoidCallback onLongPress,
   }) => Tooltip(
     message: item == null
         ? 'Choose $label'
-        : '${item.label}: tap to re-arm, hold to replace',
+        : '${_selection(item, skillId)?.name ?? item.label}: tap to re-arm, hold to replace',
     child: Semantics(
       label: item == null
           ? 'Choose $label'
-          : '$label: ${item.label}. Tap to re-arm. Hold to replace.',
+          : '$label: ${_selection(item, skillId)?.name ?? item.label}. Tap to re-arm. Hold to replace.',
       button: true,
       onLongPress: onLongPress,
       child: GestureDetector(
@@ -1015,13 +1121,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               ? PowerUpIcon(
                   item,
                   useSettingsArtwork: false,
-                  spriteId: widget.initialSkill?.baseKind == item
-                      ? widget.initialSkill!.iconSpriteId
-                      : _match?.state.powerUps?.visualSkill(item).iconSpriteId,
+                  spriteId: _selection(item, skillId)?.iconSpriteId,
                   size: 30,
-                  tint: widget.initialSkill?.baseKind == item
-                      ? widget.initialSkill!.spriteTint
-                      : _match?.state.powerUps?.artworkTint(item) ?? 0xFFFFFFFF,
+                  tint: _selection(item, skillId)?.spriteTint ?? 0xFFFFFFFF,
                 )
               : Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1312,12 +1414,16 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 class _ItemPicker extends StatefulWidget {
   const _ItemPicker({
     required this.tuning,
+    required this.library,
     required this.initialTab,
     required this.selected,
     required this.onTabChanged,
     this.lockedTab,
+    this.selectedId,
   });
   final PowerUpConfig tuning;
+  final SkillLibrary library;
+  final String? selectedId;
   final int initialTab;
   final PowerUpKind? selected;
   final ValueChanged<int> onTabChanged;
@@ -1337,22 +1443,30 @@ class _ItemPickerState extends State<_ItemPicker> {
     final searching = query.isNotEmpty && widget.lockedTab == null;
     final activeTab = widget.lockedTab ?? _tab;
     final items =
-        PowerUpKind.values
+        widget.library
+            .all(widget.tuning)
             .where(
-              (kind) =>
+              (skill) =>
                   (searching ||
                       (activeTab == 0
-                          ? kind.isWeapon
+                          ? skill.resolvedCategory == SkillCategory.weapon
                           : activeTab == 1
-                          ? kind.isPowerUp
-                          : kind.isTrap)) &&
-                  kind.label.toLowerCase().contains(query),
+                          ? skill.resolvedCategory == SkillCategory.powerUp
+                          : skill.resolvedCategory == SkillCategory.trap ||
+                                skill.resolvedCategory ==
+                                    SkillCategory.arenaTrap)) &&
+                  skill.name.toLowerCase().contains(query),
             )
             .toList()
           ..sort((a, b) {
-            if (a == widget.selected) return -1;
-            if (b == widget.selected) return 1;
-            return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+            final selectedId =
+                widget.selectedId ??
+                (widget.selected == null
+                    ? null
+                    : 'builtin.${widget.selected!.name}');
+            if (a.id == selectedId) return -1;
+            if (b.id == selectedId) return 1;
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
           });
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -1422,22 +1536,42 @@ class _ItemPickerState extends State<_ItemPicker> {
                         itemCount: items.length,
                         itemBuilder: (context, index) {
                           final item = items[index];
-                          final selected = item == widget.selected;
+                          final selected =
+                              item.id ==
+                              (widget.selectedId ??
+                                  'builtin.${widget.selected?.name}');
+                          final rarity = SkillLibrary.rarityOf(
+                            item,
+                            widget.tuning,
+                          );
                           return ListTile(
-                            key: ValueKey('power-test-item-${item.name}'),
+                            key: ValueKey(
+                              item.custom
+                                  ? 'power-test-skill-${item.id}'
+                                  : 'power-test-item-${item.baseKind.name}',
+                            ),
                             minVerticalPadding: 12,
                             selected: selected,
                             selectedTileColor: Theme.of(
                               context,
                             ).colorScheme.primary.withValues(alpha: 0.12),
-                            leading: PowerUpIcon(item, size: 32),
-                            title: PowerUpName(item, tuning: widget.tuning),
+                            leading: PowerUpIcon(
+                              item.displayKind,
+                              size: 32,
+                              spriteId: item.iconSpriteId,
+                              tint: item.spriteTint,
+                              useSettingsArtwork: false,
+                            ),
+                            title: Text(
+                              item.name,
+                              style: TextStyle(color: rarity?.color),
+                            ),
                             subtitle: Text(
-                              '${widget.tuning.rarityOf(item)?.label ?? "Trap"}${item.isTrap
-                                  ? ""
-                                  : item.isWeapon
-                                  ? " weapon"
-                                  : " power-up"}',
+                              '${item.custom ? "Custom · " : ""}${item.resolvedCategory == SkillCategory.arenaTrap
+                                  ? "Arena trap"
+                                  : item.resolvedCategory == SkillCategory.trap
+                                  ? "Trap"
+                                  : "${rarity?.label ?? ""} ${item.resolvedCategory == SkillCategory.weapon ? "weapon" : "power-up"}"}${item.enabled ? "" : " · Disabled in matches"}',
                             ),
                             trailing: selected
                                 ? const Icon(Icons.check_circle)

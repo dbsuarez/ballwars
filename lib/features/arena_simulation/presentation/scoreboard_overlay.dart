@@ -6,6 +6,7 @@ import '../domain/power_up.dart';
 import '../domain/power_up_config.dart';
 import '../domain/simulation_ball.dart';
 import 'power_up_sprites.dart';
+import '../../skills/domain/skill_library.dart';
 
 /// One row per ball: name, current strength and round wins. Arsenal uses a
 /// compact circular life meter so the exact number stays readable on phones.
@@ -22,6 +23,7 @@ class ScoreboardOverlay extends StatelessWidget {
   final PowerUpConfig tuning;
   final int Function(SimulationBall ball, PowerUpKind kind)? artworkTint;
   final String? Function(SimulationBall ball, PowerUpKind kind)? iconSpriteId;
+  final SkillDefinition? Function(String id)? skillById;
 
   /// The tier of an item a ball holds (a held custom skill has its own); null: the kind's tier in
   /// [tuning].
@@ -39,11 +41,49 @@ class ScoreboardOverlay extends StatelessWidget {
     this.tuning = PowerUpConfig.defaults,
     this.artworkTint,
     this.iconSpriteId,
+    this.skillById,
     this.itemRarity,
   });
 
   PowerUpRarity? _rarityOf(SimulationBall ball, PowerUpKind kind) =>
       itemRarity == null ? tuning.rarityOf(kind) : itemRarity!(ball, kind);
+  SkillDefinition? _skillAt(SimulationBall ball, int index, PowerUpKind kind) {
+    final weapons = [
+      if (ball.held != null) ball.heldSkillId,
+      if (ball.heldSecondary != null) ball.heldSecondarySkillId,
+    ];
+    final id = index < weapons.length
+        ? weapons[index]
+        : ball.activeEffectSkillIds[kind];
+    return skillById?.call(id ?? 'builtin.${kind.name}');
+  }
+
+  String _itemLabel(SimulationBall ball, int index, PowerUpKind kind) =>
+      _skillAt(ball, index, kind)?.name ?? kind.label;
+  PowerUpRarity? _itemRarity(SimulationBall ball, int index, PowerUpKind kind) {
+    final skill = _skillAt(ball, index, kind);
+    return skill == null
+        ? _rarityOf(ball, kind)
+        : SkillLibrary.rarityOf(skill, tuning);
+  }
+
+  Widget _itemIcon(
+    SimulationBall ball,
+    int index,
+    PowerUpKind kind,
+    double size,
+  ) {
+    final skill = _skillAt(ball, index, kind);
+    return PowerUpIcon(
+      skill?.displayKind ?? kind,
+      size: size,
+      spriteId: skill != null
+          ? skill.iconSpriteId
+          : iconSpriteId?.call(ball, kind),
+      tint: skill?.spriteTint ?? artworkTint?.call(ball, kind) ?? 0xffffffff,
+      useSettingsArtwork: skill == null && iconSpriteId == null,
+    );
+  }
 
   Widget _compactCards(BuildContext context) {
     final c = BallWarsColors.of(context);
@@ -129,20 +169,14 @@ class ScoreboardOverlay extends StatelessWidget {
                           height: 18,
                           child: Row(
                             children: [
-                              for (final item in _items(ball).take(3))
+                              for (final (index, item) in _items(
+                                ball,
+                              ).take(3).indexed)
                                 Padding(
                                   padding: const EdgeInsets.only(right: 4),
                                   child: Tooltip(
-                                    message: item.label,
-                                    child: PowerUpIcon(
-                                      item,
-                                      spriteId: iconSpriteId?.call(ball, item),
-                                      useSettingsArtwork: iconSpriteId == null,
-                                      size: 16,
-                                      tint:
-                                          artworkTint?.call(ball, item) ??
-                                          0xFFFFFFFF,
-                                    ),
+                                    message: _itemLabel(ball, index, item),
+                                    child: _itemIcon(ball, index, item, 16),
                                   ),
                                 ),
                             ],
@@ -243,12 +277,12 @@ class ScoreboardOverlay extends StatelessWidget {
                   height: 24,
                   child: Row(
                     children: [
-                      for (final kind in _items(ball).take(4))
+                      for (final (index, kind) in _items(ball).take(4).indexed)
                         Expanded(
                           child: Tooltip(
-                            message: kind.label,
+                            message: _itemLabel(ball, index, kind),
                             child: Semantics(
-                              label: kind.label,
+                              label: _itemLabel(ball, index, kind),
                               child: ExcludeSemantics(
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
@@ -256,28 +290,20 @@ class ScoreboardOverlay extends StatelessWidget {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      PowerUpIcon(
-                                        kind,
-                                        useSettingsArtwork:
-                                            iconSpriteId == null,
-                                        spriteId: iconSpriteId?.call(
-                                          ball,
-                                          kind,
-                                        ),
-                                        size: 20,
-                                        tint:
-                                            artworkTint?.call(ball, kind) ??
-                                            0xFFFFFFFF,
-                                      ),
+                                      _itemIcon(ball, index, kind, 20),
                                       const SizedBox(width: 4),
                                       Text(
-                                        kind.label,
+                                        _itemLabel(ball, index, kind),
                                         maxLines: 1,
                                         style: AppText.ui(
                                           11,
                                           FontWeight.w600,
                                           color:
-                                              _rarityOf(ball, kind)?.color ??
+                                              _itemRarity(
+                                                ball,
+                                                index,
+                                                kind,
+                                              )?.color ??
                                               c.muted,
                                         ),
                                       ),

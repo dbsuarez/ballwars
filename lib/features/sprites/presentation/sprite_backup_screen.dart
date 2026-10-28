@@ -175,6 +175,7 @@ class _SpriteBackupScreenState extends State<SpriteBackupScreen> {
           skill.iconSpriteId,
           skill.projectileSpriteId,
           skill.impactSpriteId,
+          skill.castingSpriteId,
           skill.shellSprite,
         ].contains('custom.${item.entry.id}.$name'),
       ))

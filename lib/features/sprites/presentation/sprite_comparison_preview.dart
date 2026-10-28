@@ -15,6 +15,7 @@ class SpriteComparisonPreview extends StatefulWidget {
     required this.background,
     required this.ballColor,
     this.spriteScale = 1,
+    this.spriteOpacity = 1,
   });
   final ui.Image source;
   final SpriteDef sprite;
@@ -23,6 +24,7 @@ class SpriteComparisonPreview extends StatefulWidget {
   final SpritePreviewBackground background;
   final Color ballColor;
   final double spriteScale;
+  final double spriteOpacity;
   @override
   State<SpriteComparisonPreview> createState() =>
       _SpriteComparisonPreviewState();
@@ -98,6 +100,7 @@ class _SpriteComparisonPreviewState extends State<SpriteComparisonPreview>
                                 widget.background,
                                 widget.ballColor,
                                 widget.spriteScale,
+                                widget.spriteOpacity,
                               ),
                             ),
                     ),
@@ -142,6 +145,7 @@ class _PreviewPainter extends CustomPainter {
     this.background,
     this.ballColor,
     this.spriteScale,
+    this.spriteOpacity,
   );
   final ui.Image image;
   final SpriteDef sprite;
@@ -149,6 +153,7 @@ class _PreviewPainter extends CustomPainter {
   final SpritePreviewBackground background;
   final Color ballColor;
   final double spriteScale;
+  final double spriteOpacity;
   @override
   void paint(Canvas canvas, Size size) {
     final light = background == SpritePreviewBackground.light;
@@ -208,7 +213,12 @@ class _PreviewPainter extends CustomPainter {
         source.width * scale,
         source.height * scale,
       ),
-      Paint()..filterQuality = FilterQuality.none,
+      Paint()
+        ..filterQuality = FilterQuality.none
+        ..colorFilter = ColorFilter.mode(
+          Colors.white.withValues(alpha: spriteOpacity),
+          BlendMode.modulate,
+        ),
     );
     canvas.restore();
     canvas.drawCircle(

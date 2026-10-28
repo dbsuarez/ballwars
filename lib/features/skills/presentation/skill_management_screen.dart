@@ -1319,6 +1319,10 @@ class _SkillEditorState extends State<_SkillEditor> {
     'handEffectDuration': TextEditingController(
       text: '${widget.skill.handEffectDurationSeconds}',
     ),
+    'castingDuration': TextEditingController(
+      text: '${widget.skill.castingDurationSeconds}',
+    ),
+    'castingScale': TextEditingController(text: '${widget.skill.castingScale}'),
     'shellSize': TextEditingController(text: '${widget.skill.shellSize}'),
     'shellCount': TextEditingController(text: '${widget.skill.shellCount}'),
   };
@@ -1328,6 +1332,9 @@ class _SkillEditorState extends State<_SkillEditor> {
   late String? _iconSpriteId = widget.skill.iconSpriteId;
   late String? _projectileSpriteId = widget.skill.projectileSpriteId;
   late String? _impactSpriteId = widget.skill.impactSpriteId;
+  late String? _castingSpriteId = widget.skill.castingSpriteId;
+  late bool _castingFollowsActive = widget.skill.castingFollowsActive;
+  late SkillHeldFacing _heldFacing = widget.skill.heldFacing;
   late String? _shellSprite = widget.skill.shellSprite;
   late bool _shellRandomRest = widget.skill.shellRandomRest;
   late SkillVisualMode _sprite = widget.skill.spriteMode;
@@ -1615,6 +1622,11 @@ class _SkillEditorState extends State<_SkillEditor> {
       _iconSpriteId = defaults.iconSpriteId;
       _projectileSpriteId = defaults.projectileSpriteId;
       _impactSpriteId = defaults.impactSpriteId;
+      _castingSpriteId = defaults.castingSpriteId;
+      _heldFacing = defaults.heldFacing;
+      _castingFollowsActive = defaults.castingFollowsActive;
+      number('castingDuration', defaults.castingDurationSeconds);
+      number('castingScale', defaults.castingScale);
       _shellSprite = defaults.shellSprite;
       _shellRandomRest = defaults.shellRandomRest;
     });
@@ -1764,6 +1776,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       weaponGripInset: _double('weaponGripInset'),
       weaponGripSide: _double('weaponGripSide'),
       weaponGripRotation: _double('weaponGripRotation'),
+      heldFacing: _heldFacing,
       effectStrength: _double('effectStrength'),
       healing: _double('healing'),
       shieldHits: _int('shieldHits'),
@@ -1804,6 +1817,10 @@ class _SkillEditorState extends State<_SkillEditor> {
       iconSpriteId: _iconSpriteId,
       projectileSpriteId: _projectileSpriteId,
       impactSpriteId: _impactSpriteId,
+      castingSpriteId: _castingSpriteId,
+      castingDurationSeconds: _double('castingDuration'),
+      castingScale: _double('castingScale'),
+      castingFollowsActive: _castingFollowsActive,
       shellSprite: _shellSprite,
       shellSize: _double('shellSize'),
       shellCount: _int('shellCount'),
@@ -1847,6 +1864,8 @@ class _SkillEditorState extends State<_SkillEditor> {
     'triggerInterval': (0.5, 120),
     'handEffectScale': (0.1, 4),
     'handEffectDuration': (0.1, 10),
+    'castingDuration': (0.1, 10),
+    'castingScale': (0.25, 4),
     'shellSize': (0.25, 10),
     'shellCount': (1, 20),
   };
@@ -1893,6 +1912,7 @@ class _SkillEditorState extends State<_SkillEditor> {
         inset: _double('weaponGripInset') ?? 0,
         side: _double('weaponGripSide') ?? 0,
         rotation: _double('weaponGripRotation') ?? 0,
+        facing: _heldFacing,
       ),
     );
     if (result == null || !mounted) return;
@@ -1908,6 +1928,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _numbers['weaponGripInset']!.text = text(result.inset);
       _numbers['weaponGripSide']!.text = text(result.side);
       _numbers['weaponGripRotation']!.text = '${result.rotation.round()}';
+      _heldFacing = result.facing;
     });
   }
 
@@ -2998,6 +3019,11 @@ class _SkillEditorState extends State<_SkillEditor> {
                       ),
                       for (final slot in [
                         (
+                          'Casting artwork',
+                          _castingSpriteId,
+                          (String? v) => _castingSpriteId = v,
+                        ),
+                        (
                           'Icon / held artwork',
                           _iconSpriteId,
                           (String? v) => _iconSpriteId = v,
@@ -3078,6 +3104,35 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ],
                         ),
                       ),
+                      if (_castingSpriteId != null) ...[
+                        const SizedBox(height: 12),
+                        _section(
+                          'Casting effect',
+                          'Plays on the caster when the move starts, independently of hit artwork. Uses Sprite effect visuals.',
+                        ),
+                        _fixedRow(
+                          'Follow active move',
+                          Switch(
+                            key: const ValueKey('casting-follows-active'),
+                            value: _castingFollowsActive,
+                            onChanged: (value) =>
+                                setState(() => _castingFollowsActive = value),
+                          ),
+                        ),
+                        const Text(
+                          'Energy Wave, Shadow Clone, Raging Demon and Omnislash can follow the move until it ends. Other moves use the duration below.',
+                        ),
+                        _number(
+                          'castingDuration',
+                          'Casting duration',
+                          suffix: 's',
+                        ),
+                        _number(
+                          'castingScale',
+                          'Casting artwork scale',
+                          suffix: 'x',
+                        ),
+                      ],
                       const Text(
                         'Recolors this skill’s artwork, projectiles and effects. Original keeps the source colors.',
                       ),
@@ -3178,6 +3233,23 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'weaponGripRotation',
                           'Grip rotation',
                           suffix: 'degrees',
+                        ),
+                        _fixedRow(
+                          'Artwork facing',
+                          DropdownButton<SkillHeldFacing>(
+                            key: const ValueKey('skill-held-facing'),
+                            isExpanded: true,
+                            value: _heldFacing,
+                            items: [
+                              for (final mode in SkillHeldFacing.values)
+                                DropdownMenuItem(
+                                  value: mode,
+                                  child: Text(mode.label),
+                                ),
+                            ],
+                            onChanged: (mode) =>
+                                setState(() => _heldFacing = mode!),
+                          ),
                         ),
                         if (widget.skill.baseKind.isWeapon)
                           Align(

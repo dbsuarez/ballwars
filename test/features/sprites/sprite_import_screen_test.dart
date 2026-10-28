@@ -283,6 +283,18 @@ void main() {
       await tester.ensureVisible(scaleControl);
       tester.widget<Slider>(scaleControl).onChanged!(2);
       await tester.pump();
+      final opacityControl = find.byKey(const ValueKey('sprite-opacity'));
+      await tester.ensureVisible(opacityControl);
+      tester.widget<Slider>(opacityControl).onChanged!(.5);
+      await tester.pump();
+      expect(
+        tester
+            .widget<SpriteComparisonPreview>(
+              find.byType(SpriteComparisonPreview),
+            )
+            .spriteOpacity,
+        .5,
+      );
       expect(
         tester
             .widget<SpriteComparisonPreview>(
@@ -308,6 +320,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(repo.savedId, old.id);
       expect(repo.saved!.sprites.values.single.displayScale, 2);
+      expect(repo.saved!.sprites.values.single.opacity, .5);
       expect(repo.saved!.sprites.keys, ['sprite']);
       expect(repo.saved!.sprites['sprite']!.label, 'Clone Pop');
       expect(repo.bytes, bytes);

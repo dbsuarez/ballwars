@@ -51,12 +51,7 @@ class HarpoonCinematic extends StatefulWidget {
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       SpriteRegistry.imageRect(image, Offset.zero, half * 2, half * 2, anchor),
-      Paint()
-        ..filterQuality = FilterQuality.none
-        ..colorFilter = ColorFilter.mode(
-          Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
-          BlendMode.modulate,
-        ),
+      SpriteRegistry.imagePaint(image, opacity: opacity),
     );
     canvas.restore();
   }

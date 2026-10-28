@@ -67,7 +67,9 @@ Presentation is independent of mechanics:
 
 - item/icon visual and scale;
 - equipped visual, hand inset, and scale;
+- held-art facing policy (automatic, mirror, rotate with aim, or upright), saved from the editor/grip preview;
 - projectile visual, scale, spin, trail, and animation;
+- casting artwork on the owner, with independent size, finite duration or an active-move lifetime;
 - impact visual, scale, animation, and color;
 - hand effect and scale;
 - sound cue;
@@ -75,6 +77,12 @@ Presentation is independent of mechanics:
 - finisher profile and screen shake.
 
 Item and impact previews use identical square viewports, fit rules, and center alignment. Missing artwork uses one generic code-drawn placeholder; it must not trigger paid image generation.
+
+Casting and impact are separate slots: casting starts on activation and ends with
+its timer or channelled move; impact starts only at the hit. Sprite-library
+opacity is non-destructive metadata shared by every use of that sprite, applied
+in previews, arena rendering and finishers. Changing presentation settings must
+not require recompilation or alter collision/damage behavior.
 
 ## Runtime identity
 

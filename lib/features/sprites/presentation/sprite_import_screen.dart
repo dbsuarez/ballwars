@@ -64,6 +64,7 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
     // Artwork scale changes placement, not the normalized sheet pixels.
     for (final sprite in (manifest['sprites'] as Map).values) {
       (sprite as Map).remove('displayScale');
+      sprite.remove('opacity');
     }
     return '$_sourceVersion:$_frameSize:$_smooth:${jsonEncode(manifest)}';
   }
@@ -73,6 +74,13 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
     if (originals == null || originals.isEmpty) return;
     final original = originals[_preview.clamp(0, originals.length - 1)];
     setState(() => _edit(original.id).displayScale = value);
+  }
+
+  void _setSpriteOpacity(double value) {
+    final originals = _cuts?.sprites.values.toList();
+    if (originals == null || originals.isEmpty) return;
+    final original = originals[_preview.clamp(0, originals.length - 1)];
+    setState(() => _edit(original.id).opacity = value);
   }
 
   SpriteFrameDiagnostics _inspect(Rect frame) => _diagnostics.putIfAbsent(
@@ -1017,6 +1025,47 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
                               ),
                               controlFlex: 2,
                             ),
+                            _row(
+                              'Opacity',
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Slider(
+                                      key: const ValueKey('sprite-opacity'),
+                                      value: selected?.opacity ?? 1,
+                                      min: 0,
+                                      max: 1,
+                                      divisions: 20,
+                                      label:
+                                          '${((selected?.opacity ?? 1) * 100).round()}%',
+                                      onChanged: selected == null
+                                          ? null
+                                          : _setSpriteOpacity,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 44,
+                                    child: Text(
+                                      '${((selected?.opacity ?? 1) * 100).round()}%',
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Reset opacity',
+                                    onPressed:
+                                        selected == null ||
+                                            selected.opacity == 1
+                                        ? null
+                                        : () => _setSpriteOpacity(1),
+                                    icon: const Icon(Icons.restore),
+                                  ),
+                                ],
+                              ),
+                              controlFlex: 2,
+                            ),
+                            const Text(
+                              '100% is solid; lower opacity lets the ball show through. Saved and used in-game.',
+                            ),
                             if (selected != null && _image != null)
                               SpriteComparisonPreview(
                                 source: _image!,
@@ -1028,6 +1077,7 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
                                 background: _previewBackground,
                                 ballColor: _ballColor,
                                 spriteScale: spriteScale,
+                                spriteOpacity: selected.opacity,
                               ),
                             if (_optimized != null && !fresh)
                               const Text(

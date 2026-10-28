@@ -72,7 +72,7 @@ class _LineRecorder implements Canvas {
 
 void main() {
   testWidgets(
-    'uploaded impact artwork saves from Appearance and restore defaults clears the slot',
+    'casting and impact artwork save independently and restore defaults clears both',
     (tester) async {
       await tester.runAsync(() async {
         final r = ui.PictureRecorder();
@@ -110,8 +110,32 @@ void main() {
       await _revealEditor(tester, find.text('Impact / effect artwork'));
       await tester.tap(find.text('Impact / effect artwork'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('sprite'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('sprite'),
+        ),
+      );
       await tester.pumpAndSettle();
+      await _revealEditor(tester, find.text('Casting artwork'));
+      await tester.tap(find.text('Casting artwork'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('sprite'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final duration = find.byKey(
+        const ValueKey('skill-field-castingDuration'),
+      );
+      await _revealEditor(tester, duration);
+      await tester.enterText(duration, '1.5');
+      final scale = find.byKey(const ValueKey('skill-field-castingScale'));
+      await _revealEditor(tester, scale);
+      await tester.enterText(scale, '2');
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('save-skill')));
       await tester.pumpAndSettle();
       expect(
@@ -120,6 +144,13 @@ void main() {
             .impactSpriteId,
         'custom.editor.sprite',
       );
+      final cast = saved!.library.builtIn(
+        PowerUpKind.pistol,
+        PowerUpConfig.defaults,
+      );
+      expect(cast.castingSpriteId, 'custom.editor.sprite');
+      expect(cast.castingDurationSeconds, 1.5);
+      expect(cast.castingScale, 2);
       final restore = find.byKey(const ValueKey('restore-skill-defaults'));
       await _revealEditor(tester, restore);
       await tester.tap(restore);
@@ -130,6 +161,12 @@ void main() {
         saved!.library
             .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
             .impactSpriteId,
+        isNull,
+      );
+      expect(
+        saved!.library
+            .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+            .castingSpriteId,
         isNull,
       );
     },
@@ -1049,6 +1086,10 @@ void main() {
     // Forward/back can go negative (push the weapon out).
     await slide('inset', -0.5);
     await slide('inset', 0.4);
+    await tester.tap(find.byKey(const ValueKey('grip-preview-facing')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Stay upright').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('grip-preview-done')));
     await tester.pumpAndSettle();
     expect(double.parse(field('weaponGripInset')), 0.4);
@@ -1066,6 +1107,7 @@ void main() {
       PowerUpConfig.defaults,
     );
     expect(saved.weaponGripInset, 0.4);
+    expect(saved.heldFacing, SkillHeldFacing.upright);
     expect(saved.weaponGripSide, -0.5);
     expect(saved.weaponGripRotation, 30);
   });

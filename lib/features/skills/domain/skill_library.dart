@@ -7,6 +7,16 @@ import '../../arena_simulation/domain/power_up_config.dart';
 
 enum SkillVisualMode { sprite, vector }
 
+enum SkillHeldFacing {
+  automatic('Automatic'),
+  mirror('Mirror when facing left'),
+  rotate('Rotate with aim'),
+  upright('Stay upright');
+
+  const SkillHeldFacing(this.label);
+  final String label;
+}
+
 enum SkillTrigger {
   pickup,
   aimedFire,
@@ -99,6 +109,7 @@ class SkillDefinition {
     this.weaponGripInset = 0,
     this.weaponGripSide = 0,
     this.weaponGripRotation = 0,
+    this.heldFacing = SkillHeldFacing.automatic,
     this.effectStrength = 1,
     this.healing = 10,
     this.shieldHits = 1,
@@ -141,6 +152,10 @@ class SkillDefinition {
     this.iconSpriteId,
     this.projectileSpriteId,
     this.impactSpriteId,
+    this.castingSpriteId,
+    this.castingDurationSeconds = 0.5,
+    this.castingScale = 1,
+    this.castingFollowsActive = true,
     this.shellSprite,
     this.shellSize = 1,
     this.shellCount = 1,
@@ -192,6 +207,7 @@ class SkillDefinition {
   /// Degrees added to the held sprite's drawn angle, mirrored when the
   /// sprite flips, so a slanted sprite sits straight on both sides.
   final double weaponGripRotation;
+  final SkillHeldFacing heldFacing;
   final double effectStrength;
   final double healing;
   final int shieldHits;
@@ -264,6 +280,9 @@ class SkillDefinition {
   final String? iconSpriteId;
   final String? projectileSpriteId;
   final String? impactSpriteId;
+  final String? castingSpriteId;
+  final double castingDurationSeconds, castingScale;
+  final bool castingFollowsActive;
   final String? shellSprite;
 
   /// Casing size, times the brass shell's size (0.25 to 10).
@@ -387,6 +406,7 @@ class SkillDefinition {
     double? weaponGripInset,
     double? weaponGripSide,
     double? weaponGripRotation,
+    SkillHeldFacing? heldFacing,
     double? effectStrength,
     double? healing,
     int? shieldHits,
@@ -429,6 +449,10 @@ class SkillDefinition {
     Object? iconSpriteId = _unset,
     Object? projectileSpriteId = _unset,
     Object? impactSpriteId = _unset,
+    Object? castingSpriteId = _unset,
+    double? castingDurationSeconds,
+    double? castingScale,
+    bool? castingFollowsActive,
     Object? shellSprite = _unset,
     double? shellSize,
     int? shellCount,
@@ -461,6 +485,7 @@ class SkillDefinition {
     weaponGripInset: weaponGripInset ?? this.weaponGripInset,
     weaponGripSide: weaponGripSide ?? this.weaponGripSide,
     weaponGripRotation: weaponGripRotation ?? this.weaponGripRotation,
+    heldFacing: heldFacing ?? this.heldFacing,
     effectStrength: effectStrength ?? this.effectStrength,
     healing: healing ?? this.healing,
     shieldHits: shieldHits ?? this.shieldHits,
@@ -522,6 +547,13 @@ class SkillDefinition {
     impactSpriteId: identical(impactSpriteId, _unset)
         ? this.impactSpriteId
         : impactSpriteId as String?,
+    castingSpriteId: identical(castingSpriteId, _unset)
+        ? this.castingSpriteId
+        : castingSpriteId as String?,
+    castingDurationSeconds:
+        castingDurationSeconds ?? this.castingDurationSeconds,
+    castingScale: castingScale ?? this.castingScale,
+    castingFollowsActive: castingFollowsActive ?? this.castingFollowsActive,
     shellSprite: identical(shellSprite, _unset)
         ? this.shellSprite
         : shellSprite as String?,
@@ -603,6 +635,12 @@ class SkillDefinition {
     if (iconSpriteId != null) 'icon_sprite': iconSpriteId,
     if (projectileSpriteId != null) 'projectile_sprite': projectileSpriteId,
     if (impactSpriteId != null) 'impact_sprite': impactSpriteId,
+    if (castingSpriteId != null) 'casting_sprite': castingSpriteId,
+    if (heldFacing != SkillHeldFacing.automatic) 'held_facing': heldFacing.name,
+    if (castingDurationSeconds != 0.5)
+      'casting_duration_seconds': castingDurationSeconds,
+    if (castingScale != 1) 'casting_scale': castingScale,
+    if (!castingFollowsActive) 'casting_follows_active': false,
     if (shellSprite != null) 'shell_sprite': shellSprite,
     if (shellSize != 1) 'shell_size': shellSize,
     if (shellCount != 1) 'shell_count': shellCount,
@@ -732,6 +770,17 @@ class SkillDefinition {
       impactSpriteId: value['impact_sprite'] is String
           ? value['impact_sprite'] as String
           : null,
+      castingSpriteId: value['casting_sprite'] is String
+          ? value['casting_sprite'] as String
+          : null,
+      castingDurationSeconds: decimal('casting_duration_seconds') ?? 0.5,
+      castingScale: decimal('casting_scale') ?? 1,
+      castingFollowsActive: value['casting_follows_active'] != false,
+      heldFacing:
+          SkillHeldFacing.values
+              .where((mode) => mode.name == value['held_facing'])
+              .firstOrNull ??
+          SkillHeldFacing.automatic,
       shellSprite: value['shell_sprite'] is String
           ? value['shell_sprite'] as String
           : null,
@@ -798,6 +847,11 @@ class SkillDefinition {
     iconSpriteId: _cleanSpriteReference(iconSpriteId),
     projectileSpriteId: _cleanSpriteReference(projectileSpriteId),
     impactSpriteId: _cleanSpriteReference(impactSpriteId),
+    castingSpriteId: _cleanSpriteReference(castingSpriteId),
+    castingDurationSeconds: castingDurationSeconds.isFinite
+        ? castingDurationSeconds.clamp(0.1, 10)
+        : 0.5,
+    castingScale: castingScale.isFinite ? castingScale.clamp(0.25, 4) : 1,
     shellSprite: _cleanSpriteReference(shellSprite),
     shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 10) : 1,
     shellCount: shellCount.clamp(1, 20),

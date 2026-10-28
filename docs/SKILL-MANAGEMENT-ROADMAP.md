@@ -292,6 +292,9 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 ## Current position
 
 2026-10-28 post-sprite follow-up:
+- [x] Add independent casting artwork, size, timed duration and Follow active move; Energy Wave supports charge/beam casting and clears automatically at move end.
+- [x] Add saved sprite opacity to previews, normalization metadata, backup/restore and game/finisher drawing so effects can blend with the ball.
+- [x] Add saved artwork-facing options in Edit Skill and Preview grip, shared with arena drawing; respect the shield's sideways grip setting.
 - [x] Add saved per-sprite artwork scale (50–200%) in the importer Preview tab; apply it to arena artwork, icons, effects and finishers while keeping circle/hitbox sizes unchanged.
 - [x] Stop treating Impact artwork as a persistent ball overlay; render assigned artwork on brief hit events, including Shadow Clone strikes.
 - [x] Paint transient hit artwork above ball bodies and clones so small impact sprites cannot be hidden by the target. Verify visibility with actual rendered pixels.

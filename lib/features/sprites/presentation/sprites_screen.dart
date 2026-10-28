@@ -73,6 +73,7 @@ class _SpritesScreenState extends State<SpritesScreen> {
         s.iconSpriteId,
         s.projectileSpriteId,
         s.impactSpriteId,
+        s.castingSpriteId,
         s.shellSprite,
       ].any((id) => id?.startsWith('custom.${atlas.id}.') ?? false))
         s.name,
@@ -98,6 +99,7 @@ class _SpritesScreenState extends State<SpritesScreen> {
                           s.iconSpriteId,
                           s.projectileSpriteId,
                           s.impactSpriteId,
+                          s.castingSpriteId,
                           s.shellSprite,
                         ].contains('custom.${existing.id}.$name'))
                           s.name,
@@ -423,12 +425,15 @@ class _SpriteThumbnailState extends State<SpriteThumbnail>
         return image == null
             ? const Icon(Icons.image_outlined)
             : ClipRect(
-                child: Transform.scale(
-                  scale: SpriteRegistry.imageScale(image),
-                  child: RawImage(
-                    image: image,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.none,
+                child: Opacity(
+                  opacity: SpriteRegistry.imageOpacity(image),
+                  child: Transform.scale(
+                    scale: SpriteRegistry.imageScale(image),
+                    child: RawImage(
+                      image: image,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.none,
+                    ),
                   ),
                 ),
               );

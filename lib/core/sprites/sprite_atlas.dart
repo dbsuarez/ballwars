@@ -28,6 +28,7 @@ class SpriteDef {
 
   /// Visual multiplier around the anchor; does not change collision geometry.
   final double displayScale;
+  final double opacity;
 
   /// Width of the output image in pixels (its side when square).
   final int output;
@@ -63,6 +64,7 @@ class SpriteDef {
     this.sourceOffsets,
     this.anchor = const Offset(0.5, 0.5),
     this.displayScale = 1,
+    this.opacity = 1,
     required this.output,
     this.outputHeight,
     this.fit = SpriteFit.contain,
@@ -178,6 +180,10 @@ class SpriteAtlas {
     }
     final fitRaw = v['fit'] ?? 'contain';
     final scale = v['displayScale'] ?? 1;
+    final opacity = v['opacity'] ?? 1;
+    if (opacity is! num || !opacity.isFinite || opacity < 0 || opacity > 1) {
+      throw FormatException('Sprite $id opacity must be between 0 and 1');
+    }
     if (scale is! num || !scale.isFinite || scale < .5 || scale > 2) {
       throw FormatException(
         'Sprite $id displayScale must be between 0.5 and 2',
@@ -239,6 +245,7 @@ class SpriteAtlas {
             ],
       anchor: anchor,
       displayScale: scale.toDouble(),
+      opacity: opacity.toDouble(),
       output: output,
       outputHeight: outputHeight as int?,
       fit: fit,
@@ -262,6 +269,9 @@ class SpriteAtlas {
       );
     }
     for (final def in sprites.values) {
+      if (!def.opacity.isFinite || def.opacity < 0 || def.opacity > 1) {
+        out.add('${def.id} opacity must be between 0 and 1');
+      }
       if (!def.displayScale.isFinite ||
           def.displayScale < .5 ||
           def.displayScale > 2) {

@@ -6,24 +6,36 @@ import '../../arena_simulation/presentation/ball_face_expression.dart';
 import '../../arena_simulation/presentation/power_up_painter.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
+import '../domain/skill_library.dart';
 
 /// A held weapon's grip: [inset] pulls it in along the aim, [side] moves it
 /// across the aim (both in ball radii) and [rotation] turns the sprite
 /// (degrees).
 @immutable
 class GripValues {
-  const GripValues({this.inset = 0, this.side = 0, this.rotation = 0});
+  const GripValues({
+    this.inset = 0,
+    this.side = 0,
+    this.rotation = 0,
+    this.facing = SkillHeldFacing.automatic,
+  });
 
   final double inset;
   final double side;
   final double rotation;
+  final SkillHeldFacing facing;
 
-  GripValues copyWith({double? inset, double? side, double? rotation}) =>
-      GripValues(
-        inset: inset ?? this.inset,
-        side: side ?? this.side,
-        rotation: rotation ?? this.rotation,
-      );
+  GripValues copyWith({
+    double? inset,
+    double? side,
+    double? rotation,
+    SkillHeldFacing? facing,
+  }) => GripValues(
+    inset: inset ?? this.inset,
+    side: side ?? this.side,
+    rotation: rotation ?? this.rotation,
+    facing: facing ?? this.facing,
+  );
 }
 
 /// A small popup showing a ball holding [kind] with the real held-weapon
@@ -80,6 +92,7 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
     inset: widget.grip.inset.clamp(-1.5, 1.5),
     side: widget.grip.side.clamp(-1.5, 1.5),
     rotation: widget.grip.rotation.clamp(-180.0, 180.0),
+    facing: widget.grip.facing,
   );
 
   Widget _slider(
@@ -203,6 +216,27 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                 'deg',
                 (v) => _grip = _grip.copyWith(rotation: v),
               ),
+              Row(
+                children: [
+                  const SizedBox(width: 100, child: Text('Facing')),
+                  Expanded(
+                    child: DropdownButton<SkillHeldFacing>(
+                      key: const ValueKey('grip-preview-facing'),
+                      isExpanded: true,
+                      value: _grip.facing,
+                      items: [
+                        for (final mode in SkillHeldFacing.values)
+                          DropdownMenuItem(
+                            value: mode,
+                            child: Text(mode.label),
+                          ),
+                      ],
+                      onChanged: (mode) =>
+                          setState(() => _grip = _grip.copyWith(facing: mode)),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -296,6 +330,7 @@ class _GripPreviewPainter extends CustomPainter {
       weaponGripInset: (_, _) => grip.inset,
       weaponGripSide: (_, _) => grip.side,
       weaponGripRotation: (_, _) => grip.rotation,
+      heldFacing: (_, _) => grip.facing,
     );
     paintHands(canvas, ball);
     if (kind.isWeapon) {
@@ -325,6 +360,7 @@ class _GripPreviewPainter extends CustomPainter {
       old.grip.inset != grip.inset ||
       old.grip.side != grip.side ||
       old.grip.rotation != grip.rotation ||
+      old.grip.facing != grip.facing ||
       old.kind != kind ||
       old.artwork != artwork ||
       old.tint != tint ||

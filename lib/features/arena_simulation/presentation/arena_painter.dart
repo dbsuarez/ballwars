@@ -12,6 +12,7 @@ import 'ball_face_painter.dart';
 import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
+import '../../skills/domain/skill_library.dart';
 import 'ball_face_expression.dart';
 import 'hp_bar.dart';
 import '../../match_setup/domain/match_config.dart';
@@ -113,6 +114,12 @@ class ArenaPainter extends CustomPainter {
       _paintSingleBall(canvas, ball);
     }
     PowerUpPainter.paintShadowClones(canvas, state, paintBody: _paintBody);
+    PowerUpPainter.paintCasting(
+      canvas,
+      state,
+      showEffects: showEffects,
+      effectRenderMode: explosionRenderMode,
+    );
     PowerUpPainter.paintImpacts(
       canvas,
       state,
@@ -731,6 +738,16 @@ class ArenaPainter extends CustomPainter {
           kind.defaultGripInset,
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
+      heldFacing: (kind, slot) =>
+          state.powerUps
+              ?.visualSkill(
+                kind,
+                skillId: slot == 0
+                    ? ball.heldSkillId
+                    : ball.heldSecondarySkillId,
+              )
+              .heldFacing ??
+          SkillHeldFacing.automatic,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
       handEffectScale: (kind) =>
           state.powerUps?.handEffectScale(kind, ball: ball) ?? 1,

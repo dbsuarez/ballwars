@@ -377,7 +377,7 @@ class _IconPainter extends CustomPainter {
           size.height,
           SpriteRegistry.center,
         ),
-        Paint()..filterQuality = FilterQuality.none,
+        SpriteRegistry.imagePaint(sprite),
       );
       canvas.restore();
     }

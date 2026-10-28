@@ -220,6 +220,48 @@ class PowerUpPainter {
 
   /// Field power-ups, aim lines, bullets, mines, blasts and slashes. Call after the fan lines, before the
   /// balls. [showEffects] covers only the decorative blast flash; gameplay objects always draw.
+  /// A separate finite effect on the caster, never reused as impact artwork.
+  static void paintCasting(
+    Canvas canvas,
+    SimulationState state, {
+    bool showEffects = true,
+    EffectRenderMode effectRenderMode = EffectRenderMode.sprite,
+  }) {
+    if (!showEffects) return;
+    for (final effect in state.powerUps?.castingArtwork ?? []) {
+      final skill = effect.skill;
+      if (effect.active != null && !effect.active!()) continue;
+      if (!skill.usesSpriteEffects(
+        globalSprite: effectRenderMode == EffectRenderMode.sprite,
+      )) {
+        continue;
+      }
+      final id = skill.castingSpriteId;
+      final image = id == null
+          ? null
+          : effect.active != null
+          ? SpriteRegistry.frameAt(id, effect.age)
+          : SpriteRegistry.frameAtProgress(id, effect.age / effect.steps);
+      if (image == null) continue;
+      SkillArtworkTint.begin(canvas, skill.spriteTint);
+      try {
+        _drawEffect(
+          canvas,
+          image,
+          effect.owner.position,
+          effect.owner.radius * 1.4 * skill.castingScale,
+          0,
+          anchor: SpriteRegistry.anchor(id!),
+          opacity: effect.active != null
+              ? 1
+              : ((effect.steps - effect.age) / 6).clamp(0.0, 1.0),
+        );
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+  }
+
   /// Transient hit sprites are painted above bodies so small art stays visible.
   static void paintImpacts(
     Canvas canvas,
@@ -2454,8 +2496,6 @@ class PowerUpPainter {
     }
   }
 
-  static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
-
   static final Paint _shellBody = Paint()..color = const Color(0xFFD8A63A);
   static final Paint _shellShine = Paint()
     ..strokeWidth = 0.8
@@ -2489,7 +2529,7 @@ class PowerUpPainter {
           h * fit,
           SpriteRegistry.center,
         ),
-        _spritePaint,
+        SpriteRegistry.imagePaint(sprite),
       );
     } else {
       final body = RRect.fromRectAndRadius(
@@ -2537,14 +2577,7 @@ class PowerUpPainter {
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       SpriteRegistry.imageRect(image, Offset.zero, 2 * half, 2 * half, anchor),
-      opacity >= 1
-          ? _spritePaint
-          : (Paint()
-              ..filterQuality = FilterQuality.none
-              ..colorFilter = ColorFilter.mode(
-                Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
-                BlendMode.modulate,
-              )),
+      SpriteRegistry.imagePaint(image, opacity: opacity),
     );
     canvas.restore();
   }
@@ -2568,12 +2601,7 @@ class PowerUpPainter {
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       SpriteRegistry.imageRect(image, Offset.zero, half * 2, half * 2, anchor),
-      Paint()
-        ..filterQuality = FilterQuality.none
-        ..colorFilter = ColorFilter.mode(
-          Colors.white.withValues(alpha: opacity.clamp(0.0, 1.0)),
-          BlendMode.modulate,
-        ),
+      SpriteRegistry.imagePaint(image, opacity: opacity),
     );
     canvas.restore();
   }
@@ -2664,6 +2692,25 @@ class PowerUpPainter {
     return math.cos(angle) < 0 ? angle - rad : angle + rad;
   }
 
+  static ({double angle, bool flip}) heldFacingTransform(
+    double angle,
+    double rotationDegrees,
+    SkillHeldFacing mode, {
+    bool shield = false,
+    double? facingAngle,
+  }) {
+    final facing = facingAngle ?? angle;
+    final correction = (rotationDegrees + (shield ? 90 : 0)) * math.pi / 180;
+    if (mode == SkillHeldFacing.upright) {
+      return (angle: correction, flip: false);
+    }
+    final mirror =
+        mode == SkillHeldFacing.mirror ||
+        (mode == SkillHeldFacing.automatic && !shield);
+    final flip = mirror && math.cos(facing) < 0;
+    return (angle: angle + (flip ? -correction : correction), flip: flip);
+  }
+
   /// Yellow lightning streaks behind a ball while the Speed power-up is
   /// active. They are painted before the ball so the face and held item stay
   /// crisp in front. Cosmetic only - no random draws or simulation state.
@@ -2748,6 +2795,7 @@ class PowerUpPainter {
     double Function(PowerUpKind kind, int slot)? weaponGripInset,
     double Function(PowerUpKind kind, int slot)? weaponGripSide,
     double Function(PowerUpKind kind, int slot)? weaponGripRotation,
+    SkillHeldFacing Function(PowerUpKind kind, int slot)? heldFacing,
     double Function(PowerUpKind kind)? skillRange,
     double Function(PowerUpKind kind)? handEffectScale,
     Color Function(PowerUpKind kind)? handEffectColor,
@@ -3383,6 +3431,8 @@ class PowerUpPainter {
             gripInset: weaponGripInset?.call(weapon, slot),
             gripSide: weaponGripSide?.call(weapon, slot) ?? 0,
             gripRotation: weaponGripRotation?.call(weapon, slot) ?? 0,
+            heldFacing:
+                heldFacing?.call(weapon, slot) ?? SkillHeldFacing.automatic,
             handEffectScale: handEffectScale?.call(weapon) ?? 1,
             handEffectColor: handEffectColor?.call(weapon),
             artwork: artworkKind?.call(weapon, slot) ?? weapon,
@@ -3447,6 +3497,7 @@ class PowerUpPainter {
     double? gripInset,
     double gripSide = 0,
     double gripRotation = 0,
+    SkillHeldFacing heldFacing = SkillHeldFacing.automatic,
     double handEffectScale = 1,
     Color? handEffectColor,
     PowerUpKind? artwork,
@@ -3494,6 +3545,12 @@ class PowerUpPainter {
         : null;
     if (held == PowerUpKind.shield) {
       final angle = heldAngle(ball, weapon: held, slot: slot);
+      final transform = heldFacingTransform(
+        angle,
+        gripRotation,
+        heldFacing,
+        shield: true,
+      );
       canvas.drawArc(
         Rect.fromCircle(
           center: ball.position,
@@ -3512,18 +3569,29 @@ class PowerUpPainter {
         _drawSprite(
           canvas,
           sprite,
-          heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset),
+          heldCenter(
+            ball,
+            weapon: held,
+            slot: slot,
+            gripInset: gripInset,
+            gripSide: gripSide,
+          ),
           ball.radius * 0.7 * displayScale,
-          angle +
-              math.pi / 2 +
-              gripRotation.clamp(-180.0, 180.0) * math.pi / 180,
+          transform.angle,
+          flip: transform.flip,
           anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
         );
       } else {
         drawGlyph(
           canvas,
           held,
-          heldCenter(ball, weapon: held, slot: slot, gripInset: gripInset),
+          heldCenter(
+            ball,
+            weapon: held,
+            slot: slot,
+            gripInset: gripInset,
+            gripSide: gripSide,
+          ),
           ball.radius * 0.7 * displayScale,
         );
       }
@@ -3549,6 +3617,12 @@ class PowerUpPainter {
     final firedProgress = firedHoldLeft <= 0 ? 0.0 : 1 - firedHoldLeft / 30.0;
     final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
     final angle = baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
+    final transform = heldFacingTransform(
+      angle,
+      gripRotation,
+      heldFacing,
+      facingAngle: baseAngle,
+    );
     final center =
         heldCenter(
           ball,
@@ -3566,9 +3640,9 @@ class PowerUpPainter {
       sprite,
       center,
       ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
-      heldSpriteAngle(angle, gripRotation),
+      transform.angle,
       iconAngle: _iconAngle[art] ?? 0,
-      flip: math.cos(baseAngle) < 0,
+      flip: transform.flip,
       opacity: 1 - drop * drop,
       anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
     );

@@ -9,6 +9,7 @@ class SpriteEdit {
   int? stepsPerFrame;
   Offset? anchor;
   double? displayScale;
+  double? opacity;
   List<int>? order;
   final Set<int> excluded = {};
   bool allowBlankFrames = false;
@@ -50,6 +51,7 @@ class SpriteEdit {
       fit: original.fit,
       anchor: anchor ?? original.anchor,
       displayScale: displayScale ?? original.displayScale,
+      opacity: opacity ?? original.opacity,
       stepsPerFrame: stepsPerFrame ?? original.stepsPerFrame,
       padding: original.padding,
       sourceSizes: original.sourceSizes == null

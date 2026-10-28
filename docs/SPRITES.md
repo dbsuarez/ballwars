@@ -154,6 +154,31 @@ the struck ball, not continuously on the owner. Increase **Effect artwork scale*
 if the artwork is too small; global effect-size overrides can disable that
 per-skill size control.
 
+**Casting artwork** is separate: select it in **Edit Skill > Appearance** to play
+on the caster when the skill activates. Set **Effect visuals** to **Sprite**.
+**Casting artwork scale** and **Casting duration** are independent of impact
+size. With **Follow active move** on, Energy Wave, Shadow Clone, Raging Demon
+and Omnislash stay visible through their active move and stop when it ends;
+other skills use the duration. Turn it off for a timed burst on any move.
+Casting effects follow the caster's position and clear on death/respawn. Merely
+equipping an aimed weapon does not start them. **Live Arena** uses unsaved edits.
+
+In the sprite editor's **Preview** tab, **Opacity** controls how solid the sprite
+is: 100% opaque, 0% invisible. Around 30–60% is useful for a casting aura that
+lets the ball show through. Opacity is saved per sprite and shared by every skill
+using it, including game/finisher artwork and thumbnails. It preserves source
+pixels and combines with an effect's normal fade. Backup/restore retains it.
+
+**Artwork facing** in Edit Skill and **Facing** in **Preview grip** are saved
+settings. **Automatic** preserves existing behavior; **Mirror when facing left**
+mirrors held artwork instead of turning it upside down; **Rotate with aim** turns
+it with the aim; **Stay upright** keeps its display angle fixed. Rotation still
+lets you correct the source sprite's initial orientation. For the shield example,
+keep your -90 degree rotation and choose **Mirror when facing left** or **Stay
+upright**, inspect both sides, click **Done**, then **Save**. These changes need
+no rebuild or deployment once the editor feature is installed. Grip sideways is
+also respected by the shield renderer.
+
 The owner supplies source artwork under `docs/ai_generated/`. Keep these originals
 unchanged in Git; app uploads and optimized runtime sheets are managed through the
 Sprites importer. Developer raster editing still follows the PhotoCraft workflow.

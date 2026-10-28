@@ -25,6 +25,21 @@ class SpriteRegistry {
   static Future<void>? _loading;
   static final Map<String, _CutSprite> _sprites = {};
   static final Expando<double> _imageScales = Expando('sprite display scale');
+  static final Expando<double> _imageOpacity = Expando('sprite opacity');
+  static double imageOpacity(ui.Image image) => _imageOpacity[image] ?? 1;
+  static final Paint _opaqueImagePaint = Paint()
+    ..filterQuality = FilterQuality.none;
+  static Paint imagePaint(ui.Image image, {double opacity = 1}) {
+    final alpha = (opacity * imageOpacity(image)).clamp(0.0, 1.0);
+    if (alpha == 1) return _opaqueImagePaint;
+    return Paint()
+      ..filterQuality = FilterQuality.none
+      ..colorFilter = ColorFilter.mode(
+        const Color(0xffffffff).withValues(alpha: alpha),
+        BlendMode.modulate,
+      );
+  }
+
   static double imageScale(ui.Image image) => _imageScales[image] ?? 1;
 
   /// Apply saved artwork scale without resizing pixels or moving its anchor.
@@ -166,6 +181,7 @@ class SpriteRegistry {
           fit: s.fit,
           anchor: s.anchor,
           displayScale: s.displayScale,
+          opacity: s.opacity,
           sourceSizes: s.sourceSizes,
           sourceOffsets: s.sourceOffsets,
           padding: 2,
@@ -208,6 +224,7 @@ class SpriteRegistry {
           padding: 0,
           anchor: s.anchor,
           displayScale: s.displayScale,
+          opacity: s.opacity,
           stepsPerFrame: s.stepsPerFrame,
         );
       }
@@ -555,6 +572,7 @@ class SpriteRegistry {
         );
         for (final frame in out[def.id]!.frames) {
           _imageScales[frame] = def.displayScale;
+          _imageOpacity[frame] = def.opacity;
         }
       }
     } catch (_) {

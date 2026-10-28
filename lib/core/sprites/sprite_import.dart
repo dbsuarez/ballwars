@@ -344,6 +344,7 @@ Map<String, dynamic> spriteAtlasJson(SpriteAtlas atlas) => {
         if (s.outputHeight != null) 'outputHeight': s.outputHeight,
         'anchor': [s.anchor.dx, s.anchor.dy],
         if (s.displayScale != 1) 'displayScale': s.displayScale,
+        if (s.opacity != 1) 'opacity': s.opacity,
         'fit': s.fit.name,
         'padding': s.padding,
         'stepsPerFrame': s.stepsPerFrame,

@@ -119,6 +119,7 @@ class PowerUpSystem {
   final List<OmnislashAttack> omnislashAttacks = [];
   final List<RagingDemonAttack> ragingDemonAttacks = [];
   final List<ShadowCloneAttack> shadowCloneAttacks = [];
+  final List<CastingArtwork> castingArtwork = [];
   final Map<Object, int> _cinematicFreezes = {};
   final Map<SimulationBall, int> _otherStuns = {};
   final List<ArenaThemeHazard> arenaThemeHazards = [];
@@ -139,12 +140,53 @@ class PowerUpSystem {
   /// Configured skill cues, counted separately so the UI can play the exact
   /// selected sound without changing deterministic simulation state.
   final Map<String, int> skillSounds = {};
+  void _startCastingArtwork(SimulationBall ball, SkillDefinition skill) {
+    if (skill.castingSpriteId == null) return;
+    bool Function()? follow<T>(
+      List<T> moves,
+      SimulationBall Function(T) ownerOf,
+    ) {
+      for (final move in moves) {
+        if (identical(ownerOf(move), ball)) return () => moves.contains(move);
+      }
+      return null;
+    }
+
+    final active = !skill.castingFollowsActive || skill.isComposed
+        ? null
+        : switch (skill.baseKind) {
+            PowerUpKind.energyWave => follow(energyWaveAttacks, (a) => a.owner),
+            PowerUpKind.shadowClone => follow(
+              shadowCloneAttacks,
+              (a) => a.owner,
+            ),
+            PowerUpKind.ragingDemon => follow(
+              ragingDemonAttacks,
+              (a) => a.owner,
+            ),
+            PowerUpKind.busterSword => follow(omnislashAttacks, (a) => a.owner),
+            _ => null,
+          };
+    castingArtwork.removeWhere(
+      (effect) => identical(effect.owner, ball) && effect.skill.id == skill.id,
+    );
+    castingArtwork.add(
+      CastingArtwork(
+        ball,
+        skill,
+        (skill.castingDurationSeconds * 60).round().clamp(6, 600),
+        active,
+      ),
+    );
+  }
+
   void _skillSound(PowerUpKind kind) {
     final cue = match.skillLibrary.activeFor(kind, _t).soundCue;
     skillSounds.update(cue, (value) => value + 1, ifAbsent: () => 1);
   }
 
   void _announceSkill(SimulationBall ball, SkillDefinition skill) {
+    _startCastingArtwork(ball, skill);
     skillSounds.update(skill.soundCue, (value) => value + 1, ifAbsent: () => 1);
     if (skill.yell.trim().isEmpty) return;
     _yell(
@@ -244,6 +286,7 @@ class PowerUpSystem {
       visualSkill(kind, ball: ball).range;
 
   void _skillYell(SimulationBall ball, PowerUpKind kind, String fallback) {
+    _startCastingArtwork(ball, visualSkill(kind, ball: ball));
     final skill = match.skillLibrary.activeFor(kind, _t);
     final custom = skill.yell.trim();
     _yell(
@@ -275,6 +318,7 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    castingArtwork.removeWhere((effect) => identical(effect.owner, ball));
     _otherStuns.remove(ball);
     if (match.simulationRevision >= 2) {
       ragingDemonAttacks.removeWhere(
@@ -1545,6 +1589,16 @@ class PowerUpSystem {
   /// Counts the speed boosts, ghosts and sweeps down, ages blasts; a ball that is out drops its waiting
   /// magnet.
   void _countDown() {
+    for (final effect in castingArtwork) {
+      effect.age++;
+    }
+    castingArtwork.removeWhere(
+      (effect) =>
+          !_alive(effect.owner) ||
+          (effect.active != null
+              ? !effect.active!()
+              : effect.age >= effect.steps),
+    );
     for (final e in explosions) {
       e.age++;
     }
@@ -3885,6 +3939,15 @@ class PowerUpSystem {
     return side(q1, q2, p1) * side(q1, q2, p2) < 0 &&
         side(p1, p2, q1) * side(p1, p2, q2) < 0;
   }
+}
+
+class CastingArtwork {
+  CastingArtwork(this.owner, this.skill, this.steps, this.active);
+  final SimulationBall owner;
+  final SkillDefinition skill;
+  final int steps;
+  final bool Function()? active;
+  int age = 0;
 }
 
 class _ScheduledComposedEffect {

@@ -483,8 +483,9 @@ class SkillDefinition {
     'pickup_display_scale': pickupDisplayScale,
     'effect_display_scale': effectDisplayScale,
     'weapon_grip_inset': weaponGripInset,
-    'weapon_grip_side': weaponGripSide,
-    'weapon_grip_rotation': weaponGripRotation,
+    // Left out at 0 (every built-in), so replay snapshots stay small.
+    if (weaponGripSide != 0) 'weapon_grip_side': weaponGripSide,
+    if (weaponGripRotation != 0) 'weapon_grip_rotation': weaponGripRotation,
     'effect_strength': effectStrength,
     'healing': healing,
     'shield_hits': shieldHits,

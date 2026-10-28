@@ -441,6 +441,35 @@ void main() {
     expect(legacy.weaponGripRotation, 0);
   });
 
+  test('default grips are left out of the JSON and replay snapshots', () {
+    var library = SkillLibrary.defaults;
+    library = library.withDefinition(
+      library.create('Plain Pistol', PowerUpKind.pistol),
+      PowerUpConfig.defaults,
+    );
+    for (final skill in library.all(PowerUpConfig.defaults)) {
+      expect(skill.weaponGripSide, 0, reason: skill.id);
+      expect(skill.weaponGripRotation, 0, reason: skill.id);
+      final json = skill.toJson();
+      expect(json.containsKey('weapon_grip_side'), isFalse, reason: skill.id);
+      expect(
+        json.containsKey('weapon_grip_rotation'),
+        isFalse,
+        reason: skill.id,
+      );
+    }
+    final encoded = library.encodeReplay()!;
+    final source = utf8.decode(
+      base64Url.decode(encoded.padRight((encoded.length + 3) ~/ 4 * 4, '=')),
+    );
+    expect(source, isNot(contains('weapon_grip_side')));
+    expect(source, isNot(contains('weapon_grip_rotation')));
+    final decoded = SkillLibrary.decodeReplay(encoded)!;
+    expect(decoded.custom.single.weaponGripSide, 0);
+    expect(decoded.custom.single.weaponGripRotation, 0);
+    expect(jsonEncode(decoded.toJson()), jsonEncode(library.toJson()));
+  });
+
   test(
     'custom description round trips, trims, caps at 160 and defaults to empty',
     () {

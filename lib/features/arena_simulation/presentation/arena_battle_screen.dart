@@ -173,6 +173,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Seed of the first round: the link's seed, until Play again starts fresh matches.
   late int? _seedBase = widget.seed;
 
+  /// True while the current round is a replay (the Replay button, or a match opened from a link or
+  /// the saved replays list, in its first round): there is nothing new to save. Play again, New match
+  /// and the next round of a series start new matches and clear it.
+  bool _watchingReplay = false;
+
   /// Starts a match. [replaySeed] re-runs a finished match exactly (Replay); it isn't counted again.
   void _initMatch({
     int? replaySeed,
@@ -217,6 +222,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
           : (_seedBase != null && _round == 1 ? widget.endStep : null),
     );
     _roundCounted = replaySeed != null;
+    _watchingReplay = replaySeed != null || (_seedBase != null && _round == 1);
     _startCountdown = 3;
     _countdownBeat = 3;
     _state = _controller.state;
@@ -622,7 +628,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final endStep = _controller.endStep;
     setState(() {
       _isPaused = false;
-      _initMatch(replaySeed: seed, replayNudges: nudges, replayEndStep: endStep);
+      _initMatch(
+        replaySeed: seed,
+        replayNudges: nudges,
+        replayEndStep: endStep,
+      );
     });
   }
 
@@ -904,22 +914,30 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Tooltip(
-                                  message: 'Unstuck: push every ball in a random direction',
+                                  message:
+                                      'Unstuck: push every ball in a random direction',
                                   child: OutlinedButton.icon(
                                     key: const ValueKey('arena-unstuck'),
                                     onPressed: finished ? null : _unstuck,
-                                    icon: const Icon(Icons.open_with_rounded, size: 18),
+                                    icon: const Icon(
+                                      Icons.open_with_rounded,
+                                      size: 18,
+                                    ),
                                     label: const Text('Unstuck'),
                                     style: OutlinedButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                if (widget.config.endlessBattle && !widget.config.mayhem) ...[
+                                if (widget.config.endlessBattle &&
+                                    !widget.config.mayhem) ...[
                                   const SizedBox(width: 8),
                                   _endBattleButton(
-                                    compact: box.maxWidth < _endBattleLabelWidth,
+                                    compact:
+                                        box.maxWidth < _endBattleLabelWidth,
                                   ),
                                 ],
                               ],
@@ -1144,10 +1162,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         _audio.click();
                         _copyReplayLink();
                       },
-                      onSaveReplay: () {
-                        _audio.click();
-                        _saveReplay();
-                      },
+                      onSaveReplay: _watchingReplay
+                          ? null
+                          : () {
+                              _audio.click();
+                              _saveReplay();
+                            },
                       onReplay: _replay,
                       onReplayFinisher:
                           _finishersOn &&

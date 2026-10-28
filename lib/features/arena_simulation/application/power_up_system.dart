@@ -1729,21 +1729,37 @@ class PowerUpSystem {
         .where((kind) => kind.isTrap || !claimedKinds.contains(kind))
         .toList();
     if (eligibleKinds.isEmpty && forcedKind == null) return;
-    final kind =
-        forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
-    final variants = spawnableCustom
-        .where((skill) => skill.baseKind == kind)
-        .toList();
     // The built-in itself only when it's chosen too (with everything chosen this draws as before).
-    final builtInChosen =
+    bool builtInChosen(PowerUpKind kind) =>
         chosen == null || chosen.contains(kind) || kind.isTrap;
-    final candidates = [
-      if (builtInChosen) match.skillLibrary.builtIn(kind, _t),
-      ...variants,
-    ];
-    final selectedSkill = forcedKind == null && variants.isNotEmpty
-        ? candidates[rng.nextInt(candidates.length)]
-        : match.skillLibrary.builtIn(kind, _t);
+    final SkillDefinition selectedSkill;
+    if (forcedKind == null &&
+        PowerUpSpawnSelector.customTiersDiffer(spawnableCustom, _t)) {
+      // A custom skill with a tier of its own spawns at that tier's odds.
+      selectedSkill = PowerUpSpawnSelector.chooseSkill(
+        eligibleKinds,
+        _t,
+        rng,
+        library: match.skillLibrary,
+        custom: spawnableCustom,
+        builtInChosen: builtInChosen,
+      );
+    } else {
+      // Every custom skill at its base kind's tier: exactly the draws from before custom tiers.
+      final kind =
+          forcedKind ?? PowerUpSpawnSelector.choose(eligibleKinds, _t, rng);
+      final variants = spawnableCustom
+          .where((skill) => skill.baseKind == kind)
+          .toList();
+      final candidates = [
+        if (builtInChosen(kind)) match.skillLibrary.builtIn(kind, _t),
+        ...variants,
+      ];
+      selectedSkill = forcedKind == null && variants.isNotEmpty
+          ? candidates[rng.nextInt(candidates.length)]
+          : match.skillLibrary.builtIn(kind, _t);
+    }
+    final kind = selectedSkill.baseKind;
     final radius = fieldRadius;
     final balls = match.state.balls;
     final taken = List.filled(4, 0);

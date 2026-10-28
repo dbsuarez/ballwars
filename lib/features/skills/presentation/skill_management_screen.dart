@@ -159,6 +159,23 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
   }
 
+  /// A built-in's tier lives in the tuning (`tier.<kind>`); a custom skill keeps its own, so editing it
+  /// never changes the built-in it is based on. An unchanged custom tier keeps following its base kind.
+  (SkillDefinition, PowerUpConfig) _applyRarity(
+    SkillDefinition original,
+    _SkillEditResult edited,
+  ) {
+    final rarity = edited.rarity;
+    if (rarity == null) return (edited.skill, _tuning);
+    if (!edited.skill.custom) {
+      return (edited.skill, _tuning.withRarity(original.baseKind, rarity));
+    }
+    if (rarity == SkillLibrary.rarityOf(original, _tuning)) {
+      return (edited.skill, _tuning);
+    }
+    return (SkillLibrary.withOwnRarity(edited.skill, rarity, _tuning), _tuning);
+  }
+
   Future<void> _edit(SkillDefinition skill) async {
     final edited = await showModalBottomSheet<_SkillEditResult>(
       context: context,
@@ -168,14 +185,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         skill: skill,
         library: _library,
         tuning: _tuning,
-        rarity: _tuning.rarityOf(skill.baseKind),
+        rarity: SkillLibrary.rarityOf(skill, _tuning),
         onSave: widget.onSave == null
             ? null
             : (edited) async {
-                final tuning = edited.rarity == null
-                    ? _tuning
-                    : _tuning.withRarity(skill.baseKind, edited.rarity!);
-                final library = _library.withDefinition(edited.skill, tuning);
+                final (definition, tuning) = _applyRarity(skill, edited);
+                final library = _library.withDefinition(definition, tuning);
                 await widget.onSave!(
                   SkillManagementResult(
                     library: library,
@@ -194,10 +209,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
     if (edited == null || !mounted) return;
     setState(() {
-      if (edited.rarity != null) {
-        _tuning = _tuning.withRarity(skill.baseKind, edited.rarity!);
-      }
-      _library = _library.withDefinition(edited.skill, _tuning);
+      final (definition, tuning) = _applyRarity(skill, edited);
+      _tuning = tuning;
+      _library = _library.withDefinition(definition, _tuning);
     });
   }
 
@@ -350,7 +364,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             skill.resolvedCategory == SkillCategory.trap ||
                 skill.resolvedCategory == SkillCategory.arenaTrap
             ? 'Special'
-            : _tuning.rarityOf(skill.baseKind)!.label;
+            : SkillLibrary.rarityOf(skill, _tuning)!.label;
         final details = <String>[
           tierLabel,
           if (skill.custom) skill.enabled ? 'Active' : 'Inactive',
@@ -377,7 +391,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                     skill.resolvedCategory == SkillCategory.trap ||
                         skill.resolvedCategory == SkillCategory.arenaTrap
                     ? const Color(0xFFFFD54F)
-                    : _tuning.rarityOf(skill.baseKind)?.color,
+                    : SkillLibrary.rarityOf(skill, _tuning)?.color,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -2052,9 +2066,12 @@ class _SkillEditorState extends State<_SkillEditor> {
                             isExpanded: true,
                             key: const ValueKey('skill-item-rarity'),
                             initialValue: _rarity,
-                            decoration: const InputDecoration(
-                              helperText:
-                                  'Controls how often this weapon or power-up appears.',
+                            decoration: InputDecoration(
+                              helperText: widget.skill.custom
+                                  ? 'This skill\'s own tier: its color and how often it appears. '
+                                        'The built-in ${widget.skill.baseKind.label} keeps its own.'
+                                  : 'Controls how often this weapon or power-up appears.',
+                              helperMaxLines: 3,
                             ),
                             items: [
                               for (final rarity in PowerUpRarity.values)
@@ -2063,8 +2080,18 @@ class _SkillEditorState extends State<_SkillEditor> {
                                   child: Text(rarity.label),
                                 ),
                             ],
-                            onChanged: (value) =>
-                                setState(() => _rarity = value),
+                            onChanged: (value) => setState(() {
+                              // A custom skill's callout style moves with its tier unless it was set
+                              // apart from the tier.
+                              if (widget.skill.custom &&
+                                  value != null &&
+                                  _rarity != null &&
+                                  _calloutStyle.index == _rarity!.index) {
+                                _calloutStyle =
+                                    SkillCalloutStyle.values[value.index];
+                              }
+                              _rarity = value;
+                            }),
                           ),
                         ),
                       ],

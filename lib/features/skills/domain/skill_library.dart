@@ -133,6 +133,7 @@ class SkillDefinition {
     this.handEffectDurationSeconds = 0.5,
     this.artworkKind,
     this.payloadSkillId,
+    this.rarity,
   });
 
   final String id;
@@ -221,6 +222,11 @@ class SkillDefinition {
   /// this skill keeps the trigger, aim, cooldown, callout and the number and spread of shots. Null: it
   /// fires its own projectile. See [SkillLibrary.resolvePayload] and [SkillLibrary.payloadProblem].
   final String? payloadSkillId;
+
+  /// A custom skill's own tier (color, callout and spawn odds). Null: it follows its base kind's tier
+  /// (`tier.<kind>` in the tuning), as custom skills did before they had one. Built-ins and traps never
+  /// keep one ([validated] drops it). Read it through [SkillLibrary.rarityOf].
+  final PowerUpRarity? rarity;
 
   /// Its held and arena artwork ([artworkKind], else its carrier).
   PowerUpKind get displayKind => artworkKind ?? baseKind;
@@ -359,6 +365,7 @@ class SkillDefinition {
     double? handEffectDurationSeconds,
     Object? artworkKind = _unset,
     Object? payloadSkillId = _unset,
+    Object? rarity = _unset,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -434,6 +441,7 @@ class SkillDefinition {
     payloadSkillId: identical(payloadSkillId, _unset)
         ? this.payloadSkillId
         : payloadSkillId as String?,
+    rarity: identical(rarity, _unset) ? this.rarity : rarity as PowerUpRarity?,
   );
 
   Map<String, Object?> toJson() => {
@@ -501,6 +509,7 @@ class SkillDefinition {
     'hand_effect_duration_seconds': handEffectDurationSeconds,
     if (artworkKind != null) 'artwork': artworkKind!.name,
     if (payloadSkillId != null) 'fires': payloadSkillId,
+    if (rarity != null) 'rarity': rarity!.name,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -612,6 +621,7 @@ class SkillDefinition {
       handEffectDurationSeconds: decimal('hand_effect_duration_seconds') ?? 0.5,
       artworkKind: nullableEnum('artwork', PowerUpKind.values),
       payloadSkillId: value['fires'] as String?,
+      rarity: nullableEnum('rarity', PowerUpRarity.values),
     ).validated();
   }
 
@@ -658,6 +668,7 @@ class SkillDefinition {
     soundCue: soundCues.contains(soundCue) ? soundCue : 'shot',
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
     payloadSkillId: _cleanReference(payloadSkillId),
+    rarity: custom && !baseKind.isTrap ? rarity : null,
   );
 
   static String? _cleanReference(String? id) {
@@ -741,6 +752,33 @@ class SkillLibrary {
   final double screenShake;
   final bool skillsSetScreenShake;
   static const double defaultScreenShake = 0.3;
+
+  /// [skill]'s tier: a custom skill's own [SkillDefinition.rarity], else its base kind's tier in
+  /// [tuning]. Null for traps, which have no tier. Every tier color, label, callout and spawn weight
+  /// for a skill comes from here.
+  static PowerUpRarity? rarityOf(SkillDefinition skill, PowerUpConfig tuning) =>
+      skill.custom && skill.rarity != null && !skill.baseKind.isTrap
+      ? skill.rarity
+      : tuning.rarityOf(skill.baseKind);
+
+  /// [skill] (a custom skill) with its own tier [rarity]; never touches the built-in's `tier.<kind>`.
+  /// Its callout style moves with the tier when it was the old tier's style, so a skill whose callout
+  /// was set apart from its tier keeps it.
+  static SkillDefinition withOwnRarity(
+    SkillDefinition skill,
+    PowerUpRarity rarity,
+    PowerUpConfig tuning,
+  ) {
+    if (!skill.custom || skill.baseKind.isTrap) return skill;
+    final old = rarityOf(skill, tuning);
+    final followsTier = old != null && skill.calloutStyle.index == old.index;
+    return skill.copyWith(
+      rarity: rarity,
+      calloutStyle: followsTier
+          ? SkillCalloutStyle.values[rarity.index]
+          : skill.calloutStyle,
+    );
+  }
 
   /// [skill]'s impact screen shake.
   double screenShakeFor(SkillDefinition skill) =>

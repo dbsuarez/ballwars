@@ -1893,6 +1893,8 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final selected = _customOn.contains(skill.id);
     final colors = Theme.of(context).colorScheme;
     final appColors = BallWarsColors.of(context);
+    // Its own tier (a custom skill's tier never follows the built-in once set).
+    final rarity = SkillLibrary.rarityOf(skill, widget.config);
     final fires = skill.payloadSkillId;
     final firedName = fires == null
         ? null
@@ -1935,12 +1937,18 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      skill.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    PowerUpName(
+                      skill.baseKind,
+                      tuning: widget.config,
+                      label: skill.name,
+                      rarity: rarity,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
+                    if (rarity != null)
+                      Text(
+                        rarity.label,
+                        style: TextStyle(fontSize: 10, color: appColors.muted),
+                      ),
                     const SizedBox(height: 4),
                     Text(
                       '$details.',

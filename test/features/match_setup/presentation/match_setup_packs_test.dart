@@ -474,6 +474,44 @@ void main() {
     },
   );
 
+  testWidgets('a custom skill card shows its own tier label and color', (
+    tester,
+  ) async {
+    final kutsilyo = SkillLibrary.withOwnRarity(
+      SkillLibrary.defaults.create('Kutsilyo', PowerUpKind.knife),
+      PowerUpRarity.special,
+      PowerUpConfig.defaults,
+    );
+    final library = SkillLibrary.defaults.withDefinition(
+      kutsilyo,
+      PowerUpConfig.defaults,
+    );
+    await pumpSetup(tester, skillLibrary: library);
+    await tester.tap(find.text('Arsenal'));
+    await tester.pump();
+    await openSettings(tester);
+    await tester.tap(find.text('Pickups: All'));
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(ValueKey('selection-card-${kutsilyo.id}'));
+    await tester.ensureVisible(card);
+    await tester.pumpAndSettle();
+    final name = find.descendant(of: card, matching: find.text('Kutsilyo'));
+    expect(tester.widget<Text>(name).style?.color, PowerUpRarity.special.color);
+    expect(
+      find.descendant(of: card, matching: find.text('Special')),
+      findsOneWidget,
+    );
+    // The built-in Knife keeps its own Normal tier.
+    final knife = find.byKey(const ValueKey('selection-card-knife'));
+    await tester.ensureVisible(knife);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: knife, matching: find.text('Normal')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'weapon cards toggle selections; select all works; Done needs at least one',
     (tester) async {

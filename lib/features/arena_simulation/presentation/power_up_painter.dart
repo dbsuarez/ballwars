@@ -10,6 +10,7 @@ import 'power_up_sprites.dart';
 import 'lightning_strike_painter.dart';
 import 'arena_effect_library.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../skills/domain/skill_library.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
 
 /// Draws the power-up layer of an Arsenal / All-Out match in the arena's coordinates (center at 0, 0):
@@ -990,7 +991,10 @@ class PowerUpPainter {
                     .visualSkill(item.kind, skillId: item.skillId)
                     .pickupDisplayScale,
             0.35 + 0.65 * pulse,
-            ring: p.match.tuning.rarityOf(item.kind)?.color,
+            ring: SkillLibrary.rarityOf(
+              p.visualSkill(item.kind, skillId: item.skillId),
+              p.match.tuning,
+            )?.color,
             useSprite: p.usesSprite(item.kind, skillId: item.skillId),
             whiteBackground: whitePickupBackgrounds,
           );

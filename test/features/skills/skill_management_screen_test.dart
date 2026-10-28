@@ -941,6 +941,102 @@ void main() {
     expect(result!.tuning.rarityOf(PowerUpKind.pistol), PowerUpRarity.epic);
   });
 
+  testWidgets(
+    'a custom skill keeps its own tier apart from its base built-in, both ways',
+    (tester) async {
+      final kutsilyo = SkillLibrary.defaults.create(
+        'Kutsilyo',
+        PowerUpKind.knife,
+      );
+      final library = SkillLibrary.defaults.withDefinition(
+        kutsilyo,
+        PowerUpConfig.defaults,
+      );
+      SkillManagementResult? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await Navigator.of(context)
+                    .push<SkillManagementResult>(
+                      MaterialPageRoute(
+                        builder: (_) => SkillManagementScreen(
+                          initial: library,
+                          tuning: PowerUpConfig.defaults,
+                        ),
+                      ),
+                    );
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      // Kutsilyo to Special.
+      await tester.tap(find.text('Custom'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Kutsilyo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Special').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(ValueKey('skill-name-${kutsilyo.id}')))
+            .style
+            ?.color,
+        PowerUpRarity.special.color,
+      );
+
+      // The built-in Knife to Rare.
+      await tester.tap(find.widgetWithText(Tab, 'Built-in'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Weapons'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Knife',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Knife'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<DropdownButtonFormField<PowerUpRarity>>(
+              find.byKey(const ValueKey('skill-item-rarity')),
+            )
+            .initialValue,
+        PowerUpRarity.normal,
+      );
+      await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rare').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
+      await tester.pumpAndSettle();
+
+      final saved = result!;
+      expect(saved.tuning.rarityOf(PowerUpKind.knife), PowerUpRarity.rare);
+      final custom = saved.library.custom.single;
+      expect(custom.rarity, PowerUpRarity.special);
+      expect(custom.calloutStyle, SkillCalloutStyle.special);
+      expect(
+        SkillLibrary.rarityOf(custom, saved.tuning),
+        PowerUpRarity.special,
+      );
+    },
+  );
+
   testWidgets('admin can create a composed skill from scratch', (tester) async {
     await tester.pumpWidget(app());
     await tester.tap(find.text('open'));

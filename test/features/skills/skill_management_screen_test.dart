@@ -11,6 +11,7 @@ import 'package:flutter/rendering.dart';
 import 'dart:ui' as ui;
 import 'package:ballwars/core/sprites/sprite_registry.dart';
 import 'package:ballwars/core/sprites/sprite_import.dart';
+import 'package:ballwars/features/skills/presentation/skill_demo_dialog.dart';
 
 Future<void> _revealEditor(WidgetTester tester, Finder target) async {
   if (target.hitTestable().evaluate().isNotEmpty) return;
@@ -71,6 +72,66 @@ class _LineRecorder implements Canvas {
 }
 
 void main() {
+  testWidgets(
+    'phone editor toolbar opens Skill Demo with unsaved values and returns without saving',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      var saves = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (_) async {
+              saves++;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      final damage = find.byKey(const ValueKey('skill-field-arsenal'));
+      await _revealEditor(tester, damage);
+      await tester.enterText(damage, '7');
+      await tester.pump();
+      for (final key in [
+        'preview-skill',
+        'demo-skill',
+        'test-skill-live',
+        'preview-skill-finisher',
+      ]) {
+        expect(find.byKey(ValueKey(key)).hitTestable(), findsOneWidget);
+      }
+      await tester.tap(find.byKey(const ValueKey('demo-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<SkillDemoDialog>(find.byType(SkillDemoDialog))
+            .skill
+            .arsenalDamage,
+        7,
+      );
+      expect(
+        find.byKey(const ValueKey('use-demo-skill')).hitTestable(),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('close-skill-demo')));
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, damage);
+      expect(tester.widget<TextField>(damage).controller!.text, '7');
+      expect(saves, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'casting and impact artwork save independently and restore defaults clears both',
     (tester) async {

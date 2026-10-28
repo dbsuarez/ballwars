@@ -292,6 +292,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 ## Current position
 
 2026-10-28 post-sprite follow-up:
+- [x] Add [Skill Demo](SKILL-DEMO.md) beside Preview, Live Arena and Finisher: manual draft activation, four artwork references, actual arena effects, repeat/pause/reset, facing, slow playback, health, bubbles/sound and incoming-hit interactions. Preserve unsaved editor state and normal match behavior.
 - [x] Fix custom-skill selection/remembering and independent dual-wield slot IDs in Live Arena; include saved and unsaved draft skills in their proper picker categories.
 - [x] Fix shared pickup/discard and match-artwork/equipment identity for same-carrier custom variants; preserve older replay rules through revision 3 links.
 - [x] Downgrade sprite edge contacts to non-blocking warnings with frame/side details; retain malformed-image, bounds, size and blank-frame validation. Verify the supplied four-frame Golden Energy Burst upload.

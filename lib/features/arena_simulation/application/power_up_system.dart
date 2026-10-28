@@ -462,12 +462,84 @@ class PowerUpSystem {
   /// (a speed boost picked up in step N runs from step N + 1).
   bool automaticSpawning = true;
 
+  /// Editor demos activate one skill explicitly, without unrelated innate triggers.
+  bool automaticPassiveTriggers = true;
+
   /// Place a selected item using the real spawn rules in the admin test arena.
   void spawnTestItem(PowerUpKind kind, {String? skillId}) =>
       _spawn(match.stepCount + 1, forcedKind: kind, forcedSkillId: skillId);
 
   /// Deploys the selected arena decoration's environmental hazard in tests.
   void spawnTestArenaHazard() => _spawnArenaThemeHazard(match.stepCount + 1);
+
+  /// One manual activation for the editor demo. Ordinary match triggers are unchanged.
+  void activateTestSkill(
+    SimulationBall owner,
+    SkillDefinition skill,
+    SimulationBall target,
+  ) {
+    if (skill.isComposed) {
+      final payload = match.skillLibrary.resolvePayload(skill, _t);
+      if (skill.delivery == SkillDelivery.projectile || payload != null) {
+        _launchComposed(owner, target, skill, payload: payload);
+      } else {
+        _executeComposed(owner, skill, primary: target);
+      }
+      if (skill.resolvedCategory == SkillCategory.weapon) {
+        _holdFiredWeapon(owner, skill.baseKind, skillId: skill.id);
+      }
+      return;
+    }
+    if (skill.resolvedCategory == SkillCategory.trap ||
+        skill.resolvedCategory == SkillCategory.arenaTrap) {
+      if (skill.baseKind == PowerUpKind.mine ||
+          skill.baseKind == PowerUpKind.phaseMine) {
+        pickUp(
+          owner,
+          FieldPowerUp(
+            kind: skill.baseKind,
+            skillId: skill.id,
+            position: owner.position,
+            spawnStep: match.stepCount,
+          ),
+        );
+      } else {
+        spawnTestItem(skill.baseKind, skillId: skill.id);
+      }
+      final position = switch (skill.baseKind) {
+        PowerUpKind.mine || PowerUpKind.phaseMine => mines.lastOrNull?.position,
+        PowerUpKind.portal => portals.lastOrNull?.position,
+        PowerUpKind.spikeWall => spikeWalls.lastOrNull?.position,
+        PowerUpKind.stickyGoo => stickyGoo.lastOrNull?.position,
+        PowerUpKind.poisonSwamp => poisonSwamps.lastOrNull?.position,
+        _ => null,
+      };
+      if (position != null) {
+        target.position = position * .96;
+        target.velocity = Offset.zero;
+      }
+      return;
+    }
+    pickUp(
+      owner,
+      FieldPowerUp(
+        kind: skill.baseKind,
+        skillId: skill.id,
+        position: owner.position,
+        spawnStep: match.stepCount,
+      ),
+    );
+    if (skill.resolvedCategory == SkillCategory.weapon) {
+      if (skill.baseKind.isGun) {
+        owner.aimLeft = 1;
+      } else if (skill.baseKind == PowerUpKind.orbitingFlail) {
+        // Start its real orbit/contact updates rather than consuming it as a bump.
+        return;
+      } else {
+        onContact(owner, target);
+      }
+    }
+  }
 
   void step() {
     _processPassiveTriggers();
@@ -670,6 +742,7 @@ class PowerUpSystem {
   }
 
   void _processPassiveTriggers() {
+    if (!automaticPassiveTriggers) return;
     final number = match.stepCount + 1;
     final timerSkills = _activeComposedSkills(SkillTrigger.timer).toList();
     final damageSkills = _activeComposedSkills(
@@ -696,6 +769,7 @@ class PowerUpSystem {
     Iterable<SimulationBall> eliminated,
     Map<SimulationBall, SimulationBall> attackers,
   ) {
+    if (!automaticPassiveTriggers) return;
     final skills = _activeComposedSkills(SkillTrigger.elimination).toList();
     if (skills.isEmpty) return;
     for (final victim in eliminated) {

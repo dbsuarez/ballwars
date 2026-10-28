@@ -151,6 +151,12 @@ as Shadow Clone strikes retain the skill identity on their hit event and play
 the selected artwork briefly at the impact. Explosions and slash effects also
 retain their dedicated effect renderers.
 
+Use **Edit Skill > Skill Demo** to see casting, equipped, projectile and impact
+references together and manually activate the current unsaved draft. The stage
+uses the arena renderer, including opacity, grip/facing, cast timing, bubbles,
+casings and hit effects. See [Skill Demo](SKILL-DEMO.md) for replay, slow playback
+and incoming-hit controls.
+
 To use hit artwork: **Edit Skill > Appearance > Impact / effect artwork**, select
 a sprite, set **Effect visuals** to **Sprite**, then **Save**. Enable effects in
 the match and trigger a real hit in **Live Test**. Hit sprites play briefly over

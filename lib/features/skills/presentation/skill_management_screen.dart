@@ -21,6 +21,7 @@ import '../../settings/presentation/app_settings_scope.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
 import 'grip_preview_dialog.dart';
+import 'skill_demo_dialog.dart';
 import '../../sprites/presentation/sprites_screen.dart';
 import 'skill_artwork_tint.dart';
 
@@ -1707,6 +1708,23 @@ class _SkillEditorState extends State<_SkillEditor> {
     );
   }
 
+  Future<void> _demoSkill() async {
+    final skill = _result;
+    if (skill == null) return;
+    final effectMode = AppSettingsScope.of(context).explosionRenderMode;
+    final library = widget.library;
+    final tuning = widget.tuning;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => SkillDemoDialog(
+        skill: skill,
+        library: library,
+        tuning: tuning,
+        effectMode: effectMode,
+      ),
+    );
+  }
+
   Future<void> _testInLiveArena() async {
     final skill = _result;
     if (skill == null) return;
@@ -2360,6 +2378,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                       Expanded(
                         child: OutlinedButton(
                           key: const ValueKey('preview-skill'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
                           onPressed: result == null ? null : _previewSkill,
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
@@ -2367,7 +2388,40 @@ class _SkillEditorState extends State<_SkillEditor> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.play_circle_outline),
-                                Text('Preview'),
+                                Text(
+                                  'Preview',
+                                  style: TextStyle(fontSize: 11),
+                                  maxLines: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          key: const ValueKey('demo-skill'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
+                          onPressed:
+                              result == null ||
+                                  compatibilityIssues.isNotEmpty ||
+                                  _payloadProblem(result) != null
+                              ? null
+                              : _demoSkill,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.science_outlined),
+                                Text(
+                                  'Skill Demo',
+                                  style: TextStyle(fontSize: 11),
+                                  maxLines: 1,
+                                ),
                               ],
                             ),
                           ),
@@ -2377,6 +2431,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                       Expanded(
                         child: OutlinedButton(
                           key: const ValueKey('test-skill-live'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
                           onPressed: result == null ? null : _testInLiveArena,
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
@@ -2384,7 +2441,11 @@ class _SkillEditorState extends State<_SkillEditor> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.sports_esports_outlined),
-                                Text('Live Arena'),
+                                Text(
+                                  'Live Arena',
+                                  style: TextStyle(fontSize: 11),
+                                  maxLines: 1,
+                                ),
                               ],
                             ),
                           ),
@@ -2394,6 +2455,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                       Expanded(
                         child: OutlinedButton(
                           key: const ValueKey('preview-skill-finisher'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
                           onPressed: result?.canDamage == true
                               ? _previewFinisher
                               : null,
@@ -2403,7 +2467,11 @@ class _SkillEditorState extends State<_SkillEditor> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.movie_filter_outlined),
-                                Text('Finisher'),
+                                Text(
+                                  'Finisher',
+                                  style: TextStyle(fontSize: 11),
+                                  maxLines: 1,
+                                ),
                               ],
                             ),
                           ),

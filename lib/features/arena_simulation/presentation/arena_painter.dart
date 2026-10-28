@@ -785,6 +785,7 @@ class ArenaPainter extends CustomPainter {
         text: TextSpan(
           text: text.text,
           style: TextStyle(
+            fontFamily: 'Manrope',
             color: (text.callout ? calloutInk : text.color).withValues(
               alpha: alpha,
             ),

@@ -475,7 +475,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Copies a link that replays this exact match in the web app: a short
   /// `?r=<code>` link when the server is reachable, else the long one.
   Future<void> _copyReplayLink() async {
-    Uri link = _replayUri();
+    final long = _replayUriOrExplain();
+    if (long == null) return;
+    Uri link = long;
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
       try {
@@ -526,9 +528,26 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     skillLibrary: widget.config.skillLibrary,
   ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
 
+  /// [_replayUri], or null after telling the user why there is none: the custom skill snapshot is
+  /// over `SkillLibrary.maxReplayCharacters`.
+  Uri? _replayUriOrExplain() {
+    try {
+      return _replayUri();
+    } on FormatException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Too many custom skills to share this replay'),
+        ),
+      );
+      return null;
+    }
+  }
+
   Future<void> _saveReplay() async {
+    final uri = _replayUriOrExplain();
+    if (uri == null) return;
     await SavedReplayStore.add(
-      _replayUri(),
+      uri,
       contestantNames: widget.config.contestants.map((ball) => ball.name),
     );
     if (!mounted) return;

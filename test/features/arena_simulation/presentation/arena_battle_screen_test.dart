@@ -1,10 +1,17 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_battle_screen.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_canvas.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
+import 'package:ballwars/features/replay_export/data/saved_replay_store.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
 
 const _balls = [
   CustomBall(
@@ -498,6 +505,74 @@ void main() {
       await tester.pump();
       await _playUntilWinnerCard(tester);
       expect(find.text('Save replay'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'Share and Save replay explain a too-large skill snapshot instead of failing',
+    (tester) async {
+      var library = SkillLibrary.defaults;
+      for (
+        var i = 0;
+        jsonEncode(library.toJson()).length <= SkillLibrary.maxReplayCharacters;
+        i++
+      ) {
+        library = library.withDefinition(
+          library
+              .create('Story Skill $i', PowerUpKind.pistol)
+              .copyWith(description: 'd' * 160),
+          PowerUpConfig.defaults,
+        );
+      }
+      expect(library.encodeReplay, throwsFormatException);
+
+      final clipboard = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') clipboard.add(call.arguments);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
+      // No seed: a seeded screen counts as a replay and has no Save button.
+      await tester.pumpWidget(
+        _app(MatchConfig(contestants: _balls, skillLibrary: library)),
+      );
+      await tester.pump();
+      await _playUntilWinnerCard(tester);
+
+      await tester.tap(find.text('Share'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Too many custom skills to share this replay'),
+        findsOneWidget,
+      );
+      expect(clipboard, isEmpty);
+
+      ScaffoldMessenger.of(
+        tester.element(find.byType(ArenaBattleScreen)),
+      ).removeCurrentSnackBar();
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(const ValueKey('save-replay')));
+      await tester.tap(find.byKey(const ValueKey('save-replay')));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Too many custom skills to share this replay'),
+        findsOneWidget,
+      );
+      expect(await SavedReplayStore.load(), isEmpty);
 
       await tester.pumpWidget(const SizedBox.shrink());
     },

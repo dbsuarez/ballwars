@@ -408,6 +408,31 @@ void main() {
     expect(await DevicePrefs.read('power-test-arena'), 'desert');
   });
 
+  testWidgets('change arena sheet marks the active arena with a check', (
+    tester,
+  ) async {
+    OfflineStore.instance = MemoryOfflineStore();
+    await DevicePrefs.write('power-test-arena', 'space');
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('test-arena')));
+    await tester.pumpAndSettle();
+    Finder checkIn(ArenaDecoration d) => find.descendant(
+      of: find.byKey(ValueKey('test-arena-${d.name}')),
+      matching: find.byIcon(Icons.check_circle),
+    );
+    for (final d in ArenaDecoration.values) {
+      expect(
+        checkIn(d),
+        d == ArenaDecoration.space ? findsOneWidget : findsNothing,
+        reason: d.name,
+      );
+    }
+    // Every tile keeps its hazard caption.
+    expect(find.text(ArenaDecoration.space.hazardCaption), findsOneWidget);
+    expect(find.text('All arena traps'), findsOneWidget);
+  });
+
   testWidgets('bottom bar fits at 360 px', (tester) async {
     OfflineStore.instance = MemoryOfflineStore();
     tester.view.physicalSize = const Size(360, 800);

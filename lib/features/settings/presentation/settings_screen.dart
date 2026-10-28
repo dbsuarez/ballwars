@@ -401,20 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           children: [
                                             Text(decoration.label),
                                             Text(
-                                              switch (decoration) {
-                                                ArenaDecoration.defaultArena =>
-                                                  'Spike Wall',
-                                                ArenaDecoration.space =>
-                                                  'Gravity Well',
-                                                ArenaDecoration.desert =>
-                                                  'Quicksand',
-                                                ArenaDecoration.wilderness =>
-                                                  'Vine Snare',
-                                                ArenaDecoration.neonGrid =>
-                                                  'Laser Gate',
-                                                ArenaDecoration.chaotic =>
-                                                  'All arena traps',
-                                              },
+                                              decoration.hazardCaption,
                                               style: const TextStyle(
                                                 fontSize: 10,
                                               ),

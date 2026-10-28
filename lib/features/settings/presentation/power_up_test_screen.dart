@@ -1109,17 +1109,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  static String _arenaCaption(ArenaDecoration d) => switch (d) {
-    ArenaDecoration.defaultArena => 'Spike Wall',
-    ArenaDecoration.space => 'Gravity Well',
-    ArenaDecoration.desert => 'Quicksand',
-    ArenaDecoration.wilderness => 'Vine Snare',
-    ArenaDecoration.neonGrid => 'Laser Gate',
-    ArenaDecoration.chaotic => 'All arena traps',
-  };
-
   Future<void> _changeArena() async {
     final c = BallWarsColors.of(context);
+    final active = _arenaChoice ?? AppSettingsScope.of(context).arenaDecoration;
     final picked = await showModalBottomSheet<ArenaDecoration>(
       context: context,
       isScrollControlled: true,
@@ -1144,11 +1136,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ArenaPreview(decoration: d, size: 96),
+                        Stack(
+                          children: [
+                            ArenaPreview(decoration: d, size: 96),
+                            if (d == active)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Icon(
+                                  Icons.check_circle,
+                                  size: 22,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 4),
                         Text(d.label, style: TextStyle(color: c.text)),
                         Text(
-                          _arenaCaption(d),
+                          d.hazardCaption,
                           style: TextStyle(fontSize: 10, color: c.muted),
                         ),
                       ],
@@ -1173,9 +1179,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     final finished = match.state.status == MatchStatus.finished;
     const speeds = [0.5, 1.0, 2.0];
     final nextSpeed = speeds[(speeds.indexOf(_speed) + 1) % speeds.length];
-    final arenaLabel = (_arenaChoice ??
-            AppSettingsScope.of(context).arenaDecoration)
-        .label;
+    final arenaLabel =
+        (_arenaChoice ?? AppSettingsScope.of(context).arenaDecoration).label;
     final playbackLabel = finished
         ? 'Replay'
         : _paused

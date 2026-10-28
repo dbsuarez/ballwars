@@ -593,9 +593,36 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Width the bottom-right audio buttons take (three 44 px buttons, two gaps, a margin).
   static const double _audioButtonsWidth = 148;
 
-  /// Room the bottom-left row needs for Unstuck plus a labeled End battle; narrower, End battle is
-  /// an icon with its label in the tooltip.
-  static const double _endBattleLabelWidth = 300;
+  /// Room the bottom-left row needs for Unstuck plus a labeled End battle, measured with the
+  /// button text style and the text scale so the longest label ("Ending after next KO") always
+  /// fits; narrower, End battle is an icon with its label in the tooltip.
+  double _endBattleLabelWidth(BuildContext context) {
+    final theme = Theme.of(context);
+    final style =
+        theme.outlinedButtonTheme.style?.textStyle?.resolve(const {}) ??
+        theme.textTheme.labelLarge;
+    final scaler = MediaQuery.textScalerOf(context);
+    double width(String text) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final w = painter.width;
+      painter.dispose();
+      return w;
+    }
+
+    // Each labeled button: 10 px padding on both sides, an 18 px icon and an 8 px gap; 8 px
+    // between the buttons, and a little slack for rounding.
+    const chrome = 20 + 18 + 8;
+    return width('Unstuck') +
+        width('Ending after next KO') +
+        2 * chrome +
+        8 +
+        8;
+  }
 
   /// End battle: enabled until pressed. "Ending after next KO" once the request is in force (a replay
   /// with a recorded end step shows it only from that step, and can't be ended by hand).
@@ -959,7 +986,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                   const SizedBox(width: 8),
                                   _endBattleButton(
                                     compact:
-                                        box.maxWidth < _endBattleLabelWidth,
+                                        box.maxWidth <
+                                        _endBattleLabelWidth(context),
                                   ),
                                 ],
                               ],

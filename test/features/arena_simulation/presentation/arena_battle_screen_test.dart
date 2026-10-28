@@ -226,6 +226,62 @@ void main() {
     );
   }
 
+  // The bottom row is the screen width minus 158 px (audio buttons and margins) in portrait.
+  for (final row in const [300.0, 305.0, 310.0, 320.0, 560.0]) {
+    testWidgets('End battle never overflows a ${row.toInt()} px bottom row', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(row + 158, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        _app(
+          const MatchConfig(
+            contestants: _balls,
+            mode: MatchMode.arsenal,
+            endlessBattle: true,
+          ),
+          seed: 3,
+        ),
+      );
+      await tester.pump();
+      final end = find.byKey(const ValueKey('arena-end-battle'));
+      final unstuck = find.byKey(const ValueKey('arena-unstuck'));
+      expect(
+        tester
+            .getSize(
+              find
+                  .ancestor(of: unstuck, matching: find.byType(LayoutBuilder))
+                  .first,
+            )
+            .width,
+        row,
+      );
+      await tester.tap(end);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+      expect(_shows('Ending after next KO'), isTrue);
+      final endRect = tester.getRect(end);
+      expect(endRect.overlaps(tester.getRect(unstuck)), isFalse);
+      for (final key in [
+        'arena-bgm-control',
+        'arena-sfx-control',
+        'arena-ux-control',
+      ]) {
+        expect(
+          endRect.overlaps(tester.getRect(find.byKey(ValueKey(key)))),
+          isFalse,
+          reason: key,
+        );
+      }
+      // Wide enough for the whole label: it is shown as text, not only in the tooltip.
+      if (row >= 560) {
+        expect(find.text('Ending after next KO'), findsOneWidget);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   testWidgets(
     'a replay with a recorded end step shows the ending label only from that step',
     (tester) async {

@@ -78,31 +78,29 @@ Future<ui.Image> validateSpriteSheet(
       'Choose a PNG or WebP image, not a renamed JPEG.',
     );
   }
-  final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-  ui.ImageDescriptor? descriptor;
-  ui.Codec? codec;
+  // ImageDescriptor.width/height are unsupported by Flutter's web decoder.
+  // Read dimensions from the decoded image on every platform instead.
+  final codec = await ui.instantiateImageCodec(bytes);
   try {
-    descriptor = await ui.ImageDescriptor.encoded(buffer);
-    if (descriptor.width > (source ? 8192 : 4096) ||
-        descriptor.height > (source ? 8192 : 4096) ||
-        descriptor.width * descriptor.height > 16777216) {
+    if (codec.frameCount != 1) {
+      throw const FormatException(
+        'Use a static sheet, not an animated image file.',
+      );
+    }
+    final image = (await codec.getNextFrame()).image;
+    if (image.width > (source ? 8192 : 4096) ||
+        image.height > (source ? 8192 : 4096) ||
+        image.width * image.height > 16777216) {
+      image.dispose();
       throw FormatException(
         source
             ? 'Source must be at most 8192 pixels per side and 16 megapixels.'
             : 'Sheet must be at most 4096 x 4096 pixels.',
       );
     }
-    codec = await descriptor.instantiateCodec();
-    if (codec.frameCount != 1) {
-      throw const FormatException(
-        'Use a static sheet, not an animated image file.',
-      );
-    }
-    return (await codec.getNextFrame()).image;
+    return image;
   } finally {
-    codec?.dispose();
-    descriptor?.dispose();
-    buffer.dispose();
+    codec.dispose();
   }
 }
 

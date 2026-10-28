@@ -189,6 +189,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         replaySeed ?? (_seedBase == null ? null : _seedBase! + _round - 1);
     _controller = MatchSimulationController(
       widget.config.contestants,
+      simulationRevision:widget.config.simulationRevision,
       arenaRadius: _arenaRadius,
       seed: seed,
       arenaBackground: BallWarsColors.of(context).background,
@@ -500,6 +501,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   }
 
   Uri _replayUri() => ReplayLink(
+    simulationRevision:widget.config.simulationRevision,
     effectRenderMode: widget.config.effectRenderMode,
     seed: _controller.seed,
     nudgeSteps: _controller.nudgeSteps,
@@ -1158,6 +1160,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           : () {
                               _audio.click();
                               ExportVideoDialog.show(
+                                simulationRevision:widget.config.simulationRevision,
                                 effectRenderMode:
                                     widget.config.effectRenderMode ??
                                     AppSettingsScope.of(

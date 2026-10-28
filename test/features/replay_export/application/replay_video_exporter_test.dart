@@ -95,6 +95,50 @@ int _matchFrames(int seed, int fps) {
 }
 
 void main() {
+  for (final consent in <bool?>[null, false, true]) {
+    test(
+      'long video requires confirmation before encoding ($consent)',
+      () async {
+        final encoder = _FakeEncoder();
+        final exporter = ReplayVideoExporter(
+          encoder: encoder,
+          rasterize: _fakeRasterize,
+          matchFrameLimit: 3,
+        );
+        var asked = false;
+        final result = exporter.export(
+          contestants: _balls,
+          seed: 1,
+          arenaRadius: 260,
+          confirmDurationLimit: consent == null
+              ? null
+              : () async {
+                  expect(encoder.width, isNull);
+                  expect(encoder.frames, 0);
+                  asked = true;
+                  return consent;
+                },
+        );
+        if (consent == true) {
+          expect(await result, '/tmp/replay.mp4');
+          expect(encoder.frames, 3);
+          expect(encoder.finished, isTrue);
+        } else {
+          await expectLater(
+            result,
+            throwsA(
+              consent == null
+                  ? isA<ExportDurationLimit>()
+                  : isA<ExportCancelled>(),
+            ),
+          );
+          expect(encoder.width, isNull);
+          expect(encoder.frames, 0);
+        }
+        expect(asked, consent != null);
+      },
+    );
+  }
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('mixes selected replay audio into an audio-capable encoder', () async {
@@ -144,14 +188,13 @@ void main() {
 
   test('cancelling stops the export and discards the video', () async {
     final encoder = _FakeEncoder();
-    var calls = 0;
 
     final export =
         ReplayVideoExporter(encoder: encoder, rasterize: _fakeRasterize).export(
           contestants: _balls,
           seed: 4,
           arenaRadius: 260,
-          isCancelled: () => ++calls > 10,
+          isCancelled: () => encoder.frames >= 10,
         );
 
     await expectLater(export, throwsA(isA<ExportCancelled>()));

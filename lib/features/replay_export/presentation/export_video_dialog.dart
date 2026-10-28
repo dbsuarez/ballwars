@@ -19,6 +19,7 @@ import '../../settings/domain/app_settings.dart';
 /// to share it. Shows progress and can be cancelled.
 class ExportVideoDialog extends StatefulWidget {
   final List<CustomBall> contestants;
+  final int simulationRevision;
   final int seed;
   final double arenaRadius;
   final double speedMultiplier;
@@ -53,6 +54,7 @@ class ExportVideoDialog extends StatefulWidget {
   const ExportVideoDialog({
     super.key,
     required this.contestants,
+    this.simulationRevision = 2,
     required this.seed,
     required this.arenaRadius,
     required this.speedMultiplier,
@@ -84,6 +86,7 @@ class ExportVideoDialog extends StatefulWidget {
   static Future<void> show(
     BuildContext context, {
     required List<CustomBall> contestants,
+    int simulationRevision = 2,
     required int seed,
     required double arenaRadius,
     required double speedMultiplier,
@@ -125,6 +128,7 @@ class ExportVideoDialog extends StatefulWidget {
       barrierDismissible: false,
       builder: (_) => ExportVideoDialog(
         contestants: contestants,
+        simulationRevision: simulationRevision,
         seed: seed,
         arenaRadius: arenaRadius,
         speedMultiplier: speedMultiplier,
@@ -211,6 +215,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
     try {
       final path = await ReplayVideoExporter(encoder: widget.encoder).export(
         contestants: widget.contestants,
+        simulationRevision: widget.simulationRevision,
         seed: widget.seed,
         arenaRadius: widget.arenaRadius,
         speedMultiplier: widget.speedMultiplier,
@@ -241,6 +246,29 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         sfxLevel: GameAudio.instance.effectsLevel,
         style: widget.style,
         isCancelled: () => _cancelled,
+        confirmDurationLimit: () async {
+          if (!mounted || _cancelled) return false;
+          return await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('10-minute video limit'),
+                  content: const Text(
+                    'This replay is longer than 10 minutes at the selected speed. Only the first 10 minutes will be rendered. The final knockout, finisher and winner screen will not be included. Continue with a shortened video?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Back'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Render first 10 minutes'),
+                    ),
+                  ],
+                ),
+              ) ??
+              false;
+        },
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
         },
@@ -253,7 +281,12 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         });
       }
     } on ExportCancelled {
-      // Dialog is already closing.
+      if (mounted && !_cancelled) {
+        _elapsedTimer?.cancel();
+        _elapsed.stop();
+        _elapsed.reset();
+        setState(() => _phase = _Phase.options);
+      }
     } catch (e) {
       if (mounted) {
         setState(() {

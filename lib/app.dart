@@ -462,6 +462,7 @@ class _HomeScreenState extends State<_HomeScreen> {
       MaterialPageRoute(
         builder: (_) => ArenaBattleScreen(
           config: MatchConfig(
+            simulationRevision: link.simulationRevision,
             contestants: link.contestants,
             speedMultiplier: link.speedMultiplier,
             automaticSpeedUp: link.automaticSpeedUp,

@@ -134,6 +134,10 @@ class PowerUpPainter {
     0, 0, 0.38, 0, 18,
     0, 0, 0, 1, 0,
   ]);
+  static final Paint _cloneTrail = Paint(),
+      _cloneLayer = Paint()..colorFilter = _shadowFilter,
+      _cloneOutline = Paint()..style = PaintingStyle.stroke,
+      _cloneSmoke = Paint();
 
   /// Shadow Clone: darkened, translucent copies of the owner's body ([paintBody] draws a ball the
   /// way the arena does, picture or face), with a smoke puff as they appear and vanish. Call after
@@ -151,6 +155,17 @@ class PowerUpPainter {
       final appear = attack.appearProgress;
       final vanish = attack.vanishProgress;
       final alpha = (appear * (1 - vanish)).clamp(0.0, 1.0);
+      _cloneTrail.color = const Color(
+        0xFF1A1630,
+      ).withValues(alpha: .28 * alpha);
+      _cloneLayer.color = Color.fromRGBO(0, 0, 0, .78 * alpha);
+      _cloneOutline
+        ..strokeWidth = math.max(1.5, r * .08)
+        ..color = const Color(0xFF8E7CFF).withValues(alpha: .55 * alpha);
+      final bodyBounds = Rect.fromCircle(
+        center: owner.position,
+        radius: r * 1.6,
+      );
       for (var i = 0; i < attack.clones; i++) {
         final at = attack.clonePosition(i);
         if (alpha > 0.01) {
@@ -160,12 +175,9 @@ class PowerUpPainter {
             canvas.drawLine(
               Offset.lerp(home, at, 0.45)!,
               at,
-              Paint()
+              _cloneTrail
                 ..strokeWidth = r * 1.1
-                ..strokeCap = StrokeCap.round
-                ..color = const Color(
-                  0xFF1A1630,
-                ).withValues(alpha: 0.28 * alpha),
+                ..strokeCap = StrokeCap.round,
             );
           }
           canvas.save();
@@ -173,23 +185,11 @@ class PowerUpPainter {
             at.dx - owner.position.dx,
             at.dy - owner.position.dy,
           );
-          canvas.saveLayer(
-            Rect.fromCircle(center: owner.position, radius: r * 1.6),
-            Paint()
-              ..color = Color.fromRGBO(0, 0, 0, 0.78 * alpha)
-              ..colorFilter = _shadowFilter,
-          );
+          canvas.saveLayer(bodyBounds, _cloneLayer);
           paintBody(canvas, owner);
           canvas.restore();
           canvas.restore();
-          canvas.drawCircle(
-            at,
-            r,
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = math.max(1.5, r * 0.08)
-              ..color = const Color(0xFF8E7CFF).withValues(alpha: 0.55 * alpha),
-          );
+          canvas.drawCircle(at, r, _cloneOutline);
         }
         // Smoke puffs: on appearing, and when the clones go.
         final puff = appear < 1 ? appear : (attack.isVanishing ? vanish : -1.0);
@@ -204,10 +204,10 @@ class PowerUpPainter {
               canvas.drawCircle(
                 at + Offset.fromDirection(angle, r * (0.35 + 0.9 * puff)),
                 r * (0.42 + 0.38 * puff),
-                Paint()
+                _cloneSmoke
                   ..color = const Color(
                     0xFFD9D6E4,
-                  ).withValues(alpha: 0.62 * (1 - puff)),
+                  ).withValues(alpha: .62 * (1 - puff)),
               );
             }
           } finally {
@@ -3515,7 +3515,6 @@ class PowerUpPainter {
     final firedProgress = firedHoldLeft <= 0 ? 0.0 : 1 - firedHoldLeft / 30.0;
     final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
     final angle = baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
-    final dir = Offset(math.cos(angle), math.sin(angle));
     final center =
         heldCenter(
           ball,
@@ -3535,7 +3534,7 @@ class PowerUpPainter {
       ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
       heldSpriteAngle(angle, gripRotation),
       iconAngle: _iconAngle[art] ?? 0,
-      flip: dir.dx < 0,
+      flip: math.cos(baseAngle) < 0,
       opacity: 1 - drop * drop,
       anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
     );

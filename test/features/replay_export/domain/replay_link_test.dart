@@ -34,6 +34,7 @@ List<String> _spawnedKinds(ReplayLink link) {
     lookAhead: false,
     powerUpKinds: link.powerUps,
     tuning: link.tuning,
+    simulationRevision: link.simulationRevision,
   );
   final seen = <FieldPowerUp>{};
   final kinds = <String>[];
@@ -60,6 +61,35 @@ String _legacyTuning() {
 }
 
 void main() {
+  test(
+    'simulation revision preserves legacy links and rejects unknown rules',
+    () {
+      for (final revision in [1, 2]) {
+        final encoded = ReplayLink(
+          simulationRevision: revision,
+          seed: 7,
+          speedMultiplier: 1,
+          contestants: _presets.take(2).toList(),
+        ).toUri(presetIds: _presetIds, appUrl: 'https://example.com/');
+        final decoded = ReplayLink.fromUri(encoded, presets: _presets);
+        expect(decoded, isNotNull);
+        expect(decoded!.simulationRevision, revision);
+        expect(
+          decoded.toUri(presetIds: _presetIds).toString().contains('v.2'),
+          revision == 2,
+        );
+        if (revision == 2) {
+          expect(
+            ReplayLink.fromUri(
+              Uri.parse(encoded.toString().replaceFirst('v.2', 'v.3')),
+              presets: _presets,
+            ),
+            isNull,
+          );
+        }
+      }
+    },
+  );
   test('random hairstyle choice is preserved in replay links', () {
     final uri = ReplayLink(
       seed: 19,
@@ -217,7 +247,10 @@ void main() {
       contestants: [netflix, _presets[0]],
     ).toUri(presetIds: _presetIds, appUrl: kWebAppUrl);
 
-    expect(uri.toString(), contains('balls=k.streaming/netflix,p.preset-usa'));
+    expect(
+      uri.toString(),
+      contains('balls=v.2,k.streaming/netflix,p.preset-usa'),
+    );
     expect(ReplayLink.usesPacks(uri), isTrue);
     // Without the packs loaded the link can't be resolved...
     expect(ReplayLink.fromUri(uri, presets: _presets), isNull);
@@ -341,7 +374,7 @@ void main() {
       contestants: [_presets[0], _presets[1]],
       mode: MatchMode.allOut,
     ).toUri(presetIds: ids, appUrl: app);
-    expect(uri.queryParameters['balls'], startsWith('m.allout,'));
+    expect(uri.queryParameters['balls'], startsWith('v.2,m.allout,'));
     final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
     expect(parsed.mode, MatchMode.allOut);
     expect(parsed.contestants, hasLength(2));
@@ -482,8 +515,9 @@ void main() {
         powerUps: {PowerUpKind.knife, PowerUpKind.mine},
       ).toUri(presetIds: ids, appUrl: app);
       final tokens = some.queryParameters['balls']!.split(',');
-      expect(tokens[0], 'm.arsenal');
-      expect(tokens[1], startsWith('w.'));
+      expect(tokens[0], 'v.2');
+      expect(tokens[1], 'm.arsenal');
+      expect(tokens[2], startsWith('w.'));
       expect(ReplayLink.fromUri(some, presets: _presets)!.powerUps, {
         PowerUpKind.knife,
         PowerUpKind.mine,
@@ -969,7 +1003,7 @@ void main() {
         mode: MatchMode.arsenal,
         powerUps: kinds,
       ).toUri(presetIds: _presetIds);
-      expect(uri.queryParameters['balls']!.split(',')[1], 'w.$expected');
+      expect(uri.queryParameters['balls']!.split(',')[2], 'w.$expected');
       expect(ReplayLink.fromUri(uri, presets: _presets)!.powerUps, kinds);
     });
 

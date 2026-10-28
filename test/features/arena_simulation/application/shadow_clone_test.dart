@@ -35,6 +35,7 @@ MatchSimulationController _match({
   int seed = 88,
   MatchMode mode = MatchMode.arsenal,
   PowerUpConfig tuning = PowerUpConfig.defaults,
+  int simulationRevision = 2,
 }) {
   final match = MatchSimulationController(
     _balls.take(count).toList(),
@@ -45,6 +46,7 @@ MatchSimulationController _match({
     lookAhead: false,
     dualWield: true,
     tuning: tuning,
+    simulationRevision:simulationRevision,
   );
   for (final ball in match.state.balls) {
     ball.velocity = Offset.zero;
@@ -234,8 +236,8 @@ void main() {
     },
   );
 
-  test("respawn drops the owner's clones and frees a respawned target", () {
-    final match = _match();
+  test("legacy respawn drops the owner's clones and frees a respawned target", () {
+    final match = _match(simulationRevision:1);
     final (owner, near, far) = _place(match);
     _give(match, owner, PowerUpKind.shadowClone);
     final system = match.powerUps!;

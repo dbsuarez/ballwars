@@ -25,6 +25,7 @@ const String kWebAppUrl = 'https://dbsuarez.github.io/ballwars/';
 /// - `c.<base64 json>`: a custom ball. Uploaded images can't fit in a link,
 ///   so these replay with their colors and initial.
 class ReplayLink {
+  final int simulationRevision;
   final int seed;
   final double speedMultiplier;
   final bool automaticSpeedUp;
@@ -85,6 +86,7 @@ class ReplayLink {
   final BallLook? look;
 
   const ReplayLink({
+    this.simulationRevision = 2,
     required this.seed,
     required this.speedMultiplier,
     this.automaticSpeedUp = true,
@@ -151,6 +153,7 @@ class ReplayLink {
     });
     final chosen = powerUps;
     final tokens = [
+      if (simulationRevision >= 2) 'v.2',
       if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
       if (mode != MatchMode.threads &&
           chosen != null &&
@@ -237,6 +240,12 @@ class ReplayLink {
         .where((t) => t.isNotEmpty)
         .toList();
     var mode = MatchMode.threads;
+    var simulationRevision = 1;
+    if (tokens.isNotEmpty && tokens.first.startsWith('v.')) {
+      final marker = tokens.removeAt(0);
+      if (marker != 'v.2') return null;
+      simulationRevision = 2;
+    }
     if (tokens.isNotEmpty && tokens.first.startsWith(_modePrefix)) {
       final parsedMode = MatchMode.byId(
         tokens.removeAt(0).substring(_modePrefix.length),
@@ -404,6 +413,7 @@ class ReplayLink {
       contestants.add(ball);
     }
     return ReplayLink(
+      simulationRevision: simulationRevision,
       seed: seed,
       speedMultiplier: speed,
       automaticSpeedUp: automaticSpeedUp,

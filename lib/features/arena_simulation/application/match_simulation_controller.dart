@@ -175,6 +175,7 @@ class MatchSimulationController {
   /// The power-up numbers (the admin's settings, or a replay link's). Part of the match, like the seed.
   final PowerUpConfig tuning;
   final SkillLibrary skillLibrary;
+  final int simulationRevision;
   final bool dualWield;
   final bool endlessBattle;
   final bool mayhem;
@@ -300,6 +301,7 @@ class MatchSimulationController {
     this.customSkillIds,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
+    this.simulationRevision = 2,
     this.dualWield = false,
     this.endlessBattle = false,
     this.mayhem = false,
@@ -320,6 +322,7 @@ class MatchSimulationController {
     // Same seed, setup and nudges: the steps are identical (slow motion only changes playback), so its
     // timeline is this match's. Kept as a function so a nudge mid-match can plan again.
     _makeAhead = (nudges) => MatchSimulationController(
+      simulationRevision: simulationRevision,
       contestants,
       arenaRadius: arenaRadius,
       seed: this.seed,

@@ -34,6 +34,13 @@ class ExportCancelled implements Exception {
   const ExportCancelled();
 }
 
+class ExportDurationLimit implements Exception {
+  const ExportDurationLimit();
+  @override
+  String toString() =>
+      'This replay exceeds the 10-minute video limit. Confirm a shortened export before rendering.';
+}
+
 /// Re-runs a match from its seed off-screen and encodes it as a 9:16 video.
 /// Matches are deterministic, so the video shows exactly the match that was
 /// played, whatever the frame rate it was watched at.
@@ -53,15 +60,21 @@ class ReplayVideoExporter {
   final VideoEncoder encoder;
   final FrameRasterizer rasterize;
 
+  /// Allows short pipeline tests without encoding ten minutes of frames.
+  @visibleForTesting
+  final int matchFrameLimit;
+
   ReplayVideoExporter({
     required this.encoder,
     this.rasterize = rasterizePicture,
-  });
+    this.matchFrameLimit = maxMatchFrames,
+  }) : assert(matchFrameLimit > 0 && matchFrameLimit <= maxMatchFrames);
 
   /// Encodes the match and returns the video's local path. [onProgress]
   /// receives 0..1; throws [ExportCancelled] once [isCancelled] returns true.
   Future<String> export({
     required List<CustomBall> contestants,
+    int simulationRevision = 2,
     required int seed,
     required double arenaRadius,
     double speedMultiplier = 1.0,
@@ -93,9 +106,11 @@ class ReplayVideoExporter {
     double sfxLevel = 0.9,
     ValueChanged<double>? onProgress,
     bool Function()? isCancelled,
+    Future<bool> Function()? confirmDurationLimit,
   }) async {
     MatchSimulationController newMatch() => MatchSimulationController(
       contestants,
+      simulationRevision: simulationRevision,
       arenaRadius: arenaRadius,
       seed: seed,
       arenaBackground: style.background,
@@ -128,26 +143,35 @@ class ReplayVideoExporter {
     final audioRecorder = _ReplaySoundRecorder(audioEvents);
     var matchFrames = 0;
     while (dryRun.state.status != MatchStatus.finished &&
-        matchFrames < maxMatchFrames) {
+        matchFrames < matchFrameLimit) {
+      if (isCancelled?.call() ?? false) throw const ExportCancelled();
       dryRun.tick(frameDelta);
       matchFrames++;
       audioRecorder.capture(dryRun, matchFrames / fps);
     }
-    final holdFrames = (finalHoldSeconds * fps).round();
-    final cardFrames = (winnerCardSeconds * fps).round();
-    final loserFrames = (loserSeconds * fps).round();
-    final finisherFrames = finishersEnabled && dryRun.winningMove != null
+    final truncated = dryRun.state.status != MatchStatus.finished;
+    if (truncated) {
+      if (confirmDurationLimit == null) throw const ExportDurationLimit();
+      if (!await confirmDurationLimit()) throw const ExportCancelled();
+    }
+    final holdFrames = truncated ? 0 : (finalHoldSeconds * fps).round();
+    final cardFrames = truncated ? 0 : (winnerCardSeconds * fps).round();
+    final loserFrames = truncated ? 0 : (loserSeconds * fps).round();
+    final finisherFrames =
+        !truncated && finishersEnabled && dryRun.winningMove != null
         ? (finisherSeconds * fps).round()
         : 0;
     final totalFrames =
         matchFrames +
-        1 +
+        (truncated ? 0 : 1) +
         holdFrames +
         finisherFrames +
         loserFrames +
         cardFrames;
 
-    if (mayhem) {
+    if (truncated) {
+      // A shortened clip has no fabricated knockout, win sound or result card.
+    } else if (mayhem) {
       audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'whistle', 0.8));
     } else {
       audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'out', 0.7));
@@ -210,7 +234,7 @@ class ReplayVideoExporter {
     }
 
     try {
-      for (var frame = 0; frame <= matchFrames; frame++) {
+      for (var frame = 0; frame < matchFrames + (truncated ? 0 : 1); frame++) {
         final state = match.state;
         await emit(
           (canvas, size) => ReplayFramePainter.paintMatch(

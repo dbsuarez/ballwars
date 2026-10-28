@@ -41,6 +41,34 @@ CustomAtlas custom(String id) => CustomAtlas(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(SpriteRegistry.resetForTest);
+  test(
+    'sheet dimensions are read from decoded pixels on web and native',
+    () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        final picture = ui.PictureRecorder();
+        ui.Canvas(picture);
+        final drawing = picture.endRecording();
+        final original = await drawing.toImage(4097, 1);
+        final bytes = (await original.toByteData(
+          format: ui.ImageByteFormat.png,
+        ))!.buffer.asUint8List();
+        original.dispose();
+        drawing.dispose();
+        final source = await validateSpriteSheet(
+          bytes,
+          'image/png',
+          source: true,
+        );
+        expect(source.width, 4097);
+        expect(source.height, 1);
+        source.dispose();
+        await expectLater(
+          validateSpriteSheet(bytes, 'image/png'),
+          throwsFormatException,
+        );
+      });
+    },
+  );
   test('custom atlas round trip retains geometry', () {
     final a = custom('first');
     expect(CustomAtlas.fromJson(a.toJson()).toJson(), a.toJson());

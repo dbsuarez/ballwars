@@ -119,6 +119,8 @@ class PowerUpSystem {
   final List<OmnislashAttack> omnislashAttacks = [];
   final List<RagingDemonAttack> ragingDemonAttacks = [];
   final List<ShadowCloneAttack> shadowCloneAttacks = [];
+  final Map<Object, int> _cinematicFreezes = {};
+  final Map<SimulationBall, int> _otherStuns = {};
   final List<ArenaThemeHazard> arenaThemeHazards = [];
 
   /// Recent knife slashes, for drawing (removed after [PowerUpTuning.slashShowSteps]).
@@ -273,6 +275,18 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    _otherStuns.remove(ball);
+    if (match.simulationRevision >= 2) {
+      ragingDemonAttacks.removeWhere(
+        (a) => identical(a.owner, ball) || identical(a.target, ball),
+      );
+      omnislashAttacks.removeWhere(
+        (a) => identical(a.owner, ball) || identical(a.target, ball),
+      );
+      shadowCloneAttacks.removeWhere(
+        (a) => identical(a.owner, ball) || identical(a.target, ball),
+      );
+    }
     ball.activeEffectSkillIds.clear();
     ball
       ..held = null
@@ -843,7 +857,15 @@ class PowerUpSystem {
     return result;
   }
 
-  void _freezeTime(int steps) {
+  void _freezeTime(int steps, {Object? source}) {
+    if (match.simulationRevision >= 2 && source != null) {
+      if (_cinematicFreezes.isEmpty) {
+        for (final ball in match.state.balls) {
+          _otherStuns[ball] = ball.stunnedLeft;
+        }
+      }
+      _cinematicFreezes[source] = steps;
+    }
     for (final ball in match.state.balls) {
       if (!_alive(ball)) continue;
       if (ball.stunnedLeft == 0) _stunnedVelocity[ball] = ball.velocity;
@@ -883,8 +905,9 @@ class PowerUpSystem {
   void _startOmnislash(SimulationBall owner) {
     final target = _farthestTarget(owner);
     if (target == null) return;
-    _freezeTime(52);
-    omnislashAttacks.add(OmnislashAttack(owner: owner, target: target));
+    final attack = OmnislashAttack(owner: owner, target: target);
+    _freezeTime(52, source: attack);
+    omnislashAttacks.add(attack);
     _skillYell(owner, PowerUpKind.busterSword, 'OMNISLASH!');
   }
 
@@ -892,10 +915,13 @@ class PowerUpSystem {
     final target = _nearestTarget(owner);
     if (target == null) return;
     final hits = _t.ragingDemonHits;
-    _freezeTime(hits * 2 + 18);
-    ragingDemonAttacks.add(
-      RagingDemonAttack(owner: owner, target: target, totalHits: hits),
+    final attack = RagingDemonAttack(
+      owner: owner,
+      target: target,
+      totalHits: hits,
     );
+    _freezeTime(hits * 2 + 18, source: attack);
+    ragingDemonAttacks.add(attack);
     _skillYell(owner, PowerUpKind.ragingDemon, 'DIE ONE THOUSAND DEATHS!');
   }
 
@@ -905,10 +931,13 @@ class PowerUpSystem {
     final target = _nearestTarget(owner);
     if (target == null) return;
     final clones = _t.shadowCloneCount;
-    _freezeTime(ShadowCloneAttack.durationFor(clones));
-    shadowCloneAttacks.add(
-      ShadowCloneAttack(owner: owner, target: target, clones: clones),
+    final attack = ShadowCloneAttack(
+      owner: owner,
+      target: target,
+      clones: clones,
     );
+    _freezeTime(ShadowCloneAttack.durationFor(clones), source: attack);
+    shadowCloneAttacks.add(attack);
     _skillYell(owner, PowerUpKind.shadowClone, 'KAGE BUNSHIN NO JUTSU!');
   }
 
@@ -956,6 +985,13 @@ class PowerUpSystem {
     sniperFlashes.removeWhere((flash) => flash.age >= 24);
 
     for (final attack in omnislashAttacks.toList()) {
+      if (match.simulationRevision >= 2 &&
+          (!_alive(attack.owner) ||
+              !_alive(attack.target) ||
+              !omnislashAttacks.contains(attack))) {
+        omnislashAttacks.remove(attack);
+        continue;
+      }
       attack.age++;
       if (attack.age % 5 == 0 && attack.hitsShown < 8) {
         attack.hitsShown++;
@@ -986,6 +1022,13 @@ class PowerUpSystem {
     }
 
     for (final attack in ragingDemonAttacks.toList()) {
+      if (match.simulationRevision >= 2 &&
+          (!_alive(attack.owner) ||
+              !_alive(attack.target) ||
+              !ragingDemonAttacks.contains(attack))) {
+        ragingDemonAttacks.remove(attack);
+        continue;
+      }
       attack.age++;
       if (attack.age % 2 == 0 && attack.hitsShown < attack.totalHits) {
         attack.hitsShown++;
@@ -1406,8 +1449,16 @@ class PowerUpSystem {
     }
     final heldA = [...a.equippedWeapons];
     final heldB = [...b.equippedWeapons];
-    final idsA = [a.heldSkillId, a.heldSecondarySkillId];
-    final idsB = [b.heldSkillId, b.heldSecondarySkillId];
+    final idsA = [
+      if (match.simulationRevision < 2 || a.held != null) a.heldSkillId,
+      if (match.simulationRevision < 2 || a.heldSecondary != null)
+        a.heldSecondarySkillId,
+    ];
+    final idsB = [
+      if (match.simulationRevision < 2 || b.held != null) b.heldSkillId,
+      if (match.simulationRevision < 2 || b.heldSecondary != null)
+        b.heldSecondarySkillId,
+    ];
     for (var slot = 0; slot < heldA.length; slot++) {
       _melee(a, heldA[slot], b, heldB, skillId: idsA[slot]);
     }
@@ -1941,6 +1992,29 @@ class PowerUpSystem {
   }
 
   void _updateStunned() {
+    if (match.simulationRevision >= 2 &&
+        (_cinematicFreezes.isNotEmpty || _otherStuns.isNotEmpty)) {
+      _cinematicFreezes.removeWhere(
+        (source, _) =>
+            !omnislashAttacks.contains(source) &&
+            !ragingDemonAttacks.contains(source) &&
+            !shadowCloneAttacks.contains(source),
+      );
+      _cinematicFreezes.updateAll((_, steps) => steps - 1);
+      _cinematicFreezes.removeWhere((_, steps) => steps <= 0);
+      _otherStuns.updateAll((_, steps) => math.max(0, steps - 1));
+      final frozen = _cinematicFreezes.values.fold<int>(0, math.max);
+      for (final ball in match.state.balls) {
+        final remaining = math.max(frozen, _otherStuns[ball] ?? 0);
+        if (ball.stunnedLeft > 0 && remaining == 0) {
+          ball.velocity = _stunnedVelocity.remove(ball) ?? ball.velocity;
+        }
+        ball.stunnedLeft = remaining;
+        if (remaining > 0) ball.velocity = Offset.zero;
+      }
+      if (_cinematicFreezes.isEmpty) _otherStuns.clear();
+      return;
+    }
     for (final ball in match.state.balls) {
       if (ball.stunnedLeft <= 0) continue;
       ball.stunnedLeft--;
@@ -2357,6 +2431,9 @@ class PowerUpSystem {
           _stunnedVelocity[target] = target.velocity;
         }
         target.stunnedLeft = ((skill.durationSeconds ?? 2) * 60).round();
+        if (match.simulationRevision >= 2 && _cinematicFreezes.isNotEmpty) {
+          _otherStuns[target] = target.stunnedLeft;
+        }
         target.velocity = Offset.zero;
       case SkillEffectType.speed:
         target

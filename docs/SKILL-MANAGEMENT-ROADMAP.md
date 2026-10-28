@@ -291,6 +291,14 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Current position
 
+2026-10-28 post-sprite follow-up:
+- [x] Fix web sprite imports reading unsupported `ImageDescriptor.width/height`; validate dimensions from decoded pixels and retain size/format limits.
+- [x] Preserve legacy replay rules while identifying new simulation rules with a `v.2` token.
+- [x] Fix secondary-hand custom collision skills, cinematic respawn cleanup and early-ending freezes. Preserve overlapping freezes and independent stuns.
+- [x] Confirm shortened video exports before encoding matches over the 10-minute limit; omit misleading result screens from truncated clips.
+- [x] Align dropped-weapon mirroring with its grip and reduce Shadow Clone painting allocations.
+- [ ] Browser/Android and production acceptance remain manual; deployment workflows are not monitored automatically.
+
 2026-10-27 verification fixes:
 - [x] Upgrade saved legacy custom skills to executable shared-model definitions; verify impact explosion, sound and knockback on a duplicated Boomerang.
 - [x] Separate Mayhem settings and pickups from Arsenal, including default restoration when switching profiles.

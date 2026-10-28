@@ -213,7 +213,7 @@ void main() {
             appUrl: kWebAppUrl,
           );
 
-      expect(uri.toString(), contains('balls=g.0b7c,p.preset-usa'));
+      expect(uri.toString(), contains('balls=v.2,g.0b7c,p.preset-usa'));
       expect(ReplayLink.groupBallIds(uri), ['group:0b7c']);
       expect(
         ReplayLink.fromUri(uri, presets: LocalBallRepository.presets),

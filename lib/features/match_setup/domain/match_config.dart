@@ -75,6 +75,8 @@ enum WallSparkSize {
 }
 
 class MatchConfig {
+  /// Revision 1 preserves outcomes of links made before the cinematic fixes.
+  final int simulationRevision;
   final List<CustomBall> contestants;
   final double speedMultiplier;
   final bool automaticSpeedUp;
@@ -140,6 +142,7 @@ class MatchConfig {
   final String? question;
 
   const MatchConfig({
+    this.simulationRevision = 2,
     required this.contestants,
     this.speedMultiplier = 1.0,
     this.automaticSpeedUp = true,

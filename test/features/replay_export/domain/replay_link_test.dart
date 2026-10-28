@@ -24,6 +24,41 @@ const _custom = CustomBall(
   mass: 1.5,
 );
 
+/// Pickups that spawned in the first minute of a seeded Arsenal match, in order.
+List<String> _spawnedKinds(ReplayLink link) {
+  final c = MatchSimulationController(
+    link.contestants,
+    arenaRadius: 260,
+    seed: link.seed,
+    mode: link.mode,
+    lookAhead: false,
+    powerUpKinds: link.powerUps,
+    tuning: link.tuning,
+  );
+  final seen = <FieldPowerUp>{};
+  final kinds = <String>[];
+  for (var i = 0; i < 3600; i++) {
+    c.tick(1 / 60);
+    for (final f in c.powerUps!.field) {
+      if (seen.add(f)) kinds.add(f.kind.name);
+    }
+  }
+  return kinds;
+}
+
+/// A `t=` as the app wrote it before Shadow Clone: a 48-kind tier list.
+String _legacyTuning() {
+  final current = PowerUpConfig.defaults.encode()!;
+  final json =
+      jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(current))))
+          as Map<String, Object?>;
+  json['_tiers'] = (json['_tiers'] as String).substring(
+    0,
+    ReplayLink.legacyKindCount,
+  );
+  return base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+}
+
 void main() {
   test('random hairstyle choice is preserved in replay links', () {
     final uri = ReplayLink(
@@ -646,53 +681,90 @@ void main() {
     );
   });
 
-  test('the ball look travels in the link, so a replay shows the faces it was played with', () {
-    final presetIds = {for (final b in _presets) b.id};
-    final faces = ReplayLink(
-      seed: 5,
-      speedMultiplier: 1,
-      contestants: [_presets[0], _presets[1]],
-      look: BallLook.faces,
-    ).toUri(presetIds: presetIds);
-    expect(faces.queryParameters['look'], 'faces');
-    expect(ReplayLink.fromUri(faces, presets: _presets)!.look, BallLook.faces);
+  test(
+    'the ball look travels in the link, so a replay shows the faces it was played with',
+    () {
+      final presetIds = {for (final b in _presets) b.id};
+      final faces = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        look: BallLook.faces,
+      ).toUri(presetIds: presetIds);
+      expect(faces.queryParameters['look'], 'faces');
+      expect(
+        ReplayLink.fromUri(faces, presets: _presets)!.look,
+        BallLook.faces,
+      );
 
-    // Older links have no look (the viewer's own setting applies); a garbled one is ignored, not fatal.
-    final old = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]]).toUri(presetIds: presetIds);
-    expect(old.queryParameters.containsKey('look'), isFalse);
-    expect(ReplayLink.fromUri(old, presets: _presets)!.look, isNull);
-    final garbled = old.replace(queryParameters: {...old.queryParameters, 'look': 'sparkles'});
-    final parsed = ReplayLink.fromUri(garbled, presets: _presets);
-    expect(parsed, isNotNull);
-    expect(parsed!.look, isNull);
-  });
+      // Older links have no look (the viewer's own setting applies); a garbled one is ignored, not fatal.
+      final old = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+      ).toUri(presetIds: presetIds);
+      expect(old.queryParameters.containsKey('look'), isFalse);
+      expect(ReplayLink.fromUri(old, presets: _presets)!.look, isNull);
+      final garbled = old.replace(
+        queryParameters: {...old.queryParameters, 'look': 'sparkles'},
+      );
+      final parsed = ReplayLink.fromUri(garbled, presets: _presets);
+      expect(parsed, isNotNull);
+      expect(parsed!.look, isNull);
+    },
+  );
 
-  test('the chosen custom skills travel in the link; bad ids and threads links are rejected', () {
-    final presetIds = {for (final b in _presets) b.id};
-    final link = ReplayLink(
-      seed: 5,
-      speedMultiplier: 1,
-      contestants: [_presets[0], _presets[1]],
-      mode: MatchMode.arsenal,
-      customSkills: const {'custom.knife-volley', 'custom.boom-merang'},
-    ).toUri(presetIds: presetIds);
-    expect(link.queryParameters['cs'], 'custom.boom-merang,custom.knife-volley');
-    expect(ReplayLink.fromUri(link, presets: _presets)!.customSkills, {'custom.knife-volley', 'custom.boom-merang'});
+  test(
+    'the chosen custom skills travel in the link; bad ids and threads links are rejected',
+    () {
+      final presetIds = {for (final b in _presets) b.id};
+      final link = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        mode: MatchMode.arsenal,
+        customSkills: const {'custom.knife-volley', 'custom.boom-merang'},
+      ).toUri(presetIds: presetIds);
+      expect(
+        link.queryParameters['cs'],
+        'custom.boom-merang,custom.knife-volley',
+      );
+      expect(ReplayLink.fromUri(link, presets: _presets)!.customSkills, {
+        'custom.knife-volley',
+        'custom.boom-merang',
+      });
 
-    final none = link.replace(queryParameters: {...link.queryParameters, 'cs': ''});
-    expect(ReplayLink.fromUri(none, presets: _presets)!.customSkills, isEmpty);
-    final all = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]], mode: MatchMode.arsenal)
-        .toUri(presetIds: presetIds);
-    expect(all.queryParameters.containsKey('cs'), isFalse);
-    expect(ReplayLink.fromUri(all, presets: _presets)!.customSkills, isNull);
+      final none = link.replace(
+        queryParameters: {...link.queryParameters, 'cs': ''},
+      );
+      expect(
+        ReplayLink.fromUri(none, presets: _presets)!.customSkills,
+        isEmpty,
+      );
+      final all = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        mode: MatchMode.arsenal,
+      ).toUri(presetIds: presetIds);
+      expect(all.queryParameters.containsKey('cs'), isFalse);
+      expect(ReplayLink.fromUri(all, presets: _presets)!.customSkills, isNull);
 
-    final bad = link.replace(queryParameters: {...link.queryParameters, 'cs': 'builtin.pistol'});
-    expect(ReplayLink.fromUri(bad, presets: _presets), isNull);
-    final threads = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]])
-        .toUri(presetIds: presetIds);
-    final threadsWithCs = threads.replace(queryParameters: {...threads.queryParameters, 'cs': 'custom.x'});
-    expect(ReplayLink.fromUri(threadsWithCs, presets: _presets), isNull);
-  });
+      final bad = link.replace(
+        queryParameters: {...link.queryParameters, 'cs': 'builtin.pistol'},
+      );
+      expect(ReplayLink.fromUri(bad, presets: _presets), isNull);
+      final threads = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+      ).toUri(presetIds: presetIds);
+      final threadsWithCs = threads.replace(
+        queryParameters: {...threads.queryParameters, 'cs': 'custom.x'},
+      );
+      expect(ReplayLink.fromUri(threadsWithCs, presets: _presets), isNull);
+    },
+  );
 
   test('Unstuck nudges travel in the link; bad values are rejected', () {
     final presetIds = {for (final b in _presets) b.id};
@@ -704,56 +776,198 @@ void main() {
     ).toUri(presetIds: presetIds);
     expect(link.queryParameters['nudge'], '121,640');
     expect(ReplayLink.fromUri(link, presets: _presets)!.nudgeSteps, [121, 640]);
-    final plain = ReplayLink(seed: 5, speedMultiplier: 1, contestants: [_presets[0], _presets[1]]).toUri(presetIds: presetIds);
-    expect(plain.queryParameters.containsKey('nudge'), isFalse);
-    expect(ReplayLink.fromUri(plain, presets: _presets)!.nudgeSteps, isEmpty);
-    final late = link.replace(queryParameters: {...link.queryParameters, 'nudge': '121,200000'});
-    expect(ReplayLink.fromUri(late, presets: _presets)!.nudgeSteps, [121, 200000]);
-    for (final bad in ['x', '0', '-3', '216001', '99999999', '12,,40']) {
-      final uri = link.replace(queryParameters: {...link.queryParameters, 'nudge': bad});
-      expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
-    }
-  });
-
-  test('End battle step travels with endless links; bad values are rejected', () {
-    final presetIds = {for (final b in _presets) b.id};
-    final link = ReplayLink(
-      seed: 5,
-      speedMultiplier: 1,
-      contestants: [_presets[0], _presets[1]],
-      mode: MatchMode.arsenal,
-      endlessBattle: true,
-      endStep: 900,
-    ).toUri(presetIds: presetIds);
-    expect(link.queryParameters['end'], '900');
-    expect(ReplayLink.fromUri(link, presets: _presets)!.endStep, 900);
     final plain = ReplayLink(
       seed: 5,
       speedMultiplier: 1,
       contestants: [_presets[0], _presets[1]],
-      mode: MatchMode.arsenal,
-      endlessBattle: true,
     ).toUri(presetIds: presetIds);
-    expect(plain.queryParameters.containsKey('end'), isFalse);
-    expect(ReplayLink.fromUri(plain, presets: _presets)!.endStep, isNull);
-    final late = link.replace(queryParameters: {...link.queryParameters, 'end': '200000'});
-    expect(ReplayLink.fromUri(late, presets: _presets)!.endStep, 200000);
-    for (final bad in ['x', '0', '-3', '216001', '1,2']) {
-      final uri = link.replace(queryParameters: {...link.queryParameters, 'end': bad});
+    expect(plain.queryParameters.containsKey('nudge'), isFalse);
+    expect(ReplayLink.fromUri(plain, presets: _presets)!.nudgeSteps, isEmpty);
+    final late = link.replace(
+      queryParameters: {...link.queryParameters, 'nudge': '121,200000'},
+    );
+    expect(ReplayLink.fromUri(late, presets: _presets)!.nudgeSteps, [
+      121,
+      200000,
+    ]);
+    for (final bad in ['x', '0', '-3', '216001', '99999999', '12,,40']) {
+      final uri = link.replace(
+        queryParameters: {...link.queryParameters, 'nudge': bad},
+      );
       expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
     }
-    final notEndless = Map.of(link.queryParameters)..remove('endless');
-    expect(
-      ReplayLink.fromUri(link.replace(queryParameters: notEndless), presets: _presets),
-      isNull,
-    );
-    // Not written outside endless battles.
-    final threads = ReplayLink(
-      seed: 5,
-      speedMultiplier: 1,
-      contestants: [_presets[0], _presets[1]],
-      endStep: 900,
-    ).toUri(presetIds: presetIds);
-    expect(threads.queryParameters.containsKey('end'), isFalse);
+  });
+
+  test(
+    'End battle step travels with endless links; bad values are rejected',
+    () {
+      final presetIds = {for (final b in _presets) b.id};
+      final link = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        mode: MatchMode.arsenal,
+        endlessBattle: true,
+        endStep: 900,
+      ).toUri(presetIds: presetIds);
+      expect(link.queryParameters['end'], '900');
+      expect(ReplayLink.fromUri(link, presets: _presets)!.endStep, 900);
+      final plain = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        mode: MatchMode.arsenal,
+        endlessBattle: true,
+      ).toUri(presetIds: presetIds);
+      expect(plain.queryParameters.containsKey('end'), isFalse);
+      expect(ReplayLink.fromUri(plain, presets: _presets)!.endStep, isNull);
+      final late = link.replace(
+        queryParameters: {...link.queryParameters, 'end': '200000'},
+      );
+      expect(ReplayLink.fromUri(late, presets: _presets)!.endStep, 200000);
+      for (final bad in ['x', '0', '-3', '216001', '1,2']) {
+        final uri = link.replace(
+          queryParameters: {...link.queryParameters, 'end': bad},
+        );
+        expect(ReplayLink.fromUri(uri, presets: _presets), isNull, reason: bad);
+      }
+      final notEndless = Map.of(link.queryParameters)..remove('endless');
+      expect(
+        ReplayLink.fromUri(
+          link.replace(queryParameters: notEndless),
+          presets: _presets,
+        ),
+        isNull,
+      );
+      // Not written outside endless battles.
+      final threads = ReplayLink(
+        seed: 5,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        endStep: 900,
+      ).toUri(presetIds: presetIds);
+      expect(threads.queryParameters.containsKey('end'), isFalse);
+    },
+  );
+
+  group('kind count (kc) keeps old links playing as they were', () {
+    final a = 'p.${_presets[0].id}';
+    final b = 'p.${_presets[1].id}';
+
+    test('a link from before kc opens with the first 48 kinds only', () {
+      final link = ReplayLink.fromUri(
+        Uri.parse(
+          'https://x.test/?seed=3&speed=1&t=${_legacyTuning()}&balls=m.arsenal,$a,$b',
+        ),
+        presets: _presets,
+      )!;
+      expect(link.powerUps, {
+        for (final k in PowerUpKind.values)
+          if (k.index < ReplayLink.legacyKindCount) k,
+      });
+      expect(link.powerUps, isNot(contains(PowerUpKind.shadowClone)));
+      // Recorded with the app at the commit before Shadow Clone (same seeds, all kinds on).
+      const recorded = {
+        3: 'boomerang,orbitingFlail,bow,busterSword,magneticField,busterSword',
+        11: 'busterSword,knife,sniperRifle',
+        29: 'busterSword,busterSword,sword,bow',
+      };
+      for (final entry in recorded.entries) {
+        final old = ReplayLink.fromUri(
+          Uri.parse(
+            'https://x.test/?seed=${entry.key}&speed=1&t=${_legacyTuning()}&balls=m.arsenal,$a,$b',
+          ),
+          presets: _presets,
+        )!;
+        expect(
+          _spawnedKinds(old).join(','),
+          entry.value,
+          reason: 'seed ${entry.key}',
+        );
+      }
+    });
+
+    test('a legacy w. mask is cut to the first 48 kinds', () {
+      final mask =
+          (1 << PowerUpKind.pistol.index) | (1 << PowerUpKind.knife.index);
+      final link = ReplayLink.fromUri(
+        Uri.parse(
+          'https://x.test/?seed=3&speed=1&balls=m.arsenal,w.${mask.toRadixString(36)},$a,$b',
+        ),
+        presets: _presets,
+      )!;
+      expect(link.powerUps, {PowerUpKind.pistol, PowerUpKind.knife});
+    });
+
+    test('new links carry kc and round-trip with every kind', () {
+      final uri = ReplayLink(
+        seed: 4,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+        mode: MatchMode.allOut,
+      ).toUri(presetIds: _presetIds);
+      expect(uri.queryParameters['kc'], '${PowerUpKind.values.length}');
+      final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
+      expect(parsed.powerUps, isNull, reason: 'all kinds: no RNG change');
+      final threads = ReplayLink(
+        seed: 4,
+        speedMultiplier: 1,
+        contestants: [_presets[0], _presets[1]],
+      ).toUri(presetIds: _presetIds);
+      expect(threads.queryParameters.containsKey('kc'), isFalse);
+    });
+
+    test('a pinned pool re-shares as the same pool', () {
+      final old = ReplayLink.fromUri(
+        Uri.parse('https://x.test/?seed=3&speed=1&balls=m.arsenal,$a,$b'),
+        presets: _presets,
+      )!;
+      final again = ReplayLink.fromUri(
+        ReplayLink(
+          seed: old.seed,
+          speedMultiplier: 1,
+          contestants: old.contestants,
+          mode: old.mode,
+          powerUps: old.powerUps,
+        ).toUri(presetIds: _presetIds),
+        presets: _presets,
+      )!;
+      expect(again.powerUps, old.powerUps);
+    });
+
+    test('bad kc values are rejected', () {
+      ReplayLink? withKc(String kc, {String mode = 'm.arsenal,'}) =>
+          ReplayLink.fromUri(
+            Uri.parse('https://x.test/?seed=3&speed=1&kc=$kc&balls=$mode$a,$b'),
+            presets: _presets,
+          );
+      expect(withKc('${PowerUpKind.values.length}'), isNotNull);
+      expect(withKc('${PowerUpKind.values.length + 1}'), isNull);
+      expect(withKc('0'), isNull);
+      expect(withKc('abc'), isNull);
+      expect(withKc('048'), isNull);
+      expect(withKc('48', mode: ''), isNull, reason: 'threads has no kinds');
+    });
+
+    test('t= tier lists longer than the kinds or empty are rejected', () {
+      String tiers(String value) {
+        final json = {'_tiers': value};
+        return base64Url
+            .encode(utf8.encode(jsonEncode(json)))
+            .replaceAll('=', '');
+      }
+
+      final full = PowerUpKind.values.map((k) => k.isTrap ? '-' : '0').join();
+      expect(PowerUpConfig.decode(tiers(full)), isNotNull);
+      expect(PowerUpConfig.decode(tiers(full.substring(0, 48))), isNotNull);
+      expect(PowerUpConfig.decode(tiers('${full}0')), isNull);
+      expect(PowerUpConfig.decode(tiers('')), isNull);
+      expect(
+        PowerUpConfig.decode(
+          tiers(full.substring(0, 48)),
+        )!.rarityOf(PowerUpKind.shadowClone),
+        PowerUpRarity.special,
+      );
+    });
   });
 }

@@ -52,6 +52,10 @@ class ReplayLink {
   /// Highest step `nudge=` and `end=` accept: one hour of game time at 60 steps per second.
   static const int maxLinkStep = 216000;
 
+  /// How many [PowerUpKind]s existed before links carried `kc=` (the count before Shadow Clone). A
+  /// power-up link without `kc` was made then, so only the first [legacyKindCount] kinds can spawn.
+  static const int legacyKindCount = 48;
+
   /// End battle: the step at which the player asked to end an endless (non-Mayhem) battle after the
   /// next knockout; part of the match. `end=`, only with `endless=1`.
   final int? endStep;
@@ -157,6 +161,10 @@ class ReplayLink {
         : '&q=${Uri.encodeQueryComponent(question!)}';
     final encoded = mode == MatchMode.threads ? null : tuning.encode();
     final t = encoded == null ? '' : '&t=$encoded';
+    // Pins the kind pool: kinds added after this link was made never spawn when it plays back.
+    final kc = mode == MatchMode.threads
+        ? ''
+        : '&kc=${PowerUpKind.values.length}';
     final dw = mode != MatchMode.threads && dualWield ? '&dw=1' : '';
     final endless = mode == MatchMode.arsenal && endlessBattle
         ? '&endless=1'
@@ -183,8 +191,11 @@ class ReplayLink {
     final hair = randomizedHairstyles ? '&hair=1' : '';
     final lookToken = look == null ? '' : '&look=${look!.name}';
     final chosenCustom = customSkills;
-    final nudgeToken = nudgeSteps.isEmpty ? '' : '&nudge=${nudgeSteps.join(',')}';
-    final endToken = endStep != null && mode == MatchMode.arsenal && endlessBattle && !mayhem
+    final nudgeToken = nudgeSteps.isEmpty
+        ? ''
+        : '&nudge=${nudgeSteps.join(',')}';
+    final endToken =
+        endStep != null && mode == MatchMode.arsenal && endlessBattle && !mayhem
         ? '&end=$endStep'
         : '';
     final customToken = mode == MatchMode.threads || chosenCustom == null
@@ -194,7 +205,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$kc$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
     );
@@ -247,6 +258,26 @@ class ReplayLink {
           if (mask & (1 << k.index) != 0) k,
       };
     }
+    // The kinds that existed when the link was made (`kc`, strict); before `kc` there were
+    // [legacyKindCount]. Later kinds are left out of the pool so the match replays as it was played.
+    final kcText = params['kc'];
+    final kindCount = kcText == null ? legacyKindCount : int.tryParse(kcText);
+    if (kcText != null &&
+        (mode == MatchMode.threads ||
+            kindCount == null ||
+            kindCount < 1 ||
+            kindCount > PowerUpKind.values.length ||
+            '$kindCount' != kcText)) {
+      return null;
+    }
+    if (mode != MatchMode.threads && kindCount! < PowerUpKind.values.length) {
+      final known = powerUps ?? PowerUpKind.values.toSet();
+      powerUps = {
+        for (final k in known)
+          if (k.index < kindCount) k,
+      };
+      if (powerUps.isEmpty) return null;
+    }
     final mayhem = params['mayhem'] == '1';
     final mayhemSeconds = int.tryParse(params['duration'] ?? '120');
     if (mayhemSeconds == null ||
@@ -271,7 +302,10 @@ class ReplayLink {
     if (nudge != null) {
       final steps = [for (final part in nudge.split(',')) int.tryParse(part)];
       // Positive steps within an hour of game time, at most 200 of them.
-      if (steps.length > 200 || steps.any((s) => s == null || s < 1 || s > maxLinkStep)) return null;
+      if (steps.length > 200 ||
+          steps.any((s) => s == null || s < 1 || s > maxLinkStep)) {
+        return null;
+      }
       nudgeSteps = [...steps.cast<int>()]..sort();
     }
     Set<String>? customSkills;
@@ -301,7 +335,11 @@ class ReplayLink {
     if (end != null) {
       // Only with an endless (non-Mayhem) battle; a step within an hour of game time.
       endStep = int.tryParse(end);
-      if (!endlessBattle || mayhem || endStep == null || endStep < 1 || endStep > maxLinkStep) {
+      if (!endlessBattle ||
+          mayhem ||
+          endStep == null ||
+          endStep < 1 ||
+          endStep > maxLinkStep) {
         return null;
       }
     }

@@ -747,10 +747,14 @@ class PowerUpConfig {
       var config = PowerUpConfig.defaults;
       final tiers = json['_tiers'];
       if (tiers != null) {
-        if (tiers is! String || tiers.length != PowerUpKind.values.length) {
+        // Shorter lists come from links made before newer kinds existed: those keep their
+        // default tier (ReplayLink leaves them out of the pool anyway).
+        if (tiers is! String ||
+            tiers.isEmpty ||
+            tiers.length > PowerUpKind.values.length) {
           return null;
         }
-        for (final kind in PowerUpKind.values) {
+        for (final kind in PowerUpKind.values.take(tiers.length)) {
           final digit = tiers[kind.index];
           if (kind.isTrap) {
             if (digit != '-') return null;

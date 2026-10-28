@@ -1398,11 +1398,16 @@ class SkillLibrary {
   /// exact definitions that were active when it was created, so later admin
   /// edits cannot change an old match.
   ///
-  /// The snapshot is the compact form ([toCompactJson]): each built-in override keeps only what
-  /// differs from the built-in default, so a library with every built-in edited still fits.
+  /// The snapshot is the full form ([toJson], version 2, frozen definitions, readable by older apps)
+  /// whenever it fits [maxReplayCharacters]. Only a library too large for that (say, every built-in
+  /// edited) falls back to the compact form ([toCompactJson], version 3), whose unedited fields come
+  /// from the factory defaults at decode time.
   String? encodeReplay() {
     if (isDefault) return null;
-    final source = jsonEncode(toCompactJson());
+    var source = jsonEncode(toJson());
+    if (source.length > maxReplayCharacters) {
+      source = jsonEncode(toCompactJson());
+    }
     if (source.length > maxReplayCharacters) {
       throw const FormatException('The active skill snapshot is too large.');
     }

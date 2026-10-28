@@ -243,6 +243,70 @@ void main() {
   );
 
   testWidgets(
+    'Global: each of the five Apply to all skills buttons changes its field',
+    (tester) async {
+      const tuning = PowerUpConfig.defaults;
+      final initial = SkillLibrary.defaults.withDefinition(
+        SkillLibrary.defaults.create('Zap', PowerUpKind.pistol),
+        tuning,
+      );
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async => saved = await Navigator.of(context)
+                  .push<SkillManagementResult>(
+                    MaterialPageRoute(
+                      builder: (_) => SkillManagementScreen(
+                        initial: initial,
+                        tuning: tuning,
+                      ),
+                    ),
+                  ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Global'));
+      await tester.pumpAndSettle();
+      for (final (field, value) in [
+        ('callout-seconds', '3.5'),
+        ('screen-shake', '0.7'),
+        ('weapon-display-scale', '1.75'),
+        ('pickup-display-scale', '2.25'),
+        ('effect-display-scale', '0.5'),
+      ]) {
+        final input = find.byKey(ValueKey('global-$field'));
+        await _revealGlobal(tester, input);
+        await tester.enterText(input, value);
+        await tester.pumpAndSettle();
+        final apply = find.byKey(ValueKey('apply-all-$field'));
+        await _revealGlobal(tester, apply);
+        await tester.tap(apply);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('apply-all-confirm')));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Save Library'));
+      await tester.pumpAndSettle();
+      final skills = saved!.library.all(tuning);
+      expect(skills, hasLength(initial.all(tuning).length));
+      for (final skill in skills) {
+        expect(skill.bubbleDurationSeconds, 3.5, reason: skill.id);
+        expect(skill.screenShake, 0.7, reason: skill.id);
+        expect(skill.weaponDisplayScale, 1.75, reason: skill.id);
+        expect(skill.pickupDisplayScale, 2.25, reason: skill.id);
+        expect(skill.effectDisplayScale, 0.5, reason: skill.id);
+      }
+    },
+  );
+
+  testWidgets(
     'Global: the sprite size switches disable the matching fields in every skill',
     (tester) async {
       await tester.pumpWidget(

@@ -169,8 +169,73 @@ void main() {
       '${source.length}, encoded ${encoded.length}',
     );
     expect(source.length, lessThan(30000));
+    // Too big in full form: falls back to the compact form.
+    expect(_snapshotVersion(encoded), SkillLibrary.compactVersion);
     final decoded = SkillLibrary.decodeReplay(encoded)!;
     expect(jsonEncode(decoded.toJson()), jsonEncode(library.toJson()));
+  });
+
+  test('a snapshot that fits keeps the full form older apps read', () {
+    final pistol = SkillLibrary.defaults.withDefinition(
+      SkillLibrary.defaults
+          .builtIn(PowerUpKind.pistol, tuning)
+          .copyWith(yell: 'PEW!'),
+      tuning,
+    );
+    // Byte-identical to what the code before the compact form produced.
+    expect(pistol.encodeReplay(), _oldPistolLink);
+
+    // Just under the cap in full form: still full.
+    var library = SkillLibrary.defaults;
+    var i = 0;
+    while (true) {
+      final next = library.withDefinition(
+        library
+            .create('Story $i', PowerUpKind.pistol)
+            .copyWith(description: 'd' * 160),
+        tuning,
+      );
+      if (jsonEncode(next.toJson()).length > SkillLibrary.maxReplayCharacters) {
+        break;
+      }
+      library = next;
+      i++;
+    }
+    final encoded = library.encodeReplay()!;
+    expect(_snapshotVersion(encoded), SkillLibrary.currentVersion);
+    expect(
+      encoded,
+      base64Url
+          .encode(utf8.encode(jsonEncode(library.toJson())))
+          .replaceAll('=', ''),
+    );
+  });
+
+  test('a compact snapshot with a bad entry is rejected', () {
+    String link(Object json) =>
+        base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+    expect(
+      SkillLibrary.decodeReplay(
+        link({
+          'version': SkillLibrary.compactVersion,
+          'overrides': {
+            'builtin.pistol': {'id': 'builtin.pistol', 'base': 'nope'},
+          },
+          'custom': [],
+        }),
+      ),
+      isNull,
+    );
+    expect(
+      SkillLibrary.decodeReplay(
+        link({
+          'version': SkillLibrary.compactVersion + 1,
+          'overrides': {},
+          'custom': [],
+        }),
+      ),
+      isNull,
+    );
   });
 
   test(
@@ -286,3 +351,15 @@ void main() {
 /// A replay snapshot made before the compact form (version 2, full override): the pistol yelling "PEW!".
 const _oldPistolLink =
     'eyJ2ZXJzaW9uIjoyLCJvdmVycmlkZXMiOnsiYnVpbHRpbi5waXN0b2wiOnsiaWQiOiJidWlsdGluLnBpc3RvbCIsIm5hbWUiOiJQaXN0b2wiLCJiYXNlIjoicGlzdG9sIiwiY2F0ZWdvcnkiOiJ3ZWFwb24iLCJlbmFibGVkIjp0cnVlLCJjdXN0b20iOmZhbHNlLCJhcnNlbmFsX2RhbWFnZSI6MTAuMCwiYWxsX291dF9kYW1hZ2UiOjgsInByb2plY3RpbGVfc3BlZWQiOjEuMiwicmFuZ2UiOjAuNTUsInByb2plY3RpbGVfc2l6ZSI6MS4wLCJwcm9qZWN0aWxlX3NwaW4iOjAuMCwiaG9taW5nIjpmYWxzZSwicmV0dXJuc190b19vcmlnaW4iOmZhbHNlLCJ0cmFja19uZWFyZXN0X29wcG9uZW50IjpmYWxzZSwid2VhcG9uX2Rpc3BsYXlfc2NhbGUiOjEuMCwicGlja3VwX2Rpc3BsYXlfc2NhbGUiOjEuMCwiZWZmZWN0X2Rpc3BsYXlfc2NhbGUiOjEuMCwid2VhcG9uX2dyaXBfaW5zZXQiOjAuMCwiZWZmZWN0X3N0cmVuZ3RoIjoxLjAsImhlYWxpbmciOjEwLjAsInNoaWVsZF9oaXRzIjoxLCJmcm96ZW5fZGFtYWdlX211bHRpcGxpZXIiOjEuNSwiZnJvemVuX2NvbGxpc2lvbl9kYW1hZ2UiOjUuMCwia25vY2tiYWNrIjowLjAsInNwcml0ZV9tb2RlIjoic3ByaXRlIiwiZWZmZWN0X21vZGUiOiJzcHJpdGUiLCJ1c2VfZ2xvYmFsX2VmZmVjdF92aXN1YWxzIjp0cnVlLCJzb3VuZF9jdWUiOiJzaG90IiwicmVwZWF0X2NvdW50IjoxLCJyZXBlYXRfaW50ZXJ2YWxfc2Vjb25kcyI6MC41LCJzdGFydF9kZWxheV9zZWNvbmRzIjowLjAsInRpY2tfaW50ZXJ2YWxfc2Vjb25kcyI6MC41LCJjb29sZG93bl9zZWNvbmRzIjowLjAsInRyaWdnZXJfaW50ZXJ2YWxfc2Vjb25kcyI6NS4wLCJlZmZlY3RfY29sb3IiOjQyOTQ5MjkyNTksInNwcml0ZV90aW50Ijo0Mjk0OTY3Mjk1LCJzY3JlZW5fc2hha2UiOjAuMTYsImhhbmRlZG5lc3MiOiJjYXJyaWVyRGVmYXVsdCIsInllbGwiOiJQRVchIiwiY2FsbG91dF9zdHlsZSI6Im5vcm1hbCIsImJ1YmJsZV90eXBlIjoic2hvdXQiLCJidWJibGVfZHVyYXRpb25fc2Vjb25kcyI6MS4yLCJleHBsb2Rlc19vbl9pbXBhY3QiOmZhbHNlLCJoYW5kX2VmZmVjdF9zY2FsZSI6MS4wLCJoYW5kX2VmZmVjdF9jb2xvciI6NDI5NDk2NzI5NSwiaGFuZF9lZmZlY3RfZHVyYXRpb25fc2Vjb25kcyI6MC42NX19LCJjdXN0b20iOltdfQ';
+
+/// The version a replay snapshot was written with.
+int _snapshotVersion(String encoded) =>
+    (jsonDecode(
+              utf8.decode(
+                base64Url.decode(
+                  encoded.padRight((encoded.length + 3) ~/ 4 * 4, '='),
+                ),
+              ),
+            )
+            as Map)['version']
+        as int;

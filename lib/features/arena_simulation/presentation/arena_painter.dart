@@ -716,7 +716,7 @@ class ArenaPainter extends CustomPainter {
                     : ball.heldSecondarySkillId,
               )
               .weaponGripInset ??
-          PowerUpPainter.defaultGripInset(kind),
+          kind.defaultGripInset,
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,

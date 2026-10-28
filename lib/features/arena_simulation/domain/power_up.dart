@@ -117,6 +117,10 @@ enum PowerUpKind {
   /// True for the melee kinds used up on the next ball they touch.
   bool get isBlade => this == knife || this == sword;
 
+  /// The built-in grip inset (ball radii): blades and the Buster Sword sit
+  /// 0.2 in, everything else 0. Also the hand's standard grip point.
+  double get defaultGripInset => isBlade || this == busterSword ? 0.2 : 0;
+
   /// Two-handed weapons cannot share the dual-wield loadout.
   bool get isTwoHanded =>
       this == rocketLauncher ||

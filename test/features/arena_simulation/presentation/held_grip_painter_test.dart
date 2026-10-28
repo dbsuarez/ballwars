@@ -162,7 +162,7 @@ void main() {
   test('the Buster Sword hand sits at its default 0.2 inset grip', () {
     final ball = _ball()
       ..equipWeapon(PowerUpKind.busterSword, dualWield: false);
-    expect(PowerUpPainter.defaultGripInset(PowerUpKind.busterSword), 0.2);
+    expect(PowerUpKind.busterSword.defaultGripInset, 0.2);
     _expectOffset(
       PowerUpPainter.heldCenter(ball, gripInset: 0.2),
       const Offset(110, 100),
@@ -173,8 +173,8 @@ void main() {
     paintHands(canvas, ball);
     _expectOffset(canvas.circles.first, const Offset(105.5, 103));
     final gun = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
-    expect(PowerUpPainter.defaultGripInset(PowerUpKind.pistol), 0);
-    expect(PowerUpPainter.defaultGripInset(PowerUpKind.knife), 0.2);
+    expect(PowerUpKind.pistol.defaultGripInset, 0);
+    expect(PowerUpKind.knife.defaultGripInset, 0.2);
     _expectOffset(gripHandPosition(gun), const Offset(107.5, 103));
   });
 

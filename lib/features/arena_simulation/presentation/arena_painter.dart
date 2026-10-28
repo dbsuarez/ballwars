@@ -616,9 +616,7 @@ class ArenaPainter extends CustomPainter {
           ) ??
           true,
       displayScale:
-          state.powerUps
-              ?.visualSkill(PowerUpKind.speed, ball: ball)
-              .effectDisplayScale ??
+          state.powerUps?.effectDisplayScale(PowerUpKind.speed, ball: ball) ??
           1,
     );
 
@@ -696,17 +694,13 @@ class ArenaPainter extends CustomPainter {
       firedWeaponHoldLeft: (kind) =>
           state.powerUps?.firedWeaponHoldLeft(ball, kind) ?? 0,
       weaponDisplayScale: (kind, slot) =>
-          state.powerUps
-              ?.visualSkill(
-                kind,
-                skillId: slot == 0
-                    ? ball.heldSkillId
-                    : ball.heldSecondarySkillId,
-              )
-              .weaponDisplayScale ??
+          state.powerUps?.weaponDisplayScale(
+            kind,
+            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+          ) ??
           1,
       effectDisplayScale: (kind) =>
-          state.powerUps?.visualSkill(kind, ball: ball).effectDisplayScale ?? 1,
+          state.powerUps?.effectDisplayScale(kind, ball: ball) ?? 1,
       weaponGripInset: (kind, slot) =>
           state.powerUps
               ?.visualSkill(
@@ -716,7 +710,7 @@ class ArenaPainter extends CustomPainter {
                     : ball.heldSecondarySkillId,
               )
               .weaponGripInset ??
-          (kind.isBlade ? 0.2 : 0),
+          kind.defaultGripInset,
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
@@ -727,22 +721,7 @@ class ArenaPainter extends CustomPainter {
           const Color(0xFFFFFFFF),
     );
     if (look != BallLook.pictures || handsOnPictures) {
-      paintHands(
-        canvas,
-        ball,
-        weaponGripInset: (kind, slot) =>
-            state.powerUps
-                ?.visualSkill(
-                  kind,
-                  skillId: slot == 0
-                      ? ball.heldSkillId
-                      : ball.heldSecondarySkillId,
-                )
-                .weaponGripInset ??
-            (kind.isBlade ? 0.2 : 0),
-        weaponGripSide: gripSide,
-        weaponGripRotation: gripRotation,
-      );
+      paintHands(canvas, ball);
     }
     if (ball.isGhost) canvas.restore();
   }

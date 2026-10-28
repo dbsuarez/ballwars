@@ -117,6 +117,81 @@ void main() {
     }
   });
 
+  test('a negative grip forward/back pushes the weapon out along the aim', () {
+    final ball = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    expect(PowerUpPainter.heldCenter(ball), const Offset(112, 100));
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: -0.5),
+      const Offset(117, 100),
+    );
+    // 0..1.5 is unchanged (pulled in, never closer than 0.1 radii).
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: 0.5),
+      const Offset(107, 100),
+    );
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: 1.5),
+      const Offset(101, 100),
+    );
+    // Clamped at -1.5.
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: -9),
+      const Offset(127, 100),
+    );
+
+    final left = _ball(velocity: const Offset(-10, 0))
+      ..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    _expectOffset(
+      PowerUpPainter.heldCenter(left, gripInset: -0.5),
+      const Offset(83, 100),
+    );
+
+    final dual = _ball()
+      ..equipWeapon(PowerUpKind.pistol, dualWield: true)
+      ..equipWeapon(PowerUpKind.pistol, dualWield: true);
+    for (final slot in const [0, 1]) {
+      final far = PowerUpPainter.heldCenter(dual, slot: slot, gripInset: -0.5);
+      final near = PowerUpPainter.heldCenter(dual, slot: slot);
+      expect(
+        (far - dual.position).distance - (near - dual.position).distance,
+        closeTo(5, 1e-9),
+      );
+    }
+  });
+
+  test('the Buster Sword hand sits at its default 0.2 inset grip', () {
+    final ball = _ball()
+      ..equipWeapon(PowerUpKind.busterSword, dualWield: false);
+    expect(PowerUpKind.busterSword.defaultGripInset, 0.2);
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: 0.2),
+      const Offset(110, 100),
+    );
+    // heldCenter(0.2) - dir * 4.5 + right * 3.
+    _expectOffset(gripHandPosition(ball), const Offset(105.5, 103));
+    final canvas = _RecordingCanvas();
+    paintHands(canvas, ball);
+    _expectOffset(canvas.circles.first, const Offset(105.5, 103));
+    final gun = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    expect(PowerUpKind.pistol.defaultGripInset, 0);
+    expect(PowerUpKind.knife.defaultGripInset, 0.2);
+    _expectOffset(gripHandPosition(gun), const Offset(107.5, 103));
+  });
+
+  test('the hand stays at the standard grip point whatever the grip', () {
+    final ball = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    final base = gripHandPosition(ball);
+    _expectOffset(base, const Offset(107.5, 103));
+    // The weapon moves; the marker/hand does not.
+    _expectOffset(
+      PowerUpPainter.heldCenter(ball, gripInset: -0.5),
+      const Offset(117, 100),
+    );
+    final blade = _ball()..equipWeapon(PowerUpKind.knife, dualWield: false);
+    // Blade default inset 0.2: center 18 - 13 = 5 ahead of the ball.
+    _expectOffset(gripHandPosition(blade), const Offset(105, 100));
+  });
+
   test('a shield ignores grip sideways', () {
     final ball = _ball()..equipWeapon(PowerUpKind.shield, dualWield: false);
     expect(
@@ -189,35 +264,25 @@ void main() {
     });
   });
 
-  test('hands follow grip sideways and rotation', () {
-    final ball = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
-    Offset grip({double side = 0, double rotation = 0}) {
+  test('hands sit at the standard grip point, facing right and left', () {
+    // The hand ignores the skill's grip: only the weapon sprite moves.
+    List<Offset> hands(SimulationBall ball) {
       final canvas = _RecordingCanvas();
-      paintHands(
-        canvas,
-        ball,
-        weaponGripSide: (_, _) => side,
-        weaponGripRotation: (_, _) => rotation,
-      );
-      return canvas.circles.first;
+      paintHands(canvas, ball);
+      return canvas.circles;
     }
 
-    // Default: center (112, 100) - dir * 4.5 + right * 3.
-    _expectOffset(grip(), const Offset(107.5, 103));
-    _expectOffset(grip(side: 0.5), const Offset(107.5, 108));
-    // Turned 90 degrees: the sprite points down, so its grip turns with it.
-    _expectOffset(grip(rotation: 90), const Offset(109, 95.5));
+    final right = _ball()..equipWeapon(PowerUpKind.pistol, dualWield: false);
+    // Default grip: center (112, 100) - dir * 4.5 + right * 3.
+    _expectOffset(hands(right).first, const Offset(107.5, 103));
 
-    // Facing left mirrors the grip across the ball's vertical axis.
     final left = _ball(velocity: const Offset(-10, 0))
       ..equipWeapon(PowerUpKind.pistol, dualWield: false);
-    Offset leftGrip({double side = 0}) {
-      final canvas = _RecordingCanvas();
-      paintHands(canvas, left, weaponGripSide: (_, _) => side);
-      return canvas.circles.first;
-    }
+    _expectOffset(hands(left).first, const Offset(92.5, 103));
 
-    _expectOffset(leftGrip(), const Offset(92.5, 103));
-    _expectOffset(leftGrip(side: 0.5), const Offset(92.5, 108));
+    final dual = _ball()
+      ..equipWeapon(PowerUpKind.pistol, dualWield: true)
+      ..equipWeapon(PowerUpKind.pistol, dualWield: true);
+    expect(hands(dual), isNotEmpty);
   });
 }

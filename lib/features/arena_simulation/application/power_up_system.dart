@@ -57,6 +57,9 @@ class PowerUpSystem {
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
   final List<ShellCasing> shellCasings = [];
+
+  /// Casings ejected so far this match ([ShellCasing.sequence]).
+  int _shellSequence = 0;
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
 
   /// Shots fired by one skill as another skill's projectile ([SkillDefinition.payloadSkillId]): the skill
@@ -205,8 +208,26 @@ class PowerUpSystem {
   }
 
   String skillName(PowerUpKind kind) => visualSkill(kind).name;
-  double weaponDisplayScale(PowerUpKind kind, {SimulationBall? ball}) =>
-      visualSkill(kind, ball: ball).weaponDisplayScale;
+
+  /// Sprite sizes as drawn: the skill's own, or the library's global value while its "Let each
+  /// skill set its own" switch is off ([SkillLibrary.weaponDisplayScaleFor] etc.).
+  double weaponDisplayScale(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+    String? skillId,
+  }) => match.skillLibrary.weaponDisplayScaleFor(
+    visualSkill(kind, ball: ball, skillId: skillId),
+  );
+  double pickupDisplayScale(PowerUpKind kind, {String? skillId}) => match
+      .skillLibrary
+      .pickupDisplayScaleFor(visualSkill(kind, skillId: skillId));
+  double effectDisplayScale(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+    String? skillId,
+  }) => effectDisplayScaleOf(visualSkill(kind, ball: ball, skillId: skillId));
+  double effectDisplayScaleOf(SkillDefinition skill) =>
+      match.skillLibrary.effectDisplayScaleFor(skill);
   double handEffectScale(PowerUpKind kind, {SimulationBall? ball}) =>
       visualSkill(kind, ball: ball).handEffectScale;
   Color handEffectColor(PowerUpKind kind, {SimulationBall? ball}) =>
@@ -323,6 +344,9 @@ class PowerUpSystem {
   // Volleys: shots fired as one attack share an id; a shield that breaks on one of them softens the
   // rest of that volley too (see [_hit]).
   int _lastVolley = 0;
+
+  /// The skill of the gatling a ball's burst came from, for its casings.
+  final Map<SimulationBall, SkillDefinition> _burstShellSkill = {};
   final Map<SimulationBall, int> _burstVolley = {};
   final Map<SimulationBall, Map<PowerUpKind, int>> _firedWeaponHold = {};
   final Map<SimulationBall, int> _shieldedVolley = {};
@@ -796,10 +820,7 @@ class PowerUpSystem {
     match.state.particles.spawnSparkle(
       origin: ball.position,
       rng: rng,
-      displayScale: visualSkill(
-        PowerUpKind.friedChicken,
-        ball: ball,
-      ).effectDisplayScale,
+      displayScale: effectDisplayScale(PowerUpKind.friedChicken, ball: ball),
     );
     _skillYell(ball, PowerUpKind.friedChicken, 'FEAST MODE!');
   }
@@ -1551,10 +1572,7 @@ class PowerUpSystem {
     match.state.particles.spawnSparkle(
       origin: ball.position,
       rng: rng,
-      displayScale: visualSkill(
-        PowerUpKind.apple,
-        ball: ball,
-      ).effectDisplayScale,
+      displayScale: effectDisplayScale(PowerUpKind.apple, ball: ball),
     );
   }
 
@@ -2069,6 +2087,11 @@ class PowerUpSystem {
       final spread = skill.spreadDegrees ?? 0;
       for (var index = 0; index < count; index++) {
         if (_composedProjectiles.length >= maxComposedProjectiles) break;
+        // One casing per volley (with its first shot, so a capped volley drops none), and only when
+        // the firing skill switches shells on (as before: none).
+        if (index == 0 && skill.dropsShells) {
+          _ejectShellCasing(owner, baseDirection, skill);
+        }
         final offset = count == 1 ? 0.0 : (index / (count - 1) - 0.5) * spread;
         final radians =
             math.atan2(baseDirection.dy, baseDirection.dx) +
@@ -2197,7 +2220,7 @@ class PowerUpSystem {
         color: Color(skill.effectColor),
         accent: const Color(0xFFFFFFFF),
         count: 7 + (match.skillLibrary.screenShakeFor(skill) * 10).round(),
-        displayScale: skill.effectDisplayScale,
+        displayScale: effectDisplayScaleOf(skill),
       );
       if (match.skillLibrary.screenShakeFor(skill) > 0) {
         weaponImpacts.add(
@@ -2526,6 +2549,7 @@ class PowerUpSystem {
           PowerUpKind.gatling,
           0,
           volley: _burstVolley[ball] ?? 0,
+          shellSkill: _burstShellSkill[ball],
         );
         gatlingShots++;
         ball.burstLeft--;
@@ -2544,16 +2568,24 @@ class PowerUpSystem {
           }
           switch (kind) {
             case PowerUpKind.shotgun:
-              _fireShotgun(ball, target);
+              _fireShotgun(ball, target, shellSkill: composed);
               _skillYell(ball, kind, 'BLAM!');
             case PowerUpKind.gatling:
               _burstVolley[ball] = ++_lastVolley;
-              _fire(ball, target, kind, 0, volley: _lastVolley);
+              _burstShellSkill[ball] = composed;
+              _fire(
+                ball,
+                target,
+                kind,
+                0,
+                shellSkill: composed,
+                volley: _lastVolley,
+              );
               gatlingShots++;
               ball.burstLeft = _t.gatlingRounds - 1;
               _skillYell(ball, kind, 'RATATAT!');
             case PowerUpKind.freeze:
-              _fire(ball, target, kind, 0);
+              _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'FREEZE!');
             case PowerUpKind.grenade:
               _throwGrenade(ball, target);
@@ -2568,34 +2600,49 @@ class PowerUpSystem {
                 kind,
                 0,
                 speedRatio: PowerUpTuning.hookSpeedRatio,
+                shellSkill: composed,
               );
               _skillYell(ball, kind, 'COME OVER HERE!');
             case PowerUpKind.ricochetDisc:
-              _fire(ball, target, kind, 0);
+              _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'BANK SHOT!');
             case PowerUpKind.threadHarpoon:
-              _fire(ball, target, kind, 0);
+              _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'GIVE IT HERE!');
             case PowerUpKind.prismLaser:
-              _fire(ball, target, kind, 0);
+              _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'TASTE THE RAINBOW!');
             case PowerUpKind.swapCannon:
-              _fire(ball, target, kind, 0);
+              _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'SWAP INCOMING!');
             case PowerUpKind.bow:
-              _fireBow(ball, target);
+              _fireBow(ball, target, shellSkill: composed);
               _skillYell(ball, kind, 'ARROWS, FLY!');
             case PowerUpKind.rocketLauncher:
               _fireRocket(ball, target);
               _skillYell(ball, kind, 'TARGET LOCKED!');
             case PowerUpKind.boomerang:
-              _fire(ball, target, kind, 0, speedRatio: 0.72);
+              _fire(
+                ball,
+                target,
+                kind,
+                0,
+                shellSkill: composed,
+                speedRatio: 0.72,
+              );
               _skillYell(ball, kind, 'COMING BACK!');
             case PowerUpKind.fireWall:
               _raiseFireWall(ball, target);
               _skillYell(ball, kind, 'BURNING BARRIER!');
             case PowerUpKind.waterGun:
-              _fire(ball, target, kind, 0, speedRatio: 1.55);
+              _fire(
+                ball,
+                target,
+                kind,
+                0,
+                shellSkill: composed,
+                speedRatio: 1.55,
+              );
               _skillYell(ball, kind, 'SPLASH!');
             case PowerUpKind.energyWave:
               _fireEnergyWave(ball, target);
@@ -2608,8 +2655,21 @@ class PowerUpSystem {
             case PowerUpKind.busterSword:
               _startOmnislash(ball);
             default:
-              _fire(ball, target, kind, 0);
+              _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'BANG!');
+          }
+          // Guns that don't fire through _fire drop a casing only when their skill says so.
+          if (const {
+            PowerUpKind.grenade,
+            PowerUpKind.molotov,
+            PowerUpKind.rocketLauncher,
+            PowerUpKind.fireWall,
+            PowerUpKind.energyWave,
+            PowerUpKind.flamethrower,
+            PowerUpKind.sniperRifle,
+            PowerUpKind.busterSword,
+          }.contains(kind)) {
+            _dropShellToward(ball, target, kind, shellSkill: composed);
           }
         }
       }
@@ -2702,11 +2762,22 @@ class PowerUpSystem {
 
   /// Fans [_t.shotgunPellets] pellets evenly over [PowerUpTuning.shotgunSpread]. The inner
   /// pellets get a seeded jitter of up to [_pelletJitter]; the two outer ones mark the fan's edges.
-  void _fireShotgun(SimulationBall ball, SimulationBall target) {
+  void _fireShotgun(
+    SimulationBall ball,
+    SimulationBall target, {
+    SkillDefinition? shellSkill,
+  }) {
     final count = _t.shotgunPellets;
     final spread = _t.shotgunSpreadRadians;
     final volley = ++_lastVolley;
     final sabotaged = _consumeGremlin(ball);
+    _ejectVolleyShell(
+      ball,
+      target,
+      PowerUpKind.shotgun,
+      sabotaged,
+      shellSkill: shellSkill,
+    );
     for (var i = 0; i < count; i++) {
       final edge = i == 0 || i == count - 1;
       final jitter = edge
@@ -2719,11 +2790,33 @@ class PowerUpSystem {
         (count == 1 ? 0 : -spread / 2 + spread * i / (count - 1)) + jitter,
         volley: volley,
         sabotaged: sabotaged,
+        ejectsShell: false,
       );
     }
   }
 
-  void _fireBow(SimulationBall ball, SimulationBall target) {
+  /// One casing for a whole volley (shotgun, bow), ejected along the volley's center aim, when the
+  /// held skill drops shells.
+  void _ejectVolleyShell(
+    SimulationBall ball,
+    SimulationBall target,
+    PowerUpKind kind,
+    bool sabotaged, {
+    SkillDefinition? shellSkill,
+  }) {
+    final skill = shellSkill ?? visualSkill(kind, ball: ball);
+    if (!skill.dropsShells) return;
+    final toTarget = target.position - ball.position;
+    final angle =
+        math.atan2(toTarget.dy, toTarget.dx) + (sabotaged ? math.pi : 0);
+    _ejectShellCasing(ball, Offset(math.cos(angle), math.sin(angle)), skill);
+  }
+
+  void _fireBow(
+    SimulationBall ball,
+    SimulationBall target, {
+    SkillDefinition? shellSkill,
+  }) {
     final count = _t.bowArrows;
     final spread = PowerUpTuning.bowSpread(
       (target.position - ball.position).distance,
@@ -2731,6 +2824,13 @@ class PowerUpSystem {
     );
     final volley = ++_lastVolley;
     final sabotaged = _consumeGremlin(ball);
+    _ejectVolleyShell(
+      ball,
+      target,
+      PowerUpKind.bow,
+      sabotaged,
+      shellSkill: shellSkill,
+    );
     for (var i = 0; i < count; i++) {
       _fire(
         ball,
@@ -2739,6 +2839,7 @@ class PowerUpSystem {
         count == 1 ? 0 : -spread / 2 + spread * i / (count - 1),
         volley: volley,
         sabotaged: sabotaged,
+        ejectsShell: false,
       );
     }
   }
@@ -2992,7 +3093,9 @@ class PowerUpSystem {
     }
   }
 
-  /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians.
+  /// Fires one projectile from [ball]'s edge toward [target], turned by [turn] radians. It drops a
+  /// shell casing when the held skill does, unless [ejectsShell] is false (a volley ejects one itself,
+  /// [_ejectVolleyShell]).
   void _fire(
     SimulationBall ball,
     SimulationBall target,
@@ -3001,6 +3104,8 @@ class PowerUpSystem {
     int volley = 0,
     double? speedRatio,
     bool? sabotaged,
+    bool ejectsShell = true,
+    SkillDefinition? shellSkill,
   }) {
     final toTarget = target.position - ball.position;
     final firesBackward = sabotaged ?? _consumeGremlin(ball);
@@ -3009,14 +3114,10 @@ class PowerUpSystem {
         turn +
         (firesBackward ? math.pi : 0);
     final direction = Offset(math.cos(angle), math.sin(angle));
-    final ejectsCasing = const {
-      PowerUpKind.pistol,
-      PowerUpKind.shotgun,
-      PowerUpKind.gatling,
-      PowerUpKind.freeze,
-    }.contains(kind);
-    if (ejectsCasing && (kind != PowerUpKind.shotgun || turn.abs() < 0.001)) {
-      _ejectShellCasing(ball, direction);
+    // The casing follows the firing slot's skill (two variants of one gun can differ).
+    final skill = shellSkill ?? visualSkill(kind, ball: ball);
+    if (ejectsShell && skill.dropsShells) {
+      _ejectShellCasing(ball, direction, skill);
     }
     projectiles.add(
       Projectile(
@@ -3042,13 +3143,51 @@ class PowerUpSystem {
     shots++;
   }
 
-  void _ejectShellCasing(SimulationBall ball, Offset shotDirection) {
+  /// Drops one casing for a gun that doesn't fire through [_fire] (rocket, sniper, grenade and the
+  /// like) when its skill switches shells on ([SkillDefinition.shellEnabled]); off by default.
+  void _dropShellToward(
+    SimulationBall ball,
+    SimulationBall target,
+    PowerUpKind kind, {
+    SkillDefinition? shellSkill,
+  }) {
+    final skill = shellSkill ?? visualSkill(kind, ball: ball);
+    if (!skill.dropsShells) return;
+    final toward = target.position - ball.position;
+    _ejectShellCasing(
+      ball,
+      toward.distance == 0 ? const Offset(1, 0) : toward / toward.distance,
+      skill,
+    );
+  }
+
+  /// The resting angle of casing number [sequence] with [SkillDefinition.shellRandomRest]: a pure
+  /// integer hash (31-bit masks keep it the same on the web), never an RNG draw.
+  static double shellRestAngle(int sequence) {
+    var h = (sequence * 40503 + 12345) & 0x7FFFFFFF;
+    h = (h ^ ((h & 0x3FFFF) << 13)) & 0x7FFFFFFF;
+    h ^= h >> 17;
+    h = (h ^ ((h & 0x3FFFFFF) << 5)) & 0x7FFFFFFF;
+    h = (h ^ ((h & 0x3FFF) << 17)) & 0x7FFFFFFF;
+    h ^= h >> 11;
+    return h / 0x7FFFFFFF * 2 * math.pi;
+  }
+
+  void _ejectShellCasing(
+    SimulationBall ball,
+    Offset shotDirection,
+    SkillDefinition skill,
+  ) {
     final side = Offset(-shotDirection.dy, shotDirection.dx);
     shellCasings.add(
       ShellCasing(
         position: ball.position + side * ball.radius * 0.55,
         velocity: side * ball.radius * 1.8 - Offset(0, ball.radius * 1.4),
         angle: math.atan2(side.dy, side.dx),
+        spriteId: skill.shellSprite,
+        size: skill.shellSize,
+        randomRest: skill.shellRandomRest,
+        sequence: _shellSequence++,
       ),
     );
     if (shellCasings.length > maxShellCasings) {
@@ -3071,6 +3210,9 @@ class PowerUpSystem {
           ..position = Offset(x.toDouble(), floorY)
           ..velocity = Offset.zero
           ..settled = true;
+        if (casing.randomRest) {
+          casing.angle = shellRestAngle(casing.sequence);
+        }
       }
     }
   }
@@ -3379,7 +3521,7 @@ class PowerUpSystem {
       color: Color(impactSkill.effectColor),
       accent: impactAccent,
       count: 7 + (kind.impactWeight * 10).round(),
-      displayScale: impactSkill.effectDisplayScale,
+      displayScale: effectDisplayScaleOf(impactSkill),
     );
     weaponImpacts.add(
       WeaponImpact(

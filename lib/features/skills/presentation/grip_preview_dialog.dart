@@ -73,7 +73,7 @@ class GripPreviewDialog extends StatefulWidget {
 
 class _GripPreviewDialogState extends State<GripPreviewDialog> {
   late GripValues _grip = GripValues(
-    inset: widget.grip.inset.clamp(0.0, 1.5),
+    inset: widget.grip.inset.clamp(-1.5, 1.5),
     side: widget.grip.side.clamp(-1.5, 1.5),
     rotation: widget.grip.rotation.clamp(-180.0, 180.0),
   );
@@ -175,7 +175,7 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                 'inset',
                 'Forward/back',
                 _grip.inset,
-                0,
+                -1.5,
                 1.5,
                 'r',
                 (v) => _grip = _grip.copyWith(inset: v),
@@ -289,14 +289,28 @@ class _GripPreviewPainter extends CustomPainter {
       weaponGripSide: (_, _) => grip.side,
       weaponGripRotation: (_, _) => grip.rotation,
     );
-    paintHands(
-      canvas,
-      ball,
-      weaponGripInset: (_, _) => grip.inset,
-      weaponGripSide: (_, _) => grip.side,
-      weaponGripRotation: (_, _) => grip.rotation,
-    );
+    paintHands(canvas, ball);
+    if (kind.isWeapon) {
+      // Crosshair at the (fixed) gripping hand: slide the hilt onto it.
+      final mark = gripHandPosition(ball);
+      final arm = radius * 0.3;
+      canvas.drawLine(
+        mark - Offset(arm, 0),
+        mark + Offset(arm, 0),
+        _markerPaint,
+      );
+      canvas.drawLine(
+        mark - Offset(0, arm),
+        mark + Offset(0, arm),
+        _markerPaint,
+      );
+    }
   }
+
+  static final Paint _markerPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5
+    ..color = const Color(0xFFE53935);
 
   @override
   bool shouldRepaint(_GripPreviewPainter old) =>

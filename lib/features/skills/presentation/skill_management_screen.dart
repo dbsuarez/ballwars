@@ -6,6 +6,7 @@ import '../../../core/widgets/color_picker_dialog.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/audio/game_audio.dart';
+import '../../../core/sprites/sprite_registry.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/animated_empty_state.dart';
 import '../../../core/widgets/canvas_action_glyph.dart';
@@ -375,8 +376,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             '${skill.projectileCount} projectiles',
           if (skill.maxBounces != null) '${skill.maxBounces} bounce',
         ];
-        // A custom skill's own description, else the generated note.
-        final note = skill.custom && skill.description.isNotEmpty
+        // The skill's own description (custom or an edited built-in), else the generated note.
+        final note = skill.description.isNotEmpty
             ? skill.description
             : skill.custom && skill.enabled
             ? 'Independent skill using ${skill.baseKind.label} artwork'
@@ -624,6 +625,56 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   late final TextEditingController _shakeText = TextEditingController(
     text: _formatSeconds(_library.screenShake),
   );
+  late final TextEditingController _weaponScaleText = TextEditingController(
+    text: _formatSeconds(_library.weaponDisplayScale),
+  );
+  late final TextEditingController _pickupScaleText = TextEditingController(
+    text: _formatSeconds(_library.pickupDisplayScale),
+  );
+  late final TextEditingController _effectScaleText = TextEditingController(
+    text: _formatSeconds(_library.effectDisplayScale),
+  );
+
+  /// "Apply to all skills": after a confirmation, writes the value into every skill's own field
+  /// ([SkillLibrary.applyToAll] through [apply]). Saved with Save library like any edit.
+  Future<void> _applyToAll(
+    String shown,
+    SkillLibrary Function(SkillLibrary library) apply,
+  ) async {
+    final count = _library.all(_tuning).length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apply to all skills'),
+        content: Text(
+          "Set $shown on all $count skills? This changes each skill's own value."
+          ' Built-in skills you have not edited yet become individually edited skills, so Edit power-up numbers (Legacy) will no longer change them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('apply-all-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _library = apply(_library));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            'Set $shown on all $count skills. Save library to keep it.',
+          ),
+        ),
+      );
+  }
 
   /// One global setting: a number for every skill, and "Let each skill set its own".
   Widget _globalCard({
@@ -639,6 +690,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     required String globalNote,
     required void Function(double value) onValue,
     required void Function(bool value) onSkillsSetOwn,
+    required Key applyKey,
+    required String Function(double value) shown,
+    required SkillLibrary Function(SkillLibrary library, double value)
+    applyToAll,
   }) {
     final c = BallWarsColors.of(context);
     final typed = double.tryParse(controller.text.trim());
@@ -696,6 +751,23 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               value: skillsSetOwn,
               onChanged: (value) => setState(() => onSkillsSetOwn(value)),
             ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  key: applyKey,
+                  onPressed: error != null
+                      ? null
+                      : () => _applyToAll(
+                          shown(typed!),
+                          (library) => applyToAll(library, typed),
+                        ),
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('Apply to all skills'),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -733,6 +805,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           onValue: (v) => _library = _library.withGlobal(calloutSeconds: v),
           onSkillsSetOwn: (v) =>
               _library = _library.withGlobal(skillsSetCallout: v),
+          applyKey: const ValueKey('apply-all-callout-seconds'),
+          shown: (v) => '${_formatSeconds(v)} s',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, calloutSeconds: v),
         ),
         Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -808,6 +884,73 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           onValue: (v) => _library = _library.withGlobal(screenShake: v),
           onSkillsSetOwn: (v) =>
               _library = _library.withGlobal(skillsSetScreenShake: v),
+          applyKey: const ValueKey('apply-all-screen-shake'),
+          shown: _formatSeconds,
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, screenShake: v),
+        ),
+        _globalCard(
+          label: 'Equipped artwork size',
+          fieldKey: const ValueKey('global-weapon-display-scale'),
+          switchKey: const ValueKey('skills-set-weapon-display-scale'),
+          controller: _weaponScaleText,
+          suffix: 'x',
+          min: 0.25,
+          max: 3,
+          skillsSetOwn: _library.skillsSetWeaponDisplayScale,
+          ownNote:
+              'Each weapon uses its own equipped display scale (Appearance). This value is not used.',
+          globalNote:
+              'Every weapon in hand is drawn at this size. The equipped display scale in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(weaponDisplayScale: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetWeaponDisplayScale: v),
+          applyKey: const ValueKey('apply-all-weapon-display-scale'),
+          shown: (v) => '${_formatSeconds(v)}x',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, weaponDisplayScale: v),
+        ),
+        _globalCard(
+          label: 'Pickup artwork size',
+          fieldKey: const ValueKey('global-pickup-display-scale'),
+          switchKey: const ValueKey('skills-set-pickup-display-scale'),
+          controller: _pickupScaleText,
+          suffix: 'x',
+          min: 0.25,
+          max: 3,
+          skillsSetOwn: _library.skillsSetPickupDisplayScale,
+          ownNote:
+              'Each skill uses its own pickup artwork scale (Appearance). This value is not used.',
+          globalNote:
+              'Every pickup in the arena is drawn at this size. The pickup artwork scale in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(pickupDisplayScale: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetPickupDisplayScale: v),
+          applyKey: const ValueKey('apply-all-pickup-display-scale'),
+          shown: (v) => '${_formatSeconds(v)}x',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, pickupDisplayScale: v),
+        ),
+        _globalCard(
+          label: 'Effect artwork size',
+          fieldKey: const ValueKey('global-effect-display-scale'),
+          switchKey: const ValueKey('skills-set-effect-display-scale'),
+          controller: _effectScaleText,
+          suffix: 'x',
+          min: 0.25,
+          max: 3,
+          skillsSetOwn: _library.skillsSetEffectDisplayScale,
+          ownNote:
+              'Each skill uses its own effect artwork scale (Appearance). This value is not used.',
+          globalNote:
+              'Every effect is drawn at this size. The effect artwork scale in each skill is disabled.',
+          onValue: (v) => _library = _library.withGlobal(effectDisplayScale: v),
+          onSkillsSetOwn: (v) =>
+              _library = _library.withGlobal(skillsSetEffectDisplayScale: v),
+          applyKey: const ValueKey('apply-all-effect-display-scale'),
+          shown: (v) => '${_formatSeconds(v)}x',
+          applyToAll: (library, v) =>
+              library.applyToAll(_tuning, effectDisplayScale: v),
         ),
       ],
     );
@@ -1146,7 +1289,13 @@ class _SkillEditorState extends State<_SkillEditor> {
     'handEffectDuration': TextEditingController(
       text: '${widget.skill.handEffectDurationSeconds}',
     ),
+    'shellSize': TextEditingController(text: '${widget.skill.shellSize}'),
   };
+
+  /// Shell settings (gun skills): Default (null) / On / Off, the sprite id (null: brass) and rest.
+  late bool? _shellEnabled = widget.skill.shellEnabled;
+  late String? _shellSprite = widget.skill.shellSprite;
+  late bool _shellRandomRest = widget.skill.shellRandomRest;
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
   late bool _globalEffectVisuals = widget.skill.useGlobalEffectVisuals;
@@ -1240,6 +1389,69 @@ class _SkillEditorState extends State<_SkillEditor> {
             PowerUpKind.busterSword,
           ].contains(widget.skill.baseKind));
 
+  /// The Shell group shows for skills that shoot: a gun carrier, or a custom skill that fires
+  /// projectiles after an aim (the only custom path that ejects casings).
+  bool get _showsShellSettings => _editsComposed
+      ? _delivery == SkillDelivery.projectile &&
+            _trigger == SkillTrigger.aimedFire
+      : widget.skill.baseKind.isGun;
+
+  /// Whether the edited values make a composed skill (trigger, targeting, delivery and effect set).
+  bool get _editsComposed =>
+      _trigger != null &&
+      _targeting != null &&
+      _delivery != null &&
+      _effectType != null;
+
+  /// What "Default" means for Drops shells here (a composed or combined skill drops none).
+  /// Read from [SkillDefinition.defaultDropsShells] on the edited values, the same rule the match uses.
+  bool get _shellDefault => SkillDefinition(
+    id: widget.skill.id,
+    name: widget.skill.name,
+    baseKind: widget.skill.baseKind,
+    trigger: _trigger,
+    targeting: _targeting,
+    delivery: _delivery,
+    effectType: _effectType,
+    payloadSkillId: _payload,
+  ).defaultDropsShells;
+
+  /// "Brass shell (default)" (null) plus the bundled projectile, effect and animation sprites and
+  /// any uploaded ones, and the current choice even if it is no longer loaded.
+  List<String?> get _shellSpriteChoices {
+    final ids =
+        SpriteRegistry.ids
+            .where(
+              (id) =>
+                  id.startsWith('projectile.') ||
+                  id.startsWith('effect.') ||
+                  id.startsWith('anim.') ||
+                  id.startsWith('custom.'),
+            )
+            .toList()
+          ..sort();
+    return [
+      null,
+      if (_shellSprite != null && !ids.contains(_shellSprite)) _shellSprite,
+      ...ids,
+    ];
+  }
+
+  static String _shellSpriteLabel(String? id) {
+    if (id == null) return 'Brass shell (default)';
+    if (!SpriteRegistry.has(id)) return '$id (not loaded, brass shell)';
+    final dot = id.indexOf('.');
+    final group = switch (id.substring(0, dot)) {
+      'projectile' => 'Projectile',
+      'effect' => 'Effect',
+      'anim' => 'Animation',
+      'custom' => 'Uploaded',
+      final other => other,
+    };
+    final name = id.substring(dot + 1).replaceAll(RegExp(r'[._-]+'), ' ');
+    return '$group: $name';
+  }
+
   bool get _canSteerProjectile =>
       _usesProjectileDelivery &&
       (widget.skill.isComposed ||
@@ -1286,6 +1498,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       _spriteTint = defaults.spriteTint;
       _rarity = PowerUpConfig.defaults.rarityOf(widget.skill.baseKind);
       _name.text = defaults.name;
+      // A built-in's description goes back to the generated text; a custom skill keeps its own.
+      if (!widget.skill.custom) _description.text = '';
       _enabled = defaults.enabled;
       _homing = defaults.homing;
       _returnsToOrigin = defaults.returnsToOrigin;
@@ -1344,6 +1558,10 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('bubbleDuration', defaults.bubbleDurationSeconds);
       number('handEffectScale', defaults.handEffectScale);
       number('handEffectDuration', defaults.handEffectDurationSeconds);
+      number('shellSize', defaults.shellSize);
+      _shellEnabled = defaults.shellEnabled;
+      _shellSprite = defaults.shellSprite;
+      _shellRandomRest = defaults.shellRandomRest;
     });
   }
 
@@ -1464,9 +1682,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
     return widget.skill.copyWith(
       name: _name.text.trim(),
-      description: widget.skill.custom
-          ? SkillDefinition.cleanDescription(_description.text)
-          : null,
+      description: SkillDefinition.cleanDescription(_description.text),
       enabled: _enabled,
       category: _category,
       arsenalDamage: _double('arsenal'),
@@ -1526,6 +1742,10 @@ class _SkillEditorState extends State<_SkillEditor> {
       handedness: _handedness,
       artworkKind: _artwork,
       payloadSkillId: _payload,
+      shellEnabled: _shellEnabled,
+      shellSprite: _shellSprite,
+      shellSize: _double('shellSize'),
+      shellRandomRest: _shellRandomRest,
     );
   }
 
@@ -1533,7 +1753,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     'weaponDisplayScale': (0.25, 3),
     'pickupDisplayScale': (0.25, 3),
     'effectDisplayScale': (0.25, 3),
-    'weaponGripInset': (0, 1.5),
+    'weaponGripInset': (-1.5, 1.5),
     'weaponGripSide': (-1.5, 1.5),
     'weaponGripRotation': (-180, 180),
     'projectileSize': (0.1, 5),
@@ -1565,11 +1785,13 @@ class _SkillEditorState extends State<_SkillEditor> {
     'triggerInterval': (0.5, 120),
     'handEffectScale': (0.1, 4),
     'handEffectDuration': (0.1, 10),
+    'shellSize': (0.25, 4),
   };
 
   /// Number fields that may go below zero.
   static const _signedKeys = {
     'projectileSpin',
+    'weaponGripInset',
     'weaponGripSide',
     'weaponGripRotation',
   };
@@ -1734,6 +1956,93 @@ class _SkillEditorState extends State<_SkillEditor> {
     ];
   }
 
+  /// Appearance > Shell: whether firing drops casings, their sprite (with a preview), size and rest.
+  List<Widget> _shellGroup() {
+    final choices = _shellSpriteChoices;
+    return [
+      _section(
+        'Shell',
+        'Spent casings this gun drops to the arena floor. They only change the look, never the match.',
+      ),
+      _fixedRow(
+        'Drops shells',
+        DropdownButtonFormField<String>(
+          key: const ValueKey('skill-shell-enabled'),
+          isExpanded: true,
+          initialValue: switch (_shellEnabled) {
+            null => 'default',
+            true => 'on',
+            false => 'off',
+          },
+          decoration: const InputDecoration(),
+          items: [
+            DropdownMenuItem(
+              value: 'default',
+              child: Text('Default (${_shellDefault ? 'On' : 'Off'})'),
+            ),
+            const DropdownMenuItem(value: 'on', child: Text('On')),
+            const DropdownMenuItem(value: 'off', child: Text('Off')),
+          ],
+          onChanged: (value) => setState(
+            () => _shellEnabled = switch (value) {
+              'on' => true,
+              'off' => false,
+              _ => null,
+            },
+          ),
+        ),
+      ),
+      _fixedRow(
+        'Shell sprite',
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String?>(
+                key: const ValueKey('skill-shell-sprite'),
+                isExpanded: true,
+                initialValue: _shellSprite,
+                decoration: const InputDecoration(),
+                items: [
+                  for (final id in choices)
+                    DropdownMenuItem(
+                      value: id,
+                      child: Text(
+                        _shellSpriteLabel(id),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _shellSprite = value),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox.square(
+              key: const ValueKey('skill-shell-preview'),
+              dimension: 40,
+              child: CustomPaint(
+                painter: _ShellPreviewPainter(
+                  spriteId: _shellSprite,
+                  size: (_double('shellSize') ?? 1).clamp(0.25, 4),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      _number('shellSize', 'Shell size', suffix: 'x'),
+      SwitchListTile(
+        key: const ValueKey('skill-shell-random-rest'),
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Random rest orientation'),
+        subtitle: const Text(
+          'Landed shells lie at varied angles. Off: they keep the angle they hit the floor at.',
+        ),
+        value: _shellRandomRest,
+        onChanged: (value) => setState(() => _shellRandomRest = value),
+      ),
+    ];
+  }
+
   Widget _fixedRow(String label, Widget control) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
@@ -1887,6 +2196,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                   'projectileSize',
                   'handEffectScale',
                   'meleeReach',
+                  'shellSize',
                 ].contains(key))
               Slider(
                 value: value.clamp(limits.$1, limits.$2),
@@ -2041,21 +2351,25 @@ class _SkillEditorState extends State<_SkillEditor> {
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
-                      if (widget.skill.custom)
-                        _fixedRow(
-                          'Description',
-                          TextField(
-                            key: const ValueKey('skill-description'),
-                            controller: _description,
-                            maxLength: SkillDefinition.maxDescriptionLength,
-                            minLines: 2,
-                            maxLines: 3,
-                            keyboardType: TextInputType.text,
-                            decoration: const InputDecoration(
-                              hintText: 'Shown on the skill card',
-                            ),
+                      _fixedRow(
+                        'Description',
+                        TextField(
+                          key: const ValueKey('skill-description'),
+                          controller: _description,
+                          maxLength: SkillDefinition.maxDescriptionLength,
+                          minLines: 2,
+                          maxLines: 3,
+                          keyboardType: TextInputType.text,
+                          decoration: InputDecoration(
+                            hintText: 'Shown on the skill card',
+                            helperMaxLines: 3,
+                            helperText: widget.skill.custom
+                                ? null
+                                : 'Saving a built-in skill stores its current numbers; '
+                                      'Edit power-up numbers (Legacy) will no longer change it.',
                           ),
                         ),
+                      ),
                       _fixedRow(
                         'Category',
                         DropdownButtonFormField<SkillCategory>(
@@ -2725,11 +3039,17 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'weaponDisplayScale',
                           'Equipped display scale',
                           suffix: 'x',
+                          enabled: widget.library.skillsSetWeaponDisplayScale,
+                          disabledNote:
+                              'Using the global equipped artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.weaponDisplayScale)}x). '
+                              'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                         _number(
                           'weaponGripInset',
                           'Grip forward/back',
                           suffix: 'ball radius',
+                          helper:
+                              'Forward/back: positive pulls the weapon toward the ball, negative pushes it out.',
                         ),
                         _number(
                           'weaponGripSide',
@@ -2761,10 +3081,15 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'Projectile scale',
                           suffix: 'x',
                         ),
+                      if (_showsShellSettings) ..._shellGroup(),
                       _number(
                         'pickupDisplayScale',
                         'Pickup artwork scale',
                         suffix: 'x',
+                        enabled: widget.library.skillsSetPickupDisplayScale,
+                        disabledNote:
+                            'Using the global pickup artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.pickupDisplayScale)}x). '
+                            'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                       ),
                       if (widget.skill.isComposed ||
                           !const [
@@ -2775,6 +3100,10 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'effectDisplayScale',
                           'Effect artwork scale',
                           suffix: 'x',
+                          enabled: widget.library.skillsSetEffectDisplayScale,
+                          disabledNote:
+                              'Using the global effect artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.effectDisplayScale)}x). '
+                              'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                       const SizedBox(height: 8),
                       _fixedRow(
@@ -3318,4 +3647,32 @@ class _VectorSkillPreview extends CustomPainter {
   @override
   bool shouldRepaint(_VectorSkillPreview oldDelegate) =>
       oldDelegate.kind != kind;
+}
+
+/// A landed shell as the arena draws it ([PowerUpPainter.paintShellCasing]), level and centered, for a
+/// ball radius that makes a 4x shell nearly fill the box.
+class _ShellPreviewPainter extends CustomPainter {
+  _ShellPreviewPainter({required this.spriteId, required this.size});
+
+  final String? spriteId;
+  final double size;
+
+  @override
+  void paint(Canvas canvas, Size box) {
+    PowerUpPainter.paintShellCasing(
+      canvas,
+      ShellCasing(
+        position: box.center(Offset.zero),
+        velocity: Offset.zero,
+        angle: 0,
+        spriteId: spriteId,
+        size: size,
+      ),
+      box.shortestSide * 0.11,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ShellPreviewPainter oldDelegate) =>
+      oldDelegate.spriteId != spriteId || oldDelegate.size != size;
 }

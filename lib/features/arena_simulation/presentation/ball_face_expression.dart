@@ -178,13 +178,10 @@ void paintSmiley(
 /// hand and a second hand on the lower free side; an unarmed smiley carries a
 /// relaxed hand on each side. Draw this after [PowerUpPainter.paintBallEffects]
 /// so the grip sits visibly over the weapon.
-void paintHands(
-  Canvas canvas,
-  SimulationBall ball, {
-  double Function(PowerUpKind kind, int slot)? weaponGripInset,
-  double Function(PowerUpKind kind, int slot)? weaponGripSide,
-  double Function(PowerUpKind kind, int slot)? weaponGripRotation,
-}) {
+///
+/// The hand stays at the kind's standard grip point; a skill's own grip
+/// values only slide the weapon sprite relative to it.
+void paintHands(Canvas canvas, SimulationBall ball) {
   final r = ball.radius;
   final held = ball.held;
   if (held == null) {
@@ -209,18 +206,8 @@ void paintHands(
         ball,
         weapon: weapon,
         slot: slot,
-        gripInset: weaponGripInset?.call(weapon, slot),
-        gripSide: weaponGripSide?.call(weapon, slot) ?? 0,
       );
-      // The hand grips the sprite as drawn, so it turns with the grip
-      // rotation (a shield's hand stays on the ball's rim).
-      final angle = weapon == PowerUpKind.shield
-          ? aim
-          : PowerUpPainter.heldSpriteAngle(
-              aim,
-              weaponGripRotation?.call(weapon, slot) ?? 0,
-            );
-      final dir = _unit(angle);
+      final dir = _unit(aim);
       _paintHandAt(
         canvas,
         weapon == PowerUpKind.shield
@@ -235,47 +222,45 @@ void paintHands(
                               ? 0.65
                               : 0.5)),
         r,
-        gripAngle: angle,
+        gripAngle: aim,
       );
     }
     return;
   }
 
   final aim = PowerUpPainter.heldAngle(ball);
-  // Flipping follows the aim; the grip then turns with the drawn sprite.
-  final flipped = math.cos(aim) < 0;
-  final angle = held == PowerUpKind.shield
-      ? aim
-      : PowerUpPainter.heldSpriteAngle(
-          aim,
-          weaponGripRotation?.call(held, 0) ?? 0,
-        );
-  final dir = _unit(angle);
-  final side = Offset(-dir.dy, dir.dx);
-  final weaponCenter = PowerUpPainter.heldCenter(
-    ball,
-    gripInset: weaponGripInset?.call(held, 0),
-    gripSide: weaponGripSide?.call(held, 0) ?? 0,
-  );
-  final Offset grip;
-  if (held == PowerUpKind.shield) {
-    grip = ball.position + dir * (r * 0.95);
-  } else if (held.isBlade ||
-      held == PowerUpKind.hook ||
-      held == PowerUpKind.threadHarpoon) {
-    grip = weaponCenter - dir * (r * (held.isBlade ? 1.3 : 0.65));
-  } else {
-    // The sprite flips vertically when it points left, so its local grip does
-    // the same.
-    final localY = flipped ? -0.3 : 0.3;
-    grip = weaponCenter - dir * (r * 0.45) + side * (r * localY);
-  }
-  _paintHandAt(canvas, grip, r, gripAngle: angle);
+  _paintHandAt(canvas, gripHandPosition(ball), r, gripAngle: aim);
 
   final freeA = aim - 2.3;
   final freeB = aim + 2.3;
   final freeAngle = math.sin(freeA) >= math.sin(freeB) ? freeA : freeB;
   _paintHandAt(canvas, ball.position + _unit(freeAngle) * (r * 0.98), r);
+}
+
+/// Where [paintHands] puts the gripping hand of a ball's single held item:
+/// the standard grip point of the weapon's kind, whatever grip values the skill
+/// sets (those slide the sprite relative to the hand). The grip preview marks
+/// this spot so a hilt can be lined up with it.
+Offset gripHandPosition(SimulationBall ball) {
+  final held = ball.held;
+  if (held == null) return ball.position;
+  final r = ball.radius;
+  final aim = PowerUpPainter.heldAngle(ball);
+  final flipped = math.cos(aim) < 0;
+  final dir = _unit(aim);
+  final side = Offset(-dir.dy, dir.dx);
+  final weaponCenter = PowerUpPainter.heldCenter(ball);
+  if (held == PowerUpKind.shield) {
+    return ball.position + dir * (r * 0.95);
+  } else if (held.isBlade ||
+      held == PowerUpKind.hook ||
+      held == PowerUpKind.threadHarpoon) {
+    return weaponCenter - dir * (r * (held.isBlade ? 1.3 : 0.65));
+  }
+  // The sprite flips vertically when it points left, so its local grip does
+  // the same.
+  final localY = flipped ? -0.3 : 0.3;
+  return weaponCenter - dir * (r * 0.45) + side * (r * localY);
 }
 
 Offset _unit(double angle) => Offset(math.cos(angle), math.sin(angle));

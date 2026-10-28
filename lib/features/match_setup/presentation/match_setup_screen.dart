@@ -506,6 +506,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final choice = await showDialog<_WeaponChoice>(
       context: context,
       builder: (_) => _WeaponsDialog(
+        skillLibrary: AppSettingsScope.of(context).skillLibrary,
         customSkills: spawnable,
         initialCustom: {
           for (final skill in spawnable)
@@ -1620,6 +1621,10 @@ class _WeaponsDialog extends StatefulWidget {
   /// Active custom skills that can spawn, listed next to the built-ins, and the ones that start on.
   final List<SkillDefinition> customSkills;
   final Set<String> initialCustom;
+
+  /// The admin's skill library: a built-in's own description (Skill Management) replaces the
+  /// generated text on its card.
+  final SkillLibrary skillLibrary;
   final bool arsenal;
   final PowerUpConfig config;
   final ArenaDecoration arenaDecoration;
@@ -1628,6 +1633,7 @@ class _WeaponsDialog extends StatefulWidget {
     required this.initial,
     this.customSkills = const [],
     this.initialCustom = const {},
+    this.skillLibrary = SkillLibrary.defaults,
     required this.arsenal,
     required this.config,
     required this.arenaDecoration,
@@ -2063,11 +2069,16 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                       ),
                     const SizedBox(height: 4),
                     Text(
-                      powerUpDescription(
-                        kind,
-                        arsenal: widget.arsenal,
-                        config: widget.config,
-                      ),
+                      switch (widget.skillLibrary
+                          .builtIn(kind, widget.config)
+                          .description) {
+                        '' => powerUpDescription(
+                          kind,
+                          arsenal: widget.arsenal,
+                          config: widget.config,
+                        ),
+                        final own => own,
+                      },
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(

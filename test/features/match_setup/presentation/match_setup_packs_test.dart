@@ -528,6 +528,59 @@ void main() {
     },
   );
 
+  testWidgets(
+    'built-in cards show the admin description, else the generated text',
+    (tester) async {
+      const tuning = PowerUpConfig.defaults;
+      final library = SkillLibrary.defaults.withDefinition(
+        SkillLibrary.defaults
+            .builtIn(PowerUpKind.knife, tuning)
+            .copyWith(description: 'A tiny blade with a big story.'),
+        tuning,
+      );
+      await pumpSetup(tester, skillLibrary: library);
+      await tester.tap(find.text('Arsenal'));
+      await tester.pump();
+      await openSettings(tester);
+      await tester.tap(find.text('Pickups: All'));
+      await tester.pumpAndSettle();
+
+      final knife = find.byKey(const ValueKey('selection-card-knife'));
+      await tester.ensureVisible(knife);
+      await tester.pumpAndSettle();
+      final shown = tester.widget<Text>(
+        find.descendant(
+          of: knife,
+          matching: find.text('A tiny blade with a big story.'),
+        ),
+      );
+      expect(shown.maxLines, 2);
+      expect(shown.overflow, TextOverflow.ellipsis);
+      expect(
+        find.descendant(
+          of: knife,
+          matching: find.text(
+            powerUpDescription(PowerUpKind.knife, arsenal: true),
+          ),
+        ),
+        findsNothing,
+      );
+      // An unedited built-in keeps the generated text.
+      final pistol = find.byKey(const ValueKey('selection-card-pistol'));
+      await tester.ensureVisible(pistol);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: pistol,
+          matching: find.text(
+            powerUpDescription(PowerUpKind.pistol, arsenal: true),
+          ),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('Pickups count includes spawnable custom skills', (tester) async {
     final a = SkillLibrary.defaults.create('Alpha Blade', PowerUpKind.knife);
     final b = SkillLibrary.defaults.create('Beta Blade', PowerUpKind.knife);

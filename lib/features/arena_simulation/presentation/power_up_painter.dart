@@ -247,7 +247,7 @@ class PowerUpPainter {
         );
         try {
           final visualRadius =
-              r * p.visualSkill(PowerUpKind.busterSword).effectDisplayScale;
+              r * p.effectDisplayScale(PowerUpKind.busterSword);
           for (var i = 0; i < attack.hitsShown; i++) {
             final angle = i * math.pi / 4 + attack.age * 0.035;
             final direction = Offset.fromDirection(angle);
@@ -275,8 +275,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.sniperRifle, ball: flash.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.sniperRifle).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.sniperRifle);
         final fade = (1 - flash.age / 24).clamp(0.0, 1.0);
         final from = flash.owner.position;
         final to = flash.target.position;
@@ -318,7 +317,7 @@ class PowerUpPainter {
       );
       try {
         final visualRadius =
-            r * p.visualSkill(PowerUpKind.omegaTendrils).effectDisplayScale;
+            r * p.effectDisplayScale(PowerUpKind.omegaTendrils);
         final from = tendril.owner.position;
         final to = tendril.target.position;
         final delta = to - from;
@@ -381,8 +380,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.molotov, ball: fire.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.molotov).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.molotov);
         final life = 1 - fire.age / PowerUpTuning.molotovBurnSteps;
         final pulse = 0.92 + 0.08 * math.sin(state.step * 0.35);
         canvas.drawCircle(
@@ -451,8 +449,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.fireWall, ball: wall.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.fireWall).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.fireWall);
         final tangent = Offset.fromDirection(wall.angle);
         for (var i = 0; i < 4; i++) {
           final flame =
@@ -501,7 +498,7 @@ class PowerUpPainter {
       );
       try {
         final visualRadius =
-            r * p.visualSkill(PowerUpKind.lightningStrikes).effectDisplayScale;
+            r * p.effectDisplayScale(PowerUpKind.lightningStrikes);
         if (strike.flashLeft <= 0) continue;
         final target = strike.target.position;
         if (p.usesEffectSprite(
@@ -562,8 +559,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.earthquake, ball: quake.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.earthquake).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.earthquake);
         if (quake.flashLeft <= 0) continue;
         final progress = 1 - quake.flashLeft / 10.0;
         for (var i = 0; i < 3; i++) {
@@ -588,8 +584,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.energyWave, ball: attack.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.energyWave);
         final charge = (attack.age / EnergyWaveAttack.chargeSteps).clamp(
           0.0,
           1.0,
@@ -655,8 +650,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.energyWave, ball: wave.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.energyWave).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.energyWave);
         final initial = wave.end - wave.start;
         final progress = EnergyWaveAttack.sweepProgress(wave.age);
         final startAngle =
@@ -733,8 +727,7 @@ class PowerUpPainter {
         p.artworkTint(PowerUpKind.flamethrower, ball: cone.owner),
       );
       try {
-        final visualRadius =
-            r * p.visualSkill(PowerUpKind.flamethrower).effectDisplayScale;
+        final visualRadius = r * p.effectDisplayScale(PowerUpKind.flamethrower);
         final direction = Offset.fromDirection(cone.angle);
         final normal = Offset(-direction.dy, direction.dx);
         for (var i = 0; i < 7; i++) {
@@ -796,9 +789,7 @@ class PowerUpPainter {
             e.radius *
             (e.kind == null
                 ? 1
-                : p
-                      .visualSkill(e.kind!, skillId: e.skillId)
-                      .effectDisplayScale);
+                : p.effectDisplayScale(e.kind!, skillId: e.skillId));
         final t = e.age / PowerUpTuning.explosionShowSteps;
         final fade = (1 - t).clamp(0.0, 1.0);
         if (e.kind == PowerUpKind.rocketLauncher &&
@@ -975,9 +966,7 @@ class PowerUpPainter {
             item.position,
             r *
                 (0.96 + 0.08 * pulse) *
-                p
-                    .visualSkill(item.kind, skillId: item.skillId)
-                    .pickupDisplayScale,
+                p.pickupDisplayScale(item.kind, skillId: item.skillId),
             useSprite: p.usesSprite(item.kind, skillId: item.skillId),
           );
         } else {
@@ -987,9 +976,7 @@ class PowerUpPainter {
             item.position,
             r *
                 (0.90 + 0.20 * pulse) *
-                p
-                    .visualSkill(item.kind, skillId: item.skillId)
-                    .pickupDisplayScale,
+                p.pickupDisplayScale(item.kind, skillId: item.skillId),
             0.35 + 0.65 * pulse,
             ring: SkillLibrary.rarityOf(
               p.visualSkill(item.kind, skillId: item.skillId),
@@ -1005,33 +992,13 @@ class PowerUpPainter {
     }
 
     for (final casing in p.shellCasings) {
-      canvas.save();
-      canvas.translate(casing.position.dx, casing.position.dy);
-      canvas.rotate(casing.angle);
-      final body = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset.zero,
-          width: math.max(2.5, r * 0.2),
-          height: math.max(1.5, r * 0.1),
-        ),
-        const Radius.circular(1),
-      );
-      canvas.drawRRect(body, Paint()..color = const Color(0xFFD8A63A));
-      canvas.drawLine(
-        Offset(body.right - 0.7, body.top),
-        Offset(body.right - 0.7, body.bottom),
-        Paint()
-          ..strokeWidth = 0.8
-          ..color = const Color(0xFFFFE09A),
-      );
-      canvas.restore();
+      paintShellCasing(canvas, casing, r);
     }
 
     for (final portal in p.portals) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.portal));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.portal).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.portal);
         final pulse =
             0.5 +
             0.5 * math.sin((state.step - portal.spawnStep) * 2 * math.pi / 60);
@@ -1085,8 +1052,7 @@ class PowerUpPainter {
     for (final wall in p.spikeWalls) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.spikeWall));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.spikeWall).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.spikeWall);
         final spacing = trapRadius * 0.96;
         for (final rawBase in wall.spikePositions(spacing)) {
           // Old/replayed walls may have been spawned slightly farther inward.
@@ -1109,8 +1075,7 @@ class PowerUpPainter {
     for (final goo in p.stickyGoo) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.stickyGoo));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.stickyGoo).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.stickyGoo);
         final pulse =
             0.9 + 0.08 * math.sin((state.step - goo.spawnStep) * 0.12);
         _paintCurvedGooStrip(canvas, goo, arenaRadius, trapRadius, pulse);
@@ -1121,8 +1086,7 @@ class PowerUpPainter {
     for (final swamp in p.poisonSwamps) {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.poisonSwamp));
       try {
-        final trapRadius =
-            r * p.visualSkill(PowerUpKind.poisonSwamp).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(PowerUpKind.poisonSwamp);
         final pulse =
             0.92 + 0.06 * math.sin((state.step - swamp.spawnStep) * 0.1);
         _paintCurvedGooStrip(
@@ -1159,7 +1123,7 @@ class PowerUpPainter {
         p.artworkTint(bomb.kind, ball: bomb.owner),
       );
       try {
-        final trapRadius = r * p.visualSkill(bomb.kind).effectDisplayScale;
+        final trapRadius = r * p.effectDisplayScale(bomb.kind);
         // Armed traps sit directly on the arena instead of looking like pickup
         // balls. The short owner-colored footing preserves ownership feedback.
         final blink = ((state.step - bomb.armedStep) ~/ 15).isEven;
@@ -1639,9 +1603,7 @@ class PowerUpPainter {
         }
         final center = tornadoVisualCenter(target);
         final half =
-            target.radius *
-            1.65 *
-            p.visualSkill(PowerUpKind.tornado).effectDisplayScale;
+            target.radius * 1.65 * p.effectDisplayScale(PowerUpKind.tornado);
         final frame =
             p.usesEffectSprite(
               PowerUpKind.tornado,
@@ -2213,6 +2175,57 @@ class PowerUpPainter {
 
   static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
 
+  static final Paint _shellBody = Paint()..color = const Color(0xFFD8A63A);
+  static final Paint _shellShine = Paint()
+    ..strokeWidth = 0.8
+    ..color = const Color(0xFFFFE09A);
+  static final Paint _shellShineScaled = Paint()
+    ..color = const Color(0xFFFFE09A);
+
+  /// One spent casing ([ShellCasing]) for a ball radius [r]: its sprite ([ShellCasing.spriteId], fitted
+  /// keeping its shape into a square as long as the brass shell, nearest-neighbor, centered) or, when
+  /// it has none or the id isn't loaded, the brass shell; both scaled by [ShellCasing.size] and turned
+  /// by its angle.
+  static void paintShellCasing(Canvas canvas, ShellCasing casing, double r) {
+    final size = casing.size;
+    final length = math.max(2.5, r * 0.2) * size;
+    canvas.save();
+    canvas.translate(casing.position.dx, casing.position.dy);
+    canvas.rotate(casing.angle);
+    final id = casing.spriteId;
+    final sprite = id == null ? null : SpriteRegistry.frame(id);
+    if (sprite != null) {
+      final w = sprite.width.toDouble();
+      final h = sprite.height.toDouble();
+      final fit = length / math.max(w, h);
+      canvas.drawImageRect(
+        sprite,
+        Rect.fromLTWH(0, 0, w, h),
+        Rect.fromCenter(center: Offset.zero, width: w * fit, height: h * fit),
+        _spritePaint,
+      );
+    } else {
+      final body = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: length,
+          height: math.max(1.5, r * 0.1) * size,
+        ),
+        Radius.circular(size),
+      );
+      canvas.drawRRect(body, _shellBody);
+      final shine = size == 1
+          ? _shellShine
+          : (_shellShineScaled..strokeWidth = 0.8 * size);
+      canvas.drawLine(
+        Offset(body.right - 0.7 * size, body.top),
+        Offset(body.right - 0.7 * size, body.bottom),
+        shine,
+      );
+    }
+    canvas.restore();
+  }
+
   /// Draws [image] with its sprite [anchor] (`SpriteRegistry.anchor(id)` of the sprite it came from) at
   /// [c], [half] in half-size. The icon is first turned so its own direction
   /// [iconAngle] lies along +x, then mirrored top-to-bottom if [flip] (so a gun pointing left isn't upside
@@ -2316,10 +2329,10 @@ class PowerUpPainter {
   }
 
   /// Center of the held item's sprite. [gripInset] pulls it in along the
-  /// aim (ball radii); [gripSide] moves it across the aim, to the ball's
-  /// right for slot 0 when facing right, mirrored when facing left (the
-  /// sprite flips) and for the second hand (slot 1). A shield
-  /// ignores both and keeps hugging the ball.
+  /// aim (ball radii, -1.5..1.5; negative pushes it out); [gripSide] moves
+  /// it across the aim, to the ball's right for slot 0 when facing right,
+  /// mirrored when facing left (the sprite flips) and for the second hand
+  /// (slot 1). A shield ignores both and keeps hugging the ball.
   static Offset heldCenter(
     SimulationBall ball, {
     PowerUpKind? weapon,
@@ -2330,8 +2343,8 @@ class PowerUpPainter {
     final held = weapon ?? ball.held;
     final angle = heldAngle(ball, weapon: held, slot: slot);
     final dir = Offset(math.cos(angle), math.sin(angle));
-    final defaultInset = held?.isBlade == true ? 0.2 : 0.0;
-    final inset = (gripInset ?? defaultInset).clamp(0.0, 1.5);
+    final defaultInset = held?.defaultGripInset ?? 0.0;
+    final inset = (gripInset ?? defaultInset).clamp(-1.5, 1.5);
     final baseDistance = held == PowerUpKind.shield
         ? 1.0
         : held?.isBlade == true

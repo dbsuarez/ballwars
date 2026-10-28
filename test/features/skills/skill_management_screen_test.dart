@@ -1194,6 +1194,36 @@ void main() {
     );
   });
 
+  testWidgets('unchanged prefilled description retains generated behavior', (
+    tester,
+  ) async {
+    SkillManagementResult? result;
+    await tester.pumpWidget(app(onResult: (value) => result = value));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Pistol',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol').first);
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('skill-description'));
+    await _revealEditor(tester, field);
+    expect(
+      tester.widget<TextField>(field).controller!.text,
+      powerUpDescription(PowerUpKind.pistol, arsenal: true),
+    );
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(
+      result!.library.builtIn(PowerUpKind.pistol, result!.tuning).description,
+      isEmpty,
+    );
+  });
+
   testWidgets('custom and built-in skills take a description', (tester) async {
     final library = SkillLibrary.defaults.withDefinition(
       SkillLibrary.defaults
@@ -1236,6 +1266,10 @@ void main() {
     final builtInField = find.byKey(const ValueKey('skill-description'));
     await _revealEditor(tester, builtInField);
     expect(tester.widget<TextField>(builtInField).maxLength, 160);
+    expect(
+      tester.widget<TextField>(builtInField).controller!.text,
+      powerUpDescription(PowerUpKind.pistol, arsenal: true),
+    );
     expect(find.text(_builtInSaveNote), findsOneWidget);
     await tester.enterText(builtInField, ' Bang\n bang. ');
     await tester.pump();
@@ -1256,7 +1290,10 @@ void main() {
     await tester.tap(restore);
     await tester.pumpAndSettle();
     await _revealEditor(tester, builtInField);
-    expect(tester.widget<TextField>(builtInField).controller!.text, '');
+    expect(
+      tester.widget<TextField>(builtInField).controller!.text,
+      powerUpDescription(PowerUpKind.pistol, arsenal: true),
+    );
     Navigator.of(tester.element(find.text('Edit Pistol'))).pop();
     await tester.pumpAndSettle();
 

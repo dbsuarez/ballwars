@@ -16,8 +16,7 @@ import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_canvas.dart';
-import '../../arena_simulation/presentation/arena_preview.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../arena_simulation/presentation/arena_selection_dialog.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../arena_simulation/presentation/power_up_name.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -1110,62 +1109,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   Future<void> _changeArena() async {
-    final c = BallWarsColors.of(context);
     final active = _arenaChoice ?? AppSettingsScope.of(context).arenaDecoration;
-    final picked = await showModalBottomSheet<ArenaDecoration>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: const BoxConstraints(maxWidth: 440),
-      builder: (sheetContext) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (final d in ArenaDecoration.values)
-              InkWell(
-                key: ValueKey('test-arena-${d.name}'),
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => Navigator.pop(sheetContext, d),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: SizedBox(
-                    width: 112,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Stack(
-                          children: [
-                            ArenaPreview(decoration: d, size: 96),
-                            if (d == active)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Icon(
-                                  Icons.check_circle,
-                                  size: 22,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(d.label, style: TextStyle(color: c.text)),
-                        Text(
-                          d.hazardCaption,
-                          style: TextStyle(fontSize: 10, color: c.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
+    final picked = await showArenaSelectionDialog(context, selected: active);
     if (picked == null || !mounted) return;
     DevicePrefs.write('power-test-arena', picked.name);
     setState(() {

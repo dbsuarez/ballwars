@@ -380,7 +380,7 @@ void main() {
     expect(after.state.balls[1].position, const Offset(-62, 19));
   });
 
-  testWidgets('change arena sheet previews arenas and applies the pick', (
+  testWidgets('change arena dialog previews arenas and applies the pick', (
     tester,
   ) async {
     OfflineStore.instance = MemoryOfflineStore();
@@ -389,13 +389,34 @@ void main() {
     expect(find.byKey(const ValueKey('test-arena')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('test-arena')));
     await tester.pumpAndSettle();
+    final grid = find
+        .descendant(
+          of: find.byType(GridView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
     for (final d in ArenaDecoration.values) {
-      expect(find.byKey(ValueKey('test-arena-${d.name}')), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(ValueKey('arena-option-${d.name}')),
+        100,
+        scrollable: grid,
+      );
+      expect(find.byKey(ValueKey('arena-option-${d.name}')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(ValueKey('arena-option-${d.name}')),
+          matching: find.byType(ArenaPreview),
+        ),
+        findsOneWidget,
+      );
     }
-    expect(find.byType(ArenaPreview), findsNWidgets(6));
-    await tester.tap(find.byKey(const ValueKey('test-arena-desert')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('arena-option-desert')),
+    );
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('test-arena-desert')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('arena-option-desert')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('arena-option-desert')), findsNothing);
     final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
     expect(arena.arenaDecoration, ArenaDecoration.desert);
     expect(
@@ -408,7 +429,7 @@ void main() {
     expect(await DevicePrefs.read('power-test-arena'), 'desert');
   });
 
-  testWidgets('change arena sheet marks the active arena with a check', (
+  testWidgets('change arena dialog marks the active arena with a check', (
     tester,
   ) async {
     OfflineStore.instance = MemoryOfflineStore();
@@ -418,7 +439,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('test-arena')));
     await tester.pumpAndSettle();
     Finder checkIn(ArenaDecoration d) => find.descendant(
-      of: find.byKey(ValueKey('test-arena-${d.name}')),
+      of: find.byKey(ValueKey('arena-option-${d.name}')),
       matching: find.byIcon(Icons.check_circle),
     );
     for (final d in ArenaDecoration.values) {
@@ -430,6 +451,17 @@ void main() {
     }
     // Every tile keeps its hazard caption.
     expect(find.text(ArenaDecoration.space.hazardCaption), findsOneWidget);
+    final grid = find
+        .descendant(
+          of: find.byType(GridView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('arena-option-chaotic')),
+      100,
+      scrollable: grid,
+    );
     expect(find.text('All arena traps'), findsOneWidget);
   });
 

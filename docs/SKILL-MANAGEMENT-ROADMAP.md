@@ -240,6 +240,9 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ### Continuation from Claude (2026-10-28)
 
+- [x] Use a shared centered arena-selection dialog for Match Setup, admin defaults, and Power-up Test, with previews and current-selection marking.
+- [x] Prefill built-in descriptions in Edit Skill and show them in the list; preserve edited text and keep untouched generated descriptions automatic.
+
 - [x] Production migration `022_ball_gender.sql`: user confirmed applied in Supabase.
 - [x] Add approved player rarity presets, per-mode Custom settings, live tier odds and immutable match tuning. See [rarity presets](RARITY-PRESETS.md).
 - [x] Verify rarity presets with 390px Cards/List UI tests, per-mode settings, invalid input, seeded odds and historical tuning defaults. Full suite: 724 passed; static analysis and release web build passed (2026-10-28).

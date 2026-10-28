@@ -11,6 +11,8 @@ import 'power_up_rarity_screen.dart';
 import 'app_settings_scope.dart';
 import 'finisher_gallery_screen.dart';
 import 'power_up_test_screen.dart';
+import '../../arena_simulation/presentation/arena_preview.dart';
+import '../../arena_simulation/presentation/arena_selection_dialog.dart';
 
 /// Settings. Players see only the admin sign-in; once the admin signs in
 /// (email + password, listed in the `admins` table) they can change the
@@ -362,7 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Changes the floor inside the arena without changing its size or physics.',
+                                  'Default arena for new matches. Players can choose their own arena in Match Settings.',
                                   style: AppText.ui(
                                     13,
                                     FontWeight.w500,
@@ -370,58 +372,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  children: [
-                                    for (final decoration
-                                        in ArenaDecoration.values)
-                                      ChoiceChip(
-                                        key: ValueKey(
-                                          'arena-decoration-${decoration.name}',
-                                        ),
-                                        avatar: CircleAvatar(
-                                          backgroundColor: switch (decoration) {
-                                            ArenaDecoration.defaultArena =>
-                                              const Color(0xFF181A20),
-                                            ArenaDecoration.space =>
-                                              const Color(0xFF18245A),
-                                            ArenaDecoration.desert =>
-                                              const Color(0xFFC88746),
-                                            ArenaDecoration.wilderness =>
-                                              const Color(0xFF315B37),
-                                            ArenaDecoration.neonGrid =>
-                                              const Color(0xFF00B8D4),
-                                            ArenaDecoration.chaotic =>
-                                              const Color(0xFFFF4FD8),
-                                          },
-                                        ),
-                                        label: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(decoration.label),
-                                            Text(
-                                              decoration.hazardCaption,
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        selected:
-                                            settings.arenaDecoration ==
-                                            decoration,
-                                        onSelected: _busy
-                                            ? null
-                                            : (_) => _save(
-                                                settings.copyWith(
-                                                  arenaDecoration: decoration,
-                                                ),
-                                                done:
-                                                    '${decoration.label} arena saved.',
-                                              ),
+                                OutlinedButton.icon(
+                                  key: const ValueKey('choose-default-arena'),
+                                  icon: ArenaPreview(
+                                    decoration: settings.arenaDecoration,
+                                    size: 64,
+                                  ),
+                                  label: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(settings.arenaDecoration.label),
+                                      Text(
+                                        settings.arenaDecoration.hazardCaption,
+                                        style: const TextStyle(fontSize: 11),
                                       ),
-                                  ],
+                                      const Text('Choose arena'),
+                                    ],
+                                  ),
+                                  onPressed: _busy
+                                      ? null
+                                      : () async {
+                                          final picked =
+                                              await showArenaSelectionDialog(
+                                                context,
+                                                selected:
+                                                    settings.arenaDecoration,
+                                              );
+                                          if (picked == null || !mounted) {
+                                            return;
+                                          }
+                                          await _save(
+                                            AppSettingsScope.of(
+                                              this.context,
+                                            ).copyWith(arenaDecoration: picked),
+                                            done:
+                                                '${picked.label} arena saved.',
+                                          );
+                                        },
                                 ),
                               ],
                             ),

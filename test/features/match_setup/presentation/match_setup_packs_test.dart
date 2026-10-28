@@ -865,8 +865,16 @@ void main() {
     await tester.tap(find.text('Appearance').first);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('setting-Arena')));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('arena-option-space')));
+    await tester.pumpAndSettle();
     expect(find.text('Space'), findsOneWidget);
+    expect(
+      await tester.runAsync(
+        () => DevicePrefs.read('match-arsenal-arena-decoration-user'),
+      ),
+      'space',
+    );
     await tester.tap(find.text('Gameplay').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Pickups: All'));

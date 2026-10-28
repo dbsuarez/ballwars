@@ -230,7 +230,9 @@ void main() {
     await tester.tap(find.text('Appearance'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('arena-decoration-desert')));
+    await tester.tap(find.byKey(const ValueKey('choose-default-arena')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('arena-option-desert')));
     await tester.pumpAndSettle();
     expect(repo.saved.last.arenaDecoration, ArenaDecoration.desert);
     expect(settings.value.arenaDecoration, ArenaDecoration.desert);
@@ -242,7 +244,10 @@ void main() {
     expect(settings.value.ballGlowEnabled, isFalse);
 
     // Default effect visuals moved to Skill Management > Global.
-    expect(find.byKey(const ValueKey('effect-render-Default effect visuals')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('effect-render-Default effect visuals')),
+      findsNothing,
+    );
 
     const purple = Color(0xFF8E44AD);
     await tester.tap(find.byKey(ValueKey('blood-${purple.toARGB32()}')));

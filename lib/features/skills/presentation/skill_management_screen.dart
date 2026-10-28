@@ -355,6 +355,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             : 'No matching skills.',
       );
     }
+    final descriptionTuning = _library.applyTo(_tuning);
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
       itemCount: skills.length + visibleHeaders.length,
@@ -381,7 +382,13 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             ? skill.description
             : skill.custom && skill.enabled
             ? 'Independent skill using ${skill.baseKind.label} artwork'
-            : null;
+            : skill.custom
+            ? null
+            : powerUpDescription(
+                skill.baseKind,
+                arsenal: true,
+                config: descriptionTuning,
+              );
         return Card(
           child: ListTile(
             minVerticalPadding: 12,
@@ -1321,8 +1328,16 @@ class _SkillEditorState extends State<_SkillEditor> {
         .toUpperCase(),
   );
   late final _yell = TextEditingController(text: widget.skill.yell);
+  late bool _descriptionOverride = widget.skill.description.isNotEmpty;
+  late String _generatedDescription = powerUpDescription(
+    widget.skill.baseKind,
+    arsenal: true,
+    config: widget.library.applyTo(widget.tuning),
+  );
   late final _description = TextEditingController(
-    text: widget.skill.description,
+    text: widget.skill.description.isEmpty && !widget.skill.custom
+        ? _generatedDescription
+        : widget.skill.description,
   );
   late final _sound = TextEditingController(text: widget.skill.soundCue);
   late int _handColor = widget.skill.handEffectColor;
@@ -1499,7 +1514,15 @@ class _SkillEditorState extends State<_SkillEditor> {
       _rarity = PowerUpConfig.defaults.rarityOf(widget.skill.baseKind);
       _name.text = defaults.name;
       // A built-in's description goes back to the generated text; a custom skill keeps its own.
-      if (!widget.skill.custom) _description.text = '';
+      if (!widget.skill.custom) {
+        _descriptionOverride = false;
+        _generatedDescription = powerUpDescription(
+          widget.skill.baseKind,
+          arsenal: true,
+          config: PowerUpConfig.defaults,
+        );
+        _description.text = _generatedDescription;
+      }
       _enabled = defaults.enabled;
       _homing = defaults.homing;
       _returnsToOrigin = defaults.returnsToOrigin;
@@ -1682,7 +1705,9 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
     return widget.skill.copyWith(
       name: _name.text.trim(),
-      description: SkillDefinition.cleanDescription(_description.text),
+      description: widget.skill.custom || _descriptionOverride
+          ? SkillDefinition.cleanDescription(_description.text)
+          : '',
       enabled: _enabled,
       category: _category,
       arsenalDamage: _double('arsenal'),
@@ -2356,6 +2381,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                         TextField(
                           key: const ValueKey('skill-description'),
                           controller: _description,
+                          onChanged: (_) =>
+                              setState(() => _descriptionOverride = true),
                           maxLength: SkillDefinition.maxDescriptionLength,
                           minLines: 2,
                           maxLines: 3,

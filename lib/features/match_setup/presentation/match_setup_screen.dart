@@ -24,6 +24,7 @@ import '../domain/match_config.dart';
 import '../domain/pickup_count.dart';
 import '../domain/rarity_preset.dart';
 import 'rarity_preset_panel.dart';
+import '../../arena_simulation/presentation/arena_selection_dialog.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
 /// your own groups, mixing categories freely, then start the battle.
@@ -661,6 +662,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           ? _selected.length == 6
           : _selected.length >= 2 && _selected.length <= _maxBalls);
 
+  Future<void> _chooseArena() async {
+    final picked = await showArenaSelectionDialog(
+      context,
+      selected:
+          _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+    );
+    if (picked == null || !mounted) return;
+    _update(() => _arenaDecoration = picked);
+    _writeProfile('arena-decoration-user', picked.name);
+  }
+
   void _start() {
     if (!_canStart) return;
     GameAudio.instance.click();
@@ -1274,13 +1286,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     String Function(T) label,
     void Function(T) change, {
     String? tooltip,
+    VoidCallback? onTap,
   }) {
     final next = values[(values.indexOf(value) + 1) % values.length];
     final tile = InkWell(
       key: ValueKey('setting-$title'),
       onTap: () {
         GameAudio.instance.click();
-        change(next);
+        if (onTap != null) {
+          onTap();
+        } else {
+          change(next);
+        }
       },
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 52),
@@ -1574,6 +1591,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               _update(() => _arenaDecoration = v);
               _writeProfile('arena-decoration-user', v.name);
             },
+            onTap: _chooseArena,
           ),
           _choice(
             Icons.auto_fix_high,

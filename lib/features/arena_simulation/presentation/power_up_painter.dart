@@ -220,20 +220,16 @@ class PowerUpPainter {
 
   /// Field power-ups, aim lines, bullets, mines, blasts and slashes. Call after the fan lines, before the
   /// balls. [showEffects] covers only the decorative blast flash; gameplay objects always draw.
-  static void paint(
+  /// Transient hit sprites are painted above bodies so small art stays visible.
+  static void paintImpacts(
     Canvas canvas,
-    SimulationState state,
-    double arenaRadius, {
+    SimulationState state, {
     bool showEffects = true,
-    bool whitePickupBackgrounds = true,
-    EffectRenderMode projectileRenderMode = EffectRenderMode.sprite,
-    EffectRenderMode explosionRenderMode = EffectRenderMode.sprite,
-    EffectRenderMode freezeRenderMode = EffectRenderMode.sprite,
+    EffectRenderMode effectRenderMode = EffectRenderMode.sprite,
   }) {
     final p = state.powerUps;
     if (p == null) return;
     final r = p.fieldRadius;
-
     // Impact artwork belongs to a short-lived hit, never the owner's body.
     if (showEffects) {
       for (final impact in p.weaponImpacts) {
@@ -242,7 +238,7 @@ class PowerUpPainter {
             !p.usesEffectSprite(
               kind,
               skillId: impact.skillId,
-              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+              globalSprite: effectRenderMode == EffectRenderMode.sprite,
             )) {
           continue;
         }
@@ -268,6 +264,21 @@ class PowerUpPainter {
         }
       }
     }
+  }
+
+  static void paint(
+    Canvas canvas,
+    SimulationState state,
+    double arenaRadius, {
+    bool showEffects = true,
+    bool whitePickupBackgrounds = true,
+    EffectRenderMode projectileRenderMode = EffectRenderMode.sprite,
+    EffectRenderMode explosionRenderMode = EffectRenderMode.sprite,
+    EffectRenderMode freezeRenderMode = EffectRenderMode.sprite,
+  }) {
+    final p = state.powerUps;
+    if (p == null) return;
+    final r = p.fieldRadius;
 
     if (p.ragingDemonAttacks.isNotEmpty) {
       canvas.drawCircle(

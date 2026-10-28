@@ -103,16 +103,38 @@ void main() {
           (hit) => hit.kind == PowerUpKind.shadowClone,
         );
         final during = ImageCanvas();
-        PowerUpPainter.paint(during, controller.state, 260);
+        PowerUpPainter.paintImpacts(during, controller.state);
         final at = during.images.indexOf(art);
         expect(at, greaterThanOrEqualTo(0));
         expect(during.destinations[at].center, impact.position);
+        // Exercise the real layer order: a tiny impact must remain visible
+        // at the struck ball's center rather than being covered by its body.
+        final sceneRecorder = ui.PictureRecorder();
+        ArenaPainter(
+          state: controller.state,
+          arenaRadius: 260,
+          rimAngle: 0,
+        ).paint(ui.Canvas(sceneRecorder), const ui.Size(540, 540));
+        final scene = sceneRecorder.endRecording();
+        final rendered = await scene.toImage(540, 540);
+        final rgba = (await rendered.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        ))!;
+        final pixel =
+            (((270 + impact.position.dy).round() * 540) +
+                (270 + impact.position.dx).round()) *
+            4;
+        expect(rgba.getUint8(pixel), 0);
+        expect(rgba.getUint8(pixel + 1), 255);
+        expect(rgba.getUint8(pixel + 2), 0);
+        rendered.dispose();
+        scene.dispose();
         p.shadowCloneAttacks.clear();
         for (var i = 0; i < 13; i++) {
           p.step();
         }
         final after = ImageCanvas();
-        PowerUpPainter.paint(after, controller.state, 260);
+        PowerUpPainter.paintImpacts(after, controller.state);
         expect(after.images, isNot(contains(same(art))));
         SpriteRegistry.unregister('custom.hit');
         sheet.dispose();

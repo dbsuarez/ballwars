@@ -147,6 +147,13 @@ as Shadow Clone strikes retain the skill identity on their hit event and play
 the selected artwork briefly at the impact. Explosions and slash effects also
 retain their dedicated effect renderers.
 
+To use hit artwork: **Edit Skill > Appearance > Impact / effect artwork**, select
+a sprite, set **Effect visuals** to **Sprite**, then **Save**. Enable effects in
+the match and trigger a real hit in **Live Test**. Hit sprites play briefly over
+the struck ball, not continuously on the owner. Increase **Effect artwork scale**
+if the artwork is too small; global effect-size overrides can disable that
+per-skill size control.
+
 The owner supplies source artwork under `docs/ai_generated/`. Keep these originals
 unchanged in Git; app uploads and optimized runtime sheets are managed through the
 Sprites importer. Developer raster editing still follows the PhotoCraft workflow.

@@ -113,6 +113,12 @@ class ArenaPainter extends CustomPainter {
       _paintSingleBall(canvas, ball);
     }
     PowerUpPainter.paintShadowClones(canvas, state, paintBody: _paintBody);
+    PowerUpPainter.paintImpacts(
+      canvas,
+      state,
+      showEffects: showEffects,
+      effectRenderMode: explosionRenderMode,
+    );
     // After every ball, so the bars sit on top.
     if (showHpBars) {
       HpBar.paintAll(

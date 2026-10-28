@@ -1297,6 +1297,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       text: '${widget.skill.handEffectDurationSeconds}',
     ),
     'shellSize': TextEditingController(text: '${widget.skill.shellSize}'),
+    'shellCount': TextEditingController(text: '${widget.skill.shellCount}'),
   };
 
   /// Shell settings (gun skills): Default (null) / On / Off, the sprite id (null: brass) and rest.
@@ -1582,6 +1583,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('handEffectScale', defaults.handEffectScale);
       number('handEffectDuration', defaults.handEffectDurationSeconds);
       number('shellSize', defaults.shellSize);
+      number('shellCount', defaults.shellCount);
       _shellEnabled = defaults.shellEnabled;
       _shellSprite = defaults.shellSprite;
       _shellRandomRest = defaults.shellRandomRest;
@@ -1770,6 +1772,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       shellEnabled: _shellEnabled,
       shellSprite: _shellSprite,
       shellSize: _double('shellSize'),
+      shellCount: _int('shellCount'),
       shellRandomRest: _shellRandomRest,
     );
   }
@@ -1810,7 +1813,8 @@ class _SkillEditorState extends State<_SkillEditor> {
     'triggerInterval': (0.5, 120),
     'handEffectScale': (0.1, 4),
     'handEffectDuration': (0.1, 10),
-    'shellSize': (0.25, 4),
+    'shellSize': (0.25, 10),
+    'shellCount': (1, 20),
   };
 
   /// Number fields that may go below zero.
@@ -1822,6 +1826,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   };
 
   static const _wholeNumberKeys = {
+    'shellCount',
     'count',
     'allOut',
     'dotAllOut',
@@ -2047,7 +2052,7 @@ class _SkillEditorState extends State<_SkillEditor> {
               child: CustomPaint(
                 painter: _ShellPreviewPainter(
                   spriteId: _shellSprite,
-                  size: (_double('shellSize') ?? 1).clamp(0.25, 4),
+                  size: (_double('shellSize') ?? 1).clamp(0.25, 10),
                 ),
               ),
             ),
@@ -2055,6 +2060,10 @@ class _SkillEditorState extends State<_SkillEditor> {
         ),
       ),
       _number('shellSize', 'Shell size', suffix: 'x'),
+      _number('shellCount', 'Shells per shot / volley'),
+      const Text(
+        'One ejection per shot, or per volley for Shotgun and Bow. Gatling ejects on each round.',
+      ),
       SwitchListTile(
         key: const ValueKey('skill-shell-random-rest'),
         contentPadding: EdgeInsets.zero,
@@ -3677,7 +3686,7 @@ class _VectorSkillPreview extends CustomPainter {
 }
 
 /// A landed shell as the arena draws it ([PowerUpPainter.paintShellCasing]), level and centered, for a
-/// ball radius that makes a 4x shell nearly fill the box.
+/// reference ball radius that keeps a 10x shell inside the box.
 class _ShellPreviewPainter extends CustomPainter {
   _ShellPreviewPainter({required this.spriteId, required this.size});
 

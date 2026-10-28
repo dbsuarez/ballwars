@@ -97,6 +97,12 @@ void main() {
       ),
     );
     expect(big, greaterThan(small * 4));
+    final maximum = _opaque(
+      await _render(
+        (c) => PowerUpPainter.paintShellCasing(c, _casing(size: 10), 14),
+      ),
+    );
+    expect(maximum, greaterThan(big));
   });
 
   test('a sprite shell draws the sprite, centered and fitted', () async {

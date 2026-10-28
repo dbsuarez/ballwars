@@ -1046,11 +1046,15 @@ void main() {
     }
 
     final size = find.byKey(const ValueKey('skill-field-shellSize'));
+    final count = find.byKey(const ValueKey('skill-field-shellCount'));
     final rest = find.byKey(const ValueKey('skill-shell-random-rest'));
     Future<void> editAll() async {
       await pickShells('Off');
       await _revealEditor(tester, size);
-      await tester.enterText(size, '2.5');
+      await tester.enterText(size, '10');
+      await tester.pump();
+      await _revealEditor(tester, count);
+      await tester.enterText(count, '3');
       await tester.pump();
       await _revealEditor(tester, rest);
       await tester.tap(rest);
@@ -1068,6 +1072,8 @@ void main() {
     expect(find.text('Default (On)'), findsOneWidget);
     await _revealEditor(tester, size);
     expect(tester.widget<TextField>(size).controller!.text, '1.0');
+    await _revealEditor(tester, count);
+    expect(tester.widget<TextField>(count).controller!.text, '1');
     await _revealEditor(tester, rest);
     expect(tester.widget<SwitchListTile>(rest).value, isTrue);
 
@@ -1081,7 +1087,8 @@ void main() {
       PowerUpConfig.defaults,
     );
     expect(saved.shellEnabled, isFalse);
-    expect(saved.shellSize, 2.5);
+    expect(saved.shellSize, 10);
+    expect(saved.shellCount, 3);
     expect(saved.shellRandomRest, isFalse);
     expect(saved.shellSprite, isNull);
   });

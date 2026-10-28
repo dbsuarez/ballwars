@@ -575,7 +575,12 @@ void main() {
       expect(cleared.shellEnabled, isNull);
       expect(cleared.shellSprite, isNull);
 
-      for (final (raw, want) in const [(0.01, 0.25), (9, 4.0), (1.5, 1.5)]) {
+      for (final (raw, want) in const [
+        (0.01, 0.25),
+        (9, 9.0),
+        (99, 10.0),
+        (1.5, 1.5),
+      ]) {
         final wild = SkillDefinition.fromJson(
           Map<String, Object?>.from(json)..['shell_size'] = raw,
         )!;
@@ -598,6 +603,7 @@ void main() {
       final old = SkillDefinition.fromJson(legacy)!;
       expect(old.dropsShells, isTrue);
       expect(old.shellSize, 1);
+      expect(old.shellCount, 1);
       expect(old.shellRandomRest, isTrue);
     });
 
@@ -616,6 +622,31 @@ void main() {
           'big';
       final imported = SkillLibrary.importJson(jsonEncode(exported));
       expect(imported.builtIn(PowerUpKind.pistol, tuning).shellSize, 1);
+    });
+
+    test('shell count and size 10 survive persistence and replay', () {
+      final skill = builtIn(
+        PowerUpKind.pistol,
+      ).copyWith(shellSize: 10, shellCount: 7);
+      final library = SkillLibrary.defaults.withDefinition(skill, tuning);
+      for (final restored in [
+        SkillLibrary.fromJson(library.toJson()),
+        SkillLibrary.fromJson(library.toCompactJson()),
+        SkillLibrary.decodeReplay(library.encodeReplay()!)!,
+      ]) {
+        final back = restored.builtIn(PowerUpKind.pistol, tuning);
+        expect(back.shellSize, 10);
+        expect(back.shellCount, 7);
+      }
+      for (final (raw, expected) in [(0, 1), (99, 20), ('bad', 1), (1.5, 1)]) {
+        final json = Map<String, Object?>.from(skill.toJson())
+          ..['shell_count'] = raw;
+        expect(SkillDefinition.fromJson(json)!.shellCount, expected);
+      }
+      expect(
+        builtIn(PowerUpKind.pistol).toJson().containsKey('shell_count'),
+        isFalse,
+      );
     });
 
     test('shell settings survive the compact replay form', () {

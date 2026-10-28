@@ -83,6 +83,71 @@ List<ShellCasing> _fireOnce(PowerUpKind kind, {SkillLibrary? library}) {
 }
 
 void main() {
+  test('configured shell count is per shot or volley across firing paths', () {
+    for (final kind in [
+      PowerUpKind.pistol,
+      PowerUpKind.shotgun,
+      PowerUpKind.bow,
+      PowerUpKind.rocketLauncher,
+      PowerUpKind.sniperRifle,
+    ]) {
+      final library = _with(
+        [(s) => s.copyWith(shellEnabled: true, shellCount: 3, shellSize: 10)],
+        [kind],
+      );
+      final casings = _fireOnce(kind, library: library);
+      expect(casings, hasLength(3), reason: kind.name);
+      expect(casings.every((shell) => shell.size == 10), isTrue);
+      expect(
+        casings.map((shell) => shell.velocity).toSet(),
+        hasLength(3),
+        reason: 'Extra shells must spread visibly',
+      );
+    }
+  });
+
+  test('composed volley shell count does not multiply by projectile count', () {
+    final skill = SkillLibrary.defaults
+        .create('Spray', PowerUpKind.pistol)
+        .copyWith(
+          enabled: true,
+          shellEnabled: true,
+          projectileCount: 3,
+          shellCount: 4,
+        );
+    final c = _match(
+      library: SkillLibrary.defaults.withDefinition(skill, _tuning),
+    );
+    c.state.balls.first
+      ..held = PowerUpKind.pistol
+      ..heldSkillId = skill.id;
+    _run(c, PowerUpTuning.aimSteps);
+    expect(c.powerUps!.shots, 3);
+    expect(c.powerUps!.shellCasings, hasLength(4));
+  });
+
+  test(
+    'Gatling emits configured count on every round and caps stored casings',
+    () {
+      final c = _match(
+        library: _with(
+          [(s) => s.copyWith(shellCount: 20)],
+          [PowerUpKind.gatling],
+        ),
+      );
+      c.state.balls.first.held = PowerUpKind.gatling;
+      _run(c, PowerUpTuning.aimSteps);
+      _run(
+        c,
+        PowerUpTuning.gatlingIntervalSteps * (PowerUpTuning.gatlingRounds + 2),
+      );
+      expect(
+        c.powerUps!.shellCasings,
+        hasLength(PowerUpSystem.maxShellCasings),
+      );
+    },
+  );
+
   test('the four default guns eject, another gun only when switched on', () {
     for (final kind in const [
       PowerUpKind.pistol,
@@ -342,7 +407,8 @@ void main() {
         [
           (s) => s.copyWith(
             shellSprite: 'projectile.bullet',
-            shellSize: 4,
+            shellSize: 10,
+            shellCount: 20,
             shellRandomRest: false,
           ),
           (s) => s.copyWith(shellEnabled: false),

@@ -240,6 +240,8 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ### Continuation from Claude (2026-10-28)
 
+- [x] Raise shell size to 10x and add per-shot/per-volley shell count (1..20, default 1), persisted in skills/replays with cosmetic spread and the existing 80-casing arena cap.
+
 - [x] Use a shared centered arena-selection dialog for Match Setup, admin defaults, and Power-up Test, with previews and current-selection marking.
 - [x] Prefill built-in descriptions in Edit Skill and show them in the list; preserve edited text and keep untouched generated descriptions automatic.
 

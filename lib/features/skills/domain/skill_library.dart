@@ -140,6 +140,7 @@ class SkillDefinition {
     this.shellEnabled,
     this.shellSprite,
     this.shellSize = 1,
+    this.shellCount = 1,
     this.shellRandomRest = true,
   });
 
@@ -259,8 +260,11 @@ class SkillDefinition {
   /// vector shell.
   final String? shellSprite;
 
-  /// Casing size, times the brass shell's size (0.25 to 4).
+  /// Casing size, times the brass shell's size (0.25 to 10).
   final double shellSize;
+
+  /// Cosmetic casings per shot or volley (1 to 20), independent of projectile count.
+  final int shellCount;
 
   /// A landed casing lies at a fixed pseudo-random angle (a hash of its number, no RNG draws). Off:
   /// the spin angle it had when it hit the floor.
@@ -269,7 +273,9 @@ class SkillDefinition {
   /// What [shellEnabled] null means for this skill: on for a plain (not composed, firing no other
   /// skill) Pistol, Shotgun, Gatling or Freeze. The editor and the match both read this.
   bool get defaultDropsShells =>
-      !isComposed && payloadSkillId == null && defaultShellKinds.contains(baseKind);
+      !isComposed &&
+      payloadSkillId == null &&
+      defaultShellKinds.contains(baseKind);
 
   /// Whether firing this skill drops shell casings.
   bool get dropsShells => shellEnabled ?? defaultDropsShells;
@@ -416,6 +422,7 @@ class SkillDefinition {
     Object? shellEnabled = _unset,
     Object? shellSprite = _unset,
     double? shellSize,
+    int? shellCount,
     bool? shellRandomRest,
   }) => SkillDefinition(
     id: id ?? this.id,
@@ -501,6 +508,7 @@ class SkillDefinition {
         ? this.shellSprite
         : shellSprite as String?,
     shellSize: shellSize ?? this.shellSize,
+    shellCount: shellCount ?? this.shellCount,
     shellRandomRest: shellRandomRest ?? this.shellRandomRest,
   );
 
@@ -576,6 +584,7 @@ class SkillDefinition {
     if (shellEnabled != null) 'shell': shellEnabled,
     if (shellSprite != null) 'shell_sprite': shellSprite,
     if (shellSize != 1) 'shell_size': shellSize,
+    if (shellCount != 1) 'shell_count': shellCount,
     if (!shellRandomRest) 'shell_random_rest': false,
   };
 
@@ -699,6 +708,12 @@ class SkillDefinition {
       shellSize: value['shell_size'] is num
           ? (value['shell_size'] as num).toDouble()
           : 1,
+      shellCount:
+          value['shell_count'] is num &&
+              (value['shell_count'] as num).isFinite &&
+              (value['shell_count'] as num) % 1 == 0
+          ? (value['shell_count'] as num).toInt()
+          : 1,
       shellRandomRest: value['shell_random_rest'] is bool
           ? value['shell_random_rest'] as bool
           : true,
@@ -751,7 +766,8 @@ class SkillDefinition {
     rarity: custom && !baseKind.isTrap ? rarity : null,
     description: cleanDescription(description),
     shellSprite: _cleanReference(shellSprite),
-    shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 4) : 1,
+    shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 10) : 1,
+    shellCount: shellCount.clamp(1, 20),
   );
 
   /// [text] as a card description: whitespace and newlines collapsed to single spaces, trimmed and

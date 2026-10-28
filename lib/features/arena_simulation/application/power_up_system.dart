@@ -2795,8 +2795,7 @@ class PowerUpSystem {
     }
   }
 
-  /// One casing for a whole volley (shotgun, bow), ejected along the volley's center aim, when the
-  /// held skill drops shells.
+  /// One ejection for a whole volley (shotgun, bow), using the held skill's casing count.
   void _ejectVolleyShell(
     SimulationBall ball,
     SimulationBall target,
@@ -3143,7 +3142,7 @@ class PowerUpSystem {
     shots++;
   }
 
-  /// Drops one casing for a gun that doesn't fire through [_fire] (rocket, sniper, grenade and the
+  /// Ejects casings for a gun that doesn't fire through [_fire] (rocket, sniper, grenade and the
   /// like) when its skill switches shells on ([SkillDefinition.shellEnabled]); off by default.
   void _dropShellToward(
     SimulationBall ball,
@@ -3179,17 +3178,27 @@ class PowerUpSystem {
     SkillDefinition skill,
   ) {
     final side = Offset(-shotDirection.dy, shotDirection.dx);
-    shellCasings.add(
-      ShellCasing(
-        position: ball.position + side * ball.radius * 0.55,
-        velocity: side * ball.radius * 1.8 - Offset(0, ball.radius * 1.4),
-        angle: math.atan2(side.dy, side.dx),
-        spriteId: skill.shellSprite,
-        size: skill.shellSize,
-        randomRest: skill.shellRandomRest,
-        sequence: _shellSequence++,
-      ),
-    );
+    for (var index = 0; index < skill.shellCount.clamp(1, 20); index++) {
+      final sequence = _shellSequence++;
+      // Preserve the first casing exactly. Extra casings fan out cosmetically,
+      // using a stable hash rather than consuming simulation RNG draws.
+      final phase = index == 0 ? 0.0 : shellRestAngle(sequence);
+      final scatter = index == 0
+          ? Offset.zero
+          : Offset(math.cos(phase), math.sin(phase)) * ball.radius * .65;
+      shellCasings.add(
+        ShellCasing(
+          position: ball.position + side * ball.radius * 0.55,
+          velocity:
+              side * ball.radius * 1.8 - Offset(0, ball.radius * 1.4) + scatter,
+          angle: math.atan2(side.dy, side.dx) + (index == 0 ? 0 : phase * .15),
+          spriteId: skill.shellSprite,
+          size: skill.shellSize,
+          randomRest: skill.shellRandomRest,
+          sequence: sequence,
+        ),
+      );
+    }
     if (shellCasings.length > maxShellCasings) {
       shellCasings.removeRange(0, shellCasings.length - maxShellCasings);
     }

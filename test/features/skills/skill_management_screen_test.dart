@@ -1163,9 +1163,7 @@ void main() {
     );
   });
 
-  testWidgets('custom skills take a description; built-ins have no field', (
-    tester,
-  ) async {
+  testWidgets('custom and built-in skills take a description', (tester) async {
     final library = SkillLibrary.defaults.withDefinition(
       SkillLibrary.defaults
           .create('Story Pistol', PowerUpKind.pistol)
@@ -1196,7 +1194,7 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    // A built-in skill has no description field.
+    // A built-in skill takes a description too, shown in the list.
     await tester.enterText(
       find.widgetWithText(TextField, 'Search skills'),
       'Pistol',
@@ -1204,7 +1202,29 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ListTile, 'Pistol').first);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('skill-description')), findsNothing);
+    final builtInField = find.byKey(const ValueKey('skill-description'));
+    await _revealEditor(tester, builtInField);
+    expect(tester.widget<TextField>(builtInField).maxLength, 160);
+    await tester.enterText(builtInField, ' Bang\n bang. ');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Bang bang.'), findsOneWidget);
+
+    // Restore defaults clears it (closed without saving).
+    await tester.tap(find.widgetWithText(ListTile, 'Pistol').first);
+    await tester.pumpAndSettle();
+    await _revealEditor(tester, builtInField);
+    expect(
+      tester.widget<TextField>(builtInField).controller!.text,
+      'Bang bang.',
+    );
+    final restore = find.byKey(const ValueKey('restore-skill-defaults'));
+    await _revealEditor(tester, restore);
+    await tester.tap(restore);
+    await tester.pumpAndSettle();
+    await _revealEditor(tester, builtInField);
+    expect(tester.widget<TextField>(builtInField).controller!.text, '');
     Navigator.of(tester.element(find.text('Edit Pistol'))).pop();
     await tester.pumpAndSettle();
 
@@ -1231,6 +1251,12 @@ void main() {
     await tester.tap(find.text('Save Library'));
     await tester.pumpAndSettle();
     expect(result!.library.custom.single.description, 'Fires two bullets.');
+    expect(
+      result!.library
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .description,
+      'Bang bang.',
+    );
   });
 
   testWidgets('admin can duplicate, edit and save a custom skill', (
@@ -1433,6 +1459,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
     await tester.pumpAndSettle();
+    await _revealEditor(
+      tester,
+      find.byKey(const ValueKey('skill-item-rarity')),
+    );
     await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Epic').last);
@@ -1491,6 +1521,10 @@ void main() {
         tester,
         find.byKey(const ValueKey('skill-item-rarity')),
       );
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-item-rarity')),
+      );
       await tester.tap(find.byKey(const ValueKey('skill-item-rarity')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Special').last);
@@ -1517,6 +1551,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Knife'));
       await tester.pumpAndSettle();
+      await _revealEditor(
+        tester,
+        find.byKey(const ValueKey('skill-item-rarity')),
+      );
       expect(
         tester
             .widget<DropdownButtonFormField<PowerUpRarity>>(

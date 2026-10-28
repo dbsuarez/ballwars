@@ -673,12 +673,57 @@ void main() {
         Map<String, Object?>.from(base.toJson())..['description'] = 42,
       )!;
       expect(wrongType.description, '');
+    },
+  );
 
-      final builtIn = SkillLibrary.defaults
-          .builtIn(PowerUpKind.knife, PowerUpConfig.defaults)
-          .copyWith(description: 'Not for built-ins')
-          .validated();
-      expect(builtIn.description, '');
+  test(
+    'built-in descriptions are kept in their override and travel in snapshots',
+    () {
+      const tuning = PowerUpConfig.defaults;
+      final knife = SkillLibrary.defaults
+          .builtIn(PowerUpKind.knife, tuning)
+          .copyWith(description: '  A short\nblade.  ');
+      expect(knife.validated().description, 'A short blade.');
+      expect(
+        SkillDefinition.fromJson(knife.validated().toJson())!.description,
+        'A short blade.',
+      );
+      expect(
+        knife.copyWith(description: 'x' * 300).validated().description,
+        'x' * 160,
+      );
+
+      // The description alone makes an override; clearing it removes the override again.
+      final library = SkillLibrary.defaults.withDefinition(knife, tuning);
+      expect(library.overrides.keys, ['builtin.knife']);
+      expect(
+        library.builtIn(PowerUpKind.knife, tuning).description,
+        'A short blade.',
+      );
+      final cleared = library.withDefinition(
+        library.builtIn(PowerUpKind.knife, tuning).copyWith(description: ''),
+        tuning,
+      );
+      expect(cleared.overrides, isEmpty);
+      expect(cleared.isDefault, isTrue);
+
+      // Saved JSON, the full snapshot and the compact snapshot all keep it.
+      final compact = library.toCompactJson();
+      expect(
+        ((compact['overrides'] as Map)['builtin.knife'] as Map)['description'],
+        'A short blade.',
+      );
+      for (final read in [
+        SkillLibrary.fromJson(jsonDecode(jsonEncode(library.toJson()))),
+        SkillLibrary.fromJson(compact),
+        SkillLibrary.importJson(jsonEncode(compact)),
+        SkillLibrary.decodeReplay(library.encodeReplay()!)!,
+      ]) {
+        expect(
+          read.builtIn(PowerUpKind.knife, tuning).description,
+          'A short blade.',
+        );
+      }
     },
   );
 

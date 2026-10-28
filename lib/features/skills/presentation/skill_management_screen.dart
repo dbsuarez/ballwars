@@ -376,8 +376,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             '${skill.projectileCount} projectiles',
           if (skill.maxBounces != null) '${skill.maxBounces} bounce',
         ];
-        // A custom skill's own description, else the generated note.
-        final note = skill.custom && skill.description.isNotEmpty
+        // The skill's own description (custom or an edited built-in), else the generated note.
+        final note = skill.description.isNotEmpty
             ? skill.description
             : skill.custom && skill.enabled
             ? 'Independent skill using ${skill.baseKind.label} artwork'
@@ -1491,6 +1491,8 @@ class _SkillEditorState extends State<_SkillEditor> {
       _spriteTint = defaults.spriteTint;
       _rarity = PowerUpConfig.defaults.rarityOf(widget.skill.baseKind);
       _name.text = defaults.name;
+      // A built-in's description goes back to the generated text; a custom skill keeps its own.
+      if (!widget.skill.custom) _description.text = '';
       _enabled = defaults.enabled;
       _homing = defaults.homing;
       _returnsToOrigin = defaults.returnsToOrigin;
@@ -1673,9 +1675,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     }
     return widget.skill.copyWith(
       name: _name.text.trim(),
-      description: widget.skill.custom
-          ? SkillDefinition.cleanDescription(_description.text)
-          : null,
+      description: SkillDefinition.cleanDescription(_description.text),
       enabled: _enabled,
       category: _category,
       arsenalDamage: _double('arsenal'),
@@ -2344,21 +2344,20 @@ class _SkillEditorState extends State<_SkillEditor> {
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
-                      if (widget.skill.custom)
-                        _fixedRow(
-                          'Description',
-                          TextField(
-                            key: const ValueKey('skill-description'),
-                            controller: _description,
-                            maxLength: SkillDefinition.maxDescriptionLength,
-                            minLines: 2,
-                            maxLines: 3,
-                            keyboardType: TextInputType.text,
-                            decoration: const InputDecoration(
-                              hintText: 'Shown on the skill card',
-                            ),
+                      _fixedRow(
+                        'Description',
+                        TextField(
+                          key: const ValueKey('skill-description'),
+                          controller: _description,
+                          maxLength: SkillDefinition.maxDescriptionLength,
+                          minLines: 2,
+                          maxLines: 3,
+                          keyboardType: TextInputType.text,
+                          decoration: const InputDecoration(
+                            hintText: 'Shown on the skill card',
                           ),
                         ),
+                      ),
                       _fixedRow(
                         'Category',
                         DropdownButtonFormField<SkillCategory>(

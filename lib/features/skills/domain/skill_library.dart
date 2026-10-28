@@ -246,9 +246,9 @@ class SkillDefinition {
   /// keep one ([validated] drops it). Read it through [SkillLibrary.rarityOf].
   final PowerUpRarity? rarity;
 
-  /// A custom skill's own card text (Weapons dialog, Skill Management list), plain text on one
-  /// line, at most [maxDescriptionLength] characters. Empty: the generated text is shown. Built-ins
-  /// never keep one ([validated] drops it).
+  /// The skill's own card text (Weapons dialog, Skill Management list), plain text on one line, at
+  /// most [maxDescriptionLength] characters. Empty: the generated text is shown. A built-in keeps it
+  /// in its override (admin edit); it is cosmetic, nothing in the match reads it.
   final String description;
 
   /// Whether firing drops a spent shell casing. Null: by kind ([defaultDropsShells]: a built-in or
@@ -748,7 +748,7 @@ class SkillDefinition {
     yell: yell.trim().substring(0, yell.trim().length.clamp(0, 60)),
     payloadSkillId: _cleanReference(payloadSkillId),
     rarity: custom && !baseKind.isTrap ? rarity : null,
-    description: custom ? cleanDescription(description) : '',
+    description: cleanDescription(description),
     shellSprite: _cleanReference(shellSprite),
     shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 4) : 1,
   );

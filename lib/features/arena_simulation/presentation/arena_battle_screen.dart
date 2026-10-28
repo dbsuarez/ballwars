@@ -784,6 +784,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       builder: (context, _) => ScoreboardOverlay(
         artworkTint: (ball, kind) =>
             _state.powerUps?.artworkTint(kind, ball: ball) ?? 0xFFFFFFFF,
+        itemRarity: (ball, kind) =>
+            _state.powerUps?.itemRarity(kind, ball: ball) ??
+            widget.config.tuning.rarityOf(kind),
         tuning: widget.config.tuning,
         mode: widget.config.mode,
         compact:

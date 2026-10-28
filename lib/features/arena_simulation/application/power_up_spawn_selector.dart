@@ -46,12 +46,20 @@ class PowerUpSpawnSelector {
   }) {
     assert(eligible.isNotEmpty);
     SkillDefinition builtIn(PowerUpKind kind) => library.builtIn(kind, tuning);
+    // A trap (no tier) is shared uniformly by its built-in and its custom variants, as before.
+    SkillDefinition trap(PowerUpKind kind) {
+      final variants = custom.where((skill) => skill.baseKind == kind).toList();
+      if (variants.isEmpty) return builtIn(kind);
+      final candidates = [builtIn(kind), ...variants];
+      return candidates[rng.nextInt(candidates.length)];
+    }
+
     final traps = eligible.where((kind) => kind.isTrap).toList();
     final pickups = eligible.where((kind) => !kind.isTrap).toList();
-    if (pickups.isEmpty) return builtIn(traps[rng.nextInt(traps.length)]);
+    if (pickups.isEmpty) return trap(traps[rng.nextInt(traps.length)]);
     if (traps.isNotEmpty) {
       final gate = rng.nextInt(eligible.length);
-      if (gate < traps.length) return builtIn(traps[gate]);
+      if (gate < traps.length) return trap(traps[gate]);
     }
     final groups = {for (final rarity in PowerUpRarity.values) rarity: <List<SkillDefinition>>[]};
     for (final kind in pickups) {

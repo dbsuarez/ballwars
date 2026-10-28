@@ -186,6 +186,11 @@ class PowerUpSystem {
               : _composedProjectiles[projectile] ?? visualSkill(kind))
           .spriteTint;
 
+  /// The tier of [kind] as [ball] holds or uses it: a held custom skill's own tier, else the
+  /// built-in's ([SkillLibrary.rarityOf]). Null for traps.
+  PowerUpRarity? itemRarity(PowerUpKind kind, {SimulationBall? ball}) =>
+      SkillLibrary.rarityOf(visualSkill(kind, ball: ball), _t);
+
   bool usesEffectSprite(
     PowerUpKind kind, {
     SimulationBall? ball,

@@ -144,6 +144,76 @@ void main() {
     },
   );
 
+  group('custom traps', () {
+    final bigMine = SkillLibrary.defaults.create('Big Mine', PowerUpKind.mine);
+
+    test(
+      'a custom trap still spawns when another custom skill has its own tier',
+      () {
+        expect(bigMine.spawnsInArena, isTrue);
+        final library = SkillLibrary.defaults
+            .withDefinition(bigMine, tuning)
+            .withDefinition(
+              SkillLibrary.withOwnRarity(
+                kutsilyo,
+                PowerUpRarity.special,
+                tuning,
+              ),
+              tuning,
+            );
+        expect(
+          PowerUpSpawnSelector.customTiersDiffer(library.custom, tuning),
+          isTrue,
+        );
+        final rng = SeededRandom(5);
+        var builtInMines = 0;
+        var customMines = 0;
+        for (var i = 0; i < 4000; i++) {
+          final skill = PowerUpSpawnSelector.chooseSkill(
+            const [PowerUpKind.mine, PowerUpKind.knife],
+            tuning,
+            rng,
+            library: library,
+            custom: library.custom,
+          );
+          if (skill.id == bigMine.id) customMines++;
+          if (skill.id == 'builtin.mine') builtInMines++;
+        }
+        // The trap gate (1 of 2) is shared by the built-in Mine and Big Mine.
+        expect(customMines / 4000, closeTo(0.25, 0.03));
+        expect(builtInMines / 4000, closeTo(0.25, 0.03));
+      },
+    );
+
+    test('with every tier equal, a custom trap draws exactly as before', () {
+      final follow = SkillLibrary.defaults
+          .withDefinition(bigMine, tuning)
+          .withDefinition(kutsilyo, tuning);
+      final explicit = SkillLibrary.defaults
+          .withDefinition(bigMine, tuning)
+          .withDefinition(
+            SkillLibrary.withOwnRarity(kutsilyo, PowerUpRarity.normal, tuning),
+            tuning,
+          );
+      final spawns = _spawns(follow, seconds: 150);
+      expect(spawns.where((s) => s.$2 == bigMine.id), isNotEmpty);
+      expect(_spawns(explicit, seconds: 150), spawns);
+    });
+
+    test('a custom trap spawns in a match with a differing tier', () {
+      final library = SkillLibrary.defaults
+          .withDefinition(bigMine, tuning)
+          .withDefinition(
+            SkillLibrary.withOwnRarity(kutsilyo, PowerUpRarity.special, tuning),
+            tuning,
+          );
+      expect(
+        _spawns(library, seconds: 150).where((s) => s.$2 == bigMine.id),
+        isNotEmpty,
+      );
+    });
+  });
+
   group('spawn weights', () {
     double share(SkillDefinition variant, {int draws = 20000}) {
       final rng = SeededRandom(77);

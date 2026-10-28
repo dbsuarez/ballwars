@@ -50,6 +50,33 @@ void main() {
     expect(after.calloutSeconds, SkillLibrary.defaultCalloutSeconds);
   });
 
+  test('under admin tuning, applying the current value adds no overrides', () {
+    final tuned = tuning.withValue('dmg.pistol', 23).withValue('freeze', 4);
+    const library = SkillLibrary.defaults;
+    // Every built-in already shows 1.2 s and an equipped scale of 1.
+    final same = library.applyToAll(
+      tuned,
+      calloutSeconds: 1.2,
+      weaponDisplayScale: 1,
+    );
+    expect(same.overrides, isEmpty);
+    expect(same.isDefault, isTrue);
+    expect(jsonEncode(same.toJson()), jsonEncode(library.toJson()));
+
+    // A different value changes only that field (the tuned numbers are kept).
+    final changed = library.applyToAll(tuned, effectDisplayScale: 2);
+    for (final kind in PowerUpKind.values) {
+      final was = library.builtIn(kind, tuned);
+      final now = changed.builtIn(kind, tuned);
+      expect(now.effectDisplayScale, 2, reason: kind.name);
+      expect(
+        now.copyWith(effectDisplayScale: was.effectDisplayScale).toJson(),
+        was.toJson(),
+        reason: kind.name,
+      );
+    }
+  });
+
   test('applyToAll keeps the other edits of existing overrides', () {
     final edited = SkillLibrary.defaults.withDefinition(
       SkillLibrary.defaults

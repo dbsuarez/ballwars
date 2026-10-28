@@ -646,7 +646,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Apply to all skills'),
         content: Text(
-          "Set $shown on all $count skills? This changes each skill's own value.",
+          "Set $shown on all $count skills? This changes each skill's own value."
+          ' Built-in skills you have not edited yet become individually edited skills, so Edit power-up numbers (Legacy) will no longer change them.',
         ),
         actions: [
           TextButton(
@@ -2869,7 +2870,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           suffix: 'x',
                           enabled: widget.library.skillsSetWeaponDisplayScale,
                           disabledNote:
-                              'Using the global equipped artwork size (${widget.library.weaponDisplayScale}x). '
+                              'Using the global equipped artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.weaponDisplayScale)}x). '
                               'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                         _number(
@@ -2915,7 +2916,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                         suffix: 'x',
                         enabled: widget.library.skillsSetPickupDisplayScale,
                         disabledNote:
-                            'Using the global pickup artwork size (${widget.library.pickupDisplayScale}x). '
+                            'Using the global pickup artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.pickupDisplayScale)}x). '
                             'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                       ),
                       if (widget.skill.isComposed ||
@@ -2929,7 +2930,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           suffix: 'x',
                           enabled: widget.library.skillsSetEffectDisplayScale,
                           disabledNote:
-                              'Using the global effect artwork size (${widget.library.effectDisplayScale}x). '
+                              'Using the global effect artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.effectDisplayScale)}x). '
                               'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                       const SizedBox(height: 8),

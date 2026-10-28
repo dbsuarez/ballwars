@@ -200,7 +200,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text(
-          "Set 1.5x on all $count skills? This changes each skill's own value.",
+          "Set 1.5x on all $count skills? This changes each skill's own value."
+          ' Built-in skills you have not edited yet become individually edited skills, so Edit power-up numbers (Legacy) will no longer change them.',
         ),
         findsOneWidget,
       );
@@ -350,7 +351,7 @@ void main() {
       await _revealEditor(tester, scale);
       expect(tester.widget<TextField>(scale).enabled, isFalse);
       expect(
-        find.textContaining('Using the global equipped artwork size (2.0x)'),
+        find.textContaining('Using the global equipped artwork size (2x)'),
         findsOneWidget,
       );
       final pickup = find.byKey(

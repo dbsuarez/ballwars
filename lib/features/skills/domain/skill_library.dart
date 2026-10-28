@@ -941,10 +941,15 @@ class SkillLibrary {
     );
     var result = this;
     for (final kind in PowerUpKind.values) {
-      result = result.withDefinition(
-        apply(result.builtIn(kind, tuning)),
-        tuning,
-      );
+      final current = result.builtIn(kind, tuning);
+      final next = apply(current);
+      // A built-in nobody edited that already has these values stays unedited: no no-op override
+      // (under admin tuning it would differ from the factory default and freeze its numbers).
+      if (!result.overrides.containsKey(current.id) &&
+          _same(next.validated(), current)) {
+        continue;
+      }
+      result = result.withDefinition(next, tuning);
     }
     return result._withSkills(
       custom: List.unmodifiable([

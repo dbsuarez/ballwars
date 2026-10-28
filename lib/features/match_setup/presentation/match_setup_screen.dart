@@ -20,6 +20,7 @@ import '../../settings/data/effects_prefs.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../domain/match_config.dart';
+import '../domain/pickup_count.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
 /// your own groups, mixing categories freely, then start the battle.
@@ -1634,20 +1635,6 @@ class _WeaponsDialog extends StatefulWidget {
 
   @override
   State<_WeaponsDialog> createState() => _WeaponsDialogState();
-}
-
-/// (on, total) pickups: built-in non-trap kinds in [builtIn] plus [customOn] of [customTotal] custom skills.
-(int, int) pickupCount(
-  Iterable<PowerUpKind> builtIn,
-  int customOn,
-  int customTotal,
-) {
-  final kinds = PowerUpKind.values.where((kind) => !kind.isTrap);
-  final set = builtIn.toSet();
-  return (
-    kinds.where(set.contains).length + customOn,
-    kinds.length + customTotal,
-  );
 }
 
 class _WeaponsDialogState extends State<_WeaponsDialog> {

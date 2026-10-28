@@ -251,7 +251,7 @@ class SkillDefinition {
   /// in its override (admin edit); it is cosmetic, nothing in the match reads it.
   final String description;
 
-  /// Whether firing drops a spent shell casing. Null: by kind ([defaultDropsShells]: a built-in or
+  /// Whether firing drops a spent shell casing. Null: [defaultDropsShells] (a plain built-in or
   /// non-composed Pistol, Shotgun, Gatling or Freeze). Purely visual, never touches the match.
   final bool? shellEnabled;
 
@@ -266,9 +266,10 @@ class SkillDefinition {
   /// the spin angle it had when it hit the floor.
   final bool shellRandomRest;
 
-  /// What [shellEnabled] null means for this skill.
+  /// What [shellEnabled] null means for this skill: on for a plain (not composed, firing no other
+  /// skill) Pistol, Shotgun, Gatling or Freeze. The editor and the match both read this.
   bool get defaultDropsShells =>
-      !isComposed && defaultShellKinds.contains(baseKind);
+      !isComposed && payloadSkillId == null && defaultShellKinds.contains(baseKind);
 
   /// Whether firing this skill drops shell casings.
   bool get dropsShells => shellEnabled ?? defaultDropsShells;

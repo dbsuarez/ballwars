@@ -1404,10 +1404,17 @@ class _SkillEditorState extends State<_SkillEditor> {
       _effectType != null;
 
   /// What "Default" means for Drops shells here (a composed or combined skill drops none).
-  bool get _shellDefault =>
-      SkillDefinition.defaultShellKinds.contains(widget.skill.baseKind) &&
-      !_editsComposed &&
-      _payload == null;
+  /// Read from [SkillDefinition.defaultDropsShells] on the edited values, the same rule the match uses.
+  bool get _shellDefault => SkillDefinition(
+    id: widget.skill.id,
+    name: widget.skill.name,
+    baseKind: widget.skill.baseKind,
+    trigger: _trigger,
+    targeting: _targeting,
+    delivery: _delivery,
+    effectType: _effectType,
+    payloadSkillId: _payload,
+  ).defaultDropsShells;
 
   /// "Brass shell (default)" (null) plus the bundled projectile, effect and animation sprites and
   /// any uploaded ones, and the current choice even if it is no longer loaded.
@@ -2353,8 +2360,13 @@ class _SkillEditorState extends State<_SkillEditor> {
                           minLines: 2,
                           maxLines: 3,
                           keyboardType: TextInputType.text,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: 'Shown on the skill card',
+                            helperMaxLines: 3,
+                            helperText: widget.skill.custom
+                                ? null
+                                : 'Saving a built-in skill stores its current numbers; '
+                                      'Edit power-up numbers (Legacy) will no longer change it.',
                           ),
                         ),
                       ),

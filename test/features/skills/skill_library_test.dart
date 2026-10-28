@@ -536,6 +536,14 @@ void main() {
       final custom = SkillLibrary.defaults.create('Pew', PowerUpKind.pistol);
       expect(custom.dropsShells, isFalse);
       expect(custom.copyWith(shellEnabled: true).dropsShells, isTrue);
+      // A built-in pistol that fires another skill (Combine) shoots through the composed path,
+      // which drops none by default; the editor and the match agree on that.
+      final combined = SkillLibrary.defaults
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .copyWith(payloadSkillId: 'builtin.bow');
+      expect(combined.defaultDropsShells, isFalse);
+      expect(combined.dropsShells, isFalse);
+      expect(combined.copyWith(shellEnabled: true).dropsShells, isTrue);
     });
 
     test('round trip, clamp, and old JSON behaves as today', () {

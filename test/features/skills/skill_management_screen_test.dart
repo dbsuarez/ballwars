@@ -307,6 +307,37 @@ void main() {
     },
   );
 
+  testWidgets('Global: the five cards fit a 360 px phone without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: const SkillManagementScreen(
+          initial: SkillLibrary.defaults,
+          tuning: PowerUpConfig.defaults,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Global'));
+    await tester.pumpAndSettle();
+    for (final field in [
+      'callout-seconds',
+      'screen-shake',
+      'weapon-display-scale',
+      'pickup-display-scale',
+      'effect-display-scale',
+    ]) {
+      await _revealGlobal(tester, find.byKey(ValueKey('apply-all-$field')));
+      expect(find.byKey(ValueKey('global-$field')), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: field);
+    }
+  });
+
   testWidgets(
     'Global: the sprite size switches disable the matching fields in every skill',
     (tester) async {
@@ -1205,6 +1236,7 @@ void main() {
     final builtInField = find.byKey(const ValueKey('skill-description'));
     await _revealEditor(tester, builtInField);
     expect(tester.widget<TextField>(builtInField).maxLength, 160);
+    expect(find.text(_builtInSaveNote), findsOneWidget);
     await tester.enterText(builtInField, ' Bang\n bang. ');
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('save-skill')));
@@ -1239,6 +1271,7 @@ void main() {
     final field = find.byKey(const ValueKey('skill-description'));
     await _revealEditor(tester, field);
     expect(tester.widget<TextField>(field).maxLength, 160);
+    expect(find.text(_builtInSaveNote), findsNothing);
     await tester.enterText(field, '  Fires\ntwo  bullets.  ');
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('save-skill')));
@@ -1701,3 +1734,6 @@ void main() {
     expect(save.onPressed, isNull);
   });
 }
+
+const _builtInSaveNote =
+    'Saving a built-in skill stores its current numbers; Edit power-up numbers (Legacy) will no longer change it.';

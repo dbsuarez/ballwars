@@ -148,6 +148,27 @@ void main() {
     }
   });
 
+  test(
+    'dual-wielded variants of one gun drop casings with their own settings',
+    () {
+      var library = SkillLibrary.defaults;
+      final big = library
+          .create('Big Pew', PowerUpKind.pistol)
+          .copyWith(enabled: true, shellEnabled: true, shellSize: 3);
+      library = library.withDefinition(big, _tuning);
+      final c = _match(library: library);
+      c.state.balls.first
+        ..held = PowerUpKind.pistol
+        ..heldSkillId = big.id
+        ..heldSecondary = PowerUpKind.pistol;
+      _run(c, PowerUpTuning.aimSteps);
+      final sizes = [for (final casing in c.powerUps!.shellCasings) casing.size]
+        ..sort();
+      // The custom variant's big casing, and the built-in pistol's standard one.
+      expect(sizes, [1, 3]);
+    },
+  );
+
   test('a gatling burst still drops one casing per round', () {
     final c = _match();
     c.state.balls.first.held = PowerUpKind.gatling;

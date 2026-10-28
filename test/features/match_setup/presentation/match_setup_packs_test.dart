@@ -489,6 +489,7 @@ void main() {
     await tester.tap(find.text('Arsenal'));
     await tester.pump();
     await openSettings(tester);
+    expect(find.textContaining('/ all pickups'), findsOneWidget);
     expect(find.text('Pickups: All'), findsOneWidget);
 
     await tester.tap(find.text('Pickups: All'));
@@ -505,6 +506,9 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
+    await closeSettings(tester);
+    expect(find.textContaining('/ $builtIns pickups'), findsOneWidget);
+    await openSettings(tester);
     // Built-ins on: all but pistol; custom on: only Beta (Gamma is disabled).
     expect(
       find.text('Pickups: ${builtIns - 1 + 1} of ${builtIns + 2}'),

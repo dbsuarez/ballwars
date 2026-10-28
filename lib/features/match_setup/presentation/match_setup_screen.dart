@@ -127,19 +127,23 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     return ids.difference(_customOff);
   }
 
+  /// The pickups on and the pickups there are: built-in non-trap kinds plus spawnable custom skills.
+  /// One place for the dialog, the Pickups row and the footer, so they always agree.
+  (int, int) _pickupCounts() {
+    final custom = _spawnableCustom;
+    final customOn = custom.where((s) => !_customOff.contains(s.id)).length;
+    return pickupCount(
+      _powerUps ?? PowerUpKind.values,
+      customOn,
+      custom.length,
+    );
+  }
+
   /// "Pickups: All", or "Pickups: n of m" counting the built-in pickups and the spawnable custom
   /// skills that are on (traps excluded), the same number the Weapons dialog shows.
   String _pickupsLabel() {
-    final custom = _spawnableCustom;
-    final customOn = custom.where((s) => !_customOff.contains(s.id)).length;
-    final total =
-        PowerUpKind.values.where((kind) => !kind.isTrap).length + custom.length;
-    final on = _powerUps == null
-        ? total - custom.length + customOn
-        : _powerUps!.where((kind) => !kind.isTrap).length + customOn;
-    return _powerUps == null && customOn == custom.length
-        ? 'Pickups: All'
-        : 'Pickups: $on of $total';
+    final (on, total) = _pickupCounts();
+    return on == total ? 'Pickups: All' : 'Pickups: $on of $total';
   }
 
   VoidCallback? _refreshDrawer;
@@ -1004,9 +1008,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   Widget _footer(BallWarsColors c) {
-    final pickups = _powerUps == null
+    final (pickupsOn, pickupsTotal) = _pickupCounts();
+    final pickups = pickupsOn == pickupsTotal
         ? 'all pickups'
-        : '${_powerUps!.where((kind) => !kind.isTrap).length} pickups';
+        : '$pickupsOn pickups';
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
@@ -1631,6 +1636,20 @@ class _WeaponsDialog extends StatefulWidget {
   State<_WeaponsDialog> createState() => _WeaponsDialogState();
 }
 
+/// (on, total) pickups: built-in non-trap kinds in [builtIn] plus [customOn] of [customTotal] custom skills.
+(int, int) pickupCount(
+  Iterable<PowerUpKind> builtIn,
+  int customOn,
+  int customTotal,
+) {
+  final kinds = PowerUpKind.values.where((kind) => !kind.isTrap);
+  final set = builtIn.toSet();
+  return (
+    kinds.where(set.contains).length + customOn,
+    kinds.length + customTotal,
+  );
+}
+
 class _WeaponsDialogState extends State<_WeaponsDialog> {
   late final Set<PowerUpKind> _on = {...widget.initial};
   late final Set<String> _customOn = {...widget.initialCustom};
@@ -1647,8 +1666,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
     final powerUps = PowerUpKind.values.where((kind) => kind.isPowerUp);
     final traps = PowerUpKind.values.where((kind) => kind.isTrap);
     final selectable = PowerUpKind.values.where((kind) => !kind.isTrap);
-    final selectedCount =
-        selectable.where(_on.contains).length + _customOn.length;
+    final selectedCount = pickupCount(_on, _customOn.length, 0).$1;
     final customWeapons = _customIn((c) => c == SkillCategory.weapon);
     final customTraps = _customIn(
       (c) => c == SkillCategory.trap || c == SkillCategory.arenaTrap,

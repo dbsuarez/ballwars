@@ -499,6 +499,128 @@ void main() {
     expect(jsonEncode(decoded.toJson()), jsonEncode(library.toJson()));
   });
 
+  group('shell settings', () {
+    final tuning = PowerUpConfig.defaults;
+    SkillDefinition builtIn(PowerUpKind kind) =>
+        SkillLibrary.defaults.builtIn(kind, tuning);
+
+    test('default to today: the four guns drop brass shells', () {
+      for (final kind in PowerUpKind.values) {
+        final skill = builtIn(kind);
+        expect(skill.shellEnabled, isNull, reason: kind.name);
+        expect(skill.shellSprite, isNull, reason: kind.name);
+        expect(skill.shellSize, 1, reason: kind.name);
+        expect(skill.shellRandomRest, isTrue, reason: kind.name);
+        expect(
+          skill.dropsShells,
+          SkillDefinition.defaultShellKinds.contains(kind),
+          reason: kind.name,
+        );
+        final json = skill.toJson();
+        for (final key in const [
+          'shell',
+          'shell_sprite',
+          'shell_size',
+          'shell_random_rest',
+        ]) {
+          expect(json.containsKey(key), isFalse, reason: '${kind.name} $key');
+        }
+      }
+      expect(SkillDefinition.defaultShellKinds, {
+        PowerUpKind.pistol,
+        PowerUpKind.shotgun,
+        PowerUpKind.gatling,
+        PowerUpKind.freeze,
+      });
+      // A composed custom skill keeps today's behavior: no shells unless switched on.
+      final custom = SkillLibrary.defaults.create('Pew', PowerUpKind.pistol);
+      expect(custom.dropsShells, isFalse);
+      expect(custom.copyWith(shellEnabled: true).dropsShells, isTrue);
+    });
+
+    test('round trip, clamp, and old JSON behaves as today', () {
+      final edited = builtIn(PowerUpKind.waterGun).copyWith(
+        shellEnabled: true,
+        shellSprite: 'projectile.bullet',
+        shellSize: 2.5,
+        shellRandomRest: false,
+      );
+      final json = edited.toJson();
+      expect(json['shell'], isTrue);
+      expect(json['shell_sprite'], 'projectile.bullet');
+      expect(json['shell_size'], 2.5);
+      expect(json['shell_random_rest'], isFalse);
+      final decoded = SkillDefinition.fromJson(jsonDecode(jsonEncode(json)))!;
+      expect(decoded.shellEnabled, isTrue);
+      expect(decoded.shellSprite, 'projectile.bullet');
+      expect(decoded.shellSize, 2.5);
+      expect(decoded.shellRandomRest, isFalse);
+      expect(decoded.dropsShells, isTrue);
+
+      final off = SkillDefinition.fromJson(
+        builtIn(PowerUpKind.pistol).copyWith(shellEnabled: false).toJson(),
+      )!;
+      expect(off.shellEnabled, isFalse);
+      expect(off.dropsShells, isFalse);
+      // copyWith can clear the nullable fields again.
+      final cleared = edited.copyWith(shellEnabled: null, shellSprite: null);
+      expect(cleared.shellEnabled, isNull);
+      expect(cleared.shellSprite, isNull);
+
+      for (final (raw, want) in const [(0.01, 0.25), (9, 4.0), (1.5, 1.5)]) {
+        final wild = SkillDefinition.fromJson(
+          Map<String, Object?>.from(json)..['shell_size'] = raw,
+        )!;
+        expect(wild.shellSize, want);
+      }
+      final junk = SkillDefinition.fromJson(
+        Map<String, Object?>.from(json)
+          ..['shell'] = 'yes'
+          ..['shell_sprite'] = '   '
+          ..['shell_random_rest'] = 3,
+      )!;
+      expect(junk.shellEnabled, isNull);
+      expect(junk.shellSprite, isNull);
+      expect(junk.shellRandomRest, isTrue);
+
+      final legacy =
+          Map<String, Object?>.from(builtIn(PowerUpKind.pistol).toJson())
+            ..remove('shell')
+            ..remove('shell_sprite');
+      final old = SkillDefinition.fromJson(legacy)!;
+      expect(old.dropsShells, isTrue);
+      expect(old.shellSize, 1);
+      expect(old.shellRandomRest, isTrue);
+    });
+
+    test('shell settings survive the compact replay form', () {
+      final library = SkillLibrary.defaults.withDefinition(
+        builtIn(PowerUpKind.gatling).copyWith(
+          shellEnabled: false,
+          shellSprite: 'effect.spark',
+          shellSize: 3,
+          shellRandomRest: false,
+        ),
+        tuning,
+      );
+      final compact = library.toCompactJson();
+      final gatling = (compact['overrides'] as Map)['builtin.gatling'] as Map;
+      expect(gatling['shell'], isFalse);
+      expect(gatling['shell_sprite'], 'effect.spark');
+      expect(gatling['shell_size'], 3);
+      expect(gatling['shell_random_rest'], isFalse);
+      final back = SkillLibrary.fromJson(
+        jsonDecode(jsonEncode(compact)),
+      ).builtIn(PowerUpKind.gatling, tuning);
+      expect(back.shellEnabled, isFalse);
+      expect(back.shellSprite, 'effect.spark');
+      expect(back.shellSize, 3);
+      expect(back.shellRandomRest, isFalse);
+      final replay = SkillLibrary.decodeReplay(library.encodeReplay()!)!;
+      expect(replay.builtIn(PowerUpKind.gatling, tuning).shellSize, 3);
+    });
+  });
+
   test(
     'custom description round trips, trims, caps at 160 and defaults to empty',
     () {

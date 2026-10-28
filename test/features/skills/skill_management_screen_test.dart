@@ -973,6 +973,112 @@ void main() {
     expect(saved.weaponGripRotation, 30);
   });
 
+  testWidgets('gun skills edit their shell in Appearance, restore and save', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SkillManagementResult? result;
+    Future<void> openSkill(String name) async {
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        name,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, name).first);
+      await tester.pumpAndSettle();
+    }
+
+    await tester.pumpWidget(app(onResult: (value) => result = value));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await openSkill('Gatling');
+
+    final enabled = find.byKey(const ValueKey('skill-shell-enabled'));
+    await _revealEditor(tester, enabled);
+    await _revealEditor(
+      tester,
+      find.textContaining('Spent casings this gun drops'),
+    );
+    await _revealEditor(tester, enabled);
+    expect(find.text('Default (On)'), findsOneWidget);
+    expect(find.text('Brass shell (default)'), findsOneWidget);
+    expect(find.byKey(const ValueKey('skill-shell-preview')), findsOneWidget);
+
+    Future<void> pickShells(String label) async {
+      await _revealEditor(tester, enabled);
+      await tester.tap(enabled);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label).last);
+      await tester.pumpAndSettle();
+    }
+
+    final size = find.byKey(const ValueKey('skill-field-shellSize'));
+    final rest = find.byKey(const ValueKey('skill-shell-random-rest'));
+    Future<void> editAll() async {
+      await pickShells('Off');
+      await _revealEditor(tester, size);
+      await tester.enterText(size, '2.5');
+      await tester.pump();
+      await _revealEditor(tester, rest);
+      await tester.tap(rest);
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(rest).value, isFalse);
+    }
+
+    // Restore defaults puts every shell setting back.
+    await editAll();
+    final restore = find.byKey(const ValueKey('restore-skill-defaults'));
+    await _revealEditor(tester, restore);
+    await tester.tap(restore);
+    await tester.pumpAndSettle();
+    await _revealEditor(tester, enabled);
+    expect(find.text('Default (On)'), findsOneWidget);
+    await _revealEditor(tester, size);
+    expect(tester.widget<TextField>(size).controller!.text, '1.0');
+    await _revealEditor(tester, rest);
+    expect(tester.widget<SwitchListTile>(rest).value, isTrue);
+
+    await editAll();
+    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
+    await tester.pumpAndSettle();
+    final saved = result!.library.builtIn(
+      PowerUpKind.gatling,
+      PowerUpConfig.defaults,
+    );
+    expect(saved.shellEnabled, isFalse);
+    expect(saved.shellSize, 2.5);
+    expect(saved.shellRandomRest, isFalse);
+    expect(saved.shellSprite, isNull);
+  });
+
+  testWidgets('non-gun skills have no shell settings', (tester) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(app());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Knife',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Knife').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Appearance'));
+    await tester.pumpAndSettle();
+    final list = find.byType(ListView).last;
+    for (var i = 0; i < 20; i++) {
+      expect(find.byKey(const ValueKey('skill-shell-enabled')), findsNothing);
+      await tester.drag(list, const Offset(0, -280));
+      await tester.pumpAndSettle();
+    }
+  });
+
   testWidgets('versioned JSON can be exported and imported as a draft', (
     tester,
   ) async {

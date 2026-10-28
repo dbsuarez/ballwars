@@ -992,26 +992,7 @@ class PowerUpPainter {
     }
 
     for (final casing in p.shellCasings) {
-      canvas.save();
-      canvas.translate(casing.position.dx, casing.position.dy);
-      canvas.rotate(casing.angle);
-      final body = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset.zero,
-          width: math.max(2.5, r * 0.2),
-          height: math.max(1.5, r * 0.1),
-        ),
-        const Radius.circular(1),
-      );
-      canvas.drawRRect(body, Paint()..color = const Color(0xFFD8A63A));
-      canvas.drawLine(
-        Offset(body.right - 0.7, body.top),
-        Offset(body.right - 0.7, body.bottom),
-        Paint()
-          ..strokeWidth = 0.8
-          ..color = const Color(0xFFFFE09A),
-      );
-      canvas.restore();
+      paintShellCasing(canvas, casing, r);
     }
 
     for (final portal in p.portals) {
@@ -2193,6 +2174,57 @@ class PowerUpPainter {
   }
 
   static final Paint _spritePaint = Paint()..filterQuality = FilterQuality.none;
+
+  static final Paint _shellBody = Paint()..color = const Color(0xFFD8A63A);
+  static final Paint _shellShine = Paint()
+    ..strokeWidth = 0.8
+    ..color = const Color(0xFFFFE09A);
+  static final Paint _shellShineScaled = Paint()
+    ..color = const Color(0xFFFFE09A);
+
+  /// One spent casing ([ShellCasing]) for a ball radius [r]: its sprite ([ShellCasing.spriteId], fitted
+  /// keeping its shape into a square as long as the brass shell, nearest-neighbor, centered) or, when
+  /// it has none or the id isn't loaded, the brass shell; both scaled by [ShellCasing.size] and turned
+  /// by its angle.
+  static void paintShellCasing(Canvas canvas, ShellCasing casing, double r) {
+    final size = casing.size;
+    final length = math.max(2.5, r * 0.2) * size;
+    canvas.save();
+    canvas.translate(casing.position.dx, casing.position.dy);
+    canvas.rotate(casing.angle);
+    final id = casing.spriteId;
+    final sprite = id == null ? null : SpriteRegistry.frame(id);
+    if (sprite != null) {
+      final w = sprite.width.toDouble();
+      final h = sprite.height.toDouble();
+      final fit = length / math.max(w, h);
+      canvas.drawImageRect(
+        sprite,
+        Rect.fromLTWH(0, 0, w, h),
+        Rect.fromCenter(center: Offset.zero, width: w * fit, height: h * fit),
+        _spritePaint,
+      );
+    } else {
+      final body = RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: length,
+          height: math.max(1.5, r * 0.1) * size,
+        ),
+        Radius.circular(size),
+      );
+      canvas.drawRRect(body, _shellBody);
+      final shine = size == 1
+          ? _shellShine
+          : (_shellShineScaled..strokeWidth = 0.8 * size);
+      canvas.drawLine(
+        Offset(body.right - 0.7 * size, body.top),
+        Offset(body.right - 0.7 * size, body.bottom),
+        shine,
+      );
+    }
+    canvas.restore();
+  }
 
   /// Draws [image] with its sprite [anchor] (`SpriteRegistry.anchor(id)` of the sprite it came from) at
   /// [c], [half] in half-size. The icon is first turned so its own direction

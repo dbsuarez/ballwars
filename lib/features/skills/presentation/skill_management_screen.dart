@@ -6,6 +6,7 @@ import '../../../core/widgets/color_picker_dialog.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/audio/game_audio.dart';
+import '../../../core/sprites/sprite_registry.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/animated_empty_state.dart';
 import '../../../core/widgets/canvas_action_glyph.dart';
@@ -1288,7 +1289,13 @@ class _SkillEditorState extends State<_SkillEditor> {
     'handEffectDuration': TextEditingController(
       text: '${widget.skill.handEffectDurationSeconds}',
     ),
+    'shellSize': TextEditingController(text: '${widget.skill.shellSize}'),
   };
+
+  /// Shell settings (gun skills): Default (null) / On / Off, the sprite id (null: brass) and rest.
+  late bool? _shellEnabled = widget.skill.shellEnabled;
+  late String? _shellSprite = widget.skill.shellSprite;
+  late bool _shellRandomRest = widget.skill.shellRandomRest;
   late SkillVisualMode _sprite = widget.skill.spriteMode;
   late SkillVisualMode _effect = widget.skill.effectMode;
   late bool _globalEffectVisuals = widget.skill.useGlobalEffectVisuals;
@@ -1381,6 +1388,56 @@ class _SkillEditorState extends State<_SkillEditor> {
             PowerUpKind.sniperRifle,
             PowerUpKind.busterSword,
           ].contains(widget.skill.baseKind));
+
+  /// The Shell group shows for skills that shoot: a gun carrier, or a custom skill that fires
+  /// projectiles.
+  bool get _showsShellSettings =>
+      widget.skill.baseKind.isGun || _delivery == SkillDelivery.projectile;
+
+  /// What "Default" means for Drops shells here (a composed or combined skill drops none).
+  bool get _shellDefault =>
+      SkillDefinition.defaultShellKinds.contains(widget.skill.baseKind) &&
+      !(_trigger != null &&
+          _targeting != null &&
+          _delivery != null &&
+          _effectType != null) &&
+      _payload == null;
+
+  /// "Brass shell (default)" (null) plus the bundled projectile, effect and animation sprites and
+  /// any uploaded ones, and the current choice even if it is no longer loaded.
+  List<String?> get _shellSpriteChoices {
+    final ids =
+        SpriteRegistry.ids
+            .where(
+              (id) =>
+                  id.startsWith('projectile.') ||
+                  id.startsWith('effect.') ||
+                  id.startsWith('anim.') ||
+                  id.startsWith('custom.'),
+            )
+            .toList()
+          ..sort();
+    return [
+      null,
+      if (_shellSprite != null && !ids.contains(_shellSprite)) _shellSprite,
+      ...ids,
+    ];
+  }
+
+  static String _shellSpriteLabel(String? id) {
+    if (id == null) return 'Brass shell (default)';
+    if (!SpriteRegistry.has(id)) return '$id (not loaded, brass shell)';
+    final dot = id.indexOf('.');
+    final group = switch (id.substring(0, dot)) {
+      'projectile' => 'Projectile',
+      'effect' => 'Effect',
+      'anim' => 'Animation',
+      'custom' => 'Uploaded',
+      final other => other,
+    };
+    final name = id.substring(dot + 1).replaceAll(RegExp(r'[._-]+'), ' ');
+    return '$group: $name';
+  }
 
   bool get _canSteerProjectile =>
       _usesProjectileDelivery &&
@@ -1486,6 +1543,10 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('bubbleDuration', defaults.bubbleDurationSeconds);
       number('handEffectScale', defaults.handEffectScale);
       number('handEffectDuration', defaults.handEffectDurationSeconds);
+      number('shellSize', defaults.shellSize);
+      _shellEnabled = defaults.shellEnabled;
+      _shellSprite = defaults.shellSprite;
+      _shellRandomRest = defaults.shellRandomRest;
     });
   }
 
@@ -1668,6 +1729,10 @@ class _SkillEditorState extends State<_SkillEditor> {
       handedness: _handedness,
       artworkKind: _artwork,
       payloadSkillId: _payload,
+      shellEnabled: _shellEnabled,
+      shellSprite: _shellSprite,
+      shellSize: _double('shellSize'),
+      shellRandomRest: _shellRandomRest,
     );
   }
 
@@ -1707,6 +1772,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     'triggerInterval': (0.5, 120),
     'handEffectScale': (0.1, 4),
     'handEffectDuration': (0.1, 10),
+    'shellSize': (0.25, 4),
   };
 
   /// Number fields that may go below zero.
@@ -1877,6 +1943,93 @@ class _SkillEditorState extends State<_SkillEditor> {
     ];
   }
 
+  /// Appearance > Shell: whether firing drops casings, their sprite (with a preview), size and rest.
+  List<Widget> _shellGroup() {
+    final choices = _shellSpriteChoices;
+    return [
+      _section(
+        'Shell',
+        'Spent casings this gun drops to the arena floor. They only change the look, never the match.',
+      ),
+      _fixedRow(
+        'Drops shells',
+        DropdownButtonFormField<String>(
+          key: const ValueKey('skill-shell-enabled'),
+          isExpanded: true,
+          initialValue: switch (_shellEnabled) {
+            null => 'default',
+            true => 'on',
+            false => 'off',
+          },
+          decoration: const InputDecoration(),
+          items: [
+            DropdownMenuItem(
+              value: 'default',
+              child: Text('Default (${_shellDefault ? 'On' : 'Off'})'),
+            ),
+            const DropdownMenuItem(value: 'on', child: Text('On')),
+            const DropdownMenuItem(value: 'off', child: Text('Off')),
+          ],
+          onChanged: (value) => setState(
+            () => _shellEnabled = switch (value) {
+              'on' => true,
+              'off' => false,
+              _ => null,
+            },
+          ),
+        ),
+      ),
+      _fixedRow(
+        'Shell sprite',
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String?>(
+                key: const ValueKey('skill-shell-sprite'),
+                isExpanded: true,
+                initialValue: _shellSprite,
+                decoration: const InputDecoration(),
+                items: [
+                  for (final id in choices)
+                    DropdownMenuItem(
+                      value: id,
+                      child: Text(
+                        _shellSpriteLabel(id),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(() => _shellSprite = value),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox.square(
+              key: const ValueKey('skill-shell-preview'),
+              dimension: 40,
+              child: CustomPaint(
+                painter: _ShellPreviewPainter(
+                  spriteId: _shellSprite,
+                  size: (_double('shellSize') ?? 1).clamp(0.25, 4),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      _number('shellSize', 'Shell size', suffix: 'x'),
+      SwitchListTile(
+        key: const ValueKey('skill-shell-random-rest'),
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Random rest orientation'),
+        subtitle: const Text(
+          'Landed shells lie at varied angles. Off: they keep the angle they hit the floor at.',
+        ),
+        value: _shellRandomRest,
+        onChanged: (value) => setState(() => _shellRandomRest = value),
+      ),
+    ];
+  }
+
   Widget _fixedRow(String label, Widget control) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
@@ -2030,6 +2183,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                   'projectileSize',
                   'handEffectScale',
                   'meleeReach',
+                  'shellSize',
                 ].contains(key))
               Slider(
                 value: value.clamp(limits.$1, limits.$2),
@@ -2910,6 +3064,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'Projectile scale',
                           suffix: 'x',
                         ),
+                      if (_showsShellSettings) ..._shellGroup(),
                       _number(
                         'pickupDisplayScale',
                         'Pickup artwork scale',
@@ -3475,4 +3630,32 @@ class _VectorSkillPreview extends CustomPainter {
   @override
   bool shouldRepaint(_VectorSkillPreview oldDelegate) =>
       oldDelegate.kind != kind;
+}
+
+/// A landed shell as the arena draws it ([PowerUpPainter.paintShellCasing]), level and centered, for a
+/// ball radius that makes a 4x shell nearly fill the box.
+class _ShellPreviewPainter extends CustomPainter {
+  _ShellPreviewPainter({required this.spriteId, required this.size});
+
+  final String? spriteId;
+  final double size;
+
+  @override
+  void paint(Canvas canvas, Size box) {
+    PowerUpPainter.paintShellCasing(
+      canvas,
+      ShellCasing(
+        position: box.center(Offset.zero),
+        velocity: Offset.zero,
+        angle: 0,
+        spriteId: spriteId,
+        size: size,
+      ),
+      box.shortestSide * 0.11,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ShellPreviewPainter oldDelegate) =>
+      oldDelegate.spriteId != spriteId || oldDelegate.size != size;
 }

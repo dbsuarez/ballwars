@@ -137,7 +137,19 @@ class SkillDefinition {
     this.payloadSkillId,
     this.rarity,
     this.description = '',
+    this.shellEnabled,
+    this.shellSprite,
+    this.shellSize = 1,
+    this.shellRandomRest = true,
   });
+
+  /// The guns that drop a spent casing per shot unless their skill says otherwise ([shellEnabled]).
+  static const Set<PowerUpKind> defaultShellKinds = {
+    PowerUpKind.pistol,
+    PowerUpKind.shotgun,
+    PowerUpKind.gatling,
+    PowerUpKind.freeze,
+  };
 
   /// Longest custom [description], in characters.
   static const int maxDescriptionLength = 160;
@@ -238,6 +250,28 @@ class SkillDefinition {
   /// line, at most [maxDescriptionLength] characters. Empty: the generated text is shown. Built-ins
   /// never keep one ([validated] drops it).
   final String description;
+
+  /// Whether firing drops a spent shell casing. Null: by kind ([defaultDropsShells]: a built-in or
+  /// non-composed Pistol, Shotgun, Gatling or Freeze). Purely visual, never touches the match.
+  final bool? shellEnabled;
+
+  /// The [SpriteRegistry] id its casings are drawn with. Null (or an id that isn't loaded): the brass
+  /// vector shell.
+  final String? shellSprite;
+
+  /// Casing size, times the brass shell's size (0.25 to 4).
+  final double shellSize;
+
+  /// A landed casing lies at a fixed pseudo-random angle (a hash of its number, no RNG draws). Off:
+  /// the spin angle it had when it hit the floor.
+  final bool shellRandomRest;
+
+  /// What [shellEnabled] null means for this skill.
+  bool get defaultDropsShells =>
+      !isComposed && defaultShellKinds.contains(baseKind);
+
+  /// Whether firing this skill drops shell casings.
+  bool get dropsShells => shellEnabled ?? defaultDropsShells;
 
   /// Its held and arena artwork ([artworkKind], else its carrier).
   PowerUpKind get displayKind => artworkKind ?? baseKind;
@@ -378,6 +412,10 @@ class SkillDefinition {
     Object? payloadSkillId = _unset,
     Object? rarity = _unset,
     String? description,
+    Object? shellEnabled = _unset,
+    Object? shellSprite = _unset,
+    double? shellSize,
+    bool? shellRandomRest,
   }) => SkillDefinition(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -455,6 +493,14 @@ class SkillDefinition {
         : payloadSkillId as String?,
     rarity: identical(rarity, _unset) ? this.rarity : rarity as PowerUpRarity?,
     description: description ?? this.description,
+    shellEnabled: identical(shellEnabled, _unset)
+        ? this.shellEnabled
+        : shellEnabled as bool?,
+    shellSprite: identical(shellSprite, _unset)
+        ? this.shellSprite
+        : shellSprite as String?,
+    shellSize: shellSize ?? this.shellSize,
+    shellRandomRest: shellRandomRest ?? this.shellRandomRest,
   );
 
   Map<String, Object?> toJson() => {
@@ -525,6 +571,11 @@ class SkillDefinition {
     if (payloadSkillId != null) 'fires': payloadSkillId,
     if (rarity != null) 'rarity': rarity!.name,
     if (description.isNotEmpty) 'description': description,
+    // Shell settings are left out at their defaults, so replay snapshots stay small.
+    if (shellEnabled != null) 'shell': shellEnabled,
+    if (shellSprite != null) 'shell_sprite': shellSprite,
+    if (shellSize != 1) 'shell_size': shellSize,
+    if (!shellRandomRest) 'shell_random_rest': false,
   };
 
   static SkillDefinition? fromJson(Object? value) {
@@ -640,6 +691,14 @@ class SkillDefinition {
       description: value['description'] is String
           ? value['description'] as String
           : '',
+      shellEnabled: value['shell'] is bool ? value['shell'] as bool : null,
+      shellSprite: value['shell_sprite'] is String
+          ? value['shell_sprite'] as String
+          : null,
+      shellSize: decimal('shell_size') ?? 1,
+      shellRandomRest: value['shell_random_rest'] is bool
+          ? value['shell_random_rest'] as bool
+          : true,
     ).validated();
   }
 
@@ -688,6 +747,8 @@ class SkillDefinition {
     payloadSkillId: _cleanReference(payloadSkillId),
     rarity: custom && !baseKind.isTrap ? rarity : null,
     description: custom ? cleanDescription(description) : '',
+    shellSprite: _cleanReference(shellSprite),
+    shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 4) : 1,
   );
 
   /// [text] as a card description: whitespace and newlines collapsed to single spaces, trimmed and

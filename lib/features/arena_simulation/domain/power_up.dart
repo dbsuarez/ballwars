@@ -286,17 +286,29 @@ class Projectile {
 /// A spent firearm casing that falls under gravity and remains at the arena
 /// floor. The simulation keeps only a capped number so long Mayhem matches do
 /// not grow painting or update work without bound.
+///
+/// Its look comes from the firing skill's shell settings, recorded at ejection: [spriteId] (null: the
+/// brass shell), [size] (times the brass shell) and [randomRest] (lands at an angle hashed from
+/// [sequence], the casing's number in the match, instead of its spin angle at impact).
 class ShellCasing {
   ShellCasing({
     required this.position,
     required this.velocity,
     required this.angle,
+    this.spriteId,
+    this.size = 1,
+    this.randomRest = true,
+    this.sequence = 0,
   });
 
   Offset position;
   Offset velocity;
   double angle;
   bool settled = false;
+  final String? spriteId;
+  final double size;
+  final bool randomRest;
+  final int sequence;
 }
 
 class SniperFlash {

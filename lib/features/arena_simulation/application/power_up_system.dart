@@ -57,6 +57,9 @@ class PowerUpSystem {
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
   final List<ShellCasing> shellCasings = [];
+
+  /// Casings ejected so far this match ([ShellCasing.sequence]).
+  int _shellSequence = 0;
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
 
   /// Shots fired by one skill as another skill's projectile ([SkillDefinition.payloadSkillId]): the skill
@@ -2079,6 +2082,10 @@ class PowerUpSystem {
           : delta / delta.distance;
       final count = (skill.projectileCount ?? 1).clamp(1, 100);
       final spread = skill.spreadDegrees ?? 0;
+      // One casing per volley, and only when the firing skill switches shells on (as before: none).
+      if (skill.shellEnabled ?? false) {
+        _ejectShellCasing(owner, baseDirection, skill);
+      }
       for (var index = 0; index < count; index++) {
         if (_composedProjectiles.length >= maxComposedProjectiles) break;
         final offset = count == 1 ? 0.0 : (index / (count - 1) - 0.5) * spread;
@@ -2623,6 +2630,19 @@ class PowerUpSystem {
               _fire(ball, target, kind, 0);
               _skillYell(ball, kind, 'BANG!');
           }
+          // Guns that don't fire through _fire drop a casing only when their skill says so.
+          if (const {
+            PowerUpKind.grenade,
+            PowerUpKind.molotov,
+            PowerUpKind.rocketLauncher,
+            PowerUpKind.fireWall,
+            PowerUpKind.energyWave,
+            PowerUpKind.flamethrower,
+            PowerUpKind.sniperRifle,
+            PowerUpKind.busterSword,
+          }.contains(kind)) {
+            _dropShellToward(ball, target, kind);
+          }
         }
       }
       if (ball.burstLeft > 0) {
@@ -3021,14 +3041,10 @@ class PowerUpSystem {
         turn +
         (firesBackward ? math.pi : 0);
     final direction = Offset(math.cos(angle), math.sin(angle));
-    final ejectsCasing = const {
-      PowerUpKind.pistol,
-      PowerUpKind.shotgun,
-      PowerUpKind.gatling,
-      PowerUpKind.freeze,
-    }.contains(kind);
-    if (ejectsCasing && (kind != PowerUpKind.shotgun || turn.abs() < 0.001)) {
-      _ejectShellCasing(ball, direction);
+    final skill = visualSkill(kind, ball: ball);
+    if (skill.dropsShells &&
+        (kind != PowerUpKind.shotgun || turn.abs() < 0.001)) {
+      _ejectShellCasing(ball, direction, skill);
     }
     projectiles.add(
       Projectile(
@@ -3054,13 +3070,50 @@ class PowerUpSystem {
     shots++;
   }
 
-  void _ejectShellCasing(SimulationBall ball, Offset shotDirection) {
+  /// Drops one casing for a gun that doesn't fire through [_fire] (rocket, sniper, grenade and the
+  /// like) when its skill switches shells on ([SkillDefinition.shellEnabled]); off by default.
+  void _dropShellToward(
+    SimulationBall ball,
+    SimulationBall target,
+    PowerUpKind kind,
+  ) {
+    final skill = visualSkill(kind, ball: ball);
+    if (!skill.dropsShells) return;
+    final toward = target.position - ball.position;
+    _ejectShellCasing(
+      ball,
+      toward.distance == 0 ? const Offset(1, 0) : toward / toward.distance,
+      skill,
+    );
+  }
+
+  /// The resting angle of casing number [sequence] with [SkillDefinition.shellRandomRest]: a pure
+  /// integer hash (31-bit masks keep it the same on the web), never an RNG draw.
+  static double shellRestAngle(int sequence) {
+    var h = (sequence * 40503 + 12345) & 0x7FFFFFFF;
+    h = (h ^ ((h & 0x3FFFF) << 13)) & 0x7FFFFFFF;
+    h ^= h >> 17;
+    h = (h ^ ((h & 0x3FFFFFF) << 5)) & 0x7FFFFFFF;
+    h = (h ^ ((h & 0x3FFF) << 17)) & 0x7FFFFFFF;
+    h ^= h >> 11;
+    return h / 0x7FFFFFFF * 2 * math.pi;
+  }
+
+  void _ejectShellCasing(
+    SimulationBall ball,
+    Offset shotDirection,
+    SkillDefinition skill,
+  ) {
     final side = Offset(-shotDirection.dy, shotDirection.dx);
     shellCasings.add(
       ShellCasing(
         position: ball.position + side * ball.radius * 0.55,
         velocity: side * ball.radius * 1.8 - Offset(0, ball.radius * 1.4),
         angle: math.atan2(side.dy, side.dx),
+        spriteId: skill.shellSprite,
+        size: skill.shellSize,
+        randomRest: skill.shellRandomRest,
+        sequence: _shellSequence++,
       ),
     );
     if (shellCasings.length > maxShellCasings) {
@@ -3083,6 +3136,9 @@ class PowerUpSystem {
           ..position = Offset(x.toDouble(), floorY)
           ..velocity = Offset.zero
           ..settled = true;
+        if (casing.randomRest) {
+          casing.angle = shellRestAngle(casing.sequence);
+        }
       }
     }
   }

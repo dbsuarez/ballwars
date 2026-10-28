@@ -43,6 +43,8 @@ dependencies:
   audioplayers: ^6.7.1
   package_info_plus: ^8.0.2
   wakelock_plus: ^1.2.8
+  # Pinned by the Flutter SDK; listed so lib can cut text on characters.
+  characters: any
 
 dev_dependencies:
   flutter_test:

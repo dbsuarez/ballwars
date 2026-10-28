@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:characters/characters.dart';
+
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 
@@ -688,12 +690,14 @@ class SkillDefinition {
   );
 
   /// [text] as a card description: whitespace and newlines collapsed to single spaces, trimmed and
-  /// cut to [maxDescriptionLength] characters.
+  /// cut to [maxDescriptionLength] characters (grapheme clusters, as the editor's `maxLength`
+  /// counts them), so an emoji is never split.
   static String cleanDescription(String text) {
     final flat = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return flat.length <= maxDescriptionLength
+    final chars = flat.characters;
+    return chars.length <= maxDescriptionLength
         ? flat
-        : flat.substring(0, maxDescriptionLength).trimRight();
+        : chars.take(maxDescriptionLength).toString().trimRight();
   }
 
   static String? _cleanReference(String? id) {

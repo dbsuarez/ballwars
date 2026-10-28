@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
+import 'package:characters/characters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -483,6 +484,25 @@ void main() {
       expect(builtIn.description, '');
     },
   );
+
+  test('descriptions are cut on characters, never inside an emoji', () {
+    // Each family emoji is one character but many UTF-16 units.
+    const family = '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}';
+    final emojis = SkillDefinition.cleanDescription(family * 200);
+    expect(emojis, family * SkillDefinition.maxDescriptionLength);
+    expect(emojis.characters.length, SkillDefinition.maxDescriptionLength);
+    // A flag (two regional indicators) right at the cut stays whole.
+    final flag = '\u{1F1F5}\u{1F1ED}';
+    final mixed = SkillDefinition.cleanDescription('a' * 159 + flag * 3);
+    expect(mixed, 'a' * 159 + flag);
+    // No lone surrogate survives the cut.
+    final lone = RegExp(r'[\uD800-\uDBFF](?![\uDC00-\uDFFF])');
+    expect(lone.hasMatch(mixed), isFalse);
+    expect(() => jsonEncode(mixed), returnsNormally);
+
+    final noSpaces = SkillDefinition.cleanDescription('word' * 100);
+    expect(noSpaces, ('word' * 100).substring(0, 160));
+  });
 
   test('replay snapshots carry descriptions and still enforce their limit', () {
     final description = 'd' * 160;

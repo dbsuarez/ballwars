@@ -44,7 +44,7 @@ dependencies:
   package_info_plus: ^8.0.2
   wakelock_plus: ^1.2.8
   # Pinned by the Flutter SDK; listed so lib can cut text on characters.
-  characters: any
+  characters: ^1.4.0
 
 dev_dependencies:
   flutter_test:

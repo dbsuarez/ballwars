@@ -439,10 +439,17 @@ class Explosion {
 }
 
 class WeaponImpact {
-  WeaponImpact({required this.position, required this.strength});
+  WeaponImpact({
+    required this.position,
+    required this.strength,
+    this.kind,
+    this.skillId,
+  });
 
   final Offset position;
   final double strength;
+  final PowerUpKind? kind;
+  final String? skillId;
   int age = 0;
 }
 

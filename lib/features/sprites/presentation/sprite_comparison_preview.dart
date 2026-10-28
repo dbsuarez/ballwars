@@ -14,6 +14,7 @@ class SpriteComparisonPreview extends StatefulWidget {
     this.optimizedSprite,
     required this.background,
     required this.ballColor,
+    this.spriteScale = 1,
   });
   final ui.Image source;
   final SpriteDef sprite;
@@ -21,6 +22,7 @@ class SpriteComparisonPreview extends StatefulWidget {
   final SpriteDef? optimizedSprite;
   final SpritePreviewBackground background;
   final Color ballColor;
+  final double spriteScale;
   @override
   State<SpriteComparisonPreview> createState() =>
       _SpriteComparisonPreviewState();
@@ -95,6 +97,7 @@ class _SpriteComparisonPreviewState extends State<SpriteComparisonPreview>
                                 (_clock.value * 3600).floor(),
                                 widget.background,
                                 widget.ballColor,
+                                widget.spriteScale,
                               ),
                             ),
                     ),
@@ -138,12 +141,14 @@ class _PreviewPainter extends CustomPainter {
     this.step,
     this.background,
     this.ballColor,
+    this.spriteScale,
   );
   final ui.Image image;
   final SpriteDef sprite;
   final int step;
   final SpritePreviewBackground background;
   final Color ballColor;
+  final double spriteScale;
   @override
   void paint(Canvas canvas, Size size) {
     final light = background == SpritePreviewBackground.light;
@@ -180,8 +185,8 @@ class _PreviewPainter extends CustomPainter {
     final original = sprite.sourceSizes?[i] ?? source.size;
     final target = SpriteRegistry.placeRect(
       center,
-      side * .55,
-      side * .55,
+      side * .55 * spriteScale,
+      side * .55 * spriteScale,
       sprite.anchor,
     );
     final fitted = applyBoxFit(
@@ -192,6 +197,8 @@ class _PreviewPainter extends CustomPainter {
     final box = Alignment.center.inscribe(fitted.destination, target),
         offset = sprite.sourceOffsets?[i] ?? Offset.zero;
     final scale = box.width / original.width;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
     canvas.drawImageRect(
       image,
       source,
@@ -203,6 +210,7 @@ class _PreviewPainter extends CustomPainter {
       ),
       Paint()..filterQuality = FilterQuality.none,
     );
+    canvas.restore();
     canvas.drawCircle(
       center,
       2,

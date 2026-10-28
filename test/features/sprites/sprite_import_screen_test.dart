@@ -8,6 +8,7 @@ import 'package:ballwars/core/offline/offline_store.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/sprites/data/sprite_atlas_repository.dart';
 import 'package:ballwars/features/sprites/presentation/sprite_import_screen.dart';
+import 'package:ballwars/features/sprites/presentation/sprite_comparison_preview.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -274,6 +275,24 @@ void main() {
         if (find.text('Existing art - 16 x 16').evaluate().isNotEmpty) break;
       }
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.widgetWithText(Tab, 'Preview'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Preview'));
+      await tester.pumpAndSettle();
+      final scaleControl = find.byKey(const ValueKey('sprite-preview-scale'));
+      await tester.ensureVisible(scaleControl);
+      tester.widget<Slider>(scaleControl).onChanged!(2);
+      await tester.pump();
+      expect(
+        tester
+            .widget<SpriteComparisonPreview>(
+              find.byType(SpriteComparisonPreview),
+            )
+            .spriteScale,
+        2,
+      );
+      await tester.ensureVisible(find.widgetWithText(Tab, 'Sprites'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(Tab, 'Sprites'));
       await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('sprite-name-sprite'));
@@ -288,6 +307,7 @@ void main() {
       await tester.tap(find.text('Replace'));
       await tester.pumpAndSettle();
       expect(repo.savedId, old.id);
+      expect(repo.saved!.sprites.values.single.displayScale, 2);
       expect(repo.saved!.sprites.keys, ['sprite']);
       expect(repo.saved!.sprites['sprite']!.label, 'Clone Pop');
       expect(repo.bytes, bytes);

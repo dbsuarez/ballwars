@@ -292,6 +292,8 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 ## Current position
 
 2026-10-28 post-sprite follow-up:
+- [x] Add saved per-sprite artwork scale (50–200%) in the importer Preview tab; apply it to arena artwork, icons, effects and finishers while keeping circle/hitbox sizes unchanged.
+- [x] Stop treating Impact artwork as a persistent ball overlay; render assigned artwork on brief hit events, including Shadow Clone strikes.
 - [x] Fix web sprite imports reading unsupported `ImageDescriptor.width/height`; validate dimensions from decoded pixels and retain size/format limits.
 - [x] Preserve legacy replay rules while identifying new simulation rules with a `v.2` token.
 - [x] Fix secondary-hand custom collision skills, cinematic respawn cleanup and early-ending freezes. Preserve overlapping freezes and independent stuns.

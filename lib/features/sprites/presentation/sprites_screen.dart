@@ -422,10 +422,15 @@ class _SpriteThumbnailState extends State<SpriteThumbnail>
             : SpriteRegistry.frameAt(widget.id!, (_clock.value * 3600).floor());
         return image == null
             ? const Icon(Icons.image_outlined)
-            : RawImage(
-                image: image,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.none,
+            : ClipRect(
+                child: Transform.scale(
+                  scale: SpriteRegistry.imageScale(image),
+                  child: RawImage(
+                    image: image,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                  ),
+                ),
               );
       },
     ),

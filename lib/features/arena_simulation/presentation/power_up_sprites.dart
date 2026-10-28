@@ -365,12 +365,21 @@ class _IconPainter extends CustomPainter {
     if (sprite == null) {
       PowerUpSprites.paintIcon(canvas, kind, Offset.zero & size);
     } else {
+      canvas.save();
+      canvas.clipRect(Offset.zero & size);
       canvas.drawImageRect(
         sprite,
         Rect.fromLTWH(0, 0, sprite.width.toDouble(), sprite.height.toDouble()),
-        Offset.zero & size,
+        SpriteRegistry.imageRect(
+          sprite,
+          size.center(Offset.zero),
+          size.width,
+          size.height,
+          SpriteRegistry.center,
+        ),
         Paint()..filterQuality = FilterQuality.none,
       );
+      canvas.restore();
     }
   }
 

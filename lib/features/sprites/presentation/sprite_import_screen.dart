@@ -55,11 +55,26 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
   bool _smooth = false, _previewBusy = false;
   SpritePreviewBackground _previewBackground = SpritePreviewBackground.dark;
   Color _ballColor = const Color(0xffe65c56);
+
   ui.Image? _optimized;
   SpriteAtlas? _optimizedAtlas;
   String? _optimizedSignature;
-  String _signature(SpriteAtlas atlas) =>
-      '$_sourceVersion:$_frameSize:$_smooth:${jsonEncode(spriteAtlasJson(atlas))}';
+  String _signature(SpriteAtlas atlas) {
+    final manifest = spriteAtlasJson(atlas);
+    // Artwork scale changes placement, not the normalized sheet pixels.
+    for (final sprite in (manifest['sprites'] as Map).values) {
+      (sprite as Map).remove('displayScale');
+    }
+    return '$_sourceVersion:$_frameSize:$_smooth:${jsonEncode(manifest)}';
+  }
+
+  void _setSpriteScale(double value) {
+    final originals = _cuts?.sprites.values.toList();
+    if (originals == null || originals.isEmpty) return;
+    final original = originals[_preview.clamp(0, originals.length - 1)];
+    setState(() => _edit(original.id).displayScale = value);
+  }
+
   SpriteFrameDiagnostics _inspect(Rect frame) => _diagnostics.putIfAbsent(
     frame,
     () => SpriteFrameDiagnostics.inspect(
@@ -458,13 +473,13 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
     }
   }
 
-  Widget _row(String label, Widget control) => Padding(
+  Widget _row(String label, Widget control, {int controlFlex = 1}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Row(
       children: [
         Expanded(child: Text(label)),
         const SizedBox(width: 12),
-        Expanded(child: control),
+        Expanded(flex: controlFlex, child: control),
       ],
     ),
   );
@@ -521,6 +536,7 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
     final selected = sprites.isEmpty
         ? null
         : sprites[_preview.clamp(0, sprites.length - 1)];
+    final spriteScale = selected?.displayScale ?? 1;
     SpriteAtlas? cuts;
     try {
       cuts = _cuts;
@@ -923,7 +939,7 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
                           padding: const EdgeInsets.all(16),
                           children: [
                             const Text(
-                              'Animation preview. The source pixels are preserved; fit controls how artwork fills the skill slot. Tint and gameplay size are configured in Edit Skill.',
+                              'Sprite scale is saved for this sprite and used in the game. The circle and hitbox stay unchanged. Edit Skill scales multiply this artwork scale.',
                             ),
                             _row(
                               'Background',
@@ -965,6 +981,42 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
                                 },
                               ),
                             ),
+                            _row(
+                              'Sprite scale',
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Slider(
+                                      key: const ValueKey(
+                                        'sprite-preview-scale',
+                                      ),
+                                      value: spriteScale,
+                                      min: .5,
+                                      max: 2,
+                                      divisions: 30,
+                                      label: '${(spriteScale * 100).round()}%',
+                                      onChanged: (value) =>
+                                          _setSpriteScale(value),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 44,
+                                    child: Text(
+                                      '${(spriteScale * 100).round()}%',
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Reset sprite scale',
+                                    onPressed: spriteScale == 1
+                                        ? null
+                                        : () => _setSpriteScale(1),
+                                    icon: const Icon(Icons.restore),
+                                  ),
+                                ],
+                              ),
+                              controlFlex: 2,
+                            ),
                             if (selected != null && _image != null)
                               SpriteComparisonPreview(
                                 source: _image!,
@@ -975,6 +1027,7 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
                                     : null,
                                 background: _previewBackground,
                                 ballColor: _ballColor,
+                                spriteScale: spriteScale,
                               ),
                             if (_optimized != null && !fresh)
                               const Text(

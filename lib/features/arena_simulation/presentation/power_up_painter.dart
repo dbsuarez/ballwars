@@ -234,6 +234,41 @@ class PowerUpPainter {
     if (p == null) return;
     final r = p.fieldRadius;
 
+    // Impact artwork belongs to a short-lived hit, never the owner's body.
+    if (showEffects) {
+      for (final impact in p.weaponImpacts) {
+        final kind = impact.kind;
+        if (kind == null ||
+            !p.usesEffectSprite(
+              kind,
+              skillId: impact.skillId,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            )) {
+          continue;
+        }
+        final skill = p.visualSkill(kind, skillId: impact.skillId);
+        final id = skill.impactSpriteId;
+        final image = id == null
+            ? null
+            : SpriteRegistry.frameAtProgress(id, impact.age / 12);
+        if (image == null) continue;
+        SkillArtworkTint.begin(canvas, skill.spriteTint);
+        try {
+          _drawEffect(
+            canvas,
+            image,
+            impact.position,
+            r * 1.4 * p.effectDisplayScale(kind, skillId: impact.skillId),
+            0,
+            anchor: SpriteRegistry.anchor(id!),
+            opacity: 1 - impact.age / 12,
+          );
+        } finally {
+          SkillArtworkTint.end(canvas);
+        }
+      }
+    }
+
     if (p.ragingDemonAttacks.isNotEmpty) {
       canvas.drawCircle(
         Offset.zero,
@@ -2436,7 +2471,13 @@ class PowerUpPainter {
       canvas.drawImageRect(
         sprite,
         Rect.fromLTWH(0, 0, w, h),
-        Rect.fromCenter(center: Offset.zero, width: w * fit, height: h * fit),
+        SpriteRegistry.imageRect(
+          sprite,
+          Offset.zero,
+          w * fit,
+          h * fit,
+          SpriteRegistry.center,
+        ),
         _spritePaint,
       );
     } else {
@@ -2484,7 +2525,7 @@ class PowerUpPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      SpriteRegistry.placeRect(Offset.zero, 2 * half, 2 * half, anchor),
+      SpriteRegistry.imageRect(image, Offset.zero, 2 * half, 2 * half, anchor),
       opacity >= 1
           ? _spritePaint
           : (Paint()
@@ -2515,7 +2556,7 @@ class PowerUpPainter {
     canvas.drawImageRect(
       image,
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      SpriteRegistry.placeRect(Offset.zero, half * 2, half * 2, anchor),
+      SpriteRegistry.imageRect(image, Offset.zero, half * 2, half * 2, anchor),
       Paint()
         ..filterQuality = FilterQuality.none
         ..colorFilter = ColorFilter.mode(
@@ -2701,25 +2742,7 @@ class PowerUpPainter {
     Color Function(PowerUpKind kind)? handEffectColor,
     PowerUpKind Function(PowerUpKind kind, int slot)? artworkKind,
     String? Function(PowerUpKind kind, int slot)? iconSpriteId,
-    String? Function(PowerUpKind kind)? impactSpriteId,
   }) {
-    // Custom status art surrounds its affected ball, without changing physics.
-    for (final kind in ball.activeEffectSkillIds.keys) {
-      final id = impactSpriteId?.call(kind);
-      final image = id == null || !(useEffectSprite?.call(kind) ?? true)
-          ? null
-          : SpriteRegistry.frameAt(id, step);
-      if (image != null) {
-        _drawEffect(
-          canvas,
-          image,
-          ball.position,
-          ball.radius * (effectDisplayScale?.call(kind) ?? 1),
-          0,
-          anchor: SpriteRegistry.anchor(id!),
-        );
-      }
-    }
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       SkillArtworkTint.begin(
         canvas,

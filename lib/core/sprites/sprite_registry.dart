@@ -24,6 +24,22 @@ class SpriteRegistry {
 
   static Future<void>? _loading;
   static final Map<String, _CutSprite> _sprites = {};
+  static final Expando<double> _imageScales = Expando('sprite display scale');
+  static double imageScale(ui.Image image) => _imageScales[image] ?? 1;
+
+  /// Apply saved artwork scale without resizing pixels or moving its anchor.
+  static Rect imageRect(
+    ui.Image image,
+    Offset target,
+    double width,
+    double height,
+    Offset anchor,
+  ) => placeRect(
+    target,
+    width * imageScale(image),
+    height * imageScale(image),
+    anchor,
+  );
   static final Map<String, Set<String>> _customIds = {};
   static final Map<String, String> _collectionLabels = {};
   static final Map<String, String> _spriteLabels = {};
@@ -149,6 +165,7 @@ class SpriteRegistry {
           output: output,
           fit: s.fit,
           anchor: s.anchor,
+          displayScale: s.displayScale,
           sourceSizes: s.sourceSizes,
           sourceOffsets: s.sourceOffsets,
           padding: 2,
@@ -190,6 +207,7 @@ class SpriteRegistry {
           fit: SpriteFit.fill,
           padding: 0,
           anchor: s.anchor,
+          displayScale: s.displayScale,
           stepsPerFrame: s.stepsPerFrame,
         );
       }
@@ -535,6 +553,9 @@ class SpriteRegistry {
           def.stepsPerFrame,
           def.anchor,
         );
+        for (final frame in out[def.id]!.frames) {
+          _imageScales[frame] = def.displayScale;
+        }
       }
     } catch (_) {
       for (final s in out.values) {

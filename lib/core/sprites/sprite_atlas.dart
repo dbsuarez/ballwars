@@ -26,6 +26,9 @@ class SpriteDef {
   /// that painters place on their target point. Defaults to the center.
   final Offset anchor;
 
+  /// Visual multiplier around the anchor; does not change collision geometry.
+  final double displayScale;
+
   /// Width of the output image in pixels (its side when square).
   final int output;
 
@@ -59,6 +62,7 @@ class SpriteDef {
     this.sourceSizes,
     this.sourceOffsets,
     this.anchor = const Offset(0.5, 0.5),
+    this.displayScale = 1,
     required this.output,
     this.outputHeight,
     this.fit = SpriteFit.contain,
@@ -173,6 +177,12 @@ class SpriteAtlas {
       anchor = Offset(a[0].toDouble(), a[1].toDouble());
     }
     final fitRaw = v['fit'] ?? 'contain';
+    final scale = v['displayScale'] ?? 1;
+    if (scale is! num || !scale.isFinite || scale < .5 || scale > 2) {
+      throw FormatException(
+        'Sprite $id displayScale must be between 0.5 and 2',
+      );
+    }
     final fit = switch (fitRaw) {
       'contain' => SpriteFit.contain,
       'trim' => SpriteFit.trim,
@@ -228,6 +238,7 @@ class SpriteAtlas {
                 Offset((s[0] as num).toDouble(), (s[1] as num).toDouble()),
             ],
       anchor: anchor,
+      displayScale: scale.toDouble(),
       output: output,
       outputHeight: outputHeight as int?,
       fit: fit,
@@ -251,6 +262,11 @@ class SpriteAtlas {
       );
     }
     for (final def in sprites.values) {
+      if (!def.displayScale.isFinite ||
+          def.displayScale < .5 ||
+          def.displayScale > 2) {
+        out.add('${def.id} displayScale must be between 0.5 and 2');
+      }
       if (def.sourceSizes != null || def.sourceOffsets != null) {
         if (def.sourceSizes?.length != def.frames.length ||
             def.sourceOffsets?.length != def.frames.length) {

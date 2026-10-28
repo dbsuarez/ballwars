@@ -28,6 +28,7 @@ class SpriteReplacement {
         outputHeight: s.outputHeight,
         fit: s.fit,
         anchor: s.anchor,
+        displayScale: s.displayScale,
         padding: s.padding,
         stepsPerFrame: s.stepsPerFrame,
         sharedBand: s.sharedBand,

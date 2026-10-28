@@ -896,7 +896,14 @@ class PowerUpSystem {
         move: skillName(PowerUpKind.sniperRifle),
       );
     }
-    weaponImpacts.add(WeaponImpact(position: target.position, strength: 1));
+    weaponImpacts.add(
+      WeaponImpact(
+        position: target.position,
+        strength: 1,
+        kind: PowerUpKind.sniperRifle,
+        skillId: visualSkill(PowerUpKind.sniperRifle, ball: owner).id,
+      ),
+    );
     hits++;
     _skillSound(PowerUpKind.sniperRifle);
     _skillYell(owner, PowerUpKind.sniperRifle, 'ONE SHOT.');
@@ -2300,11 +2307,14 @@ class PowerUpSystem {
         count: 7 + (match.skillLibrary.screenShakeFor(skill) * 10).round(),
         displayScale: effectDisplayScaleOf(skill),
       );
-      if (match.skillLibrary.screenShakeFor(skill) > 0) {
+      if (match.skillLibrary.screenShakeFor(skill) > 0 ||
+          skill.impactSpriteId != null) {
         weaponImpacts.add(
           WeaponImpact(
             position: target.position,
             strength: match.skillLibrary.screenShakeFor(skill),
+            kind: skill.baseKind,
+            skillId: skill.id,
           ),
         );
       }
@@ -3617,6 +3627,8 @@ class PowerUpSystem {
       WeaponImpact(
         position: impact,
         strength: match.skillLibrary.screenShakeFor(impactSkill),
+        kind: kind,
+        skillId: impactSkill.id,
       ),
     );
     var share = 1.0;

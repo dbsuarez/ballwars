@@ -8,6 +8,7 @@ class SpriteEdit {
   String? name;
   int? stepsPerFrame;
   Offset? anchor;
+  double? displayScale;
   List<int>? order;
   final Set<int> excluded = {};
   bool allowBlankFrames = false;
@@ -48,6 +49,7 @@ class SpriteEdit {
       outputHeight: original.outputHeight,
       fit: original.fit,
       anchor: anchor ?? original.anchor,
+      displayScale: displayScale ?? original.displayScale,
       stepsPerFrame: stepsPerFrame ?? original.stepsPerFrame,
       padding: original.padding,
       sourceSizes: original.sourceSizes == null

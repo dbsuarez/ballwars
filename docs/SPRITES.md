@@ -132,9 +132,20 @@ choose a background and ball color, then **Generate optimized comparison** to
 compare the original cut with the actual encoded upload. Edits mark a comparison
 outdated; generate it again before relying on it. Animation can pause/replay.
 Preview colors/backgrounds are local inspection controls and do not recolor the
-saved artwork. Existing optimized PNGs keep their original pixels when only
+saved artwork. **Sprite scale** (50–200%, reset to 100%) is different: it is saved
+per sprite and used by game icons, held artwork, projectiles, effects and finishers.
+Both comparison panels show it immediately; the circle and collision geometry
+stay unchanged. It multiplies the scale configured in Edit Skill. Save sprites
+to publish the change. Scale is metadata, so it does not crop or resample the
+uploaded pixels and survives library backup/restore. Existing optimized PNGs keep their original pixels when only
 metadata is edited; choosing a smaller maximum size or Smooth creates a new
 optimized image. The owner's source file remains untouched.
+
+**Impact artwork** is a transient strike effect, not a ball skin. Assigning it
+does not cover the owner's face throughout an active power-up. Direct hits such
+as Shadow Clone strikes retain the skill identity on their hit event and play
+the selected artwork briefly at the impact. Explosions and slash effects also
+retain their dedicated effect renderers.
 
 The owner supplies source artwork under `docs/ai_generated/`. Keep these originals
 unchanged in Git; app uploads and optimized runtime sheets are managed through the

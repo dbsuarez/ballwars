@@ -1,6 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:ballwars/core/sprites/sprite_import.dart';
 import 'package:ballwars/core/sprites/sprite_registry.dart';
+import 'package:ballwars/core/sprites/sprite_atlas.dart';
+import 'package:ballwars/core/sprites/sprite_edit.dart';
+import 'package:ballwars/features/arena_simulation/presentation/harpoon_cinematic.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
@@ -13,19 +16,110 @@ import 'package:flutter_test/flutter_test.dart';
 
 class ImageCanvas implements ui.Canvas {
   final List<ui.Image> images = [];
+  final List<ui.Rect> destinations = [];
   @override
-  void drawImageRect(
-    ui.Image image,
-    ui.Rect src,
-    ui.Rect dst,
-    ui.Paint paint,
-  ) => images.add(image);
+  void drawImageRect(ui.Image image, ui.Rect src, ui.Rect dst, ui.Paint paint) {
+    images.add(image);
+    destinations.add(dst);
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'Shadow Clone impact art appears at a hit and never coats the owner',
+    () async {
+      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+        SpriteRegistry.resetForTest();
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(
+          recorder,
+        ).drawPaint(ui.Paint()..color = const ui.Color(0xff00ff00));
+        final picture = recorder.endRecording();
+        final sheet = await picture.toImage(16, 16);
+        await SpriteRegistry.register(
+          SpriteImport.grid(sheet: 'hit.png', width: 16, height: 16),
+          sheet,
+          idPrefix: 'custom.hit',
+        );
+        final skill = SkillLibrary.defaults
+            .builtIn(PowerUpKind.shadowClone, PowerUpConfig.defaults)
+            .copyWith(impactSpriteId: 'custom.hit.sprite');
+        final controller = MatchSimulationController(
+          const [
+            CustomBall(
+              id: 'a',
+              name: 'A',
+              primaryColor: ui.Color(0xffff0000),
+              glowColor: ui.Color(0xffff0000),
+            ),
+            CustomBall(
+              id: 'b',
+              name: 'B',
+              primaryColor: ui.Color(0xff0000ff),
+              glowColor: ui.Color(0xff0000ff),
+            ),
+          ],
+          arenaRadius: 260,
+          seed: 2,
+          mode: MatchMode.arsenal,
+          lookAhead: false,
+          skillLibrary: SkillLibrary.defaults.withDefinition(
+            skill,
+            PowerUpConfig.defaults,
+          ),
+        );
+        final p = controller.powerUps!, owner = controller.state.balls.first;
+        p.automaticSpawning = false;
+        final pickup = FieldPowerUp(
+          kind: PowerUpKind.shadowClone,
+          position: owner.position,
+          spawnStep: 0,
+        );
+        p.field.add(pickup);
+        p.pickUp(owner, pickup);
+        final before = ImageCanvas();
+        ArenaPainter(
+          state: controller.state,
+          arenaRadius: 260,
+          rimAngle: 0,
+        ).paint(before, const ui.Size(600, 600));
+        final art = SpriteRegistry.frame('custom.hit.sprite')!;
+        expect(before.images, isNot(contains(same(art))));
+        for (
+          var i = 0;
+          i < 90 &&
+              !p.weaponImpacts.any(
+                (hit) => hit.kind == PowerUpKind.shadowClone,
+              );
+          i++
+        ) {
+          p.step();
+        }
+        final impact = p.weaponImpacts.firstWhere(
+          (hit) => hit.kind == PowerUpKind.shadowClone,
+        );
+        final during = ImageCanvas();
+        PowerUpPainter.paint(during, controller.state, 260);
+        final at = during.images.indexOf(art);
+        expect(at, greaterThanOrEqualTo(0));
+        expect(during.destinations[at].center, impact.position);
+        p.shadowCloneAttacks.clear();
+        for (var i = 0; i < 13; i++) {
+          p.step();
+        }
+        final after = ImageCanvas();
+        PowerUpPainter.paint(after, controller.state, 260);
+        expect(after.images, isNot(contains(same(art))));
+        SpriteRegistry.unregister('custom.hit');
+        sheet.dispose();
+        picture.dispose();
+      });
+    },
+  );
   test(
     'arena renders assigned token, held art, projectile and explosion; deletion falls back safely',
     () async {
@@ -126,6 +220,65 @@ void main() {
               .length,
           greaterThanOrEqualTo(2),
         );
+        final base = SpriteImport.grid(
+          sheet: 'a.png',
+          width: 48,
+          height: 16,
+          columns: 3,
+          animation: false,
+        );
+        final edited = SpriteAtlas(
+          sheet: base.sheet,
+          sheetSize: base.sheetSize,
+          sprites: {
+            for (final s in base.sprites.values)
+              s.id: (SpriteEdit()..displayScale = 2).apply(s),
+          },
+        );
+        final normalized = await SpriteRegistry.normalizeUpload(
+          edited,
+          sheet,
+          frameSize: 128,
+        );
+        final restored = SpriteAtlas.parse(spriteAtlasJson(normalized.atlas));
+        final codec = await ui.instantiateImageCodec(normalized.bytes);
+        final uploadedSheet = (await codec.getNextFrame()).image;
+        await SpriteRegistry.register(
+          restored,
+          uploadedSheet,
+          idPrefix: 'custom.a',
+        );
+        uploadedSheet.dispose();
+        codec.dispose();
+        final larger = ImageCanvas();
+        ArenaPainter(
+          state: controller.state,
+          arenaRadius: 260,
+          rimAngle: 0,
+          look: BallLook.faces,
+        ).paint(larger, const ui.Size(600, 600));
+        final oldRects = [
+          for (var i = 0; i < canvas.images.length; i++)
+            if (canvas.destinations[i].width > 0) canvas.destinations[i],
+        ];
+        final newRects = [
+          for (var i = 0; i < larger.images.length; i++)
+            if (larger.destinations[i].width > 0) larger.destinations[i],
+        ];
+        expect(newRects.length, oldRects.length);
+        for (var i = 0; i < oldRects.length; i++) {
+          expect(newRects[i].width, closeTo(oldRects[i].width * 2, .001));
+          expect(newRects[i].height, closeTo(oldRects[i].height * 2, .001));
+        }
+        final finisher = ImageCanvas();
+        HarpoonCinematic.paintRaster(
+          finisher,
+          SpriteRegistry.frame('custom.a.sprite-1')!,
+          ui.Offset.zero,
+          10,
+          anchor: SpriteRegistry.center,
+        );
+        expect(finisher.destinations.single.width, 40);
         SpriteRegistry.unregister('custom.a');
         expect(
           () => ArenaPainter(

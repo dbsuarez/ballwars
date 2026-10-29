@@ -106,3 +106,7 @@ Release follow-up: updated both oversized-replay widget assertions to the curren
 Phase F: ordered mechanical steps and authoring are documented in [MECHANICAL-EFFECT-STEPS.md](MECHANICAL-EFFECT-STEPS.md). The original two-effect path remains available with a Legacy tag. No additional migration is needed.
 
 Phase F verification: 945 tests passed (one opt-in performance test skipped), 18 final mechanics/phone-rendering checks passed, and analysis is clean. The release web build passes; real Android and production acceptance remain manual.
+
+Placement follow-up: launch points and mirrored/upright effects keep the same vertical offset when facing left. Projectile artwork mirrors horizontally, automatic shield facing matches other equipment, and shield grip controls are honored. New matches use replay rules v.4; v.1-v.3 recordings retain their original launch geometry.
+
+Mirroring verification: 950 tests passed (one opt-in performance test skipped); targeted placement/replay checks, held-grip checks and phone screenshot review pass. Analysis is clean. The final release web build passes. Deployment and Android APK publication are triggered through master/tag pushes; their completion is not monitored.

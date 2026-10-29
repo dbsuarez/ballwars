@@ -61,6 +61,24 @@ String _legacyTuning() {
 }
 
 void main() {
+  test('new mirrored-origin rules keep older replay versions readable', () {
+    for (final revision in [1, 2, 3, 4]) {
+      final link = ReplayLink(
+        seed: 1,
+        speedMultiplier: 1,
+        contestants: _presets.take(2).toList(),
+        simulationRevision: revision,
+      );
+      final uri = link.toUri(
+        presetIds: _presetIds,
+        appUrl: 'https://dbsuarez.github.io/ballwars/',
+      );
+      expect(
+        ReplayLink.fromUri(uri, presets: _presets)!.simulationRevision,
+        revision,
+      );
+    }
+  });
   test(
     'simulation revision preserves legacy links and rejects unknown rules',
     () {
@@ -252,7 +270,7 @@ void main() {
 
     expect(
       uri.toString(),
-      contains('balls=v.3,k.streaming/netflix,p.preset-usa'),
+      contains('balls=v.4,k.streaming/netflix,p.preset-usa'),
     );
     expect(ReplayLink.usesPacks(uri), isTrue);
     // Without the packs loaded the link can't be resolved...
@@ -377,7 +395,7 @@ void main() {
       contestants: [_presets[0], _presets[1]],
       mode: MatchMode.allOut,
     ).toUri(presetIds: ids, appUrl: app);
-    expect(uri.queryParameters['balls'], startsWith('v.3,m.allout,'));
+    expect(uri.queryParameters['balls'], startsWith('v.4,m.allout,'));
     final parsed = ReplayLink.fromUri(uri, presets: _presets)!;
     expect(parsed.mode, MatchMode.allOut);
     expect(parsed.contestants, hasLength(2));
@@ -518,7 +536,7 @@ void main() {
         powerUps: {PowerUpKind.knife, PowerUpKind.mine},
       ).toUri(presetIds: ids, appUrl: app);
       final tokens = some.queryParameters['balls']!.split(',');
-      expect(tokens[0], 'v.3');
+      expect(tokens[0], 'v.4');
       expect(tokens[1], 'm.arsenal');
       expect(tokens[2], startsWith('w.'));
       expect(ReplayLink.fromUri(some, presets: _presets)!.powerUps, {

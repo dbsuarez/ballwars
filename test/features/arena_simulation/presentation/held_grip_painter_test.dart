@@ -192,11 +192,11 @@ void main() {
     _expectOffset(gripHandPosition(blade), const Offset(105, 100));
   });
 
-  test('a shield ignores grip sideways', () {
+  test('a shield honors grip sideways', () {
     final ball = _ball()..equipWeapon(PowerUpKind.shield, dualWield: false);
     expect(
       PowerUpPainter.heldCenter(ball, gripSide: 1),
-      PowerUpPainter.heldCenter(ball),
+      PowerUpPainter.heldCenter(ball) + Offset(0, ball.radius),
     );
   });
 

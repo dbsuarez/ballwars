@@ -1,3 +1,4 @@
+import '../../../core/sprites/facing_offset.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../../core/sprites/sprite_registry.dart';
@@ -171,8 +172,12 @@ class _PlacementPainter extends CustomPainter {
       final unit = direction;
       final cross =
           attached +
-          unit * e.offsetX * r +
-          Offset(-unit.dy, unit.dx) * e.offsetY * r;
+          facingOffset(
+            unit,
+            e.offsetX * r,
+            e.offsetY * r,
+            mirror: e.facing != EffectFacing.direction,
+          );
       final pen = Paint()
         ..color = Colors.orangeAccent
         ..strokeWidth = 1;

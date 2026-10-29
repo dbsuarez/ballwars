@@ -54,7 +54,7 @@ class ExportVideoDialog extends StatefulWidget {
   const ExportVideoDialog({
     super.key,
     required this.contestants,
-    this.simulationRevision = 3,
+    this.simulationRevision = 4,
     required this.seed,
     required this.arenaRadius,
     required this.speedMultiplier,
@@ -86,7 +86,7 @@ class ExportVideoDialog extends StatefulWidget {
   static Future<void> show(
     BuildContext context, {
     required List<CustomBall> contestants,
-    int simulationRevision = 3,
+    int simulationRevision = 4,
     required int seed,
     required double arenaRadius,
     required double speedMultiplier,

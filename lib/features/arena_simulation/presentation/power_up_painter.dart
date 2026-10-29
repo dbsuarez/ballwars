@@ -1,3 +1,4 @@
+import '../../../core/sprites/facing_offset.dart';
 import '../../skills/presentation/area_indicator.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -1961,6 +1962,7 @@ class PowerUpPainter {
               shot.position,
               shotRadius,
               math.atan2(shot.velocity.dy, shot.velocity.dx),
+              flip: shot.velocity.dx < 0,
               anchor: SpriteRegistry.anchor(customId!),
             );
             continue;
@@ -2227,6 +2229,7 @@ class PowerUpPainter {
                   (shot.kind == PowerUpKind.ricochetDisc ? 0.75 : 0.62),
               math.atan2(dir.dy, dir.dx) +
                   state.step * shot.spinDegreesPerSecond * math.pi / 10800,
+              flip: dir.dx < 0,
               anchor: SpriteRegistry.anchor(
                 PowerUpSprites.projectileId(projectileKind!),
               ),
@@ -3146,20 +3149,13 @@ class PowerUpPainter {
         : held == PowerUpKind.hook || held == PowerUpKind.threadHarpoon
         ? 1.55
         : 1.2;
-    final distance =
-        ball.radius *
-        (held == PowerUpKind.shield
-            ? baseDistance
-            : math.max(0.1, baseDistance - inset));
+    final distance = ball.radius * math.max(0.1, baseDistance - inset);
     final center = ball.position + dir * distance;
-    if (held == PowerUpKind.shield || gripSide == 0) return center;
+    if (gripSide == 0) return center;
     // Facing left is a horizontal mirror of facing right (the sprite flips),
     // and the second hand mirrors the first.
-    final side =
-        gripSide.clamp(-1.5, 1.5) *
-        (slot == 1 ? -1 : 1) *
-        (math.cos(angle) < 0 ? -1 : 1);
-    return center + Offset(-dir.dy, dir.dx) * (ball.radius * side);
+    final side = gripSide.clamp(-1.5, 1.5) * (slot == 1 ? -1 : 1);
+    return center + facingOffset(dir, 0, ball.radius * side);
   }
 
   /// The angle a held sprite is drawn at: the aim [angle] plus the skill's
@@ -3184,8 +3180,7 @@ class PowerUpPainter {
       return (angle: correction, flip: false);
     }
     final mirror =
-        mode == SkillHeldFacing.mirror ||
-        (mode == SkillHeldFacing.automatic && !shield);
+        mode == SkillHeldFacing.mirror || mode == SkillHeldFacing.automatic;
     final flip = mirror && math.cos(facing) < 0;
     return (angle: angle + (flip ? -correction : correction), flip: flip);
   }

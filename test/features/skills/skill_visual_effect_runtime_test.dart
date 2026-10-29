@@ -358,6 +358,41 @@ void main() {
   });
 
   test(
+    'mirrored and upright effect placement keeps above above on both sides',
+    () {
+      for (final facing in [EffectFacing.mirror, EffectFacing.upright]) {
+        final positions = <Offset>[];
+        for (final direction in [const Offset(1, 0), const Offset(-1, 0)]) {
+          final canvas = _Canvas();
+          SkillEffectRenderer.paint(
+            canvas,
+            ResolvedSkillEffect(
+              spriteId: 'qa.hit',
+              scale: 1,
+              opacity: 1,
+              tint: 0xffffffff,
+              playback: EffectPlayback.once,
+              facing: facing,
+              offsetX: 1.64,
+              offsetY: -.52,
+            ),
+            Offset.zero,
+            8,
+            0,
+            12,
+            direction: direction,
+            unitRadius: 10,
+          );
+          positions.add(canvas.translations.single);
+        }
+        expect(positions.last.dx, closeTo(-positions.first.dx, 1e-9));
+        expect(positions.last.dy, closeTo(positions.first.dy, 1e-9));
+        expect(positions.last.dy, lessThan(0));
+      }
+    },
+  );
+
+  test(
     'casting uses local tint and opacity without applying the skill tint twice',
     () async {
       final base = library();

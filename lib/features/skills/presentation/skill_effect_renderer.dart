@@ -1,3 +1,4 @@
+import '../../../core/sprites/facing_offset.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 import '../../../core/sprites/sprite_registry.dart';
@@ -93,9 +94,12 @@ class SkillEffectRenderer {
         ? direction / direction.distance
         : const Offset(1, 0);
     final radius = unitRadius ?? half;
-    final offset =
-        unit * (effect.offsetX * radius) +
-        Offset(-unit.dy, unit.dx) * (effect.offsetY * radius);
+    final offset = facingOffset(
+      unit,
+      effect.offsetX * radius,
+      effect.offsetY * radius,
+      mirror: effect.facing != EffectFacing.direction,
+    );
     final mirrored = effect.facing == EffectFacing.mirror && unit.dx < 0;
     final angle =
         (effect.facing == EffectFacing.direction

@@ -89,7 +89,7 @@ class ReplayLink {
   final BallLook? look;
 
   const ReplayLink({
-    this.simulationRevision = 3,
+    this.simulationRevision = 4,
     required this.seed,
     required this.speedMultiplier,
     this.automaticSpeedUp = true,
@@ -256,8 +256,8 @@ class ReplayLink {
     var simulationRevision = 1;
     if (tokens.isNotEmpty && tokens.first.startsWith('v.')) {
       final marker = tokens.removeAt(0);
-      if (marker != 'v.2' && marker != 'v.3') return null;
-      simulationRevision = marker == 'v.3' ? 3 : 2;
+      if (marker != 'v.2' && marker != 'v.3' && marker != 'v.4') return null;
+      simulationRevision = int.parse(marker.substring(2));
     }
     final hasArtworkMarker = tokens.isNotEmpty && tokens.first == 'a.1';
     if (hasArtworkMarker) tokens.removeAt(0);

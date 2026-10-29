@@ -21,3 +21,7 @@ Projectile appearance has an automatic/custom launch point measured along and ac
 Area-capable skills expose actual artwork preview, a physical radius percentage, boundary color/opacity and Hidden, Dash-dot or Solid boundary choices. Edit area artwork opens the relevant ground or explosion recipe. Artwork scale and physical radius are independent. Molotov and new composed skills use the same authoring controls; composed area activation artwork is cosmetic and does not add persistent damage ticks. Ordered mechanical composition remains Phase F.
 
 Extended appearance snapshots use versions 10/11 only when these overrides are needed; earlier default snapshots remain compatible. Existing editor tabs and unsaved drafts are preserved.
+
+## Mirrored placement follow-up
+
+New matches use simulation rule marker `v.4` to keep left-facing custom launch points mirrored horizontally instead of rotating sideways offsets below the ball. Old `v.1`?`v.3` replays still load and keep their previous physical launch geometry. Placement previews and mirrored/upright effect bindings use the shared facing-offset calculation; explicit Rotate with aim effects retain rotational offsets. Native and uploaded projectile artwork now mirrors when traveling left, as held weapon artwork already does. Automatic shield facing mirrors too, and its inset/sideways grip controls are honored.

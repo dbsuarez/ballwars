@@ -1,3 +1,4 @@
+import '../../../core/sprites/facing_offset.dart';
 import 'power_up_spawn_selector.dart';
 import 'dart:math' as math;
 import 'dart:ui';
@@ -3456,12 +3457,15 @@ class PowerUpSystem {
         : direction / direction.distance;
     final point =
         owner.position +
-        unit * owner.radius * (skill.projectileOriginForward ?? 1) +
-        Offset(-unit.dy, unit.dx) *
-            owner.radius *
-            (skill.projectileOriginForward == null
-                ? 0
-                : skill.projectileOriginSide);
+        facingOffset(
+          unit,
+          owner.radius * (skill.projectileOriginForward ?? 1),
+          owner.radius *
+              (skill.projectileOriginForward == null
+                  ? 0
+                  : skill.projectileOriginSide),
+          mirror: match.simulationRevision >= 4,
+        );
     if (skill.projectileOriginForward == null) return point;
     final limit = match.arenaRadius - 1;
     return point.distance > limit ? point / point.distance * limit : point;

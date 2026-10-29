@@ -2326,7 +2326,7 @@ class _SkillEditorState extends State<_SkillEditor> {
               opacity: 1,
               tint: _spriteTint,
               playback: EffectPlayback.once,
-              facing: EffectFacing.direction,
+              facing: EffectFacing.mirror,
               offsetX: _originEnabled ? (_double('originForward') ?? 1) : 1,
               offsetY: _originEnabled ? (_double('originSide') ?? 0) : 0,
             ),

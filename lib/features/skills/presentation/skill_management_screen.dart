@@ -1,3 +1,4 @@
+import 'mechanical_effects_editor.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -1264,6 +1265,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     if (widget.skill.isComposed || widget.skill.maxBounces != null)
       'bounces': TextEditingController(text: '${widget.skill.maxBounces ?? 0}'),
     'range': TextEditingController(text: '${widget.skill.range}'),
+    'projectileHitRadius': TextEditingController(text: '${widget.skill.projectileHitRadius}'),
     'projectileSize': TextEditingController(
       text: '${widget.skill.projectileSize}',
     ),
@@ -1387,6 +1389,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late SkillDelivery? _delivery = widget.skill.delivery;
   late SkillEffectType? _effectType = widget.skill.effectType;
   late SkillEffectType? _secondaryEffectType = widget.skill.secondaryEffectType;
+  late List<SkillEffectStep> _effectSteps = List.of(widget.skill.effectSteps);
   late SkillCalloutStyle _calloutStyle = widget.skill.calloutStyle;
   late SkillBubbleType _bubbleType = widget.skill.bubbleType;
   late SkillHandedness _handedness = widget.skill.handedness;
@@ -1437,8 +1440,9 @@ class _SkillEditorState extends State<_SkillEditor> {
         : null;
   }
 
-  bool _usesEffect(SkillEffectType effect) =>
-      _effectType == effect || _secondaryEffectType == effect;
+  bool _usesEffect(SkillEffectType effect) => _effectSteps.isNotEmpty
+      ? _effectSteps.any((s) => s.type == effect)
+      : _effectType == effect || _secondaryEffectType == effect;
 
   bool get _showsHealing =>
       _usesEffect(SkillEffectType.heal) ||
@@ -1488,7 +1492,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _trigger != null &&
       _targeting != null &&
       _delivery != null &&
-      _effectType != null;
+      (_effectType != null || _effectSteps.isNotEmpty);
 
   /// What "Default" means for Drops shells here (a composed or combined skill drops none).
   /// Read from [SkillDefinition.defaultDropsShells] on the edited values, the same rule the match uses.
@@ -1500,6 +1504,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     targeting: _targeting,
     delivery: _delivery,
     effectType: _effectType,
+    effectSteps: _effectSteps,
     payloadSkillId: _payload,
   ).defaultDropsShells;
 
@@ -1608,6 +1613,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _delivery = defaults.delivery;
       _effectType = defaults.effectType;
       _secondaryEffectType = defaults.secondaryEffectType;
+      _effectSteps = List.of(defaults.effectSteps);
       _calloutStyle = defaults.calloutStyle;
       _bubbleType = defaults.bubbleType;
       _handedness = defaults.handedness;
@@ -1630,6 +1636,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       number('bounces', defaults.maxBounces);
       number('range', defaults.range);
       number('projectileSize', defaults.projectileSize);
+      number('projectileHitRadius', defaults.projectileHitRadius);
       number('projectileSpin', defaults.projectileSpin);
       number('weaponDisplayScale', defaults.weaponDisplayScale);
       number('pickupDisplayScale', defaults.pickupDisplayScale);
@@ -1843,6 +1850,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       maxBounces: _int('bounces'),
       range: _double('range'),
       projectileSize: _double('projectileSize'),
+      projectileHitRadius: _double('projectileHitRadius'),
       projectileSpin: _double('projectileSpin'),
       projectileOriginForward: _originEnabled ? _double('originForward') : null,
       projectileOriginSide: _double('originSide'),
@@ -1877,6 +1885,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       delivery: _delivery,
       effectType: _effectType,
       secondaryEffectType: _secondaryEffectType,
+      effectSteps: _effectSteps,
       repeatCount: _int('repeatCount'),
       repeatIntervalSeconds: _double('repeatInterval'),
       startDelaySeconds: _double('startDelay'),
@@ -1921,6 +1930,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     'weaponGripSide': (-1.5, 1.5),
     'weaponGripRotation': (-180, 180),
     'projectileSize': (0.1, 5),
+    'projectileHitRadius': (.01, 3),
     'originForward': (-5, 5),
     'originSide': (-5, 5),
     'areaRadius': (5, 100),
@@ -3010,89 +3020,152 @@ class _SkillEditorState extends State<_SkillEditor> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _fixedRow(
-                          'Effect',
-                          DropdownButtonFormField<SkillEffectType>(
-                            isExpanded: true,
-                            key: const ValueKey('skill-effect-type'),
-                            initialValue: _effectType,
-                            decoration: const InputDecoration(),
-                            items: [
-                              for (final value in SkillEffectType.values)
-                                DropdownMenuItem(
-                                  value: value,
-                                  child: Text(value.name),
-                                ),
-                            ],
-                            onChanged: (value) => setState(() {
-                              final wasRecovery =
-                                  _effectType == SkillEffectType.heal;
-                              _effectType = value;
-                              if (value == SkillEffectType.heal &&
-                                  !wasRecovery) {
-                                _bubbleType = SkillBubbleType.speech;
-                              } else if (value != SkillEffectType.heal &&
-                                  wasRecovery) {
-                                _bubbleType = SkillBubbleType.shout;
-                              }
-                            }),
+                        OutlinedButton.icon(
+                          key: const ValueKey('edit-mechanical-steps'),
+                          icon: const Icon(Icons.format_list_numbered),
+                          label: Text(
+                            _effectSteps.isEmpty
+                                ? 'Use ordered effect steps'
+                                : 'Edit ${_effectSteps.length} effect steps',
                           ),
+                          onPressed: () async {
+                            final initial = _effectSteps.isNotEmpty
+                                ? _effectSteps
+                                : [
+                                    SkillEffectStep(
+                                      type:
+                                          _effectType ?? SkillEffectType.damage,
+                                    ),
+                                    if (_secondaryEffectType != null)
+                                      SkillEffectStep(
+                                        type: _secondaryEffectType!,
+                                        target:
+                                            _secondaryEffectType ==
+                                                SkillEffectType.heal
+                                            ? EffectStepTarget.self
+                                            : EffectStepTarget.affected,
+                                      ),
+                                  ];
+                            final steps = await MechanicalEffectsEditor.show(
+                              context,
+                              initial,
+                              defaults: result,
+                            );
+                            if (steps != null && mounted) {
+                              setState(() => _effectSteps = steps);
+                            }
+                          },
                         ),
-                        if (_category == SkillCategory.weapon) ...[
-                          const SizedBox(height: 4),
-                          SwitchListTile.adaptive(
-                            key: const ValueKey('skill-weapon-healing'),
-                            contentPadding: EdgeInsets.zero,
-                            value: _usesEffect(SkillEffectType.heal),
-                            onChanged: (value) => setState(() {
-                              if (value) {
-                                if (_effectType != SkillEffectType.heal) {
-                                  _secondaryEffectType = SkillEffectType.heal;
-                                }
-                              } else if (_secondaryEffectType ==
-                                  SkillEffectType.heal) {
-                                _secondaryEffectType = null;
-                              } else if (_effectType == SkillEffectType.heal) {
-                                _effectType = SkillEffectType.damage;
-                              }
-                            }),
-                            title: const Text('Healing effect'),
-                            subtitle: const Text(
-                              'Off by default for weapons. Turn on only for a weapon that should also heal.',
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        _fixedRow(
-                          'Secondary effect',
-                          DropdownButtonFormField<String>(
-                            isExpanded: true,
-                            key: const ValueKey('skill-secondary-effect-type'),
-                            initialValue: _secondaryEffectType?.name ?? 'none',
-                            decoration: const InputDecoration(
-                              helperText: 'Runs after the primary effect.',
-                            ),
-                            items: [
-                              const DropdownMenuItem(
-                                value: 'none',
-                                child: Text('None'),
+                        if (_effectSteps.isNotEmpty) ...[
+                          for (var i = 0; i < _effectSteps.length; i++)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '${i + 1}. ${effectStepLabel(_effectSteps[i].type)} ? ${_effectSteps[i].target.label}',
+                                ),
                               ),
-                              for (final value in SkillEffectType.values)
-                                DropdownMenuItem(
-                                  value: value.name,
-                                  child: Text(value.name),
-                                ),
-                            ],
-                            onChanged: (value) => setState(() {
-                              _secondaryEffectType = value == 'none'
-                                  ? null
-                                  : SkillEffectType.values.firstWhere(
-                                      (effect) => effect.name == value,
-                                    );
-                            }),
+                            ),
+                          const Text(
+                            'Each step has its own parameters. Repeat repeats the whole sequence. Remove all steps to use the legacy effects.',
                           ),
-                        ),
-                        const SizedBox(height: 12),
+                        ] else ...[
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: LegacyTag(
+                              explanation:
+                                  'Original two-effect behavior. Use ordered steps for independent parameters and more effects.',
+                            ),
+                          ),
+                          _fixedRow(
+                            'Effect',
+                            DropdownButtonFormField<SkillEffectType>(
+                              isExpanded: true,
+                              key: const ValueKey('skill-effect-type'),
+                              initialValue: _effectType,
+                              decoration: const InputDecoration(),
+                              items: [
+                                for (final value in SkillEffectType.values)
+                                  DropdownMenuItem(
+                                    value: value,
+                                    child: Text(value.name),
+                                  ),
+                              ],
+                              onChanged: (value) => setState(() {
+                                final wasRecovery =
+                                    _effectType == SkillEffectType.heal;
+                                _effectType = value;
+                                if (value == SkillEffectType.heal &&
+                                    !wasRecovery) {
+                                  _bubbleType = SkillBubbleType.speech;
+                                } else if (value != SkillEffectType.heal &&
+                                    wasRecovery) {
+                                  _bubbleType = SkillBubbleType.shout;
+                                }
+                              }),
+                            ),
+                          ),
+                          if (_category == SkillCategory.weapon) ...[
+                            const SizedBox(height: 4),
+                            SwitchListTile.adaptive(
+                              key: const ValueKey('skill-weapon-healing'),
+                              contentPadding: EdgeInsets.zero,
+                              value: _usesEffect(SkillEffectType.heal),
+                              onChanged: (value) => setState(() {
+                                if (value) {
+                                  if (_effectType != SkillEffectType.heal) {
+                                    _secondaryEffectType = SkillEffectType.heal;
+                                  }
+                                } else if (_secondaryEffectType ==
+                                    SkillEffectType.heal) {
+                                  _secondaryEffectType = null;
+                                } else if (_effectType ==
+                                    SkillEffectType.heal) {
+                                  _effectType = SkillEffectType.damage;
+                                }
+                              }),
+                              title: const Text('Healing effect'),
+                              subtitle: const Text(
+                                'Off by default for weapons. Turn on only for a weapon that should also heal.',
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          _fixedRow(
+                            'Secondary effect',
+                            DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              key: const ValueKey(
+                                'skill-secondary-effect-type',
+                              ),
+                              initialValue:
+                                  _secondaryEffectType?.name ?? 'none',
+                              decoration: const InputDecoration(
+                                helperText: 'Runs after the primary effect.',
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                  value: 'none',
+                                  child: Text('None'),
+                                ),
+                                for (final value in SkillEffectType.values)
+                                  DropdownMenuItem(
+                                    value: value.name,
+                                    child: Text(value.name),
+                                  ),
+                              ],
+                              onChanged: (value) => setState(() {
+                                _secondaryEffectType = value == 'none'
+                                    ? null
+                                    : SkillEffectType.values.firstWhere(
+                                        (effect) => effect.name == value,
+                                      );
+                              }),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         _number('repeatCount', 'Repeat count', suffix: 'times'),
                         _number(
                           'repeatInterval',
@@ -3253,6 +3326,8 @@ class _SkillEditorState extends State<_SkillEditor> {
                       if (_numbers.containsKey('count') &&
                           (!widget.skill.isComposed || _usesProjectileDelivery))
                         _number('count', 'Projectile / hit count'),
+                      if (_effectSteps.isNotEmpty && _usesProjectileDelivery)
+                        _number('projectileHitRadius', 'Projectile hit radius', suffix: 'ball radii'),
                       if (_numbers.containsKey('speed') &&
                           _usesProjectileDelivery)
                         _number('speed', 'Projectile speed', suffix: 'arena/s'),

@@ -6,6 +6,7 @@ import 'package:characters/characters.dart';
 
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
+part 'skill_effect_step.dart';
 
 enum SkillVisualMode { sprite, vector }
 
@@ -103,6 +104,7 @@ class SkillDefinition {
     this.maxBounces,
     this.range = 0.55,
     this.projectileSize = 1,
+    this.projectileHitRadius = .15,
     this.projectileSpin = 0,
     this.projectileOriginForward,
     this.projectileOriginSide = 0,
@@ -135,6 +137,7 @@ class SkillDefinition {
     this.delivery,
     this.effectType,
     this.secondaryEffectType,
+    this.effectSteps = const [],
     this.repeatCount = 1,
     this.repeatIntervalSeconds = 0.5,
     this.startDelaySeconds = 0,
@@ -200,6 +203,9 @@ class SkillDefinition {
   final int? maxBounces;
   final double range;
   final double projectileSize;
+
+  /// Physical projectile radius in caster radii, independent of artwork for ordered steps.
+  final double projectileHitRadius;
   final double projectileSpin;
   final double? projectileOriginForward;
   final double projectileOriginSide;
@@ -245,6 +251,11 @@ class SkillDefinition {
   final SkillDelivery? delivery;
   final SkillEffectType? effectType;
   final SkillEffectType? secondaryEffectType;
+  final List<SkillEffectStep> effectSteps;
+  static const maxEffectSteps = 8;
+  Iterable<SkillEffectType> get mechanicalEffects => effectSteps.isNotEmpty
+      ? effectSteps.map((step) => step.type)
+      : [?effectType, ?secondaryEffectType];
   final int repeatCount;
   final double repeatIntervalSeconds;
   final double startDelaySeconds;
@@ -330,16 +341,12 @@ class SkillDefinition {
               (allOutDamage ?? 0) > 0 ||
               (dotArsenalDamage ?? 0) > 0 ||
               (dotAllOutDamage ?? 0) > 0)) ||
-      effectType == SkillEffectType.damage ||
-      effectType == SkillEffectType.damageOverTime ||
-      secondaryEffectType == SkillEffectType.damage ||
-      secondaryEffectType == SkillEffectType.damageOverTime;
-  bool get canHeal =>
-      effectType == SkillEffectType.heal ||
-      secondaryEffectType == SkillEffectType.heal;
-  bool get canDefend =>
-      effectType == SkillEffectType.shield ||
-      secondaryEffectType == SkillEffectType.shield;
+      mechanicalEffects.any(
+        (e) =>
+            e == SkillEffectType.damage || e == SkillEffectType.damageOverTime,
+      );
+  bool get canHeal => mechanicalEffects.contains(SkillEffectType.heal);
+  bool get canDefend => mechanicalEffects.contains(SkillEffectType.shield);
   SkillPurpose get purpose {
     final count = [
       canDamage,
@@ -366,7 +373,7 @@ class SkillDefinition {
       trigger != null &&
       targeting != null &&
       delivery != null &&
-      effectType != null;
+      (effectType != null || effectSteps.isNotEmpty);
 
   int get estimatedMayhemLoad {
     if (!isComposed) return 0;
@@ -375,6 +382,24 @@ class SkillDefinition {
     final projectiles = delivery == SkillDelivery.projectile
         ? (projectileCount ?? 1).clamp(1, 100)
         : 1;
+    if (effectSteps.isNotEmpty) {
+      return activations *
+          projectiles *
+          effectSteps.fold<int>(0, (sum, step) {
+            final targetCount = step.target == EffectStepTarget.allOpponents
+                ? 7
+                : step.target == EffectStepTarget.self
+                ? 1
+                : targets;
+            final ticks = step.type == SkillEffectType.damageOverTime
+                ? (((step.durationSeconds ?? durationSeconds ?? 2) /
+                              (step.tickIntervalSeconds ?? tickIntervalSeconds))
+                          .ceil())
+                      .clamp(1, 600)
+                : 1;
+            return sum + targetCount * ticks;
+          });
+    }
     final ticks = effectType == SkillEffectType.damageOverTime
         ? (((durationSeconds ?? 2) / tickIntervalSeconds).ceil()).clamp(1, 600)
         : 1;
@@ -389,7 +414,11 @@ class SkillDefinition {
         'Estimated Mayhem load is $estimatedMayhemLoad effects per activation; runtime will cap concurrent custom effects.',
       );
     }
-    if (targeting == SkillTargeting.allOpponents && repeatCount > 5) {
+    if ((targeting == SkillTargeting.allOpponents ||
+            effectSteps.any(
+              (s) => s.target == EffectStepTarget.allOpponents,
+            )) &&
+        repeatCount > 5) {
       issues.add('Mayhem caps all-opponent repeat chains at 5 activations.');
     }
     return List.unmodifiable(issues);
@@ -412,6 +441,7 @@ class SkillDefinition {
     int? maxBounces,
     double? range,
     double? projectileSize,
+    double? projectileHitRadius,
     double? projectileSpin,
     Object? projectileOriginForward = _unset,
     double? projectileOriginSide,
@@ -444,6 +474,7 @@ class SkillDefinition {
     SkillDelivery? delivery,
     SkillEffectType? effectType,
     Object? secondaryEffectType = _unset,
+    List<SkillEffectStep>? effectSteps,
     int? repeatCount,
     double? repeatIntervalSeconds,
     double? startDelaySeconds,
@@ -497,6 +528,7 @@ class SkillDefinition {
     maxBounces: maxBounces ?? this.maxBounces,
     range: range ?? this.range,
     projectileSize: projectileSize ?? this.projectileSize,
+    projectileHitRadius: projectileHitRadius ?? this.projectileHitRadius,
     projectileSpin: projectileSpin ?? this.projectileSpin,
     projectileOriginForward: identical(projectileOriginForward, _unset)
         ? this.projectileOriginForward
@@ -538,6 +570,7 @@ class SkillDefinition {
     secondaryEffectType: identical(secondaryEffectType, _unset)
         ? this.secondaryEffectType
         : secondaryEffectType as SkillEffectType?,
+    effectSteps: effectSteps ?? this.effectSteps,
     repeatCount: repeatCount ?? this.repeatCount,
     repeatIntervalSeconds: repeatIntervalSeconds ?? this.repeatIntervalSeconds,
     startDelaySeconds: startDelaySeconds ?? this.startDelaySeconds,
@@ -612,6 +645,8 @@ class SkillDefinition {
     if (maxBounces != null) 'max_bounces': maxBounces,
     'range': range,
     'projectile_size': projectileSize,
+    if (projectileHitRadius != .15)
+      'projectile_hit_radius': projectileHitRadius,
     'projectile_spin': projectileSpin,
     if (projectileOriginForward != null)
       'projectile_origin_forward': projectileOriginForward,
@@ -648,6 +683,8 @@ class SkillDefinition {
     if (effectType != null) 'effect_type': effectType!.name,
     if (secondaryEffectType != null)
       'secondary_effect_type': secondaryEffectType!.name,
+    if (effectSteps.isNotEmpty)
+      'effect_steps': effectSteps.map((s) => s.toJson()).toList(),
     'repeat_count': repeatCount,
     'repeat_interval_seconds': repeatIntervalSeconds,
     'start_delay_seconds': startDelaySeconds,
@@ -733,6 +770,7 @@ class SkillDefinition {
       maxBounces: integer('max_bounces'),
       range: decimal('range') ?? 0.55,
       projectileSize: decimal('projectile_size') ?? 1,
+      projectileHitRadius: decimal('projectile_hit_radius') ?? .15,
       projectileSpin: decimal('projectile_spin') ?? 0,
       projectileOriginForward: decimal('projectile_origin_forward'),
       projectileOriginSide: decimal('projectile_origin_side') ?? 0,
@@ -781,6 +819,7 @@ class SkillDefinition {
         'secondary_effect_type',
         SkillEffectType.values,
       ),
+      effectSteps: SkillEffectStep.parseList(value['effect_steps']),
       repeatCount: integer('repeat_count') ?? 1,
       repeatIntervalSeconds: decimal('repeat_interval_seconds') ?? 0.5,
       startDelaySeconds: decimal('start_delay_seconds') ?? 0,
@@ -858,6 +897,7 @@ class SkillDefinition {
   }
 
   SkillDefinition validated() => copyWith(
+    effectSteps: SkillEffectStep.validateList(effectSteps),
     name: name.trim().substring(0, name.trim().length.clamp(1, 40)),
     arsenalDamage: arsenalDamage?.clamp(0, 500),
     allOutDamage: allOutDamage?.clamp(0, 360),
@@ -870,6 +910,7 @@ class SkillDefinition {
     maxBounces: maxBounces?.clamp(0, 20),
     range: range.clamp(0.05, 12),
     projectileSize: projectileSize.clamp(0.1, 5),
+    projectileHitRadius: projectileHitRadius.clamp(.01, 3),
     projectileSpin: projectileSpin.clamp(-2160, 2160),
     projectileOriginForward: projectileOriginForward?.clamp(-5, 5),
     projectileOriginSide: projectileOriginSide.clamp(-5, 5),
@@ -944,7 +985,13 @@ class SkillDefinition {
   }
 
   List<String> get compatibilityIssues {
-    if (!isComposed) return const [];
+    if (!isComposed) {
+      return effectSteps.isEmpty
+          ? const []
+          : const [
+              'Ordered steps require trigger, targeting and delivery settings.',
+            ];
+    }
     final issues = <String>[];
     if ((trigger == SkillTrigger.aimedFire ||
             trigger == SkillTrigger.collision) &&
@@ -971,7 +1018,7 @@ class SkillDefinition {
         targeting == SkillTargeting.self) {
       issues.add('A boundary hazard cannot target its owner.');
     }
-    final effects = [effectType, secondaryEffectType];
+    final effects = mechanicalEffects;
     if (effects.contains(SkillEffectType.equipCarrier) &&
         resolvedCategory != SkillCategory.weapon) {
       issues.add('Equip carrier requires a weapon carrier.');
@@ -1207,6 +1254,12 @@ class SkillLibrary {
 
   /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
   static const int compactVersion = 3;
+  static const int compositionVersion = 12;
+  static const int compositionCompactVersion = 13;
+  bool get hasEffectSteps => [
+    ...overrides.values,
+    ...custom,
+  ].any((s) => s.effectSteps.isNotEmpty || s.projectileHitRadius != .15);
   static const int originVersion = 10;
   static const int originCompactVersion = 11;
   bool get hasProjectileOrigins => [...overrides.values, ...custom].any(
@@ -1678,7 +1731,9 @@ class SkillLibrary {
   }
 
   Map<String, Object?> toJson() => {
-    'version': hasProjectileOrigins
+    'version': hasEffectSteps
+        ? compositionVersion
+        : hasProjectileOrigins
         ? originVersion
         : hasVisualEffects
         ? visualVersion
@@ -1712,7 +1767,9 @@ class SkillLibrary {
   /// reads both forms to the same library. Used for replay snapshots; saved libraries keep [toJson].
   Map<String, Object?> toCompactJson() => {
     ...toJson(),
-    'version': hasProjectileOrigins
+    'version': hasEffectSteps
+        ? compositionCompactVersion
+        : hasProjectileOrigins
         ? originCompactVersion
         : hasVisualEffects
         ? visualCompactVersion
@@ -1778,7 +1835,8 @@ class SkillLibrary {
         version == 5 ||
         version == 7 ||
         version == visualCompactVersion ||
-        version == originCompactVersion;
+        version == originCompactVersion ||
+        version == compositionCompactVersion;
   }
 
   /// Whether [stored] (this library as the server returned it) holds the
@@ -1919,9 +1977,9 @@ class SkillLibrary {
     final version = decoded['version'];
     if (version is! num ||
         version.toInt() < 1 ||
-        version.toInt() > originCompactVersion) {
+        version.toInt() > compositionCompactVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected 1-$originCompactVersion.',
+        'Unsupported skill-library version. Expected 1-$compositionCompactVersion.',
       );
     }
     final compact = _isCompact(decoded);
@@ -2146,8 +2204,7 @@ class SkillLibrary {
 bool persistentRoleAvailable(SkillDefinition skill, SkillVisualRole role) {
   final kind = skill.baseKind;
   final defensive = skill.isComposed
-      ? skill.effectType == SkillEffectType.shield ||
-            skill.secondaryEffectType == SkillEffectType.shield
+      ? skill.mechanicalEffects.contains(SkillEffectType.shield)
       : {
           PowerUpKind.shield,
           PowerUpKind.mirror,
@@ -2168,7 +2225,7 @@ bool persistentRoleAvailable(SkillDefinition skill, SkillVisualRole role) {
           }.contains(kind),
     SkillVisualRole.ownerStatus =>
       skill.isComposed
-          ? {skill.effectType, skill.secondaryEffectType}.any(
+          ? skill.mechanicalEffects.any(
               (e) =>
                   {SkillEffectType.speed, SkillEffectType.shield}.contains(e),
             )
@@ -2193,7 +2250,7 @@ bool persistentRoleAvailable(SkillDefinition skill, SkillVisualRole role) {
             }.contains(kind),
     SkillVisualRole.targetStatus =>
       skill.isComposed
-          ? {skill.effectType, skill.secondaryEffectType}.any(
+          ? skill.mechanicalEffects.any(
               (e) => {
                 SkillEffectType.freeze,
                 SkillEffectType.stun,

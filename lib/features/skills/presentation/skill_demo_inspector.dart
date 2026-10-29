@@ -33,7 +33,7 @@ class SkillDemoCollisionPainter extends CustomPainter {
       if (!b.isEliminated) circle(b.position, b.radius);
     }
     for (final shot in p.projectiles) {
-      circle(shot.position, shot.owner.radius * .15 * shot.renderScale);
+      circle(shot.position, p.projectileCollisionRadius(shot));
     }
     for (final fire in p.burningZones) {
       circle(fire.position, fire.radius);

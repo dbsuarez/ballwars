@@ -89,16 +89,20 @@ production acceptance remain manual; deployment workflows are not monitored.
 
 ## F. Mechanical effect composition
 
-- [ ] Replace the two-effect ceiling with a bounded ordered list of effect steps.
-- [ ] Give each step its own parameters and targeting rules.
-- [ ] Validate loops, scheduled-event limits, repeated hits and interruption cleanup.
-- [ ] Keep damage, reach, knockback and status timing independent of selected artwork.
-- [ ] Maintain old snapshots and add end-to-end composition regression coverage.
+- [x] Replace the two-effect ceiling with a bounded ordered list of effect steps.
+- [x] Give each step its own parameters and targeting rules.
+- [x] Validate loops, scheduled-event limits, repeated hits and interruption cleanup.
+- [x] Keep damage, reach, knockback and status timing independent of selected artwork.
+- [x] Maintain old snapshots and add end-to-end composition regression coverage.
 
-A-E software is implemented. Phase E Android performance acceptance remains open; Phase F mechanical composition is next.
+A-F software is implemented. Phase E Android performance acceptance is explicitly deferred until after Phase F, as requested; phone/device and production acceptance remain manual.
 
 Phase E verification: 928 tests passed (one opt-in performance test skipped), followed by 64 replay-focused checks, 28 production asset-revision checks and 15 final authoring/visual checks. Analysis and release web build pass. Phone-sized placement and AoE previews were rendered and inspected. Actual Windows Chrome profiling is documented in [SIX-BALL-PERFORMANCE.md](SIX-BALL-PERFORMANCE.md); no Android device was connected.
 
 Also delivered: remembered Skill Demo speed, pinned placement previews with sliders and numeric inputs, configurable projectile launch points, and reusable AoE artwork/boundary/radius editing. See [REPLAY-ARTWORK-REVISIONS.md](REPLAY-ARTWORK-REVISIONS.md). Migration 024 was applied by the user.
 
 Release follow-up: updated both oversized-replay widget assertions to the current skill/artwork message. The regression still verifies a visible error, no clipboard write, and no saved replay.
+
+Phase F: ordered mechanical steps and authoring are documented in [MECHANICAL-EFFECT-STEPS.md](MECHANICAL-EFFECT-STEPS.md). The original two-effect path remains available with a Legacy tag. No additional migration is needed.
+
+Phase F verification: 945 tests passed (one opt-in performance test skipped), 18 final mechanics/phone-rendering checks passed, and analysis is clean. The release web build passes; real Android and production acceptance remain manual.

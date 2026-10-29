@@ -134,3 +134,8 @@ matches do not contain inspector controls or outlines.
 ## Phase E implementation update, 2026-10-29
 
 Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Android performance and device/production acceptance remain manual; Phase F is pending. Migration 024 was applied by the user.
+
+
+## Phase F implementation, 2026-10-29
+
+[Ordered mechanical effect steps](MECHANICAL-EFFECT-STEPS.md) are implemented: up to eight typed steps with independent targeting, delays and relevant parameters. The editor retains its four main tabs and provides a step-by-step dialog under Identity > Behavior. Native built-ins and unconverted primary/secondary skills retain their legacy execution path. New snapshots use schema 12/13; malformed step definitions are rejected explicitly. Demo inspection shows active mechanical effects and budget rejections, and projectile collision outlines follow the separate physical hit radius. Phase E Android profiling remains deferred; device/production acceptance is manual.

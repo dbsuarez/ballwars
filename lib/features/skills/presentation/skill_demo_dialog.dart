@@ -372,6 +372,9 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                                 Text(
                                   'Active sources: ${_demo.match.powerUps!.persistentEffects.handles.length} / transient events: ${_demo.match.powerUps!.persistentEffects.events.length}',
                                 ),
+                                Text(
+                                  'Mechanical effects: ${_demo.match.powerUps!.activeCustomEffectCount} / budget rejections: ${_demo.match.powerUps!.compositionLimitHits}',
+                                ),
                                 const Text(
                                   'Yellow: physical areas, independent of artwork size.',
                                 ),

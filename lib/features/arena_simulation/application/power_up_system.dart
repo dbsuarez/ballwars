@@ -74,18 +74,29 @@ class PowerUpSystem {
   /// The definition a composed shot carries (its own skill, or the skill it was fired as), or null for a
   /// built-in shot.
   SkillDefinition? projectileSkill(Projectile p) => _composedProjectiles[p];
+  double projectileCollisionRadius(Projectile p) {
+    final skill = _composedProjectiles[p];
+    return p.owner.radius *
+        (skill != null && skill.effectSteps.isNotEmpty
+            ? skill.projectileHitRadius
+            : .15 * p.renderScale);
+  }
 
   /// The skill that fired [p] as another skill's projectile, or null.
   SkillDefinition? projectileIssuer(Projectile p) => _composedIssuers[p];
   final List<_ScheduledComposedEffect> _scheduledComposedEffects = [];
   final List<_CustomDamageOverTime> _customDamageOverTime = [];
+  final List<_ScheduledEffectStep> _effectStepQueue = [];
+  static const maxScheduledEffectSteps = 256;
+  int compositionLimitHits = 0;
   final Map<(SimulationBall, String), int> _composedCooldownUntil = {};
   final Map<SimulationBall, double> _lastVital = {};
 
   int get activeCustomEffectCount =>
       _composedProjectiles.length +
       _scheduledComposedEffects.length +
-      _customDamageOverTime.length;
+      _customDamageOverTime.length +
+      _effectStepQueue.length;
 
   /// Armed proximity mines waiting for an opponent of their owner.
   final List<ArmedMine> mines = [];
@@ -423,6 +434,10 @@ class PowerUpSystem {
       (effect) =>
           identical(effect.owner, ball) || effect.targets.contains(ball),
     );
+    _effectStepQueue.removeWhere(
+      (effect) =>
+          identical(effect.owner, ball) || effect.targets.contains(ball),
+    );
     _customDamageOverTime.removeWhere(
       (effect) =>
           identical(effect.owner, ball) || identical(effect.target, ball),
@@ -591,6 +606,7 @@ class PowerUpSystem {
     _updateArenaThemeHazards();
     _updateFiredWeaponHold();
     _updateScheduledComposedEffects();
+    _updateEffectSteps();
     _updateCustomDamageOverTime();
     _updateOmegaTendrils();
     _updateLightningStrikes();
@@ -2545,6 +2561,7 @@ class PowerUpSystem {
     SimulationBall owner,
     SkillDefinition skill, {
     SimulationBall? primary,
+    List<SimulationBall>? affectedTargets,
   }) {
     final cooldownKey = (owner, skill.id);
     if ((_composedCooldownUntil[cooldownKey] ?? 0) > match.stepCount) return;
@@ -2565,18 +2582,36 @@ class PowerUpSystem {
       ],
       null => const <SimulationBall>[],
     };
-    targets = _filterDeliveryTargets(owner, targets, skill);
-    if (targets.isEmpty) return;
+    targets = affectedTargets ?? _filterDeliveryTargets(owner, targets, skill);
+    if (targets.isEmpty &&
+        !skill.effectSteps.any(
+          (step) => step.target != EffectStepTarget.affected,
+        )) {
+      return;
+    }
     if (skill.cooldownSeconds > 0) {
       _composedCooldownUntil[cooldownKey] =
           match.stepCount + (skill.cooldownSeconds * 60).round();
     }
     final repeatCount =
-        match.mayhem && skill.targeting == SkillTargeting.allOpponents
+        match.mayhem &&
+            (skill.targeting == SkillTargeting.allOpponents ||
+                skill.effectSteps.any(
+                  (step) => step.target == EffectStepTarget.allOpponents,
+                ))
         ? math.min(skill.repeatCount, maxMayhemAllOpponentRepeats)
         : skill.repeatCount;
+    if (skill.effectSteps.isNotEmpty &&
+        (skill.startDelaySeconds > 0 || repeatCount > 1) &&
+        _scheduledComposedEffects.length >= maxScheduledCustomEffects) {
+      _compositionLimit(owner);
+      return;
+    }
     if (skill.startDelaySeconds > 0) {
-      if (_scheduledComposedEffects.length >= maxScheduledCustomEffects) return;
+      if (_scheduledComposedEffects.length >= maxScheduledCustomEffects) {
+        if (skill.effectSteps.isNotEmpty) _compositionLimit(owner);
+        return;
+      }
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
           owner: owner,
@@ -2585,6 +2620,7 @@ class PowerUpSystem {
           repeatsLeft: repeatCount,
           stepsLeft: (skill.startDelaySeconds * 60).round(),
           announceOnNext: true,
+          creditMove: _creditMove,
         ),
       );
       return;
@@ -2598,6 +2634,7 @@ class PowerUpSystem {
           targets: List.unmodifiable(targets),
           skill: skill,
           repeatsLeft: repeatCount - 1,
+          creditMove: _creditMove,
           stepsLeft: (skill.repeatIntervalSeconds * 60).round(),
         ),
       );
@@ -2610,6 +2647,10 @@ class PowerUpSystem {
     Iterable<SimulationBall> targets,
     SkillDefinition skill,
   ) {
+    if (skill.effectSteps.isNotEmpty) {
+      _startEffectSteps(owner, targets.toList(), skill);
+      return;
+    }
     if ({SkillDelivery.area, SkillDelivery.aura}.contains(skill.delivery)) {
       persistentEffects.area(
         owner,
@@ -2666,15 +2707,115 @@ class PowerUpSystem {
     }
   }
 
+  void _compositionLimit(SimulationBall owner) {
+    compositionLimitHits++;
+    _yell(owner, 'EFFECT LIMIT');
+  }
+
+  void _startEffectSteps(
+    SimulationBall owner,
+    List<SimulationBall> targets,
+    SkillDefinition skill,
+  ) {
+    if (!_alive(owner)) return;
+    final steps = skill.effectSteps;
+    var pending = 0;
+    var offset = 0;
+    for (final step in steps) {
+      offset += (step.delaySeconds * 60).round();
+      if (offset > 0) pending++;
+    }
+    if (steps.length > SkillDefinition.maxEffectSteps ||
+        _effectStepQueue.length + pending > maxScheduledEffectSteps) {
+      _compositionLimit(owner);
+      return;
+    }
+    var delay = 0;
+    for (final step in steps) {
+      delay += (step.delaySeconds * 60).round();
+      final event = _ScheduledEffectStep(
+        owner,
+        List.unmodifiable(targets),
+        skill,
+        step,
+        match.stepCount + delay,
+        _creditMove,
+      );
+      if (delay == 0) {
+        _runEffectStep(event);
+      } else {
+        _effectStepQueue.add(event);
+      }
+    }
+  }
+
+  void _updateEffectSteps() {
+    for (final event in _effectStepQueue.toList()) {
+      if (!_alive(event.owner)) {
+        _effectStepQueue.remove(event);
+      } else if (event.dueStep <= match.stepCount + 1) {
+        _effectStepQueue.remove(event);
+        _runEffectStep(event);
+      }
+    }
+  }
+
+  void _runEffectStep(_ScheduledEffectStep event) {
+    final owner = event.owner;
+    if (!_alive(owner)) return;
+    final step = event.step;
+    final candidates = switch (step.target) {
+      EffectStepTarget.self => [owner],
+      EffectStepTarget.affected => event.targets,
+      EffectStepTarget.nearestOpponent => [?_nearestTarget(owner)],
+      EffectStepTarget.allOpponents => [
+        for (final ball in match.state.balls)
+          if (!identical(owner, ball)) ball,
+      ],
+    };
+    final targets = candidates
+        .where(
+          (target) =>
+              _alive(target) &&
+              (identical(owner, target) || !target.isGhost) &&
+              (step.targetRangeRatio == null ||
+                  (target.position - owner.position).distance <=
+                      match.arenaRadius * step.targetRangeRatio! +
+                          target.radius),
+        )
+        .toSet();
+    final previousCredit = _creditMove;
+    _creditMove = event.creditMove;
+    try {
+      var parameters = step.applyTo(event.skill);
+      if ((step.type == SkillEffectType.damage ||
+              step.type == SkillEffectType.damageOverTime) &&
+          step.knockback == null &&
+          event.skill.mechanicalEffects.contains(SkillEffectType.knockback)) {
+        parameters = parameters.copyWith(knockback: 0);
+      }
+      _applyComposedEffects(owner, targets, parameters);
+    } finally {
+      _creditMove = previousCredit;
+    }
+  }
+
   void _updateScheduledComposedEffects() {
     for (final scheduled in _scheduledComposedEffects.toList()) {
+      if (!_alive(scheduled.owner)) {
+        _scheduledComposedEffects.remove(scheduled);
+        continue;
+      }
       scheduled.stepsLeft--;
       if (scheduled.stepsLeft > 0) continue;
+      final previousCredit = _creditMove;
+      _creditMove = scheduled.creditMove;
       _applyComposedEffects(
         scheduled.owner,
         scheduled.targets,
         scheduled.skill,
       );
+      _creditMove = previousCredit;
       if (scheduled.announceOnNext) {
         _announceSkill(scheduled.owner, scheduled.skill);
         scheduled.announceOnNext = false;
@@ -2698,6 +2839,8 @@ class PowerUpSystem {
       effect.stepsLeft--;
       effect.stepsUntilTick--;
       if (effect.stepsUntilTick <= 0) {
+        final previousCredit = _creditMove;
+        _creditMove = effect.creditMove;
         _applyComposedEffect(
           effect.owner,
           effect.target,
@@ -2705,6 +2848,7 @@ class PowerUpSystem {
           SkillEffectType.damage,
           dotTick: true,
         );
+        _creditMove = previousCredit;
         effect.stepsUntilTick = (effect.skill.tickIntervalSeconds * 60).round();
       }
       if (effect.stepsLeft <= 0) _customDamageOverTime.remove(effect);
@@ -2761,6 +2905,7 @@ class PowerUpSystem {
         }
       case SkillEffectType.damageOverTime:
         if (_customDamageOverTime.length >= maxCustomDamageOverTimeEffects) {
+          _compositionLimit(owner);
           break;
         }
         persistentEffects.watch(
@@ -2779,6 +2924,7 @@ class PowerUpSystem {
             owner: owner,
             target: target,
             skill: skill,
+            creditMove: _creditMove,
             stepsLeft: ((skill.durationSeconds ?? 2) * 60).round(),
             stepsUntilTick: (skill.tickIntervalSeconds * 60).round(),
           ),
@@ -3753,7 +3899,9 @@ class PowerUpSystem {
             p.velocity =
                 toward /
                 toward.distance *
-                (match.arenaRadius * _t.bulletSpeedRatio * 0.72);
+                (composedSkill != null && composedSkill.effectSteps.isNotEmpty
+                    ? p.velocity.distance
+                    : match.arenaRadius * _t.bulletSpeedRatio * 0.72);
           }
         }
       }
@@ -3767,7 +3915,13 @@ class PowerUpSystem {
           p.spent = true;
           continue;
         }
-        p.velocity = home / home.distance * (match.arenaRadius * 0.72);
+        p.velocity =
+            home /
+            home.distance *
+            (composedSkill != null && composedSkill.effectSteps.isNotEmpty
+                ? match.arenaRadius *
+                      (composedSkill.projectileSpeed ?? _t.bulletSpeedRatio)
+                : match.arenaRadius * .72);
       }
       var projectileScale = 1.0;
       for (final ball in balls) {
@@ -3800,7 +3954,7 @@ class PowerUpSystem {
           ball.magneticFieldLeft > 0 &&
                   !ball.magneticReflectedOwners.contains(p.owner)
               ? ball.radius * 2
-              : ball.radius + p.owner.radius * 0.15 * p.renderScale,
+              : ball.radius + projectileCollisionRadius(p),
         );
         if (t != null && t < strikeAt) {
           struck = ball;
@@ -3881,7 +4035,8 @@ class PowerUpSystem {
         final composed = _composedProjectiles[p];
         _creditMove = _composedIssuers[p]?.name;
         p.spent = !returnsToOrigin;
-        if (p.kind == PowerUpKind.hook) {
+        if (p.kind == PowerUpKind.hook &&
+            (composed == null || composed.effectSteps.isEmpty)) {
           _catch(p.owner, struck);
         } else {
           if (composed != null) {
@@ -3902,16 +4057,23 @@ class PowerUpSystem {
                   skillId: composed.id,
                 ),
               );
-              _applyComposedEffects(
-                p.owner,
-                balls.where(
-                  (ball) =>
-                      !identical(ball, p.owner) &&
-                      _alive(ball) &&
-                      (ball.position - end).distance <= radius + ball.radius,
-                ),
-                composed,
-              );
+              final blastTargets = balls
+                  .where(
+                    (ball) =>
+                        !identical(ball, p.owner) &&
+                        _alive(ball) &&
+                        (ball.position - end).distance <= radius + ball.radius,
+                  )
+                  .toList();
+              if (composed.effectSteps.isNotEmpty) {
+                _executeComposed(
+                  p.owner,
+                  composed,
+                  affectedTargets: blastTargets,
+                );
+              } else {
+                _applyComposedEffects(p.owner, blastTargets, composed);
+              }
               if (match.skillLibrary.screenShakeFor(composed) > 0) {
                 weaponImpacts.add(
                   WeaponImpact(
@@ -3951,7 +4113,8 @@ class PowerUpSystem {
             p.hitTargets.add(struck);
             p.position += p.velocity / p.velocity.distance * 2;
           }
-          if (p.kind == PowerUpKind.rocketLauncher) {
+          if (p.kind == PowerUpKind.rocketLauncher &&
+              (composedSkill == null || composedSkill.effectSteps.isEmpty)) {
             explosions.add(
               Explosion(
                 position: end,
@@ -3982,7 +4145,8 @@ class PowerUpSystem {
             ..position = normal * (match.arenaRadius - 2)
             ..velocity -= normal * (2 * along);
           p.wallBounces++;
-          if (p.kind == PowerUpKind.prismLaser) {
+          if (p.kind == PowerUpKind.prismLaser &&
+              (composedSkill == null || composedSkill.effectSteps.isEmpty)) {
             for (final turn in [-0.32, 0.32]) {
               final angle = math.atan2(p.velocity.dy, p.velocity.dx) + turn;
               spawned.add(
@@ -4352,6 +4516,7 @@ class _ScheduledComposedEffect {
     required this.repeatsLeft,
     required this.stepsLeft,
     this.announceOnNext = false,
+    this.creditMove,
   });
 
   final SimulationBall owner;
@@ -4360,6 +4525,7 @@ class _ScheduledComposedEffect {
   int repeatsLeft;
   int stepsLeft;
   bool announceOnNext;
+  final String? creditMove;
 }
 
 class _CustomDamageOverTime {
@@ -4369,6 +4535,7 @@ class _CustomDamageOverTime {
     required this.skill,
     required this.stepsLeft,
     required this.stepsUntilTick,
+    this.creditMove,
   });
 
   final SimulationBall owner;
@@ -4376,4 +4543,22 @@ class _CustomDamageOverTime {
   final SkillDefinition skill;
   int stepsLeft;
   int stepsUntilTick;
+  final String? creditMove;
+}
+
+class _ScheduledEffectStep {
+  _ScheduledEffectStep(
+    this.owner,
+    this.targets,
+    this.skill,
+    this.step,
+    this.dueStep,
+    this.creditMove,
+  );
+  final SimulationBall owner;
+  final List<SimulationBall> targets;
+  final SkillDefinition skill;
+  final SkillEffectStep step;
+  final int dueStep;
+  final String? creditMove;
 }

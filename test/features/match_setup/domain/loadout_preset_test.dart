@@ -6,6 +6,22 @@ import 'package:ballwars/features/match_setup/data/loadout_preset_store.dart';
 import 'package:ballwars/features/match_setup/domain/loadout_preset.dart';
 
 void main() {
+  test(
+    'mixing presets deduplicates pickups and retains separate custom identities',
+    () {
+      final mixed = LoadoutPreset.combine([
+        LoadoutPreset.builtIns.first,
+        LoadoutPreset(
+          id: 'custom',
+          name: 'Extra',
+          kinds: {PowerUpKind.knife, PowerUpKind.boomerang},
+          customIds: {'custom.boom', 'custom.knife'},
+        ),
+      ]);
+      expect(mixed.kinds, {...LoadoutPreset.military, PowerUpKind.boomerang});
+      expect(mixed.customIds, {'custom.boom', 'custom.knife'});
+    },
+  );
   test('built-in pools are distinct and contain no automatic traps', () {
     final military = LoadoutPreset.builtIns.first;
     final unique = LoadoutPreset.builtIns[1];

@@ -30,6 +30,12 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
   bool _busy = false;
   bool _readFailed = false;
   String? _error;
+  final Map<String, LoadoutPreset> _selected = {};
+
+  LoadoutPreset get _combined => LoadoutPreset.combine(_selected.values);
+  int get _combinedCount =>
+      _combined.kinds.length +
+      _combined.customIds.where(widget.availableCustomNames.containsKey).length;
 
   @override
   void initState() {
@@ -73,7 +79,22 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
     try {
       await _store.write(next);
       if (mounted) {
-        setState(() => _saved = next);
+        setState(() {
+          _saved = next;
+          for (final key
+              in _selected.keys
+                  .where((key) => key.startsWith('saved:'))
+                  .toList()) {
+            final updated = next
+                .where((p) => 'saved:${p.id}' == key)
+                .firstOrNull;
+            if (updated == null) {
+              _selected.remove(key);
+            } else {
+              _selected[key] = updated;
+            }
+          }
+        });
         _tabs.animateTo(1);
       }
     } catch (_) {
@@ -147,8 +168,12 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
         LoadoutPreset(
           id: 'saved-${DateTime.now().microsecondsSinceEpoch}',
           name: name,
-          kinds: widget.currentKinds,
-          customIds: widget.currentCustomIds,
+          kinds: _selected.isEmpty ? widget.currentKinds : _combined.kinds,
+          customIds: _selected.isEmpty
+              ? widget.currentCustomIds
+              : _combined.customIds.where(
+                  widget.availableCustomNames.containsKey,
+                ),
         );
     await _save(
       existing == null
@@ -185,6 +210,64 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
     }
   }
 
+  Future<void> _info(LoadoutPreset preset) => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(preset.name),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (preset.description.isNotEmpty) ...[
+                Text(preset.description),
+                const SizedBox(height: 12),
+              ],
+              for (final category in [
+                ('Weapons', preset.kinds.where((kind) => kind.isWeapon)),
+                ('Power-ups', preset.kinds.where((kind) => !kind.isWeapon)),
+              ])
+                if (category.$2.isNotEmpty) ...[
+                  Text(
+                    category.$1,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text(
+                    (category.$2.map((kind) => kind.label).toList()..sort())
+                        .join(', '),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              if (preset.customIds.isNotEmpty) ...[
+                Text(
+                  'Custom skills',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                for (final id in preset.customIds)
+                  Text(
+                    widget.availableCustomNames[id] ??
+                        '$id (unavailable; skipped)',
+                  ),
+                const SizedBox(height: 12),
+              ],
+              const Text(
+                'Traps stay automatic and are not part of this pickup pool.',
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+
   Widget _list(List<LoadoutPreset> presets, {bool editable = false}) {
     if (presets.isEmpty) {
       return const Center(
@@ -204,19 +287,23 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
             .toSet();
         final missing = preset.customIds.length - available.length;
         final count = preset.kinds.length + available.length;
-        final labels = [
-          ...preset.kinds.map((k) => k.label),
-          ...available.map((id) => widget.availableCustomNames[id]!),
-        ]..sort();
+        final selectionKey = '${editable ? 'saved' : 'builtin'}:${preset.id}';
+        final selected = _selected.containsKey(selectionKey);
         return ListTile(
           key: ValueKey('loadout-preset-${preset.id}'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          minLeadingWidth: 20,
+          horizontalTitleGap: 8,
+          leading: Icon(
+            selected ? Icons.check_box : Icons.check_box_outline_blank,
+            size: 20,
+          ),
+          selected: selected,
           title: Text(preset.name),
           subtitle: Text(
             [
               if (preset.description.isNotEmpty) preset.description,
-              editable
-                  ? '$count pickups: ${labels.join(', ')}'
-                  : '$count pickups',
+              '$count pickups',
               if (missing > 0)
                 '$missing custom skills unavailable; these will be skipped.',
             ].join('\n'),
@@ -224,10 +311,24 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
           isThreeLine: false,
           onTap: _busy || count == 0
               ? null
-              : () => Navigator.pop(context, preset),
-          trailing: editable
-              ? PopupMenuButton<String>(
+              : () => setState(() {
+                  if (selected) {
+                    _selected.remove(selectionKey);
+                  } else {
+                    _selected[selectionKey] = preset;
+                  }
+                }),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (editable)
+                PopupMenuButton<String>(
                   enabled: !_busy && !_readFailed,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   tooltip: '${preset.name} options',
                   onSelected: (action) => action == 'rename'
                       ? _name(existing: preset)
@@ -236,8 +337,20 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
                     PopupMenuItem(value: 'rename', child: Text('Rename')),
                     PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
-                )
-              : const Icon(Icons.chevron_right),
+                ),
+              IconButton(
+                tooltip: 'About ${preset.name}',
+                constraints: const BoxConstraints.tightFor(
+                  width: 40,
+                  height: 40,
+                ),
+                padding: EdgeInsets.zero,
+                onPressed: () => _info(preset),
+                icon: const Icon(Icons.info_outline, size: 20),
+              ),
+              const Icon(Icons.chevron_right, size: 16),
+            ],
+          ),
         );
       },
     );
@@ -256,7 +369,7 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Tap a preset to replace the pickup selection. Traps stay automatic. Saved presets stay on this device.',
+              'Select one or more presets to combine. Traps stay automatic. Saved presets stay on this device.',
             ),
             if (_error != null)
               Padding(
@@ -273,6 +386,13 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
                 Tab(text: 'Saved'),
               ],
             ),
+            if (_selected.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(
+                  '${_selected.length} presets / $_combinedCount unique pickups',
+                ),
+              ),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -292,18 +412,27 @@ class _LoadoutPresetsDialogState extends State<LoadoutPresetsDialog>
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('Close'),
         ),
-        FilledButton.icon(
+        OutlinedButton.icon(
           key: const ValueKey('save-loadout-preset'),
           onPressed:
               _busy ||
                   _loading ||
                   _readFailed ||
-                  (!widget.currentKinds.any((k) => !k.isTrap) &&
-                      widget.currentCustomIds.isEmpty)
+                  (_selected.isNotEmpty
+                      ? _combinedCount == 0
+                      : (!widget.currentKinds.any((k) => !k.isTrap) &&
+                            widget.currentCustomIds.isEmpty))
               ? null
               : () => _name(),
           icon: const Icon(Icons.bookmark_add_outlined),
-          label: const Text('Save selection'),
+          label: const Text('Save'),
+        ),
+        FilledButton(
+          key: const ValueKey('apply-loadout-presets'),
+          onPressed: _busy || _combinedCount == 0
+              ? null
+              : () => Navigator.pop(context, _combined),
+          child: const Text('Apply'),
         ),
       ],
     ),

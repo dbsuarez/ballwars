@@ -19,12 +19,21 @@ Apply a built-in, then adjust individual cards to make your own selection.
 ## Saved presets
 
 Choose items in the pickup selector, open **Loadout presets**, and press
-**Save selection**. Give it a name (up to 40 characters). Saved names must be
+**Save**. Give it a name (up to 40 characters). Saved names must be
 unique, ignoring case. Use the options menu to rename or delete a saved preset.
 Built-ins cannot be renamed or deleted.
 
-Tap a preset to load it into the pickup selector, then press **Done** to apply it
-to the current mode. Canceling the pickup selector leaves match settings alone.
+Use the inline **info** button before a preset's chevron to inspect its included
+weapons, power-ups and custom skills without selecting it.
+
+Tap one or more presets to check them, including across the Built-in and Saved
+tabs. **Apply** loads their combined pickup pool into the selector; duplicates
+count once. Tap a checked preset again to remove it from the mix. **Save**
+saves the combined selection as a new named preset. With no presets checked,
+**Save** saves the current pickup selector's choices.
+
+Press **Done** in the pickup selector to apply the pool to the current mode.
+Canceling the pickup selector leaves match settings alone.
 Saving a named preset persists that preset immediately, separately from whether
 you later apply the selection. Arsenal, Mayhem and All-out retain independent
 pickup choices.

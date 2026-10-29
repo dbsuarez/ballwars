@@ -17,6 +17,14 @@ class LoadoutPreset {
   final Set<PowerUpKind> kinds;
   final Set<String> customIds;
 
+  static LoadoutPreset combine(Iterable<LoadoutPreset> presets) =>
+      LoadoutPreset(
+        id: 'combined',
+        name: presets.map((preset) => preset.name).join(' + '),
+        kinds: presets.expand((preset) => preset.kinds),
+        customIds: presets.expand((preset) => preset.customIds),
+      );
+
   LoadoutPreset renamed(String name) =>
       LoadoutPreset(id: id, name: name, kinds: kinds, customIds: customIds);
 

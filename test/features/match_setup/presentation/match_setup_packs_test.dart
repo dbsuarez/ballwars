@@ -105,6 +105,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Military'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('apply-loadout-presets')));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Done'));
       await tester.pumpAndSettle();
       final saved = powerUpsFromPref(

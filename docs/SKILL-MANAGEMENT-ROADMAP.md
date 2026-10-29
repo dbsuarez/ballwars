@@ -297,6 +297,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Apply presets through the pickup selector while preserving automatic traps and independent per-mode match settings.
 - [x] Report unavailable custom skills and storage failures; validate empty/duplicate preset names.
 - [x] Document persistence scope and usage in [LOADOUT-PRESETS.md](LOADOUT-PRESETS.md).
+- [x] Add inline preset info popups, multi-select mixing across tabs, deduplicated counts and saving combined selections.
 
 ## Current position
 

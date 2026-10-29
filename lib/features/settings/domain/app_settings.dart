@@ -1,3 +1,5 @@
+import 'ball_appearance.dart';
+export 'ball_appearance.dart';
 import 'dart:ui';
 
 import '../../arena_simulation/domain/power_up_config.dart';
@@ -46,6 +48,7 @@ class AppSettings {
   final bool watermarkEnabled;
   final bool ballGlowEnabled;
   final double ballGlowWidth;
+  final BallAppearance ballAppearance;
   final Color bloodColor;
   final String arenaTitle;
   final String arenaSubtitle;
@@ -80,6 +83,7 @@ class AppSettings {
     this.watermarkEnabled = true,
     this.ballGlowEnabled = true,
     this.ballGlowWidth = 4,
+    this.ballAppearance = BallAppearance.defaults,
     this.bloodColor = defaultBloodColor,
     this.arenaTitle = defaultArenaTitle,
     this.arenaSubtitle = defaultArenaSubtitle,
@@ -115,6 +119,7 @@ class AppSettings {
     bool? watermarkEnabled,
     bool? ballGlowEnabled,
     double? ballGlowWidth,
+    BallAppearance? ballAppearance,
     Color? bloodColor,
     String? arenaTitle,
     String? arenaSubtitle,
@@ -136,6 +141,7 @@ class AppSettings {
     watermarkEnabled: watermarkEnabled ?? this.watermarkEnabled,
     ballGlowEnabled: ballGlowEnabled ?? this.ballGlowEnabled,
     ballGlowWidth: ballGlowWidth ?? this.ballGlowWidth,
+    ballAppearance: ballAppearance ?? this.ballAppearance,
     bloodColor: bloodColor ?? this.bloodColor,
     arenaTitle: arenaTitle ?? this.arenaTitle,
     arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,

@@ -1,3 +1,4 @@
+import '../../settings/presentation/app_settings_scope.dart';
 import '../../../core/sprites/visual_quality.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
@@ -16,6 +17,7 @@ class ArenaCanvas extends StatelessWidget {
   final Map<String, String> artworkRevisions;
   final bool showBallGlow;
   final double ballGlowWidth;
+  final BallAppearance? ballAppearance;
   final String arenaTitle;
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
@@ -45,6 +47,7 @@ class ArenaCanvas extends StatelessWidget {
     this.artworkRevisions = const {},
     this.showBallGlow = true,
     this.ballGlowWidth = 4,
+    this.ballAppearance,
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
@@ -78,6 +81,8 @@ class ArenaCanvas extends StatelessWidget {
             artworkRevisions: artworkRevisions,
             showBallGlow: showBallGlow,
             ballGlowWidth: ballGlowWidth,
+            ballAppearance:
+                ballAppearance ?? AppSettingsScope.of(context).ballAppearance,
             arenaTitle: arenaTitle,
             arenaSubtitle: arenaSubtitle,
             wallSparkSize: wallSparkSize,

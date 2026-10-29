@@ -1,3 +1,4 @@
+import '../../settings/domain/ball_appearance.dart';
 import 'package:flutter/painting.dart';
 import '../domain/power_up.dart';
 import '../domain/simulation_ball.dart';
@@ -52,6 +53,9 @@ class HpBar {
   static final Paint _amber = Paint()..color = amber;
   static final Paint _red = Paint()..color = red;
   static final Paint _gold = Paint()..color = gold;
+  static final Paint _outline = Paint()
+    ..color = const Color(0xDDFFFFFF)
+    ..style = PaintingStyle.stroke;
 
   /// Draws the bars of every ball still in play, in one pass (call it after the balls so the bars sit
   /// on top). Plain rects, no text.
@@ -59,9 +63,11 @@ class HpBar {
     Canvas canvas,
     List<SimulationBall> balls, {
     required double maxLife,
+    HpBarSize size = HpBarSize.small,
+    double outlineWidth = 1,
   }) {
     for (final ball in balls) {
-      final bar = hpBarFor(ball, maxLife: maxLife);
+      final bar = hpBarFor(ball, maxLife: maxLife, size: size);
       if (bar == null) continue;
       canvas.drawRect(bar.track, _track);
       if (bar.ratio > 0) {
@@ -72,19 +78,28 @@ class HpBar {
         });
       }
       if (bar.overflow > 0) canvas.drawRect(bar.goldRect, _gold);
+      canvas.drawRect(bar.track, _outline..strokeWidth = outlineWidth);
     }
   }
 }
 
 /// The HP bar for [ball], or null when it is out. Line modes (Threads, All-Out) are told apart from
 /// Arsenal by `startLines > 0`.
-HpBar? hpBarFor(SimulationBall ball, {required double maxLife}) {
+HpBar? hpBarFor(
+  SimulationBall ball, {
+  required double maxLife,
+  HpBarSize size = HpBarSize.small,
+}) {
   if (ball.isEliminated) return null;
   final r = ball.radius;
-  final width = r * 1.6;
-  final height = r * 0.16 < 3 ? 3.0 : r * 0.16;
+  final width = r * 1.6 * size.scale;
+  final baseHeight = r * 0.16 < 3 ? 3.0 : r * 0.16;
+  final height = baseHeight * size.scale;
   final track = Rect.fromCenter(
-    center: Offset(ball.position.dx, ball.position.dy - r * 1.35),
+    center: Offset(
+      ball.position.dx,
+      ball.position.dy - r * 1.35 - (height - baseHeight) / 2,
+    ),
     width: width,
     height: height,
   );

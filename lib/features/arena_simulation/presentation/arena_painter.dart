@@ -34,6 +34,8 @@ class ArenaPainter extends CustomPainter {
   final Map<String, String> artworkRevisions;
   final bool showBallGlow;
   final double ballGlowWidth;
+  final BallAppearance ballAppearance;
+  final FaceExpression? previewExpression;
   final String arenaTitle;
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
@@ -62,6 +64,8 @@ class ArenaPainter extends CustomPainter {
     this.artworkRevisions = const {},
     this.showBallGlow = true,
     this.ballGlowWidth = 4,
+    this.ballAppearance = BallAppearance.defaults,
+    this.previewExpression,
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
@@ -145,6 +149,8 @@ class ArenaPainter extends CustomPainter {
       HpBar.paintAll(
         canvas,
         state.balls,
+        size: ballAppearance.hpBarSize,
+        outlineWidth: 1 / scale,
         maxLife:
             state.powerUps?.match.tuning.arenaMaxLife ??
             PowerUpTuning.arenaMaxLife,
@@ -163,7 +169,14 @@ class ArenaPainter extends CustomPainter {
   /// The ball's body in the chosen [look] (also drawn for its shadow clones).
   void _paintBody(Canvas canvas, SimulationBall ball) {
     if (look == BallLook.faces) {
-      paintSmiley(canvas, ball, faceHealth(ball), state.balls);
+      paintSmiley(
+        canvas,
+        ball,
+        faceHealth(ball),
+        state.balls,
+        appearance: ballAppearance,
+        expressionOverride: previewExpression,
+      );
     } else {
       BallFacePainter.paint(
         canvas,
@@ -179,6 +192,8 @@ class ArenaPainter extends CustomPainter {
           faceHealth(ball),
           state.balls,
           backgroundAlpha: 0.38,
+          appearance: ballAppearance,
+          expressionOverride: previewExpression,
         );
       }
     }
@@ -788,7 +803,7 @@ class ArenaPainter extends CustomPainter {
           const Color(0xFFFFFFFF),
     );
     if (look != BallLook.pictures || handsOnPictures) {
-      paintHands(canvas, ball);
+      paintHands(canvas, ball, appearance: ballAppearance);
     }
     if (ball.isGhost) canvas.restore();
   }

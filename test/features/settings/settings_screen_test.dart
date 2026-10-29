@@ -57,6 +57,51 @@ class _SignedOutAdmin implements AdminAuth {
 }
 
 void main() {
+  testWidgets(
+    'admin Ball Studio saves shared appearance through the settings scope',
+    (tester) async {
+      final repository = _FakeRepo();
+      final settings = ValueNotifier(AppSettings.defaults);
+      await tester.pumpWidget(
+        AppSettingsScope(
+          settings: settings,
+          repository: repository,
+          adminAuth: _Admin(),
+          child: MaterialApp(
+            theme: AppTheme.build(AppPalettes.midnight),
+            home: const SettingsScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Appearance'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('open-ball-studio')),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView).first,
+              matching: find.byType(Scrollable),
+            )
+            .first,
+        maxScrolls: 30,
+      );
+      await tester.tap(find.byKey(const ValueKey('open-ball-studio')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ball Studio'), findsOneWidget);
+      await tester.tap(find.widgetWithText(Tab, 'HP bar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<HpBarSize>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Medium').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-ball-studio')));
+      await tester.pumpAndSettle();
+      expect(settings.value.ballAppearance.hpBarSize, HpBarSize.medium);
+      expect(repository.saved.last.ballAppearance.hpBarSize, HpBarSize.medium);
+    },
+  );
   testWidgets('admin sign-in offers Remember me and passes the choice', (
     tester,
   ) async {

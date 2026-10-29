@@ -1,3 +1,4 @@
+import '../../settings/presentation/app_settings_scope.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -166,6 +167,7 @@ class ExportVideoDialog extends StatefulWidget {
           showHpBars: showHpBars,
           ballGlowEnabled: ballGlowEnabled,
           ballGlowWidth: ballGlowWidth,
+          ballAppearance: AppSettingsScope.of(context).ballAppearance,
           bloodColor: bloodColor,
           arenaTitle: arenaTitle,
           arenaSubtitle: arenaSubtitle,

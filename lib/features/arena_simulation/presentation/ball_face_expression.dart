@@ -1,3 +1,4 @@
+import '../../settings/domain/ball_appearance.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../domain/power_up.dart';
@@ -6,13 +7,42 @@ import 'power_up_painter.dart';
 
 /// The "Faces" ball look: a classic smiley in the ball's own color, with white eyes whose pupils follow
 /// the nearest opponent, and an expression that follows its health and hits. Cosmetic only.
-enum FaceExpression { happy, worried, hurt, wince, shocked }
+enum FaceExpression {
+  happy('Happy'),
+  worried('Worried'),
+  hurt('Hurt'),
+  wince('Wincing'),
+  shocked('Shocked'),
+  grinning('Grinning'),
+  angry('Angry'),
+  dizzy('Dizzy'),
+  determined('Focused'),
+  sad('Sad'),
+  knockedOut('Knocked out');
+
+  const FaceExpression(this.label);
+  final String label;
+}
 
 /// A fresh hit (wince) wins over everything, then frozen (shocked); otherwise health decides:
 /// above 0.6 happy, 0.3 to 0.6 worried, below 0.3 hurt.
-FaceExpression expressionFor(SimulationBall ball, double healthRatio) {
+FaceExpression expressionFor(
+  SimulationBall ball,
+  double healthRatio, {
+  bool expressive = true,
+}) {
   if (ball.hurtFlashLeft > 0) return FaceExpression.wince;
   if (ball.frozenLeft > 0) return FaceExpression.shocked;
+  if (expressive) {
+    if (ball.isEliminated) return FaceExpression.knockedOut;
+    if (ball.stunnedLeft > 0) return FaceExpression.dizzy;
+    if (ball.overchargeLeft > 0) return FaceExpression.angry;
+    if (ball.aimLeft > 0 || ball.burstLeft > 0) {
+      return FaceExpression.determined;
+    }
+    if (healthRatio > 1) return FaceExpression.grinning;
+    if (healthRatio < .15 || ball.poisonLeft > 0) return FaceExpression.sad;
+  }
   if (healthRatio > 0.6) return FaceExpression.happy;
   if (healthRatio >= 0.3) return FaceExpression.worried;
   return FaceExpression.hurt;
@@ -60,10 +90,14 @@ void paintSmiley(
   Offset? center,
   double? radius,
   double backgroundAlpha = 1,
+  BallAppearance appearance = BallAppearance.defaults,
+  FaceExpression? expressionOverride,
 }) {
   final c = center ?? ball.position;
   final r = radius ?? ball.radius;
-  final expression = expressionFor(ball, healthRatio);
+  final expression =
+      expressionOverride ??
+      expressionFor(ball, healthRatio, expressive: appearance.expressiveFaces);
   canvas.drawCircle(
     c,
     r,
@@ -102,6 +136,33 @@ void paintSmiley(
         ..lineTo(eye.dx - dir * eyeR * 0.8, eye.dy + eyeR * 0.7);
       canvas.drawPath(path, ink);
     }
+  } else if (expression == FaceExpression.knockedOut) {
+    for (final eye in eyes) {
+      canvas.drawLine(
+        eye + Offset(-eyeR, -eyeR),
+        eye + Offset(eyeR, eyeR),
+        ink,
+      );
+      canvas.drawLine(
+        eye + Offset(eyeR, -eyeR),
+        eye + Offset(-eyeR, eyeR),
+        ink,
+      );
+    }
+  } else if (expression == FaceExpression.dizzy) {
+    for (final eye in eyes) {
+      final spiral = Path();
+      for (var i = 0; i <= 36; i++) {
+        final a = i * math.pi / 10;
+        final at = eye + Offset(math.cos(a), math.sin(a)) * (eyeR * i / 36);
+        if (i == 0) {
+          spiral.moveTo(at.dx, at.dy);
+        } else {
+          spiral.lineTo(at.dx, at.dy);
+        }
+      }
+      canvas.drawPath(spiral, ink);
+    }
   } else {
     final look = pupilOffset(ball, balls, eyeR);
     for (final eye in eyes) {
@@ -117,12 +178,19 @@ void paintSmiley(
   }
 
   // Brows: worried tilts up in the middle, hurt tilts down (angry frown).
-  if (expression == FaceExpression.worried ||
-      expression == FaceExpression.hurt) {
-    final inner = expression == FaceExpression.worried
+  if ({
+    FaceExpression.worried,
+    FaceExpression.hurt,
+    FaceExpression.angry,
+    FaceExpression.sad,
+    FaceExpression.determined,
+  }.contains(expression)) {
+    final inner =
+        expression == FaceExpression.worried || expression == FaceExpression.sad
         ? -eyeR * 1.7
         : -eyeR * 1.1;
-    final outer = expression == FaceExpression.worried
+    final outer =
+        expression == FaceExpression.worried || expression == FaceExpression.sad
         ? -eyeR * 1.2
         : -eyeR * 1.7;
     for (final (i, eye) in eyes.indexed) {
@@ -150,12 +218,14 @@ void paintSmiley(
         false,
         ink,
       );
+    case FaceExpression.determined:
     case FaceExpression.worried:
       canvas.drawLine(
         mouth + Offset(-w * 0.6, 0),
         mouth + Offset(w * 0.6, 0),
         ink,
       );
+    case FaceExpression.sad:
     case FaceExpression.hurt:
     case FaceExpression.wince:
       canvas.drawArc(
@@ -171,6 +241,56 @@ void paintSmiley(
       );
     case FaceExpression.shocked:
       canvas.drawCircle(mouth, r * 0.12, ink);
+    case FaceExpression.angry:
+      final teeth = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: mouth, width: r * .6, height: r * .2),
+        Radius.circular(r * .04),
+      );
+      canvas.drawRRect(teeth, Paint()..color = Colors.white);
+      canvas.drawRRect(teeth, ink);
+      for (final x in [-.12, .12]) {
+        canvas.drawLine(
+          mouth + Offset(r * x, -r * .08),
+          mouth + Offset(r * x, r * .08),
+          ink..strokeWidth = math.max(1, r * .04),
+        );
+      }
+    case FaceExpression.grinning:
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: mouth, width: r * .75, height: r * .35),
+        Radius.circular(r * .12),
+      );
+      canvas.drawRRect(rect, Paint()..color = Colors.white);
+      canvas.drawRRect(rect, ink);
+      canvas.drawLine(
+        mouth + Offset(-r * .32, 0),
+        mouth + Offset(r * .32, 0),
+        ink..strokeWidth = math.max(1, r * .04),
+      );
+    case FaceExpression.knockedOut:
+      canvas.drawOval(
+        Rect.fromCenter(center: mouth, width: r * .3, height: r * .2),
+        ink,
+      );
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: mouth + Offset(r * .04, r * .13),
+          width: r * .12,
+          height: r * .2,
+        ),
+        Paint()..color = const Color(0xFFFF8CA6),
+      );
+    case FaceExpression.dizzy:
+      final wave = Path()..moveTo(mouth.dx - w, mouth.dy);
+      wave.cubicTo(
+        mouth.dx - w / 2,
+        mouth.dy - r * .2,
+        mouth.dx + w / 2,
+        mouth.dy + r * .2,
+        mouth.dx + w,
+        mouth.dy,
+      );
+      canvas.drawPath(wave, ink);
   }
 }
 
@@ -181,7 +301,11 @@ void paintSmiley(
 ///
 /// The hand stays at the kind's standard grip point; a skill's own grip
 /// values only slide the weapon sprite relative to it.
-void paintHands(Canvas canvas, SimulationBall ball) {
+void paintHands(
+  Canvas canvas,
+  SimulationBall ball, {
+  BallAppearance appearance = BallAppearance.defaults,
+}) {
   final r = ball.radius;
   final held = ball.held;
   if (held == null) {
@@ -189,11 +313,13 @@ void paintHands(Canvas canvas, SimulationBall ball) {
       canvas,
       ball.position + _unit(math.pi / 2 - 1.2) * (r * 0.98),
       r,
+      appearance: appearance,
     );
     _paintHandAt(
       canvas,
       ball.position + _unit(math.pi / 2 + 1.2) * (r * 0.98),
       r,
+      appearance: appearance,
     );
     return;
   }
@@ -222,6 +348,7 @@ void paintHands(Canvas canvas, SimulationBall ball) {
                               ? 0.65
                               : 0.5)),
         r,
+        appearance: appearance,
         gripAngle: aim,
       );
     }
@@ -229,12 +356,23 @@ void paintHands(Canvas canvas, SimulationBall ball) {
   }
 
   final aim = PowerUpPainter.heldAngle(ball);
-  _paintHandAt(canvas, gripHandPosition(ball), r, gripAngle: aim);
+  _paintHandAt(
+    canvas,
+    gripHandPosition(ball),
+    r,
+    gripAngle: aim,
+    appearance: appearance,
+  );
 
   final freeA = aim - 2.3;
   final freeB = aim + 2.3;
   final freeAngle = math.sin(freeA) >= math.sin(freeB) ? freeA : freeB;
-  _paintHandAt(canvas, ball.position + _unit(freeAngle) * (r * 0.98), r);
+  _paintHandAt(
+    canvas,
+    ball.position + _unit(freeAngle) * (r * 0.98),
+    r,
+    appearance: appearance,
+  );
 }
 
 /// Where [paintHands] puts the gripping hand of a ball's single held item:
@@ -270,8 +408,9 @@ void _paintHandAt(
   Offset center,
   double ballRadius, {
   double? gripAngle,
+  BallAppearance appearance = BallAppearance.defaults,
 }) {
-  final handRadius = ballRadius * 0.22;
+  final handRadius = ballRadius * 0.22 * appearance.handScale;
   final outline = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = math.max(1.0, ballRadius * 0.07)
@@ -280,7 +419,7 @@ void _paintHandAt(
   final fill = Paint()..color = const Color(0xFFF7F7F4);
 
   // A short cuff makes the circle read as a glove rather than another ball.
-  if (gripAngle != null) {
+  if (gripAngle != null && appearance.handStyle != BallHandStyle.circles) {
     final back = _unit(gripAngle + math.pi);
     final side = Offset(-back.dy, back.dx);
     final cuffCenter = center + back * (handRadius * 0.72);
@@ -305,6 +444,38 @@ void _paintHandAt(
     canvas.drawPath(cuff, fill);
     canvas.drawPath(cuff, outline);
   }
-  canvas.drawCircle(center, handRadius, fill);
-  canvas.drawCircle(center, handRadius, outline);
+  if (appearance.handStyle == BallHandStyle.mittens) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(gripAngle ?? 0);
+    final body = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: handRadius * 1.6,
+        height: handRadius * 2,
+      ),
+      Radius.circular(handRadius * .65),
+    );
+    canvas.drawRRect(body, fill);
+    canvas.drawRRect(body, outline);
+    canvas.drawCircle(
+      Offset(handRadius * .8, handRadius * .3),
+      handRadius * .4,
+      fill,
+    );
+    canvas.drawArc(
+      Rect.fromCircle(
+        center: Offset(handRadius * .8, handRadius * .3),
+        radius: handRadius * .4,
+      ),
+      -math.pi / 2,
+      math.pi * 1.4,
+      false,
+      outline,
+    );
+    canvas.restore();
+  } else {
+    canvas.drawCircle(center, handRadius, fill);
+    canvas.drawCircle(center, handRadius, outline);
+  }
 }

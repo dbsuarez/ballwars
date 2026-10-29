@@ -61,3 +61,8 @@ Replay artwork revisions, dependency validation, decoded cache budgets and devic
 ## Phase F implementation, 2026-10-29
 
 [Ordered mechanical effect steps](MECHANICAL-EFFECT-STEPS.md) are implemented: up to eight typed steps with independent targeting, delays and relevant parameters. The editor retains its four main tabs and provides a step-by-step dialog under Identity > Behavior. Native built-ins and unconverted primary/secondary skills retain their legacy execution path. New snapshots use schema 12/13; malformed step definitions are rejected explicitly. Demo inspection shows active mechanical effects and budget rejections, and projectile collision outlines follow the separate physical hit radius. Phase E Android profiling remains deferred; device/production acceptance is manual.
+
+
+## Remembered demo controls
+
+Sound, playback speed, facing, effect inspector and ball distance are stored per device. The dialog restores them before activation. Ball distance has a slider and Near/Mid/Far/Auto buttons; changes reset the isolated demo while retaining the setting for the next use. Auto keeps the skill-aware layout (including boundary-hazard positioning). Custom spacing keeps both balls inside the arena and separated. Skill Demo currently has its own Sound toggle; this does not add or change the app-wide BGM/SFX/UX channel controls.

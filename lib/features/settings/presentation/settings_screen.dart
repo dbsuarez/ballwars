@@ -1,3 +1,4 @@
+import 'ball_studio_screen.dart';
 import '../../../core/widgets/legacy_tag.dart';
 import 'package:flutter/material.dart';
 import '../../../core/audio/game_audio.dart';
@@ -198,6 +199,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
     setState(() {});
+  }
+
+  Future<void> _openBallStudio() async {
+    final scope = _scope!;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BallStudioScreen(
+          initial: scope.notifier!.value,
+          onSave: (draft) async {
+            final next = scope.notifier!.value.copyWith(
+              ballAppearance: draft.ballAppearance,
+              ballGlowEnabled: draft.ballGlowEnabled,
+              ballGlowWidth: draft.ballGlowWidth,
+            );
+            await scope.repository!.save(next);
+            scope.notifier!.value = next;
+          },
+        ),
+      ),
+    );
   }
 
   /// Applies [settings] right away (live preview) and saves it for everyone.
@@ -972,6 +993,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                OutlinedButton.icon(
+                                  key: const ValueKey('open-ball-studio'),
+                                  onPressed: _busy ? null : _openBallStudio,
+                                  icon: const Icon(
+                                    Icons.face_retouching_natural,
+                                  ),
+                                  label: const Text('Ball Studio'),
+                                ),
+                                const Text(
+                                  'Live preview: glow, hands, expressions and HP-bar size.',
+                                ),
+                                const SizedBox(height: 12),
+
                                 SwitchListTile(
                                   contentPadding: EdgeInsets.zero,
                                   title: Text(

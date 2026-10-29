@@ -341,3 +341,6 @@ Replay artwork revisions, dependency validation, decoded cache budgets and devic
 ## Phase F implementation, 2026-10-29
 
 [Ordered mechanical effect steps](MECHANICAL-EFFECT-STEPS.md) are implemented: up to eight typed steps with independent targeting, delays and relevant parameters. The editor retains its four main tabs and provides a step-by-step dialog under Identity > Behavior. Native built-ins and unconverted primary/secondary skills retain their legacy execution path. New snapshots use schema 12/13; malformed step definitions are rejected explicitly. Demo inspection shows active mechanical effects and budget rejections, and projectile collision outlines follow the separate physical hit radius. Phase E Android profiling remains deferred; device/production acceptance is manual.
+
+
+New arena and ball requests, their implementation order and the deliberately deferred replay work are tracked separately in [ARENA-AND-BALL-ROADMAP.md](ARENA-AND-BALL-ROADMAP.md).

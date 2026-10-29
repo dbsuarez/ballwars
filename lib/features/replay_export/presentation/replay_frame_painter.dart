@@ -60,6 +60,7 @@ class ReplayFramePainter {
         freezeRenderMode: _style.effectRenderMode,
         showBallGlow: _style.ballGlowEnabled,
         ballGlowWidth: _style.ballGlowWidth,
+        ballAppearance: _style.ballAppearance,
         arenaTitle: _style.arenaTitle,
         arenaSubtitle: _style.arenaSubtitle,
         arenaDecoration: _style.arenaDecoration,
@@ -465,6 +466,7 @@ class ReplayStyle {
   final Color muted;
   final bool ballGlowEnabled;
   final double ballGlowWidth;
+  final BallAppearance ballAppearance;
   final Color bloodColor;
   final String arenaTitle;
   final String arenaSubtitle;
@@ -486,6 +488,7 @@ class ReplayStyle {
     this.muted = const Color(0xFF959596),
     this.ballGlowEnabled = true,
     this.ballGlowWidth = 4,
+    this.ballAppearance = BallAppearance.defaults,
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',

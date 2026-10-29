@@ -25,21 +25,20 @@ class SkillDemoController {
   bool started = false;
   double elapsed = 0;
   double speed = 1;
-  double get duration => math
-      .max(
-        6.0,
-        skill.startDelaySeconds +
-            skill.repeatCount * skill.repeatIntervalSeconds +
-            (skill.durationSeconds ?? 3) +
-            3,
-      )
-      .clamp(6, 45);
-  bool get timeLimited =>
-      skill.startDelaySeconds +
-          skill.repeatCount * skill.repeatIntervalSeconds +
-          (skill.durationSeconds ?? 3) +
-          3 >
-      45;
+
+  /// Null keeps the skill-aware automatic spacing; 0 is near, 1 is far.
+  double? distanceRatio;
+  double get _expectedDuration {
+    var timeline = skill.durationSeconds ?? 3;
+    var delay = 0.0;
+    for (final step in skill.effectSteps) {
+      delay += step.delaySeconds;
+      timeline = math.max(timeline, delay + (step.durationSeconds ?? skill.durationSeconds ?? 3));
+    }
+    return skill.startDelaySeconds + skill.repeatCount * skill.repeatIntervalSeconds + timeline + 3;
+  }
+  double get duration => _expectedDuration.clamp(6, 45);
+  bool get timeLimited => _expectedDuration > 45;
   void reset() {
     playing = false;
     started = false;
@@ -88,16 +87,25 @@ class SkillDemoController {
       SkillDelivery.orbit,
       SkillDelivery.area,
     }.contains(skill.delivery);
-    final gap = melee
+    final automaticGap = melee
         ? owner.radius + 2
         : nearbyEffect
         ? math.max(owner.radius + 2, math.min(65, 180 * skill.range * .4))
         : 65.0;
+    final minGap = owner.radius + 2;
+    final maxGap = math.max(
+      minGap,
+      match.arenaRadius - math.max(owner.radius, target.radius) - 3,
+    );
+    final gap = distanceRatio == null
+        ? automaticGap
+        : minGap + (maxGap - minGap) * distanceRatio!.clamp(0, 1);
     final sign = facingRight ? 1.0 : -1.0;
     owner.position = Offset(-gap * sign, 0);
     target.position = Offset(gap * sign, 0);
-    if (skill.targeting == SkillTargeting.arenaLocation ||
-        skill.delivery == SkillDelivery.boundaryHazard) {
+    if (distanceRatio == null &&
+        (skill.targeting == SkillTargeting.arenaLocation ||
+            skill.delivery == SkillDelivery.boundaryHazard)) {
       target.position = Offset(150 * sign, 0);
     }
     owner.velocity = target.velocity = Offset.zero;

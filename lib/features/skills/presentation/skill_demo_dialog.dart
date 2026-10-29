@@ -44,6 +44,9 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   Duration? _previous;
   bool _sound = true;
   bool _speedChosen = false;
+  bool _soundChosen = false, _inspectChosen = false;
+  bool _distanceChosen = false, _facingChosen = false;
+  late final Future<void> _preferences;
   bool _inspect = false;
   bool _preparing = false;
   String? _error;
@@ -58,16 +61,38 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   void initState() {
     super.initState();
     _ticker = createTicker(_tick);
-    _restoreSpeed();
+    _preferences = _restorePreferences();
     PowerUpSprites.load().then((_) {
       if (mounted) setState(() {});
     });
   }
 
-  Future<void> _restoreSpeed() async {
+  Future<void> _restorePreferences() async {
     final speed = double.tryParse(
       await DevicePrefs.read('skill-demo-speed') ?? '',
     );
+    final sound = await DevicePrefs.read('skill-demo-sound');
+    final inspect = await DevicePrefs.read('skill-demo-inspect');
+    final distance = await DevicePrefs.read('skill-demo-distance');
+    final facing = await DevicePrefs.read('skill-demo-facing');
+    if (mounted) {
+      setState(() {
+        if (!_soundChosen && sound != null) _sound = sound == 'true';
+        if (!_inspectChosen && inspect != null) _inspect = inspect == 'true';
+        if (!_facingChosen && facing != null) {
+          _demo.facingRight = facing == 'true';
+        }
+        final ratio = double.tryParse(distance ?? '');
+        if (!_distanceChosen &&
+            ratio != null &&
+            ratio.isFinite &&
+            ratio >= 0 &&
+            ratio <= 1) {
+          _demo.distanceRatio = ratio;
+        }
+        _demo.reset();
+      });
+    }
     if (mounted && !_speedChosen && {.25, .5, 1.0}.contains(speed)) {
       setState(() => _demo.speed = speed!);
     }
@@ -148,6 +173,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
       _error = null;
     });
     try {
+      await _preferences;
       await _ensureArtwork();
       if (!mounted) return;
       _demo.activate();
@@ -159,6 +185,13 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     } finally {
       if (mounted) setState(() => _preparing = false);
     }
+  }
+
+  void _changeDistance(double? value) {
+    _distanceChosen = true;
+    _demo.distanceRatio = value;
+    DevicePrefs.write('skill-demo-distance', value ?? 'auto');
+    _reset();
   }
 
   void _reset() {
@@ -217,7 +250,11 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                     IconButton(
                       key: const ValueKey('skill-demo-sound'),
                       tooltip: _sound ? 'Mute demo sound' : 'Enable demo sound',
-                      onPressed: () => setState(() => _sound = !_sound),
+                      onPressed: () {
+                        _soundChosen = true;
+                        setState(() => _sound = !_sound);
+                        DevicePrefs.write('skill-demo-sound', _sound);
+                      },
                       icon: Icon(_sound ? Icons.volume_up : Icons.volume_off),
                     ),
                     IconButton(
@@ -316,6 +353,47 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Expanded(child: Text('Ball distance')),
+                          Text(
+                            _demo.distanceRatio == null
+                                ? 'Automatic'
+                                : '${(_demo.distanceRatio! * 100).round()}%',
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        key: const ValueKey('skill-demo-distance'),
+                        value: _demo.distanceRatio ?? .5,
+                        min: 0,
+                        max: 1,
+                        divisions: 100,
+                        onChanged: _changeDistance,
+                      ),
+                      Wrap(
+                        spacing: 6,
+                        children: [
+                          for (final preset in [
+                            ('Near', 0.0),
+                            ('Mid', .5),
+                            ('Far', 1.0),
+                          ])
+                            OutlinedButton(
+                              onPressed: () => _changeDistance(preset.$2),
+                              child: Text(preset.$1),
+                            ),
+                          TextButton(
+                            onPressed: () => _changeDistance(null),
+                            child: const Text('Auto'),
+                          ),
+                        ],
+                      ),
+                      const Text(
+                        'Changing distance resets the demo.',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       const SizedBox(height: 10),
                       ValueListenableBuilder<int>(
                         valueListenable: SpriteRegistry.revision,
@@ -360,7 +438,11 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           'Collision outlines and activation events',
                         ),
                         value: _inspect,
-                        onChanged: (v) => setState(() => _inspect = v),
+                        onChanged: (v) {
+                          _inspectChosen = true;
+                          setState(() => _inspect = v);
+                          DevicePrefs.write('skill-demo-inspect', v);
+                        },
                       ),
                       if (_inspect)
                         Card(
@@ -463,7 +545,12 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                               ],
                               selected: {_demo.facingRight},
                               onSelectionChanged: (values) {
+                                _facingChosen = true;
                                 _demo.facingRight = values.first;
+                                DevicePrefs.write(
+                                  'skill-demo-facing',
+                                  _demo.facingRight,
+                                );
                                 _reset();
                               },
                             ),

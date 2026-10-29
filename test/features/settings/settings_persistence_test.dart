@@ -15,6 +15,89 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() {
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
 
+  test(
+    'ball appearance saves, synchronizes and survives offline reload',
+    () async {
+      var offline = false;
+      final row = <String, dynamic>{
+        'id': 1,
+        'headline': 'WHO WINS?',
+        'theme': 'midnight',
+        'ball_appearance': <String, Object>{},
+      };
+      final client = SupabaseClient(
+        'https://example.supabase.co',
+        'test-key',
+        httpClient: MockClient((request) async {
+          if (offline) throw http.ClientException('Offline');
+          if (request.method == 'PATCH') {
+            row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
+          }
+          return http.Response(
+            jsonEncode([row]),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final first = SupabaseAppSettingsRepository(client),
+          second = SupabaseAppSettingsRepository(client);
+      final initial = await first.load();
+      const appearance = BallAppearance(
+        hpBarSize: HpBarSize.large,
+        handScale: 1.4,
+        handStyle: BallHandStyle.mittens,
+        expressiveFaces: false,
+      );
+      await first.save(initial.copyWith(ballAppearance: appearance));
+      expect((await second.load()).ballAppearance, appearance);
+      offline = true;
+      expect((await first.load()).ballAppearance, appearance);
+    },
+  );
+
+  test(
+    'missing migration and ignored appearance writes fail explicitly',
+    () async {
+      for (final hasColumn in [false, true]) {
+        var writes = 0;
+        final row = <String, dynamic>{
+          'id': 1,
+          'headline': 'WHO WINS?',
+          'theme': 'midnight',
+          if (hasColumn) 'ball_appearance': <String, Object>{},
+        };
+        final client = SupabaseClient(
+          'https://example.supabase.co',
+          'test-key',
+          httpClient: MockClient((request) async {
+            if (request.method == 'PATCH') writes++;
+            return http.Response(
+              jsonEncode([row]),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+        );
+        addTearDown(client.dispose);
+        final repository = SupabaseAppSettingsRepository(client);
+        final initial = await repository.load();
+        await expectLater(
+          repository.save(
+            initial.copyWith(
+              ballAppearance: const BallAppearance(hpBarSize: HpBarSize.large),
+            ),
+          ),
+          throwsStateError,
+        );
+        expect(writes, hasColumn ? 1 : 0);
+      }
+    },
+  );
+
   test('effect render modes round-trip through shared settings', () async {
     final row = <String, dynamic>{
       'id': 1,

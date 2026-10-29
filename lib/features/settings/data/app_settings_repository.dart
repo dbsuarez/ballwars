@@ -48,6 +48,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasPowerUpsColumn = false;
   bool _hasBallGlowColumn = false;
   bool _hasBallGlowWidthColumn = false;
+  bool _hasBallAppearanceColumn = false;
   bool _hasBloodColorColumn = false;
   bool _hasArenaTextColumns = false;
   bool _hasMinimumArenaScaleColumn = false;
@@ -92,6 +93,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasPowerUpsColumn = row.containsKey('power_ups');
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
     _hasBallGlowWidthColumn = row.containsKey('ball_glow_width');
+    _hasBallAppearanceColumn = row.containsKey('ball_appearance');
     _hasBloodColorColumn = row.containsKey('blood_color');
     _hasArenaTextColumns =
         row.containsKey('arena_title') && row.containsKey('arena_subtitle');
@@ -110,6 +112,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       watermarkEnabled: row['watermark_enabled'] as bool? ?? true,
       ballGlowEnabled: row['ball_glow_enabled'] as bool? ?? true,
       ballGlowWidth: (row['ball_glow_width'] as num?)?.toDouble() ?? 4,
+      ballAppearance: BallAppearance.fromJson(row['ball_appearance']),
       bloodColor: Color(
         (row['blood_color'] as num?)?.toInt() ??
             AppSettings.defaultBloodColor.toARGB32(),
@@ -176,6 +179,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         'Effect rendering was not saved: apply migration 018_effect_render_modes.sql and reload settings.',
       );
     }
+    if (!_hasBallAppearanceColumn &&
+        settings.ballAppearance != BallAppearance.defaults) {
+      throw StateError(
+        'Ball appearance was not saved: apply migration 025_ball_appearance.sql and reload settings.',
+      );
+    }
     final updated = await _writer
         .from('app_settings')
         .update({
@@ -197,6 +206,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           if (_hasBallGlowColumn) 'ball_glow_enabled': settings.ballGlowEnabled,
           if (_hasBallGlowWidthColumn)
             'ball_glow_width': settings.ballGlowWidth,
+          if (_hasBallAppearanceColumn)
+            'ball_appearance': settings.ballAppearance.validated().toJson(),
           if (_hasBloodColorColumn)
             'blood_color': settings.bloodColor.toARGB32(),
           if (_hasArenaTextColumns) 'arena_title': settings.arenaTitle.trim(),
@@ -219,6 +230,13 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     // RLS turns a non-admin update into "0 rows", not an error.
     if (updated.isEmpty) {
       throw StateError('Only the admin can change settings.');
+    }
+    if (_hasBallAppearanceColumn &&
+        BallAppearance.fromJson(updated.first['ball_appearance']) !=
+            settings.ballAppearance.validated()) {
+      throw StateError(
+        'The server did not confirm the ball appearance. Reload settings before saving again.',
+      );
     }
     if (_hasArenaTextColumns &&
         (updated.first['arena_title'] != settings.arenaTitle.trim() ||

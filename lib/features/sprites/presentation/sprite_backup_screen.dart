@@ -171,15 +171,16 @@ class _SpriteBackupScreenState extends State<SpriteBackupScreen> {
   List<String> _affected(SpriteRestoreItem item) => [
     for (final skill in widget.library.all(widget.tuning))
       if (item.removedNames.any(
-        (name) => [
-          skill.iconSpriteId,
-          skill.projectileSpriteId,
-          skill.impactSpriteId,
-          skill.castingSpriteId,
-          skill.shellSprite,
-        ].contains('custom.${item.entry.id}.$name'),
+        (name) => widget.library
+            .spriteReferences(skill)
+            .contains('custom.${item.entry.id}.$name'),
       ))
         skill.name,
+    for (final effect in widget.library.effects.values)
+      if (item.removedNames.any(
+        (name) => effect.spriteId == 'custom.${item.entry.id}.$name',
+      ))
+        'Effect: ${effect.name}',
   ];
   Future<void> _restore() async {
     final selected = _review!

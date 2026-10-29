@@ -140,8 +140,37 @@ class PowerUpSystem {
   /// Configured skill cues, counted separately so the UI can play the exact
   /// selected sound without changing deterministic simulation state.
   final Map<String, int> skillSounds = {};
+  int _visualSteps(
+    PowerUpKind? kind,
+    String? skillId,
+    SkillVisualRole role,
+    int fallback,
+  ) {
+    if (match.skillLibrary.effects.isEmpty) return fallback;
+    if (kind == null) return fallback;
+    final skill = visualSkill(kind, skillId: skillId);
+    if (!skill.visualBindings.containsKey(role)) return fallback;
+    final duration = match.skillLibrary
+        .resolveVisual(skill, role)
+        ?.durationSeconds;
+    return duration == null ? fallback : (duration * 60).round().clamp(6, 600);
+  }
+
+  int impactVisualSteps(WeaponImpact impact) =>
+      _visualSteps(impact.kind, impact.skillId, SkillVisualRole.impact, 12);
+  int explosionVisualSteps(Explosion explosion) => _visualSteps(
+    explosion.kind,
+    explosion.skillId,
+    SkillVisualRole.explosion,
+    PowerUpTuning.explosionShowSteps,
+  );
+
   void _startCastingArtwork(SimulationBall ball, SkillDefinition skill) {
-    if (skill.castingSpriteId == null) return;
+    final visual = match.skillLibrary.resolveVisual(
+      skill,
+      SkillVisualRole.casting,
+    );
+    if (visual == null) return;
     bool Function()? follow<T>(
       List<T> moves,
       SimulationBall Function(T) ownerOf,
@@ -152,7 +181,10 @@ class PowerUpSystem {
       return null;
     }
 
-    final active = !skill.castingFollowsActive || skill.isComposed
+    final active =
+        !skill.castingFollowsActive ||
+            skill.isComposed ||
+            visual.durationSeconds != null
         ? null
         : switch (skill.baseKind) {
             PowerUpKind.energyWave => follow(energyWaveAttacks, (a) => a.owner),
@@ -174,7 +206,9 @@ class PowerUpSystem {
       CastingArtwork(
         ball,
         skill,
-        (skill.castingDurationSeconds * 60).round().clamp(6, 600),
+        ((visual.durationSeconds ?? skill.castingDurationSeconds) * 60)
+            .round()
+            .clamp(6, 600),
         active,
       ),
     );
@@ -1724,11 +1758,16 @@ class PowerUpSystem {
     for (final e in explosions) {
       e.age++;
     }
-    explosions.removeWhere((e) => e.age >= PowerUpTuning.explosionShowSteps);
+    explosions.removeWhere((e) => e.age >= explosionVisualSteps(e));
     for (final impact in weaponImpacts) {
       impact.age++;
     }
-    weaponImpacts.removeWhere((impact) => impact.age >= 12);
+    weaponImpacts.removeWhere(
+      (impact) => impact.age >= impactVisualSteps(impact),
+    );
+    if (weaponImpacts.length > 512) {
+      weaponImpacts.removeRange(0, weaponImpacts.length - 512);
+    }
     for (final fire in burningZones) {
       fire.age++;
     }
@@ -2492,7 +2531,8 @@ class PowerUpSystem {
         displayScale: effectDisplayScaleOf(skill),
       );
       if (match.skillLibrary.screenShakeFor(skill) > 0 ||
-          skill.impactSpriteId != null) {
+          skill.impactSpriteId != null ||
+          skill.visualBindings.containsKey(SkillVisualRole.impact)) {
         weaponImpacts.add(
           WeaponImpact(
             position: target.position,

@@ -7,6 +7,8 @@ import '../../arena_simulation/domain/simulation_state.dart';
 import '../../arena_simulation/presentation/arena_painter.dart';
 import '../../arena_simulation/presentation/ball_face_painter.dart';
 import '../../arena_simulation/presentation/confetti_painter.dart';
+import '../../arena_simulation/presentation/harpoon_cinematic.dart';
+import '../../skills/domain/skill_library.dart';
 
 /// Draws one frame of the exported 9:16 replay video, laid out like the
 /// reference: "WHO WINS?" / "ROUND 1" header, the arena, a slow-motion badge,
@@ -146,26 +148,31 @@ class ReplayFramePainter {
     double progress, {
     required double videoTime,
     ReplayStyle style = const ReplayStyle(),
+    SkillDefinition? skill,
+    SkillLibrary skillLibrary = SkillLibrary.defaults,
   }) {
     _style = style;
     _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: true);
-      final eased = Curves.easeInOutCubic.transform(progress.clamp(0, 1));
-      final attacker = Offset(165 + eased * 105, 610);
-      final target = Offset(555 - eased * 45, 610);
-      _paintBallFace(canvas, winner, attacker, 92);
-      _paintBallFace(canvas, loser, target, 92);
-      final impact = ((progress - 0.45) / 0.2).clamp(0.0, 1.0);
-      if (impact > 0) {
-        canvas.drawCircle(
-          target,
-          35 + impact * 105,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 14 * (1 - impact)
-            ..color = _gold.withValues(alpha: 1 - impact),
-        );
-      }
+      canvas.save();
+      canvas.translate(0, 300);
+      canvas.clipRect(const Rect.fromLTWH(0, 0, 720, 480));
+      HarpoonCinematic.paintFrame(
+        canvas,
+        const Size(720, 480),
+        winner.config,
+        loser.config,
+        move,
+        progress,
+        skill: skill,
+        library: skillLibrary,
+        effectSprites:
+            skill?.usesSpriteEffects(
+              globalSprite: style.effectRenderMode == EffectRenderMode.sprite,
+            ) ??
+            true,
+      );
+      canvas.restore();
       _paintText(
         canvas,
         move.toUpperCase(),

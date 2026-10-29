@@ -1,3 +1,4 @@
+import '../../../core/widgets/legacy_tag.dart';
 import 'package:flutter/material.dart';
 import '../../../core/audio/game_audio.dart';
 import '../../../core/theme/app_theme.dart';
@@ -847,8 +848,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 'Power-up numbers saved for everyone.',
                                           );
                                         },
-                                  child: const Text(
-                                    'Edit power-up numbers (Legacy)',
+                                  child: const Wrap(
+                                    spacing: 8,
+                                    alignment: WrapAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      Text('Edit power-up numbers'),
+                                      LegacyTag(
+                                        explanation:
+                                            'Legacy editor. Use Skill Management to edit individual skills.',
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -894,8 +905,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 'Item rarities saved for everyone.',
                                           );
                                         },
-                                  child: const Text(
-                                    'Edit item rarities (Legacy)',
+                                  child: const Wrap(
+                                    spacing: 8,
+                                    alignment: WrapAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      Text('Edit item rarities'),
+                                      LegacyTag(
+                                        explanation:
+                                            'Legacy editor. Use Skill Management to edit individual skills.',
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],

@@ -32,12 +32,16 @@ was changed.
 
 ## B. Versioned Effect Library and bindings
 
-- [ ] Define reusable EffectDefinition entries with stable IDs and a schema version.
-- [ ] Define SkillVisualBinding roles separately from mechanical effects.
-- [ ] Add shared visual resolution for arena, demo, finisher and export.
-- [ ] Migrate existing slots through explicit fallbacks, preserving old skill/replay appearance.
-- [ ] Preserve bindings through save/reload, duplicate, reset, import/export and compact replay encoding.
-- [ ] Include effect assets in readiness, replacement warnings and sprite usage searches.
+- [x] Define reusable EffectDefinition entries with stable IDs and a schema version.
+- [x] Define SkillVisualBinding roles separately from mechanical effects (initial casting, direct-hit and explosion roles).
+- [x] Add shared visual resolution for arena, demo, finisher and export.
+- [x] Migrate existing slots through explicit fallbacks, preserving old skill/replay appearance.
+- [x] Preserve bindings through save/reload, duplicate, reset, import/export and compact replay encoding.
+- [x] Include effect assets in readiness, replacement warnings and sprite usage searches.
+- [x] Mark retained fallback controls and older editors with a visible Legacy pill.
+
+Details: [EFFECT-BINDINGS.md](EFFECT-BINDINGS.md). This is the model/runtime
+foundation. The editing controls are still Phase C below.
 
 ## C. Initial editable visual roles
 
@@ -72,4 +76,4 @@ was changed.
 - [ ] Keep damage, reach, knockback and status timing independent of selected artwork.
 - [ ] Maintain old snapshots and add end-to-end composition regression coverage.
 
-Only A is implemented in this batch. B-F remain explicit follow-up work.
+A and B are implemented. C-F remain explicit follow-up work.

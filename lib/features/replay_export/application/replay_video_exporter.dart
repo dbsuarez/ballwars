@@ -302,6 +302,11 @@ class ReplayVideoExporter {
             i / finisherFrames,
             videoTime: videoTime(),
             style: style,
+            skillLibrary: skillLibrary,
+            skill: skillLibrary
+                .all(tuning)
+                .where((s) => s.name == match.winningMove)
+                .firstOrNull,
           ),
         );
       }

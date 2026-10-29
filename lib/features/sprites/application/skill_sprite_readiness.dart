@@ -19,15 +19,12 @@ class SkillSpriteReadiness {
     final visited = <String>{};
     void visit(SkillDefinition skill) {
       if (!visited.add(skill.id)) return;
-      found.addAll(
-        [
-          skill.iconSpriteId,
-          skill.projectileSpriteId,
-          skill.impactSpriteId,
-          skill.castingSpriteId,
-          skill.shellSprite,
-        ].whereType<String>(),
-      );
+      found.addAll(library.activeSpriteReferences(skill));
+      for (final binding in skill.visualBindings.values) {
+        if (!library.effects.containsKey(binding.effectId)) {
+          found.add('effect:${binding.effectId}');
+        }
+      }
       final payload = skill.payloadSkillId == null
           ? null
           : library.byId(skill.payloadSkillId!, tuning);

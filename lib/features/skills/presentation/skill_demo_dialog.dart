@@ -296,7 +296,9 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           children: [
                             _art(
                               'Casting',
-                              skill.castingSpriteId,
+                              _demo.match.skillLibrary
+                                  .resolveVisual(skill, SkillVisualRole.casting)
+                                  ?.spriteId,
                               'Not assigned',
                             ),
                             _art(
@@ -315,7 +317,9 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                             ),
                             _art(
                               'Impact',
-                              skill.impactSpriteId,
+                              _demo.match.skillLibrary
+                                  .resolveVisual(skill, SkillVisualRole.impact)
+                                  ?.spriteId,
                               'Game default',
                             ),
                           ],

@@ -14,6 +14,7 @@ import 'lightning_strike_painter.dart';
 import 'power_up_painter.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
 import '../../skills/domain/skill_library.dart';
+import '../../skills/presentation/skill_effect_renderer.dart';
 
 /// A comic-book finishing cutscene for the Hook's "COME OVER HERE!" move.
 class HarpoonCinematic extends StatefulWidget {
@@ -68,6 +69,56 @@ class HarpoonCinematic extends StatefulWidget {
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
+
+  /// The same non-interactive move painter used by video export. No UI controls.
+  static void paintFrame(
+    Canvas canvas,
+    Size size,
+    CustomBall winner,
+    CustomBall loser,
+    String move,
+    double progress, {
+    SkillDefinition? skill,
+    SkillLibrary library = SkillLibrary.defaults,
+    bool effectSprites = true,
+  }) {
+    final profile = FinisherProfile.forMove(skill?.displayKind.label ?? move);
+    final t = progress.clamp(0.0, 1.0);
+    double phase(double start, double end) =>
+        ((t - start) / (end - start)).clamp(0.0, 1.0);
+    final diameter = math.min(138.0, size.width * .25);
+    final centerY = size.height * .58;
+    final winnerX = size.width * .18, loserX = size.width * .78;
+    final pull = Curves.easeInCubic.transform(phase(.32, .62));
+    final uppercut = Curves.easeOutQuart.transform(phase(.73, .9));
+    final windUp = Curves.easeInOut.transform(phase(.62, .73));
+    final closes =
+        profile.move == 'Hook' || profile.style == FinisherStyle.melee;
+    _FinisherPainter(
+      winner: winner,
+      loser: loser,
+      winnerCenter: Offset(
+        winnerX +
+            (loserX - winnerX - diameter * 1.3) *
+                (profile.style == FinisherStyle.melee ? pull : 0),
+        centerY + windUp * diameter * .12,
+      ),
+      loserCenter: Offset(
+        closes ? loserX + (winnerX + diameter * 1.28 - loserX) * pull : loserX,
+        centerY - (profile.move == 'Hook' ? uppercut : 0) * diameter * 1.4,
+      ),
+      radius: diameter / 2,
+      hookProgress: phase(.14, profile.style == FinisherStyle.hook ? .25 : .72),
+      pullProgress: pull,
+      uppercutProgress: uppercut,
+      impactProgress: phase(.73, .82),
+      profile: profile,
+      skill: skill,
+      skillLibrary: library,
+      artworkTint: skill?.spriteTint ?? 0xffffffff,
+      effectSprites: effectSprites,
+    ).paint(canvas, size);
+  }
 
   @override
   State<HarpoonCinematic> createState() => _HarpoonCinematicState();
@@ -1314,6 +1365,31 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintExplosion(Canvas canvas, Offset center, double progress) {
+    if (skill != null &&
+        effectSprites &&
+        skill!.visualBindings.containsKey(SkillVisualRole.explosion)) {
+      final resolved = skillLibrary.resolveVisual(
+        skill!,
+        SkillVisualRole.explosion,
+      );
+      final steps = ((resolved?.durationSeconds ?? .2) * 60).round().clamp(
+        6,
+        600,
+      );
+      if (resolved != null &&
+          SkillEffectRenderer.paint(
+            canvas,
+            resolved,
+            center,
+            radius * (0.8 + Curves.easeOut.transform(progress) * 2.5),
+            (progress * steps).floor(),
+            steps,
+            fade: 1 - progress,
+          )) {
+        return;
+      }
+    }
+
     final burst = Curves.easeOut.transform(progress);
     final fade = 1 - progress;
     final customId = skill?.impactSpriteId;
@@ -1590,6 +1666,31 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintImpact(Canvas canvas, Offset center, double progress) {
+    if (skill != null &&
+        effectSprites &&
+        skill!.visualBindings.containsKey(SkillVisualRole.impact)) {
+      final resolved = skillLibrary.resolveVisual(
+        skill!,
+        SkillVisualRole.impact,
+      );
+      final steps = ((resolved?.durationSeconds ?? .2) * 60).round().clamp(
+        6,
+        600,
+      );
+      if (resolved != null &&
+          SkillEffectRenderer.paint(
+            canvas,
+            resolved,
+            center,
+            radius * 1.8,
+            (progress * steps).floor(),
+            steps,
+            fade: 1 - progress,
+          )) {
+        return;
+      }
+    }
+
     final id = skill?.impactSpriteId;
     final custom = id == null || !effectSprites
         ? null

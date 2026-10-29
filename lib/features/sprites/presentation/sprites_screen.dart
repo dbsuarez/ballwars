@@ -69,14 +69,13 @@ class _SpritesScreenState extends State<SpritesScreen> {
 
   List<String> _users(CustomAtlas atlas) => [
     for (final s in widget.library.all(widget.tuning))
-      if ([
-        s.iconSpriteId,
-        s.projectileSpriteId,
-        s.impactSpriteId,
-        s.castingSpriteId,
-        s.shellSprite,
-      ].any((id) => id?.startsWith('custom.${atlas.id}.') ?? false))
+      if (widget.library
+          .spriteReferences(s)
+          .any((id) => id.startsWith('custom.${atlas.id}.')))
         s.name,
+    for (final effect in widget.library.effects.values)
+      if (effect.spriteId.startsWith('custom.${atlas.id}.'))
+        'Effect: ${effect.name}',
   ];
   Future<void> _import([
     CustomAtlas? existing,
@@ -95,14 +94,13 @@ class _SpritesScreenState extends State<SpritesScreen> {
                   for (final name in existing.atlas.sprites.keys)
                     name: [
                       for (final s in widget.library.all(widget.tuning))
-                        if ([
-                          s.iconSpriteId,
-                          s.projectileSpriteId,
-                          s.impactSpriteId,
-                          s.castingSpriteId,
-                          s.shellSprite,
-                        ].contains('custom.${existing.id}.$name'))
+                        if (widget.library
+                            .spriteReferences(s)
+                            .contains('custom.${existing.id}.$name'))
                           s.name,
+                      for (final effect in widget.library.effects.values)
+                        if (effect.spriteId == 'custom.${existing.id}.$name')
+                          'Effect: ${effect.name}',
                     ],
                 },
         ),
@@ -132,7 +130,7 @@ class _SpritesScreenState extends State<SpritesScreen> {
         content: Text(
           users.isEmpty
               ? 'This removes the uploaded artwork. Built-in art is preserved.'
-              : 'These skills will fall back to built-in art:\n${users.join(', ')}\nExisting replays remain playable.',
+              : 'These skill/effect references will lose artwork:\n${users.join(', ')}\nExisting replays remain playable.',
         ),
         actions: [
           TextButton(

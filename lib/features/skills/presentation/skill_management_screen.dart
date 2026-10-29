@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../../core/widgets/color_picker_dialog.dart';
+import '../../../core/widgets/legacy_tag.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/audio/game_audio.dart';
@@ -1334,6 +1335,8 @@ class _SkillEditorState extends State<_SkillEditor> {
   late String? _projectileSpriteId = widget.skill.projectileSpriteId;
   late String? _impactSpriteId = widget.skill.impactSpriteId;
   late String? _castingSpriteId = widget.skill.castingSpriteId;
+  late Map<SkillVisualRole, SkillVisualBinding> _visualBindings =
+      widget.skill.visualBindings;
   late bool _castingFollowsActive = widget.skill.castingFollowsActive;
   late SkillHeldFacing _heldFacing = widget.skill.heldFacing;
   late String? _shellSprite = widget.skill.shellSprite;
@@ -1624,6 +1627,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       _projectileSpriteId = defaults.projectileSpriteId;
       _impactSpriteId = defaults.impactSpriteId;
       _castingSpriteId = defaults.castingSpriteId;
+      _visualBindings = defaults.visualBindings;
       _heldFacing = defaults.heldFacing;
       _castingFollowsActive = defaults.castingFollowsActive;
       number('castingDuration', defaults.castingDurationSeconds);
@@ -1837,6 +1841,7 @@ class _SkillEditorState extends State<_SkillEditor> {
       projectileSpriteId: _projectileSpriteId,
       impactSpriteId: _impactSpriteId,
       castingSpriteId: _castingSpriteId,
+      visualBindings: _visualBindings,
       castingDurationSeconds: _double('castingDuration'),
       castingScale: _double('castingScale'),
       castingFollowsActive: _castingFollowsActive,
@@ -3111,7 +3116,19 @@ class _SkillEditorState extends State<_SkillEditor> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: SpriteThumbnail(id: slot.$2),
-                          title: Text(slot.$1),
+                          title: Wrap(
+                            spacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(slot.$1),
+                              if (slot.$1 == 'Casting artwork' ||
+                                  slot.$1 == 'Impact / effect artwork')
+                                const LegacyTag(
+                                  explanation:
+                                      'Legacy fallback artwork. A shared effect binding for this role takes priority; existing skills keep using this artwork until a binding is assigned.',
+                                ),
+                            ],
+                          ),
                           subtitle: Text(
                             slot.$2 == null
                                 ? 'Built-in art'

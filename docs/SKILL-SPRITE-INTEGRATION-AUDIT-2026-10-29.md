@@ -284,7 +284,7 @@ owner dies. This also avoids permanent caster overlays.
 ## Proposed implementation order
 
 - [x] A. Fix trap geometry consistency, custom-art finisher parity and dependency readiness. See [implementation tracking](EFFECT-SYSTEM-ROADMAP.md) for shipped scope and verification.
-- [ ] B. Add versioned EffectDefinition + SkillVisualBinding with backward-compatible slot migration.
+- [x] B. Add versioned EffectDefinition + SkillVisualBinding with backward-compatible slot migration. See [binding implementation](EFFECT-BINDINGS.md).
 - [ ] C. Expose casting, muzzle, trail, hit and explosion roles with per-binding preview controls.
 - [ ] D. Add ground/status/block/break roles and migrate native effects incrementally.
 - [ ] E. Freeze replay asset revisions; add decoded-memory and effect-instance budgets.

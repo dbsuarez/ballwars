@@ -73,6 +73,64 @@ class _LineRecorder implements Canvas {
 
 void main() {
   testWidgets(
+    'legacy artwork has pill tags and editing preserves shared bindings',
+    (tester) async {
+      var library = SkillLibrary.defaults.withEffect(
+        const EffectDefinition(
+          id: 'effect.hit',
+          name: 'Shared hit',
+          spriteId: 'custom.sheet.hit',
+        ),
+      );
+      library = library.withDefinition(
+        library
+            .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+            .copyWith(
+              visualBindings: const {
+                SkillVisualRole.impact: SkillVisualBinding(
+                  effectId: 'effect.hit',
+                ),
+              },
+            ),
+        PowerUpConfig.defaults,
+      );
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: library,
+            tuning: PowerUpConfig.defaults,
+            onSave: (value) async => saved = value,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, find.text('Casting artwork'));
+      expect(find.text('Legacy'), findsWidgets);
+      final damage = find.byKey(const ValueKey('skill-field-arsenal'));
+      await _revealEditor(tester, damage);
+      await tester.enterText(damage, '7');
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(saved!.library.effects['effect.hit']!.name, 'Shared hit');
+      final skill = saved!.library.builtIn(PowerUpKind.pistol, saved!.tuning);
+      expect(
+        skill.visualBindings[SkillVisualRole.impact]!.effectId,
+        'effect.hit',
+      );
+      expect(skill.arsenalDamage, 7);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'phone editor toolbar opens Skill Demo with unsaved values and returns without saving',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);

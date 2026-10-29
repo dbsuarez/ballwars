@@ -12,6 +12,7 @@ import 'arena_effect_library.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
+import '../../skills/presentation/skill_effect_renderer.dart';
 
 /// Draws the power-up layer of an Arsenal / All-Out match in the arena's coordinates (center at 0, 0):
 /// pulsing field power-ups, armed mines, aim lines, bullets, blasts and knife slashes ([paint]), plus the
@@ -236,6 +237,27 @@ class PowerUpPainter {
       )) {
         continue;
       }
+      final resolved = state.powerUps!.match.skillLibrary.resolveVisual(
+        skill,
+        SkillVisualRole.casting,
+      );
+      if (skill.visualBindings.containsKey(SkillVisualRole.casting) &&
+          resolved != null) {
+        SkillArtworkTint.begin(canvas, skill.spriteTint);
+        final painted = SkillEffectRenderer.paint(
+          canvas,
+          resolved,
+          effect.owner.position,
+          effect.owner.radius * 1.4,
+          effect.age,
+          effect.steps,
+          fade: effect.active != null
+              ? 1
+              : ((effect.steps - effect.age) / 6).clamp(0.0, 1.0),
+        );
+        SkillArtworkTint.end(canvas);
+        if (painted) continue;
+      }
       final id = skill.castingSpriteId;
       final image = id == null
           ? null
@@ -285,10 +307,30 @@ class PowerUpPainter {
           continue;
         }
         final skill = p.visualSkill(kind, skillId: impact.skillId);
+        final steps = p.impactVisualSteps(impact);
+        final resolved = p.match.skillLibrary.resolveVisual(
+          skill,
+          SkillVisualRole.impact,
+        );
+        if (skill.visualBindings.containsKey(SkillVisualRole.impact) &&
+            resolved != null) {
+          SkillArtworkTint.begin(canvas, skill.spriteTint);
+          final painted = SkillEffectRenderer.paint(
+            canvas,
+            resolved,
+            impact.position,
+            r * 1.4,
+            impact.age,
+            steps,
+            fade: 1 - impact.age / steps,
+          );
+          SkillArtworkTint.end(canvas);
+          if (painted) continue;
+        }
         final id = skill.impactSpriteId;
         final image = id == null
             ? null
-            : SpriteRegistry.frameAtProgress(id, impact.age / 12);
+            : SpriteRegistry.frameAtProgress(id, impact.age / steps);
         if (image == null) continue;
         SkillArtworkTint.begin(canvas, skill.spriteTint);
         try {
@@ -299,7 +341,7 @@ class PowerUpPainter {
             r * 1.4 * p.effectDisplayScale(kind, skillId: impact.skillId),
             0,
             anchor: SpriteRegistry.anchor(id!),
-            opacity: 1 - impact.age / 12,
+            opacity: 1 - impact.age / steps,
           );
         } finally {
           SkillArtworkTint.end(canvas);
@@ -975,8 +1017,35 @@ class PowerUpPainter {
             (e.kind == null
                 ? 1
                 : p.effectDisplayScale(e.kind!, skillId: e.skillId));
-        final t = e.age / PowerUpTuning.explosionShowSteps;
+        final steps = p.explosionVisualSteps(e);
+        final t = e.age / steps;
         final fade = (1 - t).clamp(0.0, 1.0);
+        if (e.kind != null &&
+            showEffects &&
+            p.usesEffectSprite(
+              e.kind!,
+              skillId: e.skillId,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            )) {
+          final skill = p.visualSkill(e.kind!, skillId: e.skillId);
+          final resolved = p.match.skillLibrary.resolveVisual(
+            skill,
+            SkillVisualRole.explosion,
+          );
+          if (skill.visualBindings.containsKey(SkillVisualRole.explosion) &&
+              resolved != null &&
+              SkillEffectRenderer.paint(
+                canvas,
+                resolved,
+                e.position,
+                e.radius,
+                e.age,
+                steps,
+                fade: fade,
+              )) {
+            continue;
+          }
+        }
         final customId = e.kind == null
             ? null
             : p.visualSkill(e.kind!, skillId: e.skillId).impactSpriteId;

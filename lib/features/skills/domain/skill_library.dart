@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'skill_visual_effect.dart';
+export 'skill_visual_effect.dart';
 
 import 'package:characters/characters.dart';
 
@@ -156,6 +158,7 @@ class SkillDefinition {
     this.castingDurationSeconds = 0.5,
     this.castingScale = 1,
     this.castingFollowsActive = true,
+    this.visualBindings = const {},
     this.shellSprite,
     this.shellSize = 1,
     this.shellCount = 1,
@@ -283,6 +286,7 @@ class SkillDefinition {
   final String? castingSpriteId;
   final double castingDurationSeconds, castingScale;
   final bool castingFollowsActive;
+  final Map<SkillVisualRole, SkillVisualBinding> visualBindings;
   final String? shellSprite;
 
   /// Casing size, times the brass shell's size (0.25 to 10).
@@ -453,6 +457,7 @@ class SkillDefinition {
     double? castingDurationSeconds,
     double? castingScale,
     bool? castingFollowsActive,
+    Map<SkillVisualRole, SkillVisualBinding>? visualBindings,
     Object? shellSprite = _unset,
     double? shellSize,
     int? shellCount,
@@ -554,6 +559,7 @@ class SkillDefinition {
         castingDurationSeconds ?? this.castingDurationSeconds,
     castingScale: castingScale ?? this.castingScale,
     castingFollowsActive: castingFollowsActive ?? this.castingFollowsActive,
+    visualBindings: Map.unmodifiable(visualBindings ?? this.visualBindings),
     shellSprite: identical(shellSprite, _unset)
         ? this.shellSprite
         : shellSprite as String?,
@@ -641,6 +647,14 @@ class SkillDefinition {
       'casting_duration_seconds': castingDurationSeconds,
     if (castingScale != 1) 'casting_scale': castingScale,
     if (!castingFollowsActive) 'casting_follows_active': false,
+    if (visualBindings.isNotEmpty)
+      'visual_bindings': {
+        'version': 1,
+        'bindings': {
+          for (final entry in visualBindings.entries)
+            entry.key.name: entry.value.toJson(),
+        },
+      },
     if (shellSprite != null) 'shell_sprite': shellSprite,
     if (shellSize != 1) 'shell_size': shellSize,
     if (shellCount != 1) 'shell_count': shellCount,
@@ -776,6 +790,7 @@ class SkillDefinition {
       castingDurationSeconds: decimal('casting_duration_seconds') ?? 0.5,
       castingScale: decimal('casting_scale') ?? 1,
       castingFollowsActive: value['casting_follows_active'] != false,
+      visualBindings: parseVisualBindings(value['visual_bindings']),
       heldFacing:
           SkillHeldFacing.values
               .where((mode) => mode.name == value['held_facing'])
@@ -852,6 +867,8 @@ class SkillDefinition {
         ? castingDurationSeconds.clamp(0.1, 10)
         : 0.5,
     castingScale: castingScale.isFinite ? castingScale.clamp(0.25, 4) : 1,
+    castingFollowsActive: castingFollowsActive,
+    visualBindings: Map.unmodifiable(visualBindings),
     shellSprite: _cleanSpriteReference(shellSprite),
     shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 10) : 1,
     shellCount: shellCount.clamp(1, 20),
@@ -929,6 +946,7 @@ class SkillLibrary {
     this.version = currentVersion,
     this.overrides = const {},
     this.custom = const [],
+    this.effects = const {},
     this.calloutSeconds = defaultCalloutSeconds,
     this.skillsSetCallout = true,
     this.screenShake = defaultScreenShake,
@@ -944,6 +962,10 @@ class SkillLibrary {
   final int version;
   final Map<String, SkillDefinition> overrides;
   final List<SkillDefinition> custom;
+  final Map<String, EffectDefinition> effects;
+  bool get hasVisualEffects =>
+      effects.isNotEmpty ||
+      [...overrides.values, ...custom].any((s) => s.visualBindings.isNotEmpty);
 
   /// Global: how long a callout (speech bubble) stays up, in seconds. Used for every skill while
   /// [skillsSetCallout] is off.
@@ -1041,6 +1063,7 @@ class SkillLibrary {
     version: version,
     overrides: overrides,
     custom: custom,
+    effects: effects,
     calloutSeconds: (calloutSeconds ?? this.calloutSeconds).clamp(0.25, 10),
     skillsSetCallout: skillsSetCallout ?? this.skillsSetCallout,
     screenShake: (screenShake ?? this.screenShake).clamp(0, 1),
@@ -1069,10 +1092,12 @@ class SkillLibrary {
   SkillLibrary _withSkills({
     Map<String, SkillDefinition>? overrides,
     List<SkillDefinition>? custom,
+    Map<String, EffectDefinition>? effects,
   }) => SkillLibrary(
     version: version,
     overrides: overrides ?? this.overrides,
     custom: custom ?? this.custom,
+    effects: effects ?? this.effects,
     calloutSeconds: calloutSeconds,
     skillsSetCallout: skillsSetCallout,
     screenShake: screenShake,
@@ -1135,6 +1160,8 @@ class SkillLibrary {
 
   /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
   static const int compactVersion = 3;
+  static const int visualVersion = 4;
+  static const int visualCompactVersion = 5;
   static const int maxImportCharacters = 1000000;
   static const int maxImportedDefinitions = 512;
   static const int maxReplayCharacters = 48000;
@@ -1142,6 +1169,7 @@ class SkillLibrary {
   bool get isDefault =>
       overrides.isEmpty &&
       custom.isEmpty &&
+      effects.isEmpty &&
       calloutSeconds == defaultCalloutSeconds &&
       skillsSetCallout &&
       screenShake == defaultScreenShake &&
@@ -1152,6 +1180,85 @@ class SkillLibrary {
       skillsSetPickupDisplayScale &&
       effectDisplayScale == 1 &&
       skillsSetEffectDisplayScale;
+
+  SkillLibrary withEffect(EffectDefinition effect) {
+    final validated = EffectDefinition.fromJson(effect.toJson());
+    if (effects.length >= 256 && !effects.containsKey(effect.id)) {
+      throw const FormatException('Use at most 256 effect definitions.');
+    }
+    return _withSkills(
+      effects: Map.unmodifiable({...effects, validated.id: validated}),
+    );
+  }
+
+  SkillLibrary withoutEffect(String id) {
+    if ([
+      ...overrides.values,
+      ...custom,
+    ].any((s) => s.visualBindings.values.any((b) => b.effectId == id))) {
+      throw StateError(
+        'This effect is assigned to a skill. Remove its bindings first.',
+      );
+    }
+    return _withSkills(effects: Map.unmodifiable({...effects}..remove(id)));
+  }
+
+  ResolvedSkillEffect? resolveVisual(
+    SkillDefinition skill,
+    SkillVisualRole role,
+  ) {
+    final binding = skill.visualBindings[role];
+    final effect = binding == null ? null : effects[binding.effectId];
+    final legacy = role == SkillVisualRole.casting
+        ? skill.castingSpriteId
+        : skill.impactSpriteId;
+    if (effect == null && legacy == null) return null;
+    final effectiveBinding = effect == null ? null : binding;
+    final baseScale = role == SkillVisualRole.casting
+        ? skill.castingScale
+        : effectDisplayScaleFor(skill);
+    return ResolvedSkillEffect(
+      spriteId: effect?.spriteId ?? legacy!,
+      scale: baseScale * (effect?.scale ?? 1) * (effectiveBinding?.scale ?? 1),
+      opacity: (effect?.opacity ?? 1) * (effectiveBinding?.opacity ?? 1),
+      tint: skill.spriteTint,
+      playback: effect?.playback ?? EffectPlayback.once,
+      durationSeconds: effect?.durationSeconds,
+    );
+  }
+
+  Set<String> spriteReferences(SkillDefinition skill) => {
+    ...[
+      skill.iconSpriteId,
+      skill.projectileSpriteId,
+      skill.impactSpriteId,
+      skill.castingSpriteId,
+      skill.shellSprite,
+    ].whereType<String>(),
+    for (final binding in skill.visualBindings.values)
+      if (effects[binding.effectId] != null)
+        effects[binding.effectId]!.spriteId,
+  };
+
+  /// Assets actually selected for playback; unused legacy fallbacks must not
+  /// block a valid replacement effect from starting.
+  Set<String> activeSpriteReferences(SkillDefinition skill) => {
+    ...[
+      skill.iconSpriteId,
+      skill.projectileSpriteId,
+      skill.shellSprite,
+    ].whereType<String>(),
+    for (final role in SkillVisualRole.values)
+      if (resolveVisual(skill, role) case final ResolvedSkillEffect visual)
+        visual.spriteId,
+  };
+
+  List<String> get visualBindingProblems => [
+    for (final skill in [...overrides.values, ...custom])
+      for (final binding in skill.visualBindings.entries)
+        if (!effects.containsKey(binding.value.effectId))
+          '${skill.name}: missing ${binding.key.name} effect ${binding.value.effectId}',
+  ];
 
   SkillDefinition builtIn(PowerUpKind kind, PowerUpConfig tuning) =>
       overrides['builtin.${kind.name}'] ?? _defaultFor(kind, tuning);
@@ -1466,7 +1573,12 @@ class SkillLibrary {
   }
 
   Map<String, Object?> toJson() => {
-    'version': version,
+    'version': hasVisualEffects ? visualVersion : version,
+    if (effects.isNotEmpty)
+      'effect_library': {
+        'version': 1,
+        'definitions': effects.values.map((effect) => effect.toJson()).toList(),
+      },
     'overrides': {
       for (final entry in overrides.entries) entry.key: entry.value.toJson(),
     },
@@ -1491,7 +1603,7 @@ class SkillLibrary {
   /// reads both forms to the same library. Used for replay snapshots; saved libraries keep [toJson].
   Map<String, Object?> toCompactJson() => {
     ...toJson(),
-    'version': compactVersion,
+    'version': hasVisualEffects ? visualCompactVersion : compactVersion,
     'overrides': {
       for (final entry in overrides.entries) entry.key: _diff(entry.value),
     },
@@ -1549,7 +1661,7 @@ class SkillLibrary {
 
   static bool _isCompact(Map value) {
     final version = value['version'];
-    return version is num && version.toInt() >= compactVersion;
+    return version == compactVersion || version == visualCompactVersion;
   }
 
   /// Whether [stored] (this library as the server returned it) holds the
@@ -1652,6 +1764,7 @@ class SkillLibrary {
       version: currentVersion,
       overrides: Map.unmodifiable(overrides),
       custom: List.unmodifiable(custom),
+      effects: parseEffectDefinitions(value['effect_library']),
       calloutSeconds: callout is num && callout.isFinite
           ? callout.toDouble().clamp(0.25, 10)
           : defaultCalloutSeconds,
@@ -1689,9 +1802,9 @@ class SkillLibrary {
     final version = decoded['version'];
     if (version is! num ||
         version.toInt() < 1 ||
-        version.toInt() > compactVersion) {
+        version.toInt() > visualCompactVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected 1-$compactVersion.',
+        'Unsupported skill-library version. Expected 1-$visualCompactVersion.',
       );
     }
     final compact = _isCompact(decoded);
@@ -1720,6 +1833,9 @@ class SkillLibrary {
       }
     }
     final library = SkillLibrary.fromJson(decoded);
+    if (library.visualBindingProblems.isNotEmpty) {
+      throw FormatException(library.visualBindingProblems.join('\n'));
+    }
     final ids = <String>{};
     for (final skill in [...library.overrides.values, ...library.custom]) {
       if (!ids.add(skill.id)) {

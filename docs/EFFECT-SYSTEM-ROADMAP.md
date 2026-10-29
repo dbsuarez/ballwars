@@ -85,7 +85,7 @@ production acceptance remain manual; deployment workflows are not monitored.
 - [x] Add replay dependency manifests and an explicit missing-revision policy.
 - [x] Add total decoded-memory estimates and a cache/eviction budget.
 - [x] Add effect-instance budgets and visual-quality density settings without changing mechanics.
-- [ ] Measure six-ball performance and memory on actual browser/Android devices.
+- [ ] Deferred until after Phase F: finish six-ball Android performance/memory verification. Windows Chrome measurements are recorded below.
 
 ## F. Mechanical effect composition
 
@@ -100,3 +100,5 @@ A-E software is implemented. Phase E Android performance acceptance remains open
 Phase E verification: 928 tests passed (one opt-in performance test skipped), followed by 64 replay-focused checks, 28 production asset-revision checks and 15 final authoring/visual checks. Analysis and release web build pass. Phone-sized placement and AoE previews were rendered and inspected. Actual Windows Chrome profiling is documented in [SIX-BALL-PERFORMANCE.md](SIX-BALL-PERFORMANCE.md); no Android device was connected.
 
 Also delivered: remembered Skill Demo speed, pinned placement previews with sliders and numeric inputs, configurable projectile launch points, and reusable AoE artwork/boundary/radius editing. See [REPLAY-ARTWORK-REVISIONS.md](REPLAY-ARTWORK-REVISIONS.md). Migration 024 was applied by the user.
+
+Release follow-up: updated both oversized-replay widget assertions to the current skill/artwork message. The regression still verifies a visible error, no clipboard write, and no saved replay.

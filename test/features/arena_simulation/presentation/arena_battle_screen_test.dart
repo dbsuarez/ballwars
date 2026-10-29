@@ -680,7 +680,9 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(
-        find.text('Too many custom skills to share this replay'),
+        find.text(
+          'This replay has too much skill or artwork data to share. Reduce enabled assets or custom descriptions.',
+        ),
         findsOneWidget,
       );
       expect(clipboard, isEmpty);
@@ -695,7 +697,9 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(
-        find.text('Too many custom skills to share this replay'),
+        find.text(
+          'This replay has too much skill or artwork data to share. Reduce enabled assets or custom descriptions.',
+        ),
         findsOneWidget,
       );
       expect(await SavedReplayStore.load(), isEmpty);

@@ -11,7 +11,7 @@ import 'package:ballwars/features/skills/presentation/skill_demo_dialog.dart';
 
 void main() {
   late SkillManagementResult? saved;
-  Future<void> open(WidgetTester tester) async {
+  Future<void> open(WidgetTester tester, {String name = 'Pistol'}) async {
     saved = null;
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -47,10 +47,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextField, 'Search skills'),
-      'Pistol',
+      name,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+    await tester.tap(find.widgetWithText(ListTile, name));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.widgetWithText(Tab, 'Appearance'));
     await tester.tap(find.widgetWithText(Tab, 'Appearance'));
@@ -70,6 +70,49 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'persistent and event groups keep draft bindings and save both roles',
+    (tester) async {
+      await open(tester, name: 'Golden Armor');
+      await tester.tap(find.text('Persistent'));
+      await tester.pumpAndSettle();
+      final newEffect = find.byKey(const ValueKey('new-effect-ownerStatus'));
+      await tester.ensureVisible(newEffect);
+      await tester.pumpAndSettle();
+      await tester.tap(newEffect);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('effect-name')),
+        'Guard aura',
+      );
+      await sprite(tester);
+      await tester.tap(find.text('Use effect'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Events'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Events'));
+      await tester.pumpAndSettle();
+      final block = find.byKey(const ValueKey('effect-select-block-null'));
+      await tester.ensureVisible(block);
+      await tester.pumpAndSettle();
+      await tester.tap(block);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guard aura').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      final bindings = saved!.library
+          .builtIn(PowerUpKind.goldenArmor, saved!.tuning)
+          .visualBindings;
+      expect(
+        bindings[SkillVisualRole.ownerStatus]!.effectId,
+        bindings[SkillVisualRole.block]!.effectId,
+      );
+      expect(saved!.library.effects.values.single.name, 'Guard aura');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'phone authors and previews an unsaved effect, saves placement and resets binding',

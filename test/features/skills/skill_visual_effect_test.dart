@@ -84,8 +84,8 @@ void main() {
         ),
         _tuning,
       );
-      expect(lib.toJson()['version'], 6);
-      expect(lib.toCompactJson()['version'], 7);
+      expect(lib.toJson()['version'], SkillLibrary.visualVersion);
+      expect(lib.toCompactJson()['version'], SkillLibrary.visualCompactVersion);
       for (final source in [lib.toJson(), lib.toCompactJson()]) {
         final loaded = SkillLibrary.importJson(jsonEncode(source));
         final bindings = loaded

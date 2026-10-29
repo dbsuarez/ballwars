@@ -18,6 +18,9 @@ preferences. Closing it returns to the same draft and editor tab.
 - **Test incoming hit** makes the target fire a real pistol shot. This shows
   shields, armor, reflection and Gremlin interactions. It does not bypass the
   firing or collision rules.
+- **Inspect effects** adds physical collision outlines and a bounded event history
+  with active source/event counts. Yellow outlines use simulation geometry,
+  independent of artwork scale. This is local to the demo and off by default.
 - **Sound** toggles demo audition locally without changing saved audio settings.
 
 The stage uses the actual arena simulation and renderer, including cast artwork,
@@ -42,3 +45,9 @@ across multiple opponents, or full-match behavior.
 Long demonstrations stop after 45 seconds with a visible notice. Replaying
 resets health, equipment, effects and random seed. Demo state is never included
 in normal matches or saved replays. No production simulation rules change.
+
+Appearance > Effects groups Attack, Persistent and Events roles. Skill Demo uses
+their unsaved recipes for zone/boundary art, owner/target statuses and block,
+defense break, expiry and discard events. Use Test incoming hit for defenses;
+Pause or slower playback helps inspect brief events. Assigning art does not add a
+mechanical event to a skill that does not emit one.

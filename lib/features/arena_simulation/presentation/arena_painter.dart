@@ -669,6 +669,14 @@ class ArenaPainter extends CustomPainter {
     PowerUpPainter.paintBallEffects(
       canvas,
       ball,
+      customStatus: (kind) =>
+          showEffects &&
+          PowerUpPainter.hasPersistentStatus(
+            state.powerUps,
+            ball,
+            kind,
+            explosionRenderMode,
+          ),
       useEffectSprite: (kind) =>
           state.powerUps?.usesEffectSprite(
             kind,

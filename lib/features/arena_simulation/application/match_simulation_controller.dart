@@ -639,6 +639,11 @@ class MatchSimulationController {
 
   bool _absorbWithGoldenArmor(SimulationBall ball) {
     if (ball.goldenArmorHits <= 0) return false;
+    powerUps?.persistentEffects.defense(
+      ball,
+      PowerUpKind.goldenArmor,
+      broken: ball.goldenArmorHits == 1,
+    );
     ball.goldenArmorHits--;
     state.floatingTexts.spawn(
       ball.position,

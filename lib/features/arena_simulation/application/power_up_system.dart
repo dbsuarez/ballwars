@@ -14,6 +14,8 @@ import '../domain/power_up_config.dart';
 import '../domain/simulation_ball.dart';
 import 'match_simulation_controller.dart';
 
+part 'persistent_skill_effects.dart';
+
 /// Runs the power-ups of an Arsenal or All-Out match: spawning, pick-up, aiming, projectiles, mines and
 /// the personal effects (apple, speed, ghost, magnet, shield).
 ///
@@ -121,6 +123,7 @@ class PowerUpSystem {
   final List<ShadowCloneAttack> shadowCloneAttacks = [];
   final List<CastingArtwork> castingArtwork = [];
   final List<MuzzleArtwork> muzzleArtwork = [];
+  late final persistentEffects = PersistentSkillEffects(this);
   final Map<Object, int> _cinematicFreezes = {};
   final Map<SimulationBall, int> _otherStuns = {};
   final List<ArenaThemeHazard> arenaThemeHazards = [];
@@ -176,19 +179,24 @@ class PowerUpSystem {
       List<T> moves,
       SimulationBall Function(T) ownerOf,
     ) {
-      for (final move in moves) {
-        if (identical(ownerOf(move), ball)) return () => moves.contains(move);
-      }
-      return null;
+      final activation = moves
+          .where((move) => identical(ownerOf(move), ball))
+          .toList();
+      return activation.isEmpty ? null : () => activation.any(moves.contains);
     }
 
-    final active =
-        !skill.castingFollowsActive ||
-            skill.isComposed ||
-            visual.durationSeconds != null
+    final active = !skill.castingFollowsActive || skill.isComposed
         ? null
         : switch (skill.baseKind) {
             PowerUpKind.energyWave => follow(energyWaveAttacks, (a) => a.owner),
+            PowerUpKind.flamethrower => follow(flameCones, (a) => a.owner),
+            PowerUpKind.tornado => follow(tornadoes, (a) => a.owner),
+            PowerUpKind.omegaTendrils => follow(omegaTendrils, (a) => a.owner),
+            PowerUpKind.lightningStrikes => follow(
+              lightningStrikes,
+              (a) => a.owner,
+            ),
+            PowerUpKind.earthquake => follow(earthquakes, (a) => a.owner),
             PowerUpKind.shadowClone => follow(
               shadowCloneAttacks,
               (a) => a.owner,
@@ -357,6 +365,7 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    persistentEffects.reset(ball);
     castingArtwork.removeWhere((effect) => identical(effect.owner, ball));
     muzzleArtwork.removeWhere((effect) => identical(effect.owner, ball));
     _otherStuns.remove(ball);
@@ -626,6 +635,7 @@ class PowerUpSystem {
       _spawn(number);
     }
     _turnTrackedItems();
+    persistentEffects.sync();
   }
 
   void _spawnArenaThemeHazard(int number) {
@@ -823,6 +833,7 @@ class PowerUpSystem {
     int steps = firedWeaponHoldSteps,
     String? skillId,
   }) {
+    persistentEffects.rememberEquipment(ball);
     final skill = visualSkill(kind, ball: ball, skillId: skillId);
     if (kind.isGun || skill.trigger == SkillTrigger.aimedFire) {
       final visual = match.skillLibrary.resolveVisual(
@@ -872,7 +883,14 @@ class PowerUpSystem {
                     (ball.heldSecondarySkillId ??
                             'builtin.${kind.kind.name}') ==
                         kind.id))) {
+          persistentEffects.emit(
+            visualSkill(kind.kind, skillId: kind.id),
+            SkillVisualRole.discard,
+            ball.position,
+            owner: ball,
+          );
           ball.removeWeapon(kind.kind, skillId: kind.id);
+          persistentEffects.rememberEquipment(ball);
         }
         held.remove(kind);
       }
@@ -883,6 +901,7 @@ class PowerUpSystem {
   /// Gives [ball] the pickup [p] and takes [p] off the field. Power-ups apply
   /// without replacing equipment; a weapon replaces the one equipped weapon.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
+    persistentEffects.rememberEquipment(ball);
     field.remove(p);
     final matchingCustom = match.skillLibrary.custom
         .where((skill) => skill.enabled && skill.baseKind == p.kind)
@@ -960,7 +979,10 @@ class PowerUpSystem {
         _skillYell(ball, p.kind, 'MAXIMUM POWER!');
       case PowerUpKind.gremlin:
         final target = _nearestTarget(ball);
-        if (target != null) target.gremlinShots++;
+        if (target != null) {
+          target.gremlinShots++;
+          target.activeEffectSkillIds[PowerUpKind.gremlin] = activeSkill.id;
+        }
         _skillYell(ball, p.kind, 'CHAOS MODE!');
       case PowerUpKind.magneticField:
         ball.magneticFieldLeft = ((activeSkill.durationSeconds ?? 3) * 60)
@@ -1518,6 +1540,12 @@ class PowerUpSystem {
     PowerUpKind kind, {
     SimulationBall? owner,
   }) {
+    target.activeEffectSkillIds[kind == PowerUpKind.poisonSwamp
+        ? kind
+        : PowerUpKind.molotov] = visualSkill(
+      kind,
+      ball: owner,
+    ).id;
     for (final effect in damageOverTime) {
       if (identical(effect.target, target) && effect.kind == kind) {
         effect.stepsLeft = math.max(
@@ -1783,7 +1811,15 @@ class PowerUpSystem {
       (effect) =>
           !_alive(effect.owner) ||
           (effect.active != null
-              ? !effect.active!()
+              ? !effect.active!() ||
+                    (match.skillLibrary
+                                .resolveVisual(
+                                  effect.skill,
+                                  SkillVisualRole.casting,
+                                )
+                                ?.durationSeconds !=
+                            null &&
+                        effect.age >= effect.steps)
               : effect.age >= effect.steps),
     );
     for (final e in explosions) {
@@ -1850,6 +1886,10 @@ class PowerUpSystem {
         }
         if ((ball.position - fire.position).distance - ball.radius <=
             fire.radius) {
+          ball.activeEffectSkillIds[PowerUpKind.molotov] = visualSkill(
+            PowerUpKind.molotov,
+            ball: fire.owner,
+          ).id;
           ball.burningLeft = math.max(ball.burningLeft, 45);
           _hit(ball, PowerUpKind.molotov, at: ball.position, from: fire.owner);
         }
@@ -2646,6 +2686,14 @@ class PowerUpSystem {
     if (artworkKind != null) {
       target.activeEffectSkillIds[artworkKind] = skill.id;
     }
+    if (effect == SkillEffectType.stun) {
+      persistentEffects.watch(
+        target,
+        skill,
+        SkillVisualRole.targetStatus,
+        () => target.stunnedLeft > 0,
+      );
+    }
     switch (effect) {
       case SkillEffectType.damage:
         if (match.mode == MatchMode.arsenal) {
@@ -2674,6 +2722,17 @@ class PowerUpSystem {
         if (_customDamageOverTime.length >= maxCustomDamageOverTimeEffects) {
           break;
         }
+        persistentEffects.watch(
+          target,
+          skill,
+          SkillVisualRole.targetStatus,
+          () => _customDamageOverTime.any(
+            (e) =>
+                identical(e.target, target) &&
+                e.skill.id == skill.id &&
+                e.stepsLeft > 0,
+          ),
+        );
         _customDamageOverTime.add(
           _CustomDamageOverTime(
             owner: owner,
@@ -3048,6 +3107,7 @@ class PowerUpSystem {
   void _catch(SimulationBall owner, SimulationBall target) {
     if (!_alive(owner) || !_alive(target) || target.isGhost) return;
     if (target.equippedWeapons.contains(PowerUpKind.shield)) {
+      persistentEffects.defense(target, PowerUpKind.shield, broken: true);
       target.removeWeapon(PowerUpKind.shield);
       blocks++;
       _yell(target, 'BLOCKED!');
@@ -3715,9 +3775,15 @@ class PowerUpSystem {
           p.velocity = p.velocity - unit * (2 * along);
           p.position += unit * 2;
           if (struck.mirrorCharges > 0 && struck.magneticFieldLeft == 0) {
+            persistentEffects.defense(
+              struck,
+              PowerUpKind.mirror,
+              broken: struck.mirrorCharges == 1,
+            );
             struck.mirrorCharges--;
           }
           if (struck.magneticFieldLeft > 0) {
+            persistentEffects.defense(struck, PowerUpKind.magneticField);
             struck.magneticReflectedOwners.add(p.owner);
           }
           p.target = p.owner;
@@ -3882,6 +3948,7 @@ class PowerUpSystem {
   }) {
     if (target.isGhost && !unavoidable) return;
     if (target.magneticFieldLeft > 0 && !unavoidable) {
+      persistentEffects.defense(target, PowerUpKind.magneticField);
       _sound('repel');
       _yell(target, 'REPELLED!');
       return;
@@ -3917,6 +3984,7 @@ class PowerUpSystem {
         ? 1 - _t.shieldBlock
         : _t.allOutShieldKeep;
     if (target.equippedWeapons.contains(PowerUpKind.shield)) {
+      persistentEffects.defense(target, PowerUpKind.shield, broken: true);
       target.removeWeapon(PowerUpKind.shield);
       blocks++;
       _yell(target, 'BLOCKED!');
@@ -3927,6 +3995,7 @@ class PowerUpSystem {
       share = shielded;
     }
     if (kind == PowerUpKind.freeze) {
+      target.activeEffectSkillIds[PowerUpKind.freeze] = impactSkill.id;
       target.frozenDamageMultiplierOverride = null;
       target.frozenCollisionDamageOverride = null;
       _sound('freeze');

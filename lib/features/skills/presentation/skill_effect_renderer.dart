@@ -36,7 +36,12 @@ class SkillEffectRenderer {
         : const Offset(1, 0);
     final place = effect.attachment == EffectAttachment.automatic
         ? switch (role) {
-            SkillVisualRole.casting => EffectAttachment.owner,
+            SkillVisualRole.casting ||
+            SkillVisualRole.ownerStatus ||
+            SkillVisualRole.discard => EffectAttachment.owner,
+            SkillVisualRole.targetStatus ||
+            SkillVisualRole.block ||
+            SkillVisualRole.breakage => EffectAttachment.target,
             SkillVisualRole.muzzle => EffectAttachment.hand,
             SkillVisualRole.trail => EffectAttachment.projectile,
             _ => EffectAttachment.impact,

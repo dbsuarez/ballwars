@@ -303,7 +303,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 New source audit: [Skill/sprite integration, 2026-10-29](SKILL-SPRITE-INTEGRATION-AUDIT-2026-10-29.md).
 Implementation is tracked in [EFFECT-SYSTEM-ROADMAP.md](EFFECT-SYSTEM-ROADMAP.md):
-A-C are implemented; D-F remain unchecked follow-up work.
+A-D are implemented; E-F remain unchecked follow-up work.
 
 2026-10-28 post-sprite follow-up:
 - [x] Add [Skill Demo](SKILL-DEMO.md) beside Preview, Live Arena and Finisher: manual draft activation, four artwork references, actual arena effects, repeat/pause/reset, facing, slow playback, health, bubbles/sound and incoming-hit interactions. Preserve unsaved editor state and normal match behavior.

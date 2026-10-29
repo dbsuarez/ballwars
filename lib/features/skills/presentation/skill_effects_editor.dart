@@ -14,6 +14,14 @@ String effectRoleLabel(SkillVisualRole role) => switch (role) {
   SkillVisualRole.trail => 'Projectile trail',
   SkillVisualRole.impact => 'Direct hit',
   SkillVisualRole.explosion => 'Explosion',
+  SkillVisualRole.ground => 'Ground zone',
+  SkillVisualRole.boundary => 'Arena boundary',
+  SkillVisualRole.ownerStatus => 'Owner status / channel',
+  SkillVisualRole.targetStatus => 'Target status',
+  SkillVisualRole.block => 'Block',
+  SkillVisualRole.breakage => 'Defense break',
+  SkillVisualRole.expiry => 'Expiry',
+  SkillVisualRole.discard => 'Discard',
 };
 String effectRoleHelp(SkillVisualRole role) => switch (role) {
   SkillVisualRole.casting => 'Plays on the caster when the move starts.',
@@ -23,9 +31,25 @@ String effectRoleHelp(SkillVisualRole role) => switch (role) {
   SkillVisualRole.impact => 'Plays when the skill hits an opponent.',
   SkillVisualRole.explosion =>
     'Plays on an explosion event. Artwork does not add explosion damage.',
+  SkillVisualRole.ground =>
+    'Replaces ground-zone artwork; collision and damage stay unchanged.',
+  SkillVisualRole.boundary =>
+    'Repeats along the real curved boundary samples, facing inward.',
+  SkillVisualRole.ownerStatus =>
+    'Follows an active buff or channel, ending with its activation.',
+  SkillVisualRole.targetStatus =>
+    'Follows a debuffed opponent until that status ends.',
+  SkillVisualRole.block =>
+    'Plays on a successful defensive block or reflection.',
+  SkillVisualRole.breakage =>
+    'Plays when the last armor, mirror or shield charge is used.',
+  SkillVisualRole.expiry =>
+    'Plays when a zone, channel or status ends; not on death/reset.',
+  SkillVisualRole.discard =>
+    'Plays when this equipped weapon is discarded or replaced.',
 };
 
-class SkillEffectsEditor extends StatelessWidget {
+class SkillEffectsEditor extends StatefulWidget {
   const SkillEffectsEditor({
     super.key,
     required this.library,
@@ -41,6 +65,40 @@ class SkillEffectsEditor extends StatelessWidget {
   onChanged;
   final Future<void> Function(SkillLibrary, SkillDefinition) onPreview;
 
+  @override
+  State<SkillEffectsEditor> createState() => _SkillEffectsEditorState();
+}
+
+class _SkillEffectsEditorState extends State<SkillEffectsEditor> {
+  SkillLibrary get library => widget.library;
+  SkillDefinition get skill => widget.skill;
+  PowerUpConfig get tuning => widget.tuning;
+  void Function(SkillLibrary, Map<SkillVisualRole, SkillVisualBinding>)
+  get onChanged => widget.onChanged;
+  Future<void> Function(SkillLibrary, SkillDefinition) get onPreview =>
+      widget.onPreview;
+  int _group = 0;
+  bool inGroup(SkillVisualRole role) => switch (_group) {
+    0 => {
+      SkillVisualRole.casting,
+      SkillVisualRole.muzzle,
+      SkillVisualRole.trail,
+      SkillVisualRole.impact,
+      SkillVisualRole.explosion,
+    }.contains(role),
+    1 => {
+      SkillVisualRole.ground,
+      SkillVisualRole.boundary,
+      SkillVisualRole.ownerStatus,
+      SkillVisualRole.targetStatus,
+    }.contains(role),
+    _ => {
+      SkillVisualRole.block,
+      SkillVisualRole.breakage,
+      SkillVisualRole.expiry,
+      SkillVisualRole.discard,
+    }.contains(role),
+  };
   bool available(SkillVisualRole role) {
     final flying = skill.isComposed
         ? skill.delivery == SkillDelivery.projectile ||
@@ -55,6 +113,14 @@ class SkillEffectsEditor extends StatelessWidget {
               }.contains(skill.baseKind);
     return switch (role) {
       SkillVisualRole.casting => true,
+      SkillVisualRole.ground ||
+      SkillVisualRole.boundary ||
+      SkillVisualRole.ownerStatus ||
+      SkillVisualRole.targetStatus ||
+      SkillVisualRole.block ||
+      SkillVisualRole.breakage ||
+      SkillVisualRole.expiry ||
+      SkillVisualRole.discard => persistentRoleAvailable(skill, role),
       SkillVisualRole.muzzle =>
         skill.isComposed
             ? skill.trigger == SkillTrigger.aimedFire
@@ -173,13 +239,18 @@ class SkillEffectsEditor extends StatelessWidget {
       const Text(
         'Shared artwork, separate from damage. Changes here are saved with this skill.',
       ),
-      for (final role in [
-        SkillVisualRole.casting,
-        SkillVisualRole.muzzle,
-        SkillVisualRole.trail,
-        SkillVisualRole.impact,
-        SkillVisualRole.explosion,
-      ])
+      const SizedBox(height: 10),
+      SegmentedButton<int>(
+        segments: const [
+          ButtonSegment(value: 0, label: Text('Attack')),
+          ButtonSegment(value: 1, label: Text('Persistent')),
+          ButtonSegment(value: 2, label: Text('Events')),
+        ],
+        showSelectedIcon: false,
+        selected: {_group},
+        onSelectionChanged: (values) => setState(() => _group = values.first),
+      ),
+      for (final role in SkillVisualRole.values.where(inGroup))
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Card(

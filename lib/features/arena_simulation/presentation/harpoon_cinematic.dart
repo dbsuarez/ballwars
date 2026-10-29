@@ -433,6 +433,10 @@ class _FinisherPainter extends CustomPainter {
       return;
     }
     final resolved = skillLibrary.resolveVisual(skill!, role);
+    if (resolved?.durationSeconds != null &&
+        age >= (resolved!.durationSeconds! * 60).round()) {
+      return;
+    }
     if (resolved != null && SpriteRegistry.has(resolved.spriteId)) {
       _pending.add((resolved, role, point, half, age, steps, direction));
     }
@@ -511,6 +515,58 @@ class _FinisherPainter extends CustomPainter {
         }
       }
     }
+    if (skill != null) {
+      if (hookProgress > 0 &&
+          hookProgress < 1 &&
+          persistentRoleAvailable(skill!, SkillVisualRole.ownerStatus)) {
+        _queue(
+          SkillVisualRole.ownerStatus,
+          winnerCenter,
+          radius * 1.5,
+          (hookProgress * 90).floor(),
+          90,
+          loserCenter - winnerCenter,
+        );
+      }
+      if (impactProgress > 0 && impactProgress < 1) {
+        final age = (impactProgress * 60).floor();
+        if (persistentRoleAvailable(skill!, SkillVisualRole.targetStatus)) {
+          _queue(
+            SkillVisualRole.targetStatus,
+            loserCenter,
+            radius * 1.5,
+            age,
+            60,
+            loserCenter - winnerCenter,
+          );
+        }
+        if (persistentRoleAvailable(skill!, SkillVisualRole.ground)) {
+          _queue(
+            SkillVisualRole.ground,
+            loserCenter + Offset(0, radius * .75),
+            radius * 1.6,
+            age,
+            60,
+            loserCenter - winnerCenter,
+          );
+        }
+        if (persistentRoleAvailable(skill!, SkillVisualRole.boundary)) {
+          for (var i = 0; i < 6; i++) {
+            final angle = -math.pi * .8 + i * math.pi * .12;
+            final point =
+                loserCenter + Offset.fromDirection(angle, radius * 1.35);
+            _queue(
+              SkillVisualRole.boundary,
+              point,
+              radius * .6,
+              age,
+              60,
+              loserCenter - point,
+            );
+          }
+        }
+      }
+    }
     for (final request in _pending) {
       final (effect, role, point, half, age, steps, direction) = request;
       final center = SkillEffectRenderer.attachment(
@@ -532,7 +588,14 @@ class _FinisherPainter extends CustomPainter {
         steps,
         direction: direction,
         unitRadius: radius,
-        fade: role == SkillVisualRole.trail
+        fade:
+            {
+              SkillVisualRole.trail,
+              SkillVisualRole.ownerStatus,
+              SkillVisualRole.targetStatus,
+              SkillVisualRole.ground,
+              SkillVisualRole.boundary,
+            }.contains(role)
             ? 1
             : (1 - age / steps).clamp(0.0, 1.0),
       );

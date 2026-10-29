@@ -56,11 +56,28 @@ Verification: 898 tests passed, analysis reported no issues, and the web release
 
 ## D. Persistent and defensive effects
 
-- [ ] Add ground-zone and curved-boundary bindings without changing hit areas.
-- [ ] Add owner/target status, block, break, expiry and discard event bindings.
-- [ ] Tie channel/status artwork to activation handles, ending on interruption, death or respawn.
-- [ ] Migrate native effects incrementally while preserving signature choreography.
-- [ ] Add collision outlines and an effect-event inspector to the demo.
+- [x] Add ground-zone and curved-boundary bindings without changing hit areas.
+- [x] Add owner/target status, block, break, expiry and discard event bindings.
+- [x] Tie channel/status artwork to activation handles, ending on interruption, death or respawn.
+- [x] Migrate native effects incrementally while preserving signature choreography.
+- [x] Add collision outlines and an effect-event inspector to the demo.
+
+Scope: ground bindings for Molotov and Fire Wall; curved-boundary bindings for
+spikes, goo, poison swamp and portals. Owner buffs/channels, target Freeze/stun/DoT,
+shield/armor/Mirror/magnetic blocks, charge breaks, source expiry and weapon discard
+use cosmetic activation handles. Native artwork remains the fallback; procedural
+signature attacks and the legacy arena-theme trap controls are retained.
+
+Skill Demo adds opt-in physical outlines and a bounded event inspector. See
+[EFFECT-BINDINGS.md](EFFECT-BINDINGS.md) for exact event support and limits.
+
+Verification: 913 tests passed, analysis reported no issues, and the web release
+build passed. New regressions exercise real armor and Mirror defenses, Freeze
+and composed stun, buff refresh/expiry, paused clearing, channel interruption,
+respawn/death cleanup, persistent world-zone lifetime, curved sample invariance,
+post-shot discard, schema compatibility, draft saves and unchanged RNG/damage.
+The Persistent role group was rendered and inspected at 390 x 844. Android and
+production acceptance remain manual; deployment workflows are not monitored.
 
 ## E. Asset reproducibility and performance
 
@@ -78,4 +95,4 @@ Verification: 898 tests passed, analysis reported no issues, and the web release
 - [ ] Keep damage, reach, knockback and status timing independent of selected artwork.
 - [ ] Maintain old snapshots and add end-to-end composition regression coverage.
 
-A-C are implemented. D-F remain explicit follow-up work.
+A-D are implemented. E-F remain explicit follow-up work.

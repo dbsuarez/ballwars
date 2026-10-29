@@ -1,7 +1,8 @@
-# Shared effect bindings (Phases B-C)
+# Shared effect bindings (Phases B-D)
 
-Open **Edit Skill > Appearance > Effects**. Five role cards provide thumbnails,
-assignment dropdowns, New, Edit, Preview and Reset. The Effect Library also creates
+Open **Edit Skill > Appearance > Effects**. Role cards provide thumbnails,
+assignment dropdowns, New, Edit, Preview and Reset. Switch between Attack,
+Persistent and Events groups; switching keeps the draft. The Effect Library also creates
 unassigned reusable definitions, searches names and prevents deletion while used.
 
 ## Authoring
@@ -28,13 +29,14 @@ projectile trail merely by assigning artwork. Existing bindings can still be res
 `SkillLibrary.effects` maps stable IDs to `EffectDefinition` entries: schema,
 name, sprite ID, playback, duration, shared scale and opacity. Maximum 256 entries.
 `SkillDefinition.visualBindings` maps casting, muzzle, trail, impact (direct hit)
-and explosion roles to effect IDs and local placement/style overrides.
+and explosion roles, plus the persistent/event roles below, to effect IDs and local
+placement/style overrides.
 `withEffect`, `withEffectDefinitions` and `withoutEffect` validate references;
 `resolveVisual` combines definition and binding settings.
 
-Definitions and binding containers write schema 2 and accept schema 1. Libraries
-with effects write full version 6 / compact version 7; Phase B versions 4 / 5
-remain readable. Libraries without effects retain versions 2 / 3. Invalid numbers,
+Definitions write schema 2 and accept schema 1. Binding containers write schema 3
+and accept schemas 1-2. Libraries with effects write full version 8 / compact 9;
+Phase B versions 4 / 5 and Phase C versions 6 / 7 remain readable. Libraries without effects retain versions 2 / 3. Invalid numbers,
 unknown roles, incompatible attachments and missing references fail clearly.
 Update older app builds before importing new snapshots.
 
@@ -74,15 +76,56 @@ sprite metadata. Opacity combines definition, binding, sprite opacity and fade.
 Binding tint overrides skill tint once; unset tint inherits the skill. Placement
 uses actual ball radii and event direction. Sprite/Vector preferences still apply.
 
-Ground/status/block/break/discard roles remain Phase D. Immutable historical
-sprite revisions and memory budgets remain Phase E.
+Immutable historical sprite revisions and memory budgets remain Phase E.
 
 ## Verification
 
-898 automated tests passed, analysis reported no issues, and the web release
+913 automated tests passed, analysis reported no issues, and the web release
 build passed. Coverage includes old/new schema round trips, unsaved editor/demo
 flows, assignment/reset, library deletion guards, shared definitions, actual shot
 and trail lifetime, target attachment, tint/opacity pixels, placement transforms,
 finisher rendering and unchanged damage/movement. The effect editor was rendered
 and inspected at 390 x 844 and adjusted for readable phone controls and actions.
 Real Android/browser account synchronization and production acceptance remain manual.
+
+## Persistent and defensive roles (Phase D)
+
+| Role | Current runtime sources |
+|---|---|
+| Ground zone | Molotov floor fire; Fire Wall (four samples along its physical wall) |
+| Arena boundary | Spike Wall, Sticky Goo, Poison Swamp and Portal |
+| Owner status / channel | Speed, Ghost, Repulsor, Time Bubble, Vampire, Mirror, Maximum Power, Magnetic Field, Golden Armor, held Shield/Flail; Energy Wave, Omnislash, Raging Demon, Shadow Clone, Omega Tendrils and Flamethrower channels |
+| Target status | Freeze, goo hold, burning, poison, Gremlin, landed Tornado; composed stun and DoT, plus composed Freeze |
+| Block | Held Shield, Golden Armor, Mirror reflection and Magnetic Field interception |
+| Defense break | Last Shield, Golden Armor or Mirror charge (Magnetic Field expires instead) |
+| Expiry | A tracked zone, channel or status ends; not on death/respawn or a charge break |
+| Discard | An equipped weapon is removed, replaced or finishes its post-shot hold |
+
+Native procedural attacks keep their choreography. Arena-theme hazards still use
+legacy parameter controls, not new editable skill recipes; their physical areas
+are visible in the demo inspector. Unsupported role cards explain that their
+current behavior emits no corresponding event.
+
+Persistent handles keep local age for one activation. Refreshing a timed buff
+restarts its art; a finite visual duration never restarts just because the
+underlying buff continues. Removing/interruption of a channel ends its art.
+Death and respawn remove attached handles and pending events. World zones keep
+their bound artwork for as long as their physical source remains active, even
+if its original caster dies. Clearing a status while paused stops its artwork
+immediately, without waiting for another simulation step. Bound casting art
+also ends with its native channel even when a longer explicit duration is chosen.
+
+Status/ground artwork is independent of physical geometry. Curved art repeats
+along unchanged collision sample angles and faces inward; artwork size and local
+offsets do not move collisions. Ground art paints beneath balls; statuses and
+transient events paint above them. Valid bound status art replaces corresponding
+native overlays where supported; missing art and Vector preference use fallback.
+Cinematic/export painters reuse applicable ground, boundary and owner/target
+recipes at their existing choreography events, using cinematic ball size.
+Defensive block/break events are only emitted when an actual defense triggers.
+
+The observer uses no random draws or mechanical mutations. It keeps at most 256
+persistent handles, 256 transient events and 60 recent history messages. Skill
+Demo's **Inspect effects** shows active source/event counts, the latest eight
+history messages and physical outlines. These are demo-only overlays; exported
+matches do not contain inspector controls or outlines.

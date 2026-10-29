@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../domain/power_up.dart';
+import '../application/power_up_system.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
 import 'power_up_sprites.dart';
@@ -222,6 +223,215 @@ class PowerUpPainter {
   /// Field power-ups, aim lines, bullets, mines, blasts and slashes. Call after the fan lines, before the
   /// balls. [showEffects] covers only the decorative blast flash; gameplay objects always draw.
   /// A separate finite effect on the caster, never reused as impact artwork.
+  static bool _persistentPaint(
+    Canvas canvas,
+    PowerUpSystem p,
+    PersistentSkillEffect e,
+    Offset at,
+    double radius,
+    Offset direction,
+    EffectRenderMode mode,
+  ) {
+    if (!e.isWorld &&
+        ((e.owner?.isEliminated ?? false) ||
+            (e.target?.isEliminated ?? false))) {
+      return false;
+    }
+    if (!e.active() ||
+        !e.skill.usesSpriteEffects(
+          globalSprite: mode == EffectRenderMode.sprite,
+        ) ||
+        !e.skill.visualBindings.containsKey(e.role)) {
+      return false;
+    }
+    final visual = p.match.skillLibrary.resolveVisual(e.skill, e.role);
+    if (visual == null) return false;
+    final steps = visual.durationSeconds == null
+        ? e.steps
+        : (visual.durationSeconds! * 60).round().clamp(1, 600);
+    // An explicit visual lifetime may end before its mechanical source. Do not
+    // restart it or bring legacy artwork back while the activation is alive.
+    if (visual.durationSeconds != null && e.age >= steps) return true;
+    final center = SkillEffectRenderer.attachment(
+      visual,
+      e.role,
+      at,
+      owner: e.owner?.position,
+      target: e.target?.position,
+      direction: direction,
+      radius:
+          e.owner?.radius ??
+          e.target?.radius ??
+          p.match.state.balls.first.radius,
+    );
+    SkillArtworkTint.begin(canvas, visual.tint);
+    final painted = SkillEffectRenderer.paint(
+      canvas,
+      visual,
+      center,
+      radius,
+      e.age,
+      steps,
+      direction: direction,
+      unitRadius:
+          e.owner?.radius ??
+          e.target?.radius ??
+          p.match.state.balls.first.radius,
+    );
+    SkillArtworkTint.end(canvas);
+    return painted;
+  }
+
+  /// Ground art is drawn beneath bodies. Curved samples use the physical arc,
+  /// with local placement relative to each inward-facing sample.
+  static bool paintPersistentZone(
+    Canvas canvas,
+    PowerUpSystem p,
+    Object source,
+    EffectRenderMode mode,
+  ) {
+    final entries = p.persistentEffects.handles.where(
+      (e) => identical(e.key, source),
+    );
+    if (entries.isEmpty) return false;
+    final e = entries.first;
+    if (e.role == SkillVisualRole.boundary) {
+      var painted = false;
+      for (final point in e.samples!()) {
+        final radial = point.distance == 0
+            ? const Offset(0, 1)
+            : point / point.distance;
+        // The source samples determine angular spacing; artwork scale never
+        // changes where collisions occur.
+        final base = radial * (p.match.arenaRadius - e.radius() * .4);
+        painted =
+            _persistentPaint(canvas, p, e, base, e.radius(), -radial, mode) ||
+            painted;
+      }
+      return painted;
+    }
+    if (source is FireWall) {
+      var painted = false;
+      for (var i = 0; i < 4; i++) {
+        final at =
+            source.center +
+            Offset.fromDirection(source.angle) *
+                p.fieldRadius *
+                2.4 *
+                ((i / 3) * 2 - 1);
+        painted =
+            _persistentPaint(
+              canvas,
+              p,
+              e,
+              at,
+              p.fieldRadius * 1.2,
+              e.direction,
+              mode,
+            ) ||
+            painted;
+      }
+      return painted;
+    }
+    return _persistentPaint(
+      canvas,
+      p,
+      e,
+      e.center(),
+      e.radius(),
+      e.direction,
+      mode,
+    );
+  }
+
+  static bool hasPersistentStatus(
+    PowerUpSystem? p,
+    SimulationBall b,
+    PowerUpKind kind,
+    EffectRenderMode mode,
+  ) {
+    if (p == null) return false;
+    return p.persistentEffects.handles.any((e) {
+      if (!e.active()) return false;
+      if (!identical(
+            e.role == SkillVisualRole.targetStatus ? e.target : e.owner,
+            b,
+          ) ||
+          (e.role != SkillVisualRole.ownerStatus &&
+              e.role != SkillVisualRole.targetStatus)) {
+        return false;
+      }
+      if (e.skill.baseKind != kind &&
+          b.activeEffectSkillIds[kind] != e.skill.id) {
+        return false;
+      }
+      if (!e.skill.usesSpriteEffects(
+            globalSprite: mode == EffectRenderMode.sprite,
+          ) ||
+          !e.skill.visualBindings.containsKey(e.role)) {
+        return false;
+      }
+      final v = p.match.skillLibrary.resolveVisual(e.skill, e.role);
+      return v != null && SpriteRegistry.has(v.spriteId);
+    });
+  }
+
+  static void paintPersistentOverlays(
+    Canvas canvas,
+    PowerUpSystem p,
+    EffectRenderMode mode,
+  ) {
+    for (final e in p.persistentEffects.handles) {
+      if (e.role != SkillVisualRole.ownerStatus &&
+          e.role != SkillVisualRole.targetStatus) {
+        continue;
+      }
+      final b = e.role == SkillVisualRole.targetStatus ? e.target : e.owner;
+      final direction = b == null
+          ? e.direction
+          : (b.aimTarget?.position ?? b.position + b.velocity) - b.position;
+      _persistentPaint(canvas, p, e, e.center(), e.radius(), direction, mode);
+    }
+    for (final event in p.persistentEffects.events) {
+      if (!event.skill.usesSpriteEffects(
+        globalSprite: mode == EffectRenderMode.sprite,
+      )) {
+        continue;
+      }
+      final effect = p.match.skillLibrary.resolveVisual(
+        event.skill,
+        event.role,
+      );
+      if (effect == null) continue;
+      final radius =
+          event.owner?.radius ??
+          event.target?.radius ??
+          p.match.state.balls.first.radius;
+      final center = SkillEffectRenderer.attachment(
+        effect,
+        event.role,
+        event.position,
+        owner: event.owner?.position,
+        target: event.target?.position,
+        direction: event.direction,
+        radius: radius,
+      );
+      SkillArtworkTint.begin(canvas, effect.tint);
+      SkillEffectRenderer.paint(
+        canvas,
+        effect,
+        center,
+        radius * 1.5,
+        event.age,
+        event.steps,
+        direction: event.direction,
+        unitRadius: radius,
+        fade: 1 - event.age / event.steps,
+      );
+      SkillArtworkTint.end(canvas);
+    }
+  }
+
   static void paintCasting(
     Canvas canvas,
     SimulationState state, {
@@ -231,6 +441,7 @@ class PowerUpPainter {
     if (!showEffects) return;
     final system = state.powerUps;
     if (system == null) return;
+    paintPersistentOverlays(canvas, system, effectRenderMode);
     for (final flash in system.muzzleArtwork) {
       if (!flash.skill.usesSpriteEffects(
         globalSprite: effectRenderMode == EffectRenderMode.sprite,
@@ -603,6 +814,10 @@ class PowerUpPainter {
     }
 
     for (final fire in p.burningZones) {
+      if (showEffects &&
+          paintPersistentZone(canvas, p, fire, explosionRenderMode)) {
+        continue;
+      }
       SkillArtworkTint.begin(
         canvas,
         p.artworkTint(PowerUpKind.molotov, ball: fire.owner),
@@ -688,6 +903,10 @@ class PowerUpPainter {
     }
 
     for (final wall in p.fireWalls) {
+      if (showEffects &&
+          paintPersistentZone(canvas, p, wall, explosionRenderMode)) {
+        continue;
+      }
       SkillArtworkTint.begin(
         canvas,
         p.artworkTint(PowerUpKind.fireWall, ball: wall.owner),
@@ -1357,6 +1576,10 @@ class PowerUpPainter {
     }
 
     for (final portal in p.portals) {
+      if (showEffects &&
+          paintPersistentZone(canvas, p, portal, explosionRenderMode)) {
+        continue;
+      }
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.portal));
       try {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.portal);
@@ -1425,6 +1648,10 @@ class PowerUpPainter {
     }
 
     for (final wall in p.spikeWalls) {
+      if (showEffects &&
+          paintPersistentZone(canvas, p, wall, explosionRenderMode)) {
+        continue;
+      }
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.spikeWall));
       try {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.spikeWall);
@@ -1464,6 +1691,10 @@ class PowerUpPainter {
     }
 
     for (final goo in p.stickyGoo) {
+      if (showEffects &&
+          paintPersistentZone(canvas, p, goo, explosionRenderMode)) {
+        continue;
+      }
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.stickyGoo));
       try {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.stickyGoo);
@@ -1489,6 +1720,10 @@ class PowerUpPainter {
       }
     }
     for (final swamp in p.poisonSwamps) {
+      if (showEffects &&
+          paintPersistentZone(canvas, p, swamp, explosionRenderMode)) {
+        continue;
+      }
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.poisonSwamp));
       try {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.poisonSwamp);
@@ -2042,6 +2277,17 @@ class PowerUpPainter {
     final p = state.powerUps;
     if (p == null) return;
     for (final tornado in p.tornadoes) {
+      if (!tornado.isAiming &&
+          hasPersistentStatus(
+            p,
+            tornado.target,
+            PowerUpKind.tornado,
+            globalEffectSprite
+                ? EffectRenderMode.sprite
+                : EffectRenderMode.vector,
+          )) {
+        continue;
+      }
       SkillArtworkTint.begin(
         canvas,
         p.artworkTint(PowerUpKind.tornado, ball: tornado.owner),
@@ -2964,6 +3210,7 @@ class PowerUpPainter {
     bool Function(PowerUpKind kind, int slot)? useWeaponSprite,
     int Function(PowerUpKind kind, int slot)? artworkTint,
     bool Function(PowerUpKind kind)? useEffectSprite,
+    bool Function(PowerUpKind kind)? customStatus,
     double? incomingAttackAngle,
     int Function(PowerUpKind kind, int slot)? firedWeaponHoldLeft,
     double Function(PowerUpKind kind, int slot)? weaponDisplayScale,
@@ -3057,7 +3304,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.burningLeft > 0) {
+    if (ball.burningLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.molotov) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.molotov, -1) ?? 0xFFFFFFFF,
@@ -3125,7 +3373,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.poisonLeft > 0) {
+    if (ball.poisonLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.poisonSwamp) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.poisonSwamp, -1) ?? 0xFFFFFFFF,
@@ -3160,7 +3409,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.timeBubbleLeft > 0) {
+    if (ball.timeBubbleLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.timeBubble) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.timeBubble, -1) ?? 0xFFFFFFFF,
@@ -3201,7 +3451,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.repulsorLeft > 0) {
+    if (ball.repulsorLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.repulsor) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.repulsor, -1) ?? 0xFFFFFFFF,
@@ -3221,7 +3472,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.vampireLeft > 0) {
+    if (ball.vampireLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.vampire) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.vampire, -1) ?? 0xFFFFFFFF,
@@ -3247,7 +3499,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.mirrorCharges > 0) {
+    if (ball.mirrorCharges > 0 &&
+        !(customStatus?.call(PowerUpKind.mirror) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.mirror, -1) ?? 0xFFFFFFFF,
@@ -3297,7 +3550,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.overchargeLeft > 0) {
+    if (ball.overchargeLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.overcharge) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.overcharge, -1) ?? 0xFFFFFFFF,
@@ -3351,7 +3605,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.gremlinShots > 0) {
+    if (ball.gremlinShots > 0 &&
+        !(customStatus?.call(PowerUpKind.gremlin) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.gremlin, -1) ?? 0xFFFFFFFF,
@@ -3370,7 +3625,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.magneticFieldLeft > 0) {
+    if (ball.magneticFieldLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.magneticField) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.magneticField, -1) ?? 0xFFFFFFFF,
@@ -3439,7 +3695,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.goldenArmorHits > 0) {
+    if (ball.goldenArmorHits > 0 &&
+        !(customStatus?.call(PowerUpKind.goldenArmor) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.goldenArmor, -1) ?? 0xFFFFFFFF,
@@ -3515,7 +3772,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.frozenLeft > 0) {
+    if (ball.frozenLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.freeze) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.freeze, -1) ?? 0xFFFFFFFF,
@@ -3530,7 +3788,8 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
       }
     }
-    if (ball.stickyGooLeft > 0) {
+    if (ball.stickyGooLeft > 0 &&
+        !(customStatus?.call(PowerUpKind.stickyGoo) ?? false)) {
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(PowerUpKind.stickyGoo, -1) ?? 0xFFFFFFFF,

@@ -13,6 +13,7 @@ import '../../settings/domain/app_settings.dart';
 import '../application/skill_demo_controller.dart';
 import '../domain/skill_library.dart';
 import 'skill_artwork_tint.dart';
+import 'skill_demo_inspector.dart';
 
 /// Manual editor showcase, separate from the full Power-up Test workbench.
 class SkillDemoDialog extends StatefulWidget {
@@ -41,6 +42,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   late final Ticker _ticker;
   Duration? _previous;
   bool _sound = true;
+  bool _inspect = false;
   bool _preparing = false;
   String? _error;
   final _heard = <String, int>{};
@@ -233,19 +235,32 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                               bounds.maxWidth,
                               math.max(180, math.min(400, size.height * .44)),
                             ),
-                            child: ArenaCanvas(
-                              key: const ValueKey('skill-demo-arena'),
-                              state: _demo.match.state,
-                              arenaRadius: 180,
-                              rimAngle: 0,
-                              look: BallLook.faces,
-                              arenaTitle: '',
-                              arenaSubtitle: '',
-                              showHpBars: true,
-                              showBallGlow: false,
-                              explosionRenderMode: widget.effectMode,
-                              projectileRenderMode: widget.effectMode,
-                              freezeRenderMode: widget.effectMode,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ArenaCanvas(
+                                  key: const ValueKey('skill-demo-arena'),
+                                  state: _demo.match.state,
+                                  arenaRadius: 180,
+                                  rimAngle: 0,
+                                  look: BallLook.faces,
+                                  arenaTitle: '',
+                                  arenaSubtitle: '',
+                                  showHpBars: true,
+                                  showBallGlow: false,
+                                  explosionRenderMode: widget.effectMode,
+                                  projectileRenderMode: widget.effectMode,
+                                  freezeRenderMode: widget.effectMode,
+                                ),
+                                if (_inspect)
+                                  IgnorePointer(
+                                    child: CustomPaint(
+                                      painter: SkillDemoCollisionPainter(
+                                        _demo.match,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -325,6 +340,56 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           ],
                         ),
                       ),
+                      SwitchListTile.adaptive(
+                        key: const ValueKey('skill-demo-inspector'),
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Inspect effects'),
+                        subtitle: const Text(
+                          'Collision outlines and activation events',
+                        ),
+                        value: _inspect,
+                        onChanged: (v) => setState(() => _inspect = v),
+                      ),
+                      if (_inspect)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Active sources: ${_demo.match.powerUps!.persistentEffects.handles.length} / transient events: ${_demo.match.powerUps!.persistentEffects.events.length}',
+                                ),
+                                const Text(
+                                  'Yellow: physical areas, independent of artwork size.',
+                                ),
+                                for (final event
+                                    in _demo
+                                        .match
+                                        .powerUps!
+                                        .persistentEffects
+                                        .history
+                                        .reversed
+                                        .take(8))
+                                  Text(
+                                    event,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                if (_demo
+                                    .match
+                                    .powerUps!
+                                    .persistentEffects
+                                    .history
+                                    .isEmpty)
+                                  const Text(
+                                    'Use the skill or Incoming hit to inspect events.',
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 6),
                       Text(
                         'Artwork references above show the first frame. The stage plays the actual move.',

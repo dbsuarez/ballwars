@@ -1,5 +1,19 @@
 /// Presentation roles are independent of damage, targeting and collision rules.
-enum SkillVisualRole { casting, impact, explosion, muzzle, trail }
+enum SkillVisualRole {
+  casting,
+  impact,
+  explosion,
+  muzzle,
+  trail,
+  ground,
+  boundary,
+  ownerStatus,
+  targetStatus,
+  block,
+  breakage,
+  expiry,
+  discard,
+}
 
 enum EffectAttachment { automatic, owner, hand, impact, target, projectile }
 
@@ -7,17 +21,26 @@ enum EffectFacing { upright, direction, mirror }
 
 List<EffectAttachment> effectAttachments(SkillVisualRole role) =>
     switch (role) {
-      SkillVisualRole.casting || SkillVisualRole.muzzle => [
+      SkillVisualRole.casting ||
+      SkillVisualRole.muzzle ||
+      SkillVisualRole.ownerStatus ||
+      SkillVisualRole.discard => [
         EffectAttachment.automatic,
         EffectAttachment.owner,
         EffectAttachment.hand,
       ],
-      SkillVisualRole.impact => [
+      SkillVisualRole.impact ||
+      SkillVisualRole.targetStatus ||
+      SkillVisualRole.block ||
+      SkillVisualRole.breakage => [
         EffectAttachment.automatic,
         EffectAttachment.impact,
         EffectAttachment.target,
       ],
-      SkillVisualRole.explosion => [
+      SkillVisualRole.explosion ||
+      SkillVisualRole.ground ||
+      SkillVisualRole.boundary ||
+      SkillVisualRole.expiry => [
         EffectAttachment.automatic,
         EffectAttachment.impact,
       ],
@@ -179,7 +202,9 @@ class ResolvedSkillEffect {
 Map<SkillVisualRole, SkillVisualBinding> parseVisualBindings(Object? raw) {
   if (raw == null) return const {};
   final object = _object(raw, 'Visual bindings');
-  if ((object['version'] != 1 && object['version'] != 2) ||
+  if ((object['version'] != 1 &&
+          object['version'] != 2 &&
+          object['version'] != 3) ||
       object['bindings'] is! Map) {
     throw const FormatException('Unsupported visual bindings schema.');
   }

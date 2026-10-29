@@ -649,7 +649,7 @@ class SkillDefinition {
     if (!castingFollowsActive) 'casting_follows_active': false,
     if (visualBindings.isNotEmpty)
       'visual_bindings': {
-        'version': 2,
+        'version': 3,
         'bindings': {
           for (final entry in visualBindings.entries)
             entry.key.name: entry.value.toJson(),
@@ -1160,8 +1160,8 @@ class SkillLibrary {
 
   /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
   static const int compactVersion = 3;
-  static const int visualVersion = 6;
-  static const int visualCompactVersion = 7;
+  static const int visualVersion = 8;
+  static const int visualCompactVersion = 9;
   static const int maxImportCharacters = 1000000;
   static const int maxImportedDefinitions = 512;
   static const int maxReplayCharacters = 48000;
@@ -1227,7 +1227,7 @@ class SkillLibrary {
       SkillVisualRole.casting => skill.castingSpriteId,
       SkillVisualRole.impact ||
       SkillVisualRole.explosion => skill.impactSpriteId,
-      SkillVisualRole.muzzle || SkillVisualRole.trail => null,
+      _ => null,
     };
     if (effect == null && legacy == null) return null;
     final effectiveBinding = effect == null ? null : binding;
@@ -1685,6 +1685,7 @@ class SkillLibrary {
     final version = value['version'];
     return version == compactVersion ||
         version == 5 ||
+        version == 7 ||
         version == visualCompactVersion;
   }
 
@@ -2047,4 +2048,84 @@ class SkillLibrary {
 
   static bool _same(SkillDefinition a, SkillDefinition b) =>
       a.toJson().toString() == b.toJson().toString();
+}
+
+/// Roles that have persistent/defensive native or composed event sources.
+bool persistentRoleAvailable(SkillDefinition skill, SkillVisualRole role) {
+  final kind = skill.baseKind;
+  final defensive = skill.isComposed
+      ? skill.effectType == SkillEffectType.shield ||
+            skill.secondaryEffectType == SkillEffectType.shield
+      : {
+          PowerUpKind.shield,
+          PowerUpKind.mirror,
+          PowerUpKind.goldenArmor,
+          PowerUpKind.magneticField,
+        }.contains(kind);
+  return switch (role) {
+    SkillVisualRole.ground =>
+      !skill.isComposed &&
+          {PowerUpKind.molotov, PowerUpKind.fireWall}.contains(kind),
+    SkillVisualRole.boundary =>
+      !skill.isComposed &&
+          {
+            PowerUpKind.spikeWall,
+            PowerUpKind.stickyGoo,
+            PowerUpKind.poisonSwamp,
+            PowerUpKind.portal,
+          }.contains(kind),
+    SkillVisualRole.ownerStatus =>
+      skill.isComposed
+          ? {skill.effectType, skill.secondaryEffectType}.any(
+              (e) =>
+                  {SkillEffectType.speed, SkillEffectType.shield}.contains(e),
+            )
+          : {
+              PowerUpKind.shield,
+              PowerUpKind.orbitingFlail,
+              PowerUpKind.speed,
+              PowerUpKind.ghost,
+              PowerUpKind.repulsor,
+              PowerUpKind.timeBubble,
+              PowerUpKind.vampire,
+              PowerUpKind.mirror,
+              PowerUpKind.overcharge,
+              PowerUpKind.magneticField,
+              PowerUpKind.goldenArmor,
+              PowerUpKind.energyWave,
+              PowerUpKind.busterSword,
+              PowerUpKind.ragingDemon,
+              PowerUpKind.shadowClone,
+              PowerUpKind.omegaTendrils,
+              PowerUpKind.flamethrower,
+            }.contains(kind),
+    SkillVisualRole.targetStatus =>
+      skill.isComposed
+          ? {skill.effectType, skill.secondaryEffectType}.any(
+              (e) => {
+                SkillEffectType.freeze,
+                SkillEffectType.stun,
+                SkillEffectType.damageOverTime,
+              }.contains(e),
+            )
+          : {
+              PowerUpKind.freeze,
+              PowerUpKind.molotov,
+              PowerUpKind.fireWall,
+              PowerUpKind.poisonSwamp,
+              PowerUpKind.stickyGoo,
+              PowerUpKind.gremlin,
+              PowerUpKind.tornado,
+            }.contains(kind),
+    SkillVisualRole.block => defensive,
+    SkillVisualRole.breakage =>
+      defensive && (skill.isComposed || kind != PowerUpKind.magneticField),
+    SkillVisualRole.discard => skill.resolvedCategory == SkillCategory.weapon,
+    SkillVisualRole.expiry =>
+      persistentRoleAvailable(skill, SkillVisualRole.ground) ||
+          persistentRoleAvailable(skill, SkillVisualRole.boundary) ||
+          persistentRoleAvailable(skill, SkillVisualRole.ownerStatus) ||
+          persistentRoleAvailable(skill, SkillVisualRole.targetStatus),
+    _ => false,
+  };
 }

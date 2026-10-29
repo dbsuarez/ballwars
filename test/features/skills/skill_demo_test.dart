@@ -182,6 +182,15 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('pause-demo-skill')));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Resume demo'), findsOneWidget);
+      final inspector = find.byKey(const ValueKey('skill-demo-inspector'));
+      await tester.ensureVisible(inspector);
+      await tester.pumpAndSettle();
+      await tester.tap(inspector);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Active sources:'), findsOneWidget);
+      expect(find.textContaining('physical areas'), findsOneWidget);
+      expect(find.textContaining('started'), findsWidgets);
+
       await tester.tap(find.byKey(const ValueKey('reset-demo-skill')));
       await tester.pumpAndSettle();
       expect(find.text('Use skill'), findsOneWidget);

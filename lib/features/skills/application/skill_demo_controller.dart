@@ -138,6 +138,7 @@ class SkillDemoController {
           match.state.balls.last.position - match.state.balls.first.position;
       match.state.balls.first.velocity = toward / toward.distance * 70;
     }
+    match.powerUps!.persistentEffects.sync();
     playing = true;
   }
 

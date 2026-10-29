@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/sprites/sprite_registry.dart';
@@ -15,6 +16,15 @@ import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
 class _Canvas extends Fake implements Canvas {
   final draws = <(ui.Image, Rect)>[];
+  final translations = <Offset>[];
+  final rotations = <double>[];
+  final scales = <Offset>[];
+  @override
+  void translate(double x, double y) => translations.add(Offset(x, y));
+  @override
+  void rotate(double angle) => rotations.add(angle);
+  @override
+  void scale(double x, [double? y]) => scales.add(Offset(x, y ?? x));
   @override
   Rect getLocalClipBounds() => const Rect.fromLTWH(0, 0, 720, 480);
   @override
@@ -93,12 +103,83 @@ MatchSimulationController match({bool bindings = true}) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'native impact follows its target and explosion follows recorded direction',
+    () {
+      final base = library();
+      final skill = base
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .copyWith(
+            visualBindings: const {
+              SkillVisualRole.impact: SkillVisualBinding(
+                effectId: 'hit',
+                attachment: EffectAttachment.target,
+              ),
+              SkillVisualRole.explosion: SkillVisualBinding(
+                effectId: 'blast',
+                facing: EffectFacing.direction,
+              ),
+            },
+          );
+      final c = MatchSimulationController(
+        _balls,
+        arenaRadius: 180,
+        mode: MatchMode.arsenal,
+        seed: 42,
+        lookAhead: false,
+        automaticSpeedUp: false,
+        skillLibrary: base.withDefinition(skill, PowerUpConfig.defaults),
+      );
+      final p = c.powerUps!..automaticSpawning = false;
+      final owner = c.state.balls.first
+        ..position = const Offset(-60, 0)
+        ..velocity = Offset.zero;
+      final target = c.state.balls.last
+        ..position = const Offset(60, 0)
+        ..velocity = Offset.zero;
+      p.pickUp(
+        owner,
+        FieldPowerUp(
+          kind: PowerUpKind.pistol,
+          position: owner.position,
+          spawnStep: 0,
+        ),
+      );
+      owner
+        ..aimTarget = target
+        ..aimLeft = 1;
+      for (var i = 0; i < 180 && p.hits == 0; i++) {
+        c.tick(1 / 60);
+      }
+      expect(p.hits, greaterThan(0));
+      expect(p.weaponImpacts.last.target, same(target));
+      target.position = const Offset(50, 40);
+      final hit = _Canvas();
+      PowerUpPainter.paintImpacts(hit, c.state);
+      expect(hit.translations.last, target.position);
+      p.explosions.add(
+        Explosion(
+          position: Offset.zero,
+          radius: 20,
+          direction: const Offset(0, 1),
+          kind: PowerUpKind.pistol,
+          skillId: 'builtin.pistol',
+        ),
+      );
+      final blast = _Canvas();
+      PowerUpPainter.paint(blast, c.state, 180);
+      expect(blast.rotations, contains(closeTo(math.pi / 2, 1e-9)));
+    },
+  );
   setUp(() async {
-    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+    await Future<void>.sync(() async {
       for (final entry in {
         'qa.hit': Colors.red,
         'qa.blast': Colors.blue,
+        'qa.muzzle': Colors.yellow,
+        'qa.trail': Colors.green,
       }.entries) {
+        if (SpriteRegistry.has(entry.key)) continue;
         final recorder = ui.PictureRecorder();
         Canvas(recorder).drawRect(
           const Rect.fromLTWH(0, 0, 16, 16),
@@ -112,6 +193,231 @@ void main() {
       }
     });
   });
+
+  test(
+    'muzzle appears on firing and a trail lives only with its projectile',
+    () {
+      var lib = library()
+          .withEffect(
+            const EffectDefinition(
+              id: 'muzzle',
+              name: 'Muzzle',
+              spriteId: 'qa.muzzle',
+              durationSeconds: 4 / 60,
+              playback: EffectPlayback.natural,
+            ),
+          )
+          .withEffect(
+            const EffectDefinition(
+              id: 'trail',
+              name: 'Trail',
+              spriteId: 'qa.trail',
+              playback: EffectPlayback.loop,
+            ),
+          );
+      final skill = lib.builtIn(PowerUpKind.pistol, PowerUpConfig.defaults);
+      lib = lib.withDefinition(
+        skill.copyWith(
+          visualBindings: {
+            ...skill.visualBindings,
+            SkillVisualRole.muzzle: const SkillVisualBinding(
+              effectId: 'muzzle',
+              attachment: EffectAttachment.hand,
+            ),
+            SkillVisualRole.trail: const SkillVisualBinding(
+              effectId: 'trail',
+              facing: EffectFacing.direction,
+            ),
+          },
+        ),
+        PowerUpConfig.defaults,
+      );
+      final c = MatchSimulationController(
+        _balls,
+        arenaRadius: 180,
+        mode: MatchMode.arsenal,
+        seed: 42,
+        lookAhead: false,
+        automaticSpeedUp: false,
+        skillLibrary: lib,
+      );
+      final p = c.powerUps!..automaticSpawning = false;
+      final owner = c.state.balls.first
+        ..position = const Offset(-60, 0)
+        ..velocity = Offset.zero;
+      final target = c.state.balls.last
+        ..position = const Offset(60, 0)
+        ..velocity = Offset.zero;
+      p.pickUp(
+        owner,
+        FieldPowerUp(
+          kind: PowerUpKind.pistol,
+          position: owner.position,
+          spawnStep: 0,
+        ),
+      );
+      expect(p.muzzleArtwork, isEmpty);
+      owner
+        ..aimTarget = target
+        ..aimLeft = 1;
+      c.tick(1 / 60);
+      expect(p.muzzleArtwork, hasLength(1));
+      expect(p.projectiles.single.visualAge, 0);
+      final muzzle = _Canvas();
+      PowerUpPainter.paintCasting(muzzle, c.state);
+      expect(
+        muzzle.draws.where(
+          (d) => identical(d.$1, SpriteRegistry.frame('qa.muzzle')),
+        ),
+        hasLength(1),
+      );
+      final trail = _Canvas();
+      PowerUpPainter.paint(trail, c.state, 180);
+      expect(
+        trail.draws.where(
+          (d) => identical(d.$1, SpriteRegistry.frame('qa.trail')),
+        ),
+        hasLength(1),
+      );
+      for (var i = 0; i < 4; i++) {
+        c.tick(1 / 60);
+      }
+      expect(p.muzzleArtwork, isEmpty);
+      expect(p.projectiles, isNotEmpty);
+      for (var i = 0; i < 180; i++) {
+        c.tick(1 / 60);
+      }
+      expect(p.projectiles, isEmpty);
+      final finished = _Canvas();
+      PowerUpPainter.paint(finished, c.state, 180);
+      expect(
+        finished.draws.where(
+          (d) => identical(d.$1, SpriteRegistry.frame('qa.trail')),
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  test('attachment, offsets, rotation and mirroring use ball-space units', () {
+    const effect = ResolvedSkillEffect(
+      spriteId: 'qa.hit',
+      scale: 1,
+      opacity: 1,
+      tint: 0xffffffff,
+      playback: EffectPlayback.once,
+      offsetX: 1,
+      offsetY: 2,
+      rotationDegrees: 90,
+      facing: EffectFacing.direction,
+      attachment: EffectAttachment.hand,
+    );
+    final anchor = SkillEffectRenderer.attachment(
+      effect,
+      SkillVisualRole.casting,
+      Offset.zero,
+      owner: const Offset(20, 30),
+      direction: const Offset(0, 1),
+      radius: 10,
+    );
+    expect(anchor, const Offset(20, 41));
+    final canvas = _Canvas();
+    SkillEffectRenderer.paint(
+      canvas,
+      effect,
+      anchor,
+      8,
+      0,
+      12,
+      direction: const Offset(0, 1),
+      unitRadius: 10,
+    );
+    expect(canvas.translations.single, const Offset(0, 51));
+    expect(canvas.rotations.single, closeTo(math.pi, 1e-9));
+    const mirror = ResolvedSkillEffect(
+      spriteId: 'qa.hit',
+      scale: 1,
+      opacity: 1,
+      tint: 0xffffffff,
+      playback: EffectPlayback.once,
+      facing: EffectFacing.mirror,
+      rotationDegrees: 30,
+    );
+    final mirrored = _Canvas();
+    SkillEffectRenderer.paint(
+      mirrored,
+      mirror,
+      Offset.zero,
+      8,
+      0,
+      12,
+      direction: const Offset(-1, 0),
+    );
+    expect(mirrored.scales.single, const Offset(-1, 1));
+    expect(mirrored.rotations.single, closeTo(-math.pi / 6, 1e-9));
+  });
+
+  test(
+    'casting uses local tint and opacity without applying the skill tint twice',
+    () async {
+      final base = library();
+      final skill = base
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .copyWith(
+            spriteTint: 0xffff0000,
+            visualBindings: const {
+              SkillVisualRole.casting: SkillVisualBinding(
+                effectId: 'hit',
+                tint: 0xff00ff00,
+                opacity: .5,
+              ),
+            },
+          );
+      final c = MatchSimulationController(
+        _balls,
+        arenaRadius: 180,
+        mode: MatchMode.arsenal,
+        seed: 42,
+        lookAhead: false,
+        skillLibrary: base.withDefinition(skill, PowerUpConfig.defaults),
+      );
+      c.powerUps!.automaticSpawning = false;
+      final owner = c.state.balls.first
+        ..position = const Offset(64, 64)
+        ..velocity = Offset.zero;
+      final target = c.state.balls.last
+        ..position = const Offset(150, 64)
+        ..velocity = Offset.zero;
+      c.powerUps!.pickUp(
+        owner,
+        FieldPowerUp(
+          kind: PowerUpKind.pistol,
+          position: owner.position,
+          spawnStep: 0,
+        ),
+      );
+      owner
+        ..aimLeft = 1
+        ..aimTarget = target;
+      c.tick(1 / 60);
+      await Future<void>.sync(() async {
+        final recorder = ui.PictureRecorder();
+        PowerUpPainter.paintCasting(Canvas(recorder), c.state);
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(128, 128);
+        final bytes = await image.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        );
+        final at = (64 * 128 + 64) * 4;
+        expect(bytes!.getUint8(at), 0);
+        expect(bytes.getUint8(at + 1), greaterThan(0));
+        expect(bytes.getUint8(at + 2), 0);
+        expect(bytes.getUint8(at + 3), closeTo(128, 1));
+        image.dispose();
+        picture.dispose();
+      });
+    },
+  );
 
   test(
     'non-interactive finisher uses the same distinct hit and explosion recipes',
@@ -201,7 +507,7 @@ void main() {
   test(
     'shared playback distinguishes fitted once, natural loop and hold-last',
     () async {
-      await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      await Future<void>.sync(() async {
         final recorder = ui.PictureRecorder();
         final canvas = Canvas(recorder);
         canvas.drawRect(
@@ -231,21 +537,21 @@ void main() {
             },
           ),
           image,
-          idPrefix: 'qa.playback',
+          idPrefix: 'custom.qa-playback',
         );
         image.dispose();
         picture.dispose();
       });
       ResolvedSkillEffect effect(EffectPlayback playback) =>
           ResolvedSkillEffect(
-            spriteId: 'qa.playback.spin',
+            spriteId: 'custom.qa-playback.spin',
             scale: 1,
             opacity: 1,
             tint: 0xffffffff,
             playback: playback,
           );
-      final first = SpriteRegistry.frame('qa.playback.spin', 0);
-      final last = SpriteRegistry.frame('qa.playback.spin', 1);
+      final first = SpriteRegistry.frame('custom.qa-playback.spin', 0);
+      final last = SpriteRegistry.frame('custom.qa-playback.spin', 1);
       expect(
         SkillEffectRenderer.frame(effect(EffectPlayback.once), 3, 20),
         same(first),

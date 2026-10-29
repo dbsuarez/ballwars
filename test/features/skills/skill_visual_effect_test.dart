@@ -47,6 +47,128 @@ SkillLibrary _library() {
 }
 
 void main() {
+  test(
+    'Phase C placement fields and new roles survive full and compact snapshots',
+    () {
+      var lib = _library().withEffect(
+        const EffectDefinition(
+          id: 'natural',
+          name: 'Natural',
+          spriteId: 'qa.frames',
+          playback: EffectPlayback.natural,
+          durationSeconds: 4 / 60,
+        ),
+      );
+      final skill = lib.builtIn(PowerUpKind.pistol, _tuning);
+      lib = lib.withDefinition(
+        skill.copyWith(
+          visualBindings: {
+            ...skill.visualBindings,
+            SkillVisualRole.muzzle: const SkillVisualBinding(
+              effectId: 'natural',
+              attachment: EffectAttachment.hand,
+              facing: EffectFacing.direction,
+              offsetX: .25,
+              offsetY: -.5,
+              rotationDegrees: 30,
+              tint: 0xff123456,
+            ),
+            SkillVisualRole.trail: const SkillVisualBinding(
+              effectId: 'effect.gold',
+              attachment: EffectAttachment.projectile,
+              facing: EffectFacing.mirror,
+              scale: 2,
+              opacity: .4,
+            ),
+          },
+        ),
+        _tuning,
+      );
+      expect(lib.toJson()['version'], 6);
+      expect(lib.toCompactJson()['version'], 7);
+      for (final source in [lib.toJson(), lib.toCompactJson()]) {
+        final loaded = SkillLibrary.importJson(jsonEncode(source));
+        final bindings = loaded
+            .builtIn(PowerUpKind.pistol, _tuning)
+            .visualBindings;
+        expect(
+          bindings[SkillVisualRole.muzzle]!.attachment,
+          EffectAttachment.hand,
+        );
+        expect(bindings[SkillVisualRole.muzzle]!.offsetX, .25);
+        expect(bindings[SkillVisualRole.muzzle]!.offsetY, -.5);
+        expect(bindings[SkillVisualRole.muzzle]!.rotationDegrees, 30);
+        expect(bindings[SkillVisualRole.muzzle]!.tint, 0xff123456);
+        expect(bindings[SkillVisualRole.trail]!.facing, EffectFacing.mirror);
+        expect(
+          loaded.effects['natural']!.durationSeconds,
+          closeTo(4 / 60, 1e-9),
+        );
+      }
+    },
+  );
+
+  test('Phase B full v4 and compact v5 effect data remains readable', () {
+    for (final compact in [false, true]) {
+      final data =
+          jsonDecode(
+                jsonEncode(
+                  compact ? _library().toCompactJson() : _library().toJson(),
+                ),
+              )
+              as Map;
+      data['version'] = compact ? 5 : 4;
+      for (final effect in data['effect_library']['definitions'] as List) {
+        effect['version'] = 1;
+      }
+      for (final skill in (data['overrides'] as Map).values) {
+        final bindings = skill['visual_bindings'];
+        bindings['version'] = 1;
+        for (final binding in (bindings['bindings'] as Map).values) {
+          (binding as Map).removeWhere(
+            (key, _) => !['effect', 'scale', 'opacity'].contains(key),
+          );
+        }
+      }
+      final loaded = SkillLibrary.importJson(jsonEncode(data));
+      final skill = loaded.builtIn(PowerUpKind.pistol, _tuning);
+      expect(skill.visualBindings, hasLength(3));
+      expect(
+        skill.visualBindings[SkillVisualRole.impact]!.attachment,
+        EffectAttachment.automatic,
+      );
+      expect(
+        loaded.resolveVisual(skill, SkillVisualRole.explosion)!.spriteId,
+        _blue.spriteId,
+      );
+    }
+  });
+
+  test(
+    'natural duration and unsupported attachment combinations fail clearly',
+    () {
+      expect(
+        () => EffectDefinition.fromJson({
+          ..._gold.toJson(),
+          'playback': 'natural',
+          'duration': null,
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => parseVisualBindings({
+          'version': 2,
+          'bindings': {
+            'trail': const SkillVisualBinding(
+              effectId: 'x',
+              attachment: EffectAttachment.owner,
+            ).toJson(),
+          },
+        }),
+        throwsFormatException,
+      );
+    },
+  );
   test('legacy libraries retain old versions and exact sprite fallbacks', () {
     final skill = SkillLibrary.defaults
         .builtIn(PowerUpKind.pistol, _tuning)
@@ -82,8 +204,11 @@ void main() {
     'full, compact and replay snapshots retain shared definitions and role bindings',
     () {
       final library = _library();
-      expect(library.toJson()['version'], 4);
-      expect(library.toCompactJson()['version'], 5);
+      expect(library.toJson()['version'], SkillLibrary.visualVersion);
+      expect(
+        library.toCompactJson()['version'],
+        SkillLibrary.visualCompactVersion,
+      );
       for (final loaded in [
         SkillLibrary.importJson(jsonEncode(library.toJson())),
         SkillLibrary.importJson(jsonEncode(library.toCompactJson())),

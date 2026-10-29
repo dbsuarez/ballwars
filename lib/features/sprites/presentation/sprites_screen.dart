@@ -444,15 +444,25 @@ Future<String?> selectSkillSprite(
   BuildContext context, {
   required String title,
   String? current,
+  bool includeBuiltIns = false,
 }) async => showDialog<String>(
   context: context,
-  builder: (context) => _SkillSpriteDialog(title: title, current: current),
+  builder: (context) => _SkillSpriteDialog(
+    title: title,
+    current: current,
+    includeBuiltIns: includeBuiltIns,
+  ),
 );
 
 class _SkillSpriteDialog extends StatefulWidget {
-  const _SkillSpriteDialog({required this.title, this.current});
+  const _SkillSpriteDialog({
+    required this.title,
+    this.current,
+    this.includeBuiltIns = false,
+  });
   final String title;
   final String? current;
+  final bool includeBuiltIns;
   @override
   State<_SkillSpriteDialog> createState() => _SkillSpriteDialogState();
 }
@@ -474,7 +484,7 @@ class _SkillSpriteDialogState extends State<_SkillSpriteDialog> {
           SpriteRegistry.ids
               .where(
                 (id) =>
-                    id.startsWith('custom.') &&
+                    (widget.includeBuiltIns || id.startsWith('custom.')) &&
                     ('${SpriteRegistry.displayLabel(id)} $id'
                         .toLowerCase()
                         .contains(_query)) &&
@@ -569,7 +579,9 @@ class _SkillSpriteDialogState extends State<_SkillSpriteDialog> {
                               leading: SpriteThumbnail(id: id),
                               title: Text(
                                 SpriteRegistry.collectionLabel(id) ??
-                                    SpriteRegistry.spriteLabel(id),
+                                    (widget.includeBuiltIns
+                                        ? 'Built-in / ${id.split('.').first}'
+                                        : SpriteRegistry.spriteLabel(id)),
                               ),
                               subtitle: Text(
                                 '${SpriteRegistry.spriteLabel(id).replaceAll('-', ' ')} - ${SpriteRegistry.frameCount(id)} frame(s)',

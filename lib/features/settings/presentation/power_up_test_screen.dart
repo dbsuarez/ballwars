@@ -26,10 +26,11 @@ import '../domain/app_settings.dart';
 
 /// Runs actual matches with local, admin-only scenario controls.
 class PowerUpTestScreen extends StatefulWidget {
-  const PowerUpTestScreen({super.key, this.initialSkill});
+  const PowerUpTestScreen({super.key, this.initialSkill, this.initialLibrary});
 
   /// An unsaved editor draft to inject into this test session only.
   final SkillDefinition? initialSkill;
+  final SkillLibrary? initialLibrary;
 
   @override
   State<PowerUpTestScreen> createState() => _PowerUpTestScreenState();
@@ -159,8 +160,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   Future<void> _loadRememberedChoices() async {
     final settings = AppSettingsScope.of(context);
     final library = widget.initialSkill == null
-        ? settings.skillLibrary
-        : settings.skillLibrary.withDefinition(
+        ? (widget.initialLibrary ?? settings.skillLibrary)
+        : (widget.initialLibrary ?? settings.skillLibrary).withDefinition(
             widget.initialSkill!,
             settings.powerUps,
           );
@@ -251,8 +252,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     final settings = AppSettingsScope.of(context);
     final initialSkill = widget.initialSkill;
     final skillLibrary = initialSkill == null
-        ? settings.skillLibrary
-        : settings.skillLibrary.withDefinition(
+        ? (widget.initialLibrary ?? settings.skillLibrary)
+        : (widget.initialLibrary ?? settings.skillLibrary).withDefinition(
             initialSkill.copyWith(enabled: true),
             settings.powerUps,
           );

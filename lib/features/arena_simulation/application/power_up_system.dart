@@ -120,6 +120,7 @@ class PowerUpSystem {
   final List<RagingDemonAttack> ragingDemonAttacks = [];
   final List<ShadowCloneAttack> shadowCloneAttacks = [];
   final List<CastingArtwork> castingArtwork = [];
+  final List<MuzzleArtwork> muzzleArtwork = [];
   final Map<Object, int> _cinematicFreezes = {};
   final Map<SimulationBall, int> _otherStuns = {};
   final List<ArenaThemeHazard> arenaThemeHazards = [];
@@ -153,7 +154,7 @@ class PowerUpSystem {
     final duration = match.skillLibrary
         .resolveVisual(skill, role)
         ?.durationSeconds;
-    return duration == null ? fallback : (duration * 60).round().clamp(6, 600);
+    return duration == null ? fallback : (duration * 60).round().clamp(1, 600);
   }
 
   int impactVisualSteps(WeaponImpact impact) =>
@@ -208,7 +209,7 @@ class PowerUpSystem {
         skill,
         ((visual.durationSeconds ?? skill.castingDurationSeconds) * 60)
             .round()
-            .clamp(6, 600),
+            .clamp(1, 600),
         active,
       ),
     );
@@ -357,6 +358,7 @@ class PowerUpSystem {
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
     castingArtwork.removeWhere((effect) => identical(effect.owner, ball));
+    muzzleArtwork.removeWhere((effect) => identical(effect.owner, ball));
     _otherStuns.remove(ball);
     if (match.simulationRevision >= 2) {
       ragingDemonAttacks.removeWhere(
@@ -821,6 +823,27 @@ class PowerUpSystem {
     int steps = firedWeaponHoldSteps,
     String? skillId,
   }) {
+    final skill = visualSkill(kind, ball: ball, skillId: skillId);
+    if (kind.isGun || skill.trigger == SkillTrigger.aimedFire) {
+      final visual = match.skillLibrary.resolveVisual(
+        skill,
+        SkillVisualRole.muzzle,
+      );
+      if (visual != null) {
+        final direction =
+            (ball.aimTarget?.position ?? ball.position + ball.velocity) -
+            ball.position;
+        muzzleArtwork.add(
+          MuzzleArtwork(
+            ball,
+            skill,
+            direction,
+            ((visual.durationSeconds ?? .12) * 60).round().clamp(1, 600),
+          ),
+        );
+        if (muzzleArtwork.length > 128) muzzleArtwork.removeAt(0);
+      }
+    }
     (_firedWeaponHold[ball] ??= {})[_holdKey(
       ball,
       kind,
@@ -1087,6 +1110,8 @@ class PowerUpSystem {
     weaponImpacts.add(
       WeaponImpact(
         position: target.position,
+        target: target,
+        direction: target.position - owner.position,
         strength: 1,
         kind: PowerUpKind.sniperRifle,
         skillId: visualSkill(PowerUpKind.sniperRifle, ball: owner).id,
@@ -1745,6 +1770,12 @@ class PowerUpSystem {
   /// Counts the speed boosts, ghosts and sweeps down, ages blasts; a ball that is out drops its waiting
   /// magnet.
   void _countDown() {
+    for (final flash in muzzleArtwork) {
+      flash.age++;
+    }
+    muzzleArtwork.removeWhere(
+      (flash) => flash.age >= flash.steps || !_alive(flash.owner),
+    );
     for (final effect in castingArtwork) {
       effect.age++;
     }
@@ -1905,7 +1936,14 @@ class PowerUpSystem {
         (skill.explodesOnImpact ? skill.range : _t.blastRadiusRatio);
     final balls = match.state.balls;
     blasts++;
-    explosions.add(Explosion(position: at, radius: radius, kind: kind));
+    explosions.add(
+      Explosion(
+        position: at,
+        radius: radius,
+        kind: kind,
+        direction: at - owner.position,
+      ),
+    );
     match.state.floatingTexts.spawn(at, 'KABOOM!', _blastColor);
     if (match.mode == MatchMode.allOut) {
       for (final ball in balls) {
@@ -2536,6 +2574,8 @@ class PowerUpSystem {
         weaponImpacts.add(
           WeaponImpact(
             position: target.position,
+            target: target,
+            direction: target.position - owner.position,
             strength: match.skillLibrary.screenShakeFor(skill),
             kind: skill.baseKind,
             skillId: skill.id,
@@ -3551,6 +3591,7 @@ class PowerUpSystem {
     final spawned = <Projectile>[];
     for (final p in projectiles) {
       if (p.spent) continue;
+      p.visualAge++;
       final from = p.position;
       final composedSkill = _composedProjectiles[p];
       if (p.homing) {
@@ -3700,6 +3741,7 @@ class PowerUpSystem {
               explosions.add(
                 Explosion(
                   position: end,
+                  direction: p.velocity,
                   radius: radius,
                   kind: composed.baseKind,
                   skillId: composed.id,
@@ -3739,7 +3781,14 @@ class PowerUpSystem {
               _explode(end, p.owner, p.kind);
               _sound(visualSkill(p.kind).soundCue);
             } else {
-              _hit(struck, p.kind, at: end, from: p.owner, volley: p.volley);
+              _hit(
+                struck,
+                p.kind,
+                at: end,
+                hitDirection: p.velocity,
+                from: p.owner,
+                volley: p.volley,
+              );
             }
           }
           _creditMove = null;
@@ -3753,6 +3802,7 @@ class PowerUpSystem {
                 position: end,
                 radius: match.arenaRadius * PowerUpTuning.blastRadiusRatio,
                 kind: PowerUpKind.rocketLauncher,
+                direction: p.velocity,
               ),
             );
           }
@@ -3823,6 +3873,7 @@ class PowerUpSystem {
     SimulationBall target,
     PowerUpKind kind, {
     Offset? at,
+    Offset? hitDirection,
     SimulationBall? from,
     int volley = 0,
     bool unavoidable = false,
@@ -3851,6 +3902,11 @@ class PowerUpSystem {
     weaponImpacts.add(
       WeaponImpact(
         position: impact,
+        target: target,
+        direction:
+            hitDirection ??
+            target.position -
+                (from?.position ?? at ?? target.position - const Offset(1, 0)),
         strength: match.skillLibrary.screenShakeFor(impactSkill),
         kind: kind,
         skillId: impactSkill.id,
@@ -4110,6 +4166,15 @@ class PowerUpSystem {
     return side(q1, q2, p1) * side(q1, q2, p2) < 0 &&
         side(p1, p2, q1) * side(p1, p2, q2) < 0;
   }
+}
+
+class MuzzleArtwork {
+  MuzzleArtwork(this.owner, this.skill, this.direction, this.steps);
+  final SimulationBall owner;
+  final SkillDefinition skill;
+  final Offset direction;
+  final int steps;
+  int age = 0;
 }
 
 class CastingArtwork {

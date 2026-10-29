@@ -369,7 +369,7 @@ class _YellBubble extends StatelessWidget {
 }
 
 class _FinisherPainter extends CustomPainter {
-  const _FinisherPainter({
+  _FinisherPainter({
     required this.winner,
     required this.loser,
     required this.winnerCenter,
@@ -415,8 +415,56 @@ class _FinisherPainter extends CustomPainter {
         : fallback;
   }
 
+  final List<
+    (ResolvedSkillEffect, SkillVisualRole, Offset, double, int, int, Offset)
+  >
+  _pending = [];
+  void _queue(
+    SkillVisualRole role,
+    Offset point,
+    double half,
+    int age,
+    int steps,
+    Offset direction,
+  ) {
+    if (skill == null ||
+        !effectSprites ||
+        !skill!.visualBindings.containsKey(role)) {
+      return;
+    }
+    final resolved = skillLibrary.resolveVisual(skill!, role);
+    if (resolved != null && SpriteRegistry.has(resolved.spriteId)) {
+      _pending.add((resolved, role, point, half, age, steps, direction));
+    }
+  }
+
+  void _trail(Canvas canvas, Offset point, Offset direction) {
+    final resolved = skill == null
+        ? null
+        : skillLibrary.resolveVisual(skill!, SkillVisualRole.trail);
+    if (resolved == null || hookProgress <= 0 || hookProgress >= 1) return;
+    final age = (hookProgress * 90).floor();
+    final steps = ((resolved.durationSeconds ?? 1.5) * 60).round().clamp(
+      1,
+      600,
+    );
+    if (resolved.durationSeconds != null && age >= steps) return;
+    final unit = direction.distance > 0
+        ? direction / direction.distance
+        : const Offset(1, 0);
+    _queue(
+      SkillVisualRole.trail,
+      point - unit * radius * .45,
+      radius * .65,
+      age,
+      steps,
+      direction,
+    );
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
+    _pending.clear();
     _paintSpeedLines(canvas);
     if (impactProgress > 0 && impactProgress < 1) {
       SkillArtworkTint.begin(canvas, artworkTint);
@@ -436,6 +484,60 @@ class _FinisherPainter extends CustomPainter {
     _paintMoveEffect(canvas);
     SkillArtworkTint.end(canvas);
     _paintWinner(canvas);
+    if (skill != null && hookProgress > 0 && hookProgress < 1) {
+      for (final role in [SkillVisualRole.casting, SkillVisualRole.muzzle]) {
+        final resolved = skillLibrary.resolveVisual(skill!, role);
+        if (resolved == null || !skill!.visualBindings.containsKey(role)) {
+          continue;
+        }
+        final age = (hookProgress * 90).floor();
+        final steps =
+            ((resolved.durationSeconds ??
+                        (role == SkillVisualRole.muzzle
+                            ? .12
+                            : skill!.castingDurationSeconds)) *
+                    60)
+                .round()
+                .clamp(1, 600);
+        if (age < steps) {
+          _queue(
+            role,
+            winnerCenter,
+            radius * (role == SkillVisualRole.muzzle ? .7 : 1.4),
+            age,
+            steps,
+            loserCenter - winnerCenter,
+          );
+        }
+      }
+    }
+    for (final request in _pending) {
+      final (effect, role, point, half, age, steps, direction) = request;
+      final center = SkillEffectRenderer.attachment(
+        effect,
+        role,
+        point,
+        owner: winnerCenter,
+        target: loserCenter,
+        direction: direction,
+        radius: radius,
+      );
+      SkillArtworkTint.begin(canvas, effect.tint);
+      SkillEffectRenderer.paint(
+        canvas,
+        effect,
+        center,
+        half,
+        age,
+        steps,
+        direction: direction,
+        unitRadius: radius,
+        fade: role == SkillVisualRole.trail
+            ? 1
+            : (1 - age / steps).clamp(0.0, 1.0),
+      );
+      SkillArtworkTint.end(canvas);
+    }
   }
 
   void _paintMoveEffect(Canvas canvas) {
@@ -629,6 +731,7 @@ class _FinisherPainter extends CustomPainter {
           for (var i = -3; i <= 3; i++) {
             final target = loserCenter + Offset(0, i * radius * 0.34);
             final pellet = Offset.lerp(from, target, hookProgress)!;
+            _trail(canvas, pellet, target - from);
             if (pelletSprite == null) {
               canvas.drawCircle(
                 pellet,
@@ -882,6 +985,13 @@ class _FinisherPainter extends CustomPainter {
                   winnerCenter,
                   (hookProgress - 0.58) / 0.42,
                 )!;
+          _trail(
+            canvas,
+            point,
+            hookProgress < .58
+                ? loserCenter - winnerCenter
+                : winnerCenter - loserCenter,
+          );
           final id = _projectileId(PowerUpSprites.boomerangProjectileId);
           final sprite = SpriteRegistry.frameAt(
             id,
@@ -1053,6 +1163,7 @@ class _FinisherPainter extends CustomPainter {
           final arc = math.sin(hookProgress * math.pi) * radius * 0.45;
           final point = to - Offset(0, arc);
           final direction = loserCenter - point;
+          _trail(canvas, point, direction);
           final angle = math.atan2(direction.dy, direction.dx);
           if (missile != null) {
             final pulse = 1 + math.sin(hookProgress * math.pi * 28) * 0.05;
@@ -1232,6 +1343,7 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintBullet(Canvas canvas, Offset center, double size) {
+    _trail(canvas, center, loserCenter - winnerCenter);
     final projectileId = _projectileId(
       PowerUpSprites.projectileId(
         _kind == PowerUpKind.gatling
@@ -1283,6 +1395,7 @@ class _FinisherPainter extends CustomPainter {
     Color color, {
     double angle = 0,
   }) {
+    _trail(canvas, point, Offset.fromDirection(angle));
     final spriteId = _projectileId(
       PowerUpSprites.projectileId(ProjectileSprite.bow),
     );
@@ -1337,6 +1450,7 @@ class _FinisherPainter extends CustomPainter {
       return;
     }
     final projectile = !held && kind.isGun;
+    if (projectile) _trail(canvas, center, loserCenter - winnerCenter);
     size *= projectile ? _projectileScale : _weaponScale;
     final customId = projectile
         ? skill?.projectileSpriteId ?? skill?.iconSpriteId
@@ -1376,16 +1490,15 @@ class _FinisherPainter extends CustomPainter {
         6,
         600,
       );
-      if (resolved != null &&
-          SkillEffectRenderer.paint(
-            canvas,
-            resolved,
-            center,
-            radius * (0.8 + Curves.easeOut.transform(progress) * 2.5),
-            (progress * steps).floor(),
-            steps,
-            fade: 1 - progress,
-          )) {
+      if (resolved != null && SpriteRegistry.has(resolved.spriteId)) {
+        _queue(
+          SkillVisualRole.explosion,
+          center,
+          radius * (0.8 + Curves.easeOut.transform(progress) * 2.5),
+          (progress * steps).floor(),
+          steps,
+          loserCenter - winnerCenter,
+        );
         return;
       }
     }
@@ -1677,16 +1790,15 @@ class _FinisherPainter extends CustomPainter {
         6,
         600,
       );
-      if (resolved != null &&
-          SkillEffectRenderer.paint(
-            canvas,
-            resolved,
-            center,
-            radius * 1.8,
-            (progress * steps).floor(),
-            steps,
-            fade: 1 - progress,
-          )) {
+      if (resolved != null && SpriteRegistry.has(resolved.spriteId)) {
+        _queue(
+          SkillVisualRole.impact,
+          center,
+          radius * 1.8,
+          (progress * steps).floor(),
+          steps,
+          loserCenter - winnerCenter,
+        );
         return;
       }
     }

@@ -1,92 +1,88 @@
-# Shared effect bindings (Phase B)
+# Shared effect bindings (Phases B-C)
 
-Implemented foundation: reusable visual definitions, skill references, shared
-playback, persistence and dependency tracking. The human-facing Effect Library
-editor and role controls are **Phase C**, not part of this batch. Existing
-artwork controls remain usable.
+Open **Edit Skill > Appearance > Effects**. Five role cards provide thumbnails,
+assignment dropdowns, New, Edit, Preview and Reset. The Effect Library also creates
+unassigned reusable definitions, searches names and prevents deletion while used.
 
-## Model
+## Authoring
 
-`SkillLibrary.effects` maps stable effect IDs to `EffectDefinition` entries.
-Each entry has its own schema version (currently 1), name, sprite ID, playback,
-optional duration, scale and opacity. At most 256 definitions are accepted.
+Keep the outer four Skill Editor tabs. The effect dialog has three focused tabs:
 
-`SkillDefinition.visualBindings` maps roles to `SkillVisualBinding` references.
-Phase B supports `casting`, `impact` (direct hit) and `explosion` separately.
-Bindings hold an effect ID and local scale/opacity multipliers. Multiple skills
-can share one definition without sharing their mechanical parameters.
+- Artwork: sprite picker with bundled/uploaded thumbnails, name, shared size and opacity.
+- Placement: role-appropriate attachment, local size/opacity, inherited or picked tint,
+  facing, forward/side offset in ball radii, and rotation.
+- Playback: fit once, loop, play and hold, or natural animation length; event lifetime
+  or an explicit visual duration.
 
-Use `SkillLibrary.withEffect` to add/replace a validated definition.
-`withoutEffect` refuses to remove a definition referenced by any skill.
-`resolveVisual` resolves the shared definition and the skill's local settings.
-`spriteReferences` includes both legacy art and bound effects.
+Shared artwork/playback edits affect every referencing skill. Placement belongs
+only to the current skill. Reset clears its assignment, retaining the reusable
+definition and legacy fallback. Changes stay local until Skill Save; Cancel leaves
+the saved library unchanged. Preview and Live Arena accept unsaved drafts.
 
-## Compatibility
+Roles without a corresponding mechanical event explain what to enable. Artwork
+does not create projectiles, explosions, damage or healing. A beam cannot gain a
+projectile trail merely by assigning artwork. Existing bindings can still be reset.
 
-No binding means the existing slot remains the source of artwork:
+## Model and compatibility
 
-| Role | Legacy fallback |
+`SkillLibrary.effects` maps stable IDs to `EffectDefinition` entries: schema,
+name, sprite ID, playback, duration, shared scale and opacity. Maximum 256 entries.
+`SkillDefinition.visualBindings` maps casting, muzzle, trail, impact (direct hit)
+and explosion roles to effect IDs and local placement/style overrides.
+`withEffect`, `withEffectDefinitions` and `withoutEffect` validate references;
+`resolveVisual` combines definition and binding settings.
+
+Definitions and binding containers write schema 2 and accept schema 1. Libraries
+with effects write full version 6 / compact version 7; Phase B versions 4 / 5
+remain readable. Libraries without effects retain versions 2 / 3. Invalid numbers,
+unknown roles, incompatible attachments and missing references fail clearly.
+Update older app builds before importing new snapshots.
+
+Bindings survive save/reload, duplication, import/export and replay encoding.
+Restore Defaults clears skill bindings but retains reusable definitions. Asset
+readiness, usage searches and replacement/deletion warnings include effect sprites.
+Readiness checks active artwork; usage warnings also retain legacy references.
+
+| Unassigned role | Fallback |
 |---|---|
-| Casting | `castingSpriteId`, casting scale and casting duration |
-| Direct hit | `impactSpriteId`, effect artwork scale and 12-step flash |
-| Explosion | `impactSpriteId`, effect artwork scale and existing blast lifetime |
+| Casting | Legacy casting sprite, scale and duration |
+| Direct hit | Legacy impact sprite, effect scale and hit flash |
+| Explosion | Legacy impact sprite, effect scale and blast lifetime |
+| Muzzle / trail | Existing native appearance |
 
-Legacy fallback values are retained when bindings are assigned. Missing
-definitions/assets are reported through import validation or runtime readiness;
-explicit runtime fallback can still use the old slot. A broken definition
-reference does not apply the broken binding's size/opacity to legacy artwork.
+The old Casting and Impact rows have a visible Legacy pill. Icon/held and
+projectile artwork retain their current controls. Broken bindings do not apply
+local style overrides to fallback artwork.
 
-The retained Casting and Impact artwork rows have a visible **Legacy** pill and
-a tooltip explaining their fallback role. Icon/held and projectile rows are not
-marked Legacy because their replacement bindings have not shipped. The older
-numbers and rarity editors also use the same pill widget.
+## Runtime
 
-Libraries without shared effects retain full version 2 / compact version 3.
-Libraries with definitions or bindings write full version 4 / compact version 5.
-Readers accept the old forms; unknown schemas, invalid numbers, duplicate IDs,
-unknown roles and missing effect references in imported libraries fail clearly.
-Older app builds cannot import these new snapshots; update before editing a
-library that uses the new schema.
+Arena, Skill Demo, live finishers and non-interactive video finishers resolve the
+same recipes. Finishers retain their signature choreography and cinematic timing.
+Muzzle events begin at actual shots and expire independently of held artwork.
+Trails use projectile-local age and end when the projectile is removed. Hit art
+can follow the target or stay at the impact point. Events retain attack direction.
+Cosmetic clocks do not consume simulation RNG or change damage and movement.
 
-## Runtime behavior
+Once fits frames to the event, loop follows sprite timing, hold-last plays then
+holds the last frame. Natural captures the manifest animation duration when
+authored and ends at that duration. Explicit visual duration accepts one simulation
+step through 10 seconds; it does not change mechanical timing or camera shake.
+Hit visuals have a 512-instance cap; muzzle visuals have a 128-instance cap.
 
-- Casting, direct hits and explosions use `SkillEffectRenderer` when bound.
-- Skill Demo uses the same arena renderer and resolves its artwork references
-  through the new model.
-- Live finishers resolve the same recipes. Video finishers now use the shared
-  non-interactive finisher painter rather than the old generic ring animation.
-- Cinematic playback fits its existing timeline; it does not lengthen the whole
-  cutscene to match an individual effect's duration.
-- `once` fits the frame sequence to the event duration; `loop` follows the
-  sprite's frame timing; `holdLast` follows natural timing and holds its last frame.
-- Optional duration affects visual lifetime only (0.1-10 seconds). Existing
-  damage, physical radius, flight, status timing and camera-shake windows stay
-  independent. Hit visuals have a 512-instance safety cap.
-- Final scale combines the existing skill/global role scale, effect definition,
-  binding and sprite metadata. Final opacity combines definition, binding,
-  sprite opacity and normal fade. Tint still uses the skill's existing setting;
-  binding-local tint/placement controls remain Phase C work.
-- Sprite readiness, usage filters, replacement warnings and backup/restore
-  warnings include effects. Even an unbound definition counts as an asset
-  reference, so deleting its artwork is not presented as harmless.
-- Readiness checks the active binding rather than an unused legacy fallback.
-  Usage/deletion warnings retain both references, so legacy assignments are
-  preserved without preventing a valid replacement effect from starting.
+Scale combines the role's existing skill/global scale, definition, binding and
+sprite metadata. Opacity combines definition, binding, sprite opacity and fade.
+Binding tint overrides skill tint once; unset tint inherits the skill. Placement
+uses actual ball radii and event direction. Sprite/Vector preferences still apply.
 
-Definitions and bindings survive save/reload, global changes, duplication,
-JSON import/export and compact/full replay snapshots. Per-skill Restore Defaults
-clears the skill's bindings while retaining reusable library definitions. Sprite
-contents are still mutable by stable ID; historical immutable asset revisions
-remain Phase E work.
+Ground/status/block/break/discard roles remain Phase D. Immutable historical
+sprite revisions and memory budgets remain Phase E.
 
 ## Verification
 
-New regression coverage includes old/new schema round trips, shared definition
-reuse, independent hit/explosion drawing, visual lifetime cleanup, playback
-policies, unchanged native damage/movement, dependency traversal, and preserving
-bindings when saving through the Skill Editor with Legacy pills visible.
-
-Delivery checks: 888 tests passed, analysis reported no issues, and the web
-release build passed. The Legacy pill layout was also rendered and inspected
-at 390 x 844. Production account synchronization and real-phone playback are
-not claimed as verified by these automated checks.
+898 automated tests passed, analysis reported no issues, and the web release
+build passed. Coverage includes old/new schema round trips, unsaved editor/demo
+flows, assignment/reset, library deletion guards, shared definitions, actual shot
+and trail lifetime, target attachment, tint/opacity pixels, placement transforms,
+finisher rendering and unchanged damage/movement. The effect editor was rendered
+and inspected at 390 x 844 and adjusted for readable phone controls and actions.
+Real Android/browser account synchronization and production acceptance remain manual.

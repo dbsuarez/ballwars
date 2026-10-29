@@ -23,6 +23,7 @@ import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
 import 'grip_preview_dialog.dart';
 import 'skill_demo_dialog.dart';
+import 'skill_effects_editor.dart';
 import '../../sprites/presentation/sprites_screen.dart';
 import 'skill_artwork_tint.dart';
 
@@ -62,7 +63,8 @@ class SkillManagementResult {
 }
 
 class _SkillEditResult {
-  const _SkillEditResult(this.skill, this.rarity);
+  const _SkillEditResult(this.skill, this.rarity, {this.effects});
+  final Map<String, EffectDefinition>? effects;
 
   final SkillDefinition skill;
   final PowerUpRarity? rarity;
@@ -194,7 +196,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             ? null
             : (edited) async {
                 final (definition, tuning) = _applyRarity(skill, edited);
-                final library = _library.withDefinition(definition, tuning);
+                final library = _library
+                    .withDefinition(definition, tuning)
+                    .withEffectDefinitions(edited.effects ?? _library.effects);
                 await widget.onSave!(
                   SkillManagementResult(
                     library: library,
@@ -215,7 +219,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     setState(() {
       final (definition, tuning) = _applyRarity(skill, edited);
       _tuning = tuning;
-      _library = _library.withDefinition(definition, _tuning);
+      _library = _library
+          .withDefinition(definition, _tuning)
+          .withEffectDefinitions(edited.effects ?? _library.effects);
     });
   }
 
@@ -1165,6 +1171,7 @@ class _SkillEditor extends StatefulWidget {
 }
 
 class _SkillEditorState extends State<_SkillEditor> {
+  late SkillLibrary _effectLibrary = widget.library;
   bool _saving = false;
   final _saveMessages = GlobalKey<ScaffoldMessengerState>();
 
@@ -1176,7 +1183,11 @@ class _SkillEditorState extends State<_SkillEditor> {
         _payloadProblem(result) != null) {
       return;
     }
-    final edited = _SkillEditResult(result, _rarity);
+    final edited = _SkillEditResult(
+      result,
+      _rarity,
+      effects: _effectLibrary.effects,
+    );
     if (widget.onSave == null) {
       Navigator.pop(context, edited);
       return;
@@ -1210,7 +1221,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late String? _payload = widget.skill.payloadSkillId;
 
   /// What's wrong with the fired-skill choice, checked against the library with this edit in it.
-  String? _payloadProblem(SkillDefinition skill) => widget.library
+  String? _payloadProblem(SkillDefinition skill) => _effectLibrary
       .withDefinition(skill, widget.tuning)
       .payloadProblem(skill.validated(), widget.tuning);
   late final Map<String, TextEditingController> _numbers = {
@@ -1370,7 +1381,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   late String _generatedDescription = powerUpDescription(
     widget.skill.baseKind,
     arsenal: true,
-    config: widget.library.applyTo(widget.tuning),
+    config: _effectLibrary.applyTo(widget.tuning),
   );
   late final _description = TextEditingController(
     text: widget.skill.description.isEmpty && !widget.skill.custom
@@ -1665,7 +1676,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     loser: loser,
                     move: skill.name,
                     skill: skill,
-                    skillLibrary: widget.library,
+                    skillLibrary: _effectLibrary,
                     visualMove: skill.displayKind.label,
                     artworkTint: skill.spriteTint,
                     effectSprites: skill.usesSpriteEffects(
@@ -1717,7 +1728,7 @@ class _SkillEditorState extends State<_SkillEditor> {
     final skill = _result;
     if (skill == null) return;
     final effectMode = AppSettingsScope.of(context).explosionRenderMode;
-    final library = widget.library;
+    final library = _effectLibrary;
     final tuning = widget.tuning;
     await showDialog<void>(
       context: context,
@@ -1734,7 +1745,12 @@ class _SkillEditorState extends State<_SkillEditor> {
     final skill = _result;
     if (skill == null) return;
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => PowerUpTestScreen(initialSkill: skill)),
+      MaterialPageRoute(
+        builder: (_) => PowerUpTestScreen(
+          initialSkill: skill,
+          initialLibrary: _effectLibrary,
+        ),
+      ),
     );
   }
 
@@ -1974,7 +1990,7 @@ class _SkillEditorState extends State<_SkillEditor> {
   /// Combine: look like any weapon, and fire any projectile skill (built-in or custom) as its shots.
   List<Widget> _combineSection(SkillDefinition? result) {
     final current = result ?? widget.skill;
-    final candidates = widget.library.payloadCandidates(current, widget.tuning);
+    final candidates = _effectLibrary.payloadCandidates(current, widget.tuning);
     final problem = result == null ? null : _payloadProblem(result);
     final known = candidates.any((c) => c.id == _payload);
     Widget option(PowerUpKind kind, String label) => Row(
@@ -2827,9 +2843,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'screenShake',
                           'Screen shake',
                           suffix: '0-1',
-                          enabled: widget.library.skillsSetScreenShake,
+                          enabled: _effectLibrary.skillsSetScreenShake,
                           disabledNote:
-                              'Using the global screen shake (${widget.library.screenShake}). '
+                              'Using the global screen shake (${_effectLibrary.screenShake}). '
                               'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                         if (_category == SkillCategory.weapon) ...[
@@ -3091,6 +3107,33 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'Appearance',
                         'Preview equipped artwork and projectiles at a shared reference size.',
                       ),
+                      if (result != null)
+                        SkillEffectsEditor(
+                          library: _effectLibrary.withDefinition(
+                            result,
+                            widget.tuning,
+                          ),
+                          skill: result,
+                          tuning: widget.tuning,
+                          onChanged: (library, bindings) => setState(() {
+                            _effectLibrary = library;
+                            _visualBindings = bindings;
+                          }),
+                          onPreview: (library, skill) => showDialog<void>(
+                            context: context,
+                            builder: (_) => SkillDemoDialog(
+                              skill: skill,
+                              library: library,
+                              tuning: widget.tuning,
+                              effectMode: AppSettingsScope.of(
+                                context,
+                              ).explosionRenderMode,
+                            ),
+                          ),
+                        ),
+                      const Divider(height: 32),
+                      const Text('Legacy artwork fallbacks'),
+                      const SizedBox(height: 8),
                       for (final slot in [
                         (
                           'Casting artwork',
@@ -3298,9 +3341,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'weaponDisplayScale',
                           'Equipped display scale',
                           suffix: 'x',
-                          enabled: widget.library.skillsSetWeaponDisplayScale,
+                          enabled: _effectLibrary.skillsSetWeaponDisplayScale,
                           disabledNote:
-                              'Using the global equipped artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.weaponDisplayScale)}x). '
+                              'Using the global equipped artwork size (${_SkillManagementScreenState._formatSeconds(_effectLibrary.weaponDisplayScale)}x). '
                               'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                         _number(
@@ -3362,9 +3405,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'pickupDisplayScale',
                         'Pickup artwork scale',
                         suffix: 'x',
-                        enabled: widget.library.skillsSetPickupDisplayScale,
+                        enabled: _effectLibrary.skillsSetPickupDisplayScale,
                         disabledNote:
-                            'Using the global pickup artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.pickupDisplayScale)}x). '
+                            'Using the global pickup artwork size (${_SkillManagementScreenState._formatSeconds(_effectLibrary.pickupDisplayScale)}x). '
                             'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                       ),
                       if (widget.skill.isComposed ||
@@ -3376,9 +3419,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                           'effectDisplayScale',
                           'Effect artwork scale',
                           suffix: 'x',
-                          enabled: widget.library.skillsSetEffectDisplayScale,
+                          enabled: _effectLibrary.skillsSetEffectDisplayScale,
                           disabledNote:
-                              'Using the global effect artwork size (${_SkillManagementScreenState._formatSeconds(widget.library.effectDisplayScale)}x). '
+                              'Using the global effect artwork size (${_SkillManagementScreenState._formatSeconds(_effectLibrary.effectDisplayScale)}x). '
                               'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                         ),
                       const SizedBox(height: 8),
@@ -3517,9 +3560,9 @@ class _SkillEditorState extends State<_SkillEditor> {
                         'bubbleDuration',
                         'Speech bubble duration',
                         suffix: 's',
-                        enabled: widget.library.skillsSetCallout,
+                        enabled: _effectLibrary.skillsSetCallout,
                         disabledNote:
-                            'Using the global callout duration (${widget.library.calloutSeconds} s). '
+                            'Using the global callout duration (${_effectLibrary.calloutSeconds} s). '
                             'Turn on "Let each skill set its own" in Built-in > Global to change it here.',
                       ),
                       const SizedBox(height: 12),

@@ -281,6 +281,9 @@ class Projectile {
 
   /// Set once it has hit something or left the arena.
   bool spent = false;
+
+  /// Cosmetic flight clock; never affects collision or randomness.
+  int visualAge = 0;
 }
 
 /// A spent firearm casing that falls under gravity and remains at the arena
@@ -427,8 +430,10 @@ class Explosion {
     required this.radius,
     this.kind,
     this.skillId,
+    this.direction = const Offset(1, 0),
   });
 
+  final Offset direction;
   final Offset position;
   final double radius;
   final PowerUpKind? kind;
@@ -444,8 +449,12 @@ class WeaponImpact {
     required this.strength,
     this.kind,
     this.skillId,
+    this.target,
+    this.direction = const Offset(1, 0),
   });
 
+  final SimulationBall? target;
+  final Offset direction;
   final Offset position;
   final double strength;
   final PowerUpKind? kind;

@@ -649,7 +649,7 @@ class SkillDefinition {
     if (!castingFollowsActive) 'casting_follows_active': false,
     if (visualBindings.isNotEmpty)
       'visual_bindings': {
-        'version': 1,
+        'version': 2,
         'bindings': {
           for (final entry in visualBindings.entries)
             entry.key.name: entry.value.toJson(),
@@ -1160,8 +1160,8 @@ class SkillLibrary {
 
   /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
   static const int compactVersion = 3;
-  static const int visualVersion = 4;
-  static const int visualCompactVersion = 5;
+  static const int visualVersion = 6;
+  static const int visualCompactVersion = 7;
   static const int maxImportCharacters = 1000000;
   static const int maxImportedDefinitions = 512;
   static const int maxReplayCharacters = 48000;
@@ -1191,6 +1191,20 @@ class SkillLibrary {
     );
   }
 
+  SkillLibrary withEffectDefinitions(
+    Map<String, EffectDefinition> definitions,
+  ) {
+    final parsed = parseEffectDefinitions({
+      'version': 1,
+      'definitions': definitions.values.map((e) => e.toJson()).toList(),
+    });
+    final result = _withSkills(effects: parsed);
+    if (result.visualBindingProblems.isNotEmpty) {
+      throw FormatException(result.visualBindingProblems.join('\n'));
+    }
+    return result;
+  }
+
   SkillLibrary withoutEffect(String id) {
     if ([
       ...overrides.values,
@@ -1209,9 +1223,12 @@ class SkillLibrary {
   ) {
     final binding = skill.visualBindings[role];
     final effect = binding == null ? null : effects[binding.effectId];
-    final legacy = role == SkillVisualRole.casting
-        ? skill.castingSpriteId
-        : skill.impactSpriteId;
+    final legacy = switch (role) {
+      SkillVisualRole.casting => skill.castingSpriteId,
+      SkillVisualRole.impact ||
+      SkillVisualRole.explosion => skill.impactSpriteId,
+      SkillVisualRole.muzzle || SkillVisualRole.trail => null,
+    };
     if (effect == null && legacy == null) return null;
     final effectiveBinding = effect == null ? null : binding;
     final baseScale = role == SkillVisualRole.casting
@@ -1221,7 +1238,12 @@ class SkillLibrary {
       spriteId: effect?.spriteId ?? legacy!,
       scale: baseScale * (effect?.scale ?? 1) * (effectiveBinding?.scale ?? 1),
       opacity: (effect?.opacity ?? 1) * (effectiveBinding?.opacity ?? 1),
-      tint: skill.spriteTint,
+      tint: effectiveBinding?.tint ?? skill.spriteTint,
+      attachment: effectiveBinding?.attachment ?? EffectAttachment.automatic,
+      facing: effectiveBinding?.facing ?? EffectFacing.upright,
+      offsetX: effectiveBinding?.offsetX ?? 0,
+      offsetY: effectiveBinding?.offsetY ?? 0,
+      rotationDegrees: effectiveBinding?.rotationDegrees ?? 0,
       playback: effect?.playback ?? EffectPlayback.once,
       durationSeconds: effect?.durationSeconds,
     );
@@ -1661,7 +1683,9 @@ class SkillLibrary {
 
   static bool _isCompact(Map value) {
     final version = value['version'];
-    return version == compactVersion || version == visualCompactVersion;
+    return version == compactVersion ||
+        version == 5 ||
+        version == visualCompactVersion;
   }
 
   /// Whether [stored] (this library as the server returned it) holds the

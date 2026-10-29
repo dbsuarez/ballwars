@@ -41,16 +41,18 @@ was changed.
 - [x] Mark retained fallback controls and older editors with a visible Legacy pill.
 
 Details: [EFFECT-BINDINGS.md](EFFECT-BINDINGS.md). This is the model/runtime
-foundation. The editing controls are still Phase C below.
+foundation; Phase C below adds authoring controls.
 
 ## C. Initial editable visual roles
 
-- [ ] Separate casting, muzzle, projectile trail, direct hit and explosion bindings.
-- [ ] Expose sprite, attachment, size, opacity, tint, facing, offset, playback and lifetime controls.
-- [ ] Keep the four Skill Editor tabs; group these controls under Appearance > Effects.
-- [ ] Provide thumbnails, role explanations, reset and preview controls.
-- [ ] Add effect-local age and once/loop/hold-last/natural-duration policies.
-- [ ] Preview each role through actual runtime events in Skill Demo.
+- [x] Separate casting, muzzle, projectile trail, direct hit and explosion bindings.
+- [x] Expose sprite, attachment, size, opacity, tint, facing, offset, playback and lifetime controls.
+- [x] Keep the four Skill Editor tabs; group these controls under Appearance > Effects.
+- [x] Provide thumbnails, role explanations, reset and preview controls.
+- [x] Add effect-local age and once/loop/hold-last/natural-duration policies.
+- [x] Preview each role through actual runtime events in Skill Demo.
+
+Verification: 898 tests passed, analysis reported no issues, and the web release build passed. The editor was rendered and inspected at 390 x 844; phone control widths and dialog actions were adjusted. Device and production acceptance remain manual.
 
 ## D. Persistent and defensive effects
 
@@ -76,4 +78,4 @@ foundation. The editing controls are still Phase C below.
 - [ ] Keep damage, reach, knockback and status timing independent of selected artwork.
 - [ ] Maintain old snapshots and add end-to-end composition regression coverage.
 
-A and B are implemented. C-F remain explicit follow-up work.
+A-C are implemented. D-F remain explicit follow-up work.

@@ -229,6 +229,41 @@ class PowerUpPainter {
     EffectRenderMode effectRenderMode = EffectRenderMode.sprite,
   }) {
     if (!showEffects) return;
+    final system = state.powerUps;
+    if (system == null) return;
+    for (final flash in system.muzzleArtwork) {
+      if (!flash.skill.usesSpriteEffects(
+        globalSprite: effectRenderMode == EffectRenderMode.sprite,
+      )) {
+        continue;
+      }
+      final resolved = system.match.skillLibrary.resolveVisual(
+        flash.skill,
+        SkillVisualRole.muzzle,
+      );
+      if (resolved == null) continue;
+      final center = SkillEffectRenderer.attachment(
+        resolved,
+        SkillVisualRole.muzzle,
+        flash.owner.position,
+        owner: flash.owner.position,
+        direction: flash.direction,
+        radius: flash.owner.radius,
+      );
+      SkillArtworkTint.begin(canvas, resolved.tint);
+      SkillEffectRenderer.paint(
+        canvas,
+        resolved,
+        center,
+        flash.owner.radius * .7,
+        flash.age,
+        flash.steps,
+        direction: flash.direction,
+        unitRadius: flash.owner.radius,
+        fade: 1 - flash.age / flash.steps,
+      );
+      SkillArtworkTint.end(canvas);
+    }
     for (final effect in state.powerUps?.castingArtwork ?? []) {
       final skill = effect.skill;
       if (effect.active != null && !effect.active!()) continue;
@@ -243,14 +278,28 @@ class PowerUpPainter {
       );
       if (skill.visualBindings.containsKey(SkillVisualRole.casting) &&
           resolved != null) {
-        SkillArtworkTint.begin(canvas, skill.spriteTint);
+        final direction =
+            (effect.owner.aimTarget?.position ??
+                effect.owner.position + effect.owner.velocity) -
+            effect.owner.position;
+        final center = SkillEffectRenderer.attachment(
+          resolved,
+          SkillVisualRole.casting,
+          effect.owner.position,
+          owner: effect.owner.position,
+          direction: direction,
+          radius: effect.owner.radius,
+        );
+        SkillArtworkTint.begin(canvas, resolved.tint);
         final painted = SkillEffectRenderer.paint(
           canvas,
           resolved,
-          effect.owner.position,
+          center,
           effect.owner.radius * 1.4,
           effect.age,
           effect.steps,
+          direction: direction,
+          unitRadius: effect.owner.radius,
           fade: effect.active != null
               ? 1
               : ((effect.steps - effect.age) / 6).clamp(0.0, 1.0),
@@ -314,14 +363,25 @@ class PowerUpPainter {
         );
         if (skill.visualBindings.containsKey(SkillVisualRole.impact) &&
             resolved != null) {
-          SkillArtworkTint.begin(canvas, skill.spriteTint);
+          final center = SkillEffectRenderer.attachment(
+            resolved,
+            SkillVisualRole.impact,
+            impact.position,
+            target: impact.target?.position,
+            direction: impact.direction,
+            radius: impact.target?.radius ?? p.match.state.balls.first.radius,
+          );
+          SkillArtworkTint.begin(canvas, resolved.tint);
           final painted = SkillEffectRenderer.paint(
             canvas,
             resolved,
-            impact.position,
+            center,
             r * 1.4,
             impact.age,
             steps,
+            direction: impact.direction,
+            unitRadius:
+                impact.target?.radius ?? p.match.state.balls.first.radius,
             fade: 1 - impact.age / steps,
           );
           SkillArtworkTint.end(canvas);
@@ -1005,9 +1065,22 @@ class PowerUpPainter {
     }
 
     for (final e in p.explosions) {
+      final blastSkill = e.kind == null
+          ? null
+          : p.visualSkill(e.kind!, skillId: e.skillId);
+      final boundBlast =
+          blastSkill == null ||
+              !blastSkill.visualBindings.containsKey(SkillVisualRole.explosion)
+          ? null
+          : p.match.skillLibrary.resolveVisual(
+              blastSkill,
+              SkillVisualRole.explosion,
+            );
       SkillArtworkTint.begin(
         canvas,
-        e.kind == null
+        boundBlast != null && SpriteRegistry.has(boundBlast.spriteId)
+            ? boundBlast.tint
+            : e.kind == null
             ? 0xFFFFFFFF
             : p.artworkTint(e.kind!, skillId: e.skillId),
       );
@@ -1042,6 +1115,8 @@ class PowerUpPainter {
                 e.age,
                 steps,
                 fade: fade,
+                direction: e.direction,
+                unitRadius: p.match.state.balls.first.radius,
               )) {
             continue;
           }
@@ -1545,6 +1620,37 @@ class PowerUpPainter {
       // Vector fallback keeps each projectile's configured dimensions.
       final len = math.max(6.0, r * 0.6);
       for (final shot in p.projectiles) {
+        final shotSkill = p.projectileVisualSkill(shot);
+        final trail = p.match.skillLibrary.resolveVisual(
+          shotSkill,
+          SkillVisualRole.trail,
+        );
+        if (trail != null &&
+            showEffects &&
+            p.usesEffectSprite(
+              shot.kind,
+              skillId: shotSkill.id,
+              globalSprite: explosionRenderMode == EffectRenderMode.sprite,
+            ) &&
+            (trail.durationSeconds == null ||
+                shot.visualAge < (trail.durationSeconds! * 60).round())) {
+          final direction = shot.velocity.distance > 0
+              ? shot.velocity / shot.velocity.distance
+              : const Offset(1, 0);
+          final center = shot.position - direction * r * .7;
+          SkillArtworkTint.begin(canvas, trail.tint);
+          SkillEffectRenderer.paint(
+            canvas,
+            trail,
+            center,
+            r,
+            shot.visualAge,
+            ((trail.durationSeconds ?? 1) * 60).round().clamp(1, 600),
+            direction: direction,
+            unitRadius: shot.owner.radius,
+          );
+          SkillArtworkTint.end(canvas);
+        }
         SkillArtworkTint.begin(
           canvas,
           p.artworkTint(shot.kind, projectile: shot),

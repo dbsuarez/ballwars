@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ballwars/features/match_setup/domain/loadout_preset.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/settings/presentation/app_settings_scope.dart';
@@ -90,6 +91,37 @@ void main() {
     await tester.tap(find.text(name).last);
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'loadout preset changes only the current mode and retains automatic traps',
+    (tester) async {
+      await DevicePrefs.write('power-ups-mayhem', 'sword');
+      await DevicePrefs.write('power-ups-allout', 'bow');
+      await pumpSetup(tester, initialMode: MatchMode.arsenal);
+      await openSettings(tester);
+      await tester.tap(find.text('Pickups: All'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('loadout-presets')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Military'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.pumpAndSettle();
+      final saved = powerUpsFromPref(
+        await DevicePrefs.read('power-ups-arsenal'),
+        PowerUpKind.values.length,
+      )!;
+      expect(saved.where((k) => !k.isTrap).toSet(), LoadoutPreset.military);
+      expect(saved, containsAll(PowerUpKind.values.where((k) => k.isTrap)));
+      expect(await DevicePrefs.read('power-ups-mayhem'), 'sword');
+      expect(await DevicePrefs.read('power-ups-allout'), 'bow');
+      await closeSettings(tester);
+      await tester.tap(find.byIcon(Icons.shuffle));
+      await tester.pump();
+      await tester.tap(find.text('Start'));
+      expect(started!.powerUps, saved);
+    },
+  );
 
   testWidgets(
     'categories are sorted by name; the first opens by default and Start needs two balls',

@@ -24,6 +24,8 @@ import '../domain/match_config.dart';
 import '../domain/pickup_count.dart';
 import '../domain/rarity_preset.dart';
 import 'rarity_preset_panel.dart';
+import 'loadout_presets_dialog.dart';
+import '../domain/loadout_preset.dart';
 import '../../arena_simulation/presentation/arena_selection_dialog.dart';
 
 /// Pick 2-4 balls from the built-in packs (Streaming, Countries, ...) or
@@ -1783,6 +1785,33 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
   late final Set<PowerUpKind> _on = {...widget.initial};
   late final Set<String> _customOn = {...widget.initialCustom};
 
+  Future<void> _presets() async {
+    final preset = await showDialog<LoadoutPreset>(
+      context: context,
+      builder: (_) => LoadoutPresetsDialog(
+        currentKinds: {..._on},
+        currentCustomIds: {..._customOn},
+        availableCustomNames: {
+          for (final skill in widget.customSkills) skill.id: skill.name,
+        },
+      ),
+    );
+    if (!mounted || preset == null) return;
+    setState(() {
+      _on
+        ..clear()
+        ..addAll(PowerUpKind.values.where((kind) => kind.isTrap))
+        ..addAll(preset.kinds);
+      _customOn
+        ..clear()
+        ..addAll(
+          preset.customIds.where(
+            (id) => widget.customSkills.any((skill) => skill.id == id),
+          ),
+        );
+    });
+  }
+
   List<SkillDefinition> _customIn(bool Function(SkillCategory category) test) =>
       widget.customSkills
           .where((skill) => test(skill.resolvedCategory))
@@ -1827,6 +1856,15 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('loadout-presets'),
+                  onPressed: _presets,
+                  icon: const Icon(Icons.bookmarks_outlined),
+                  label: const Text('Loadout presets'),
+                ),
+              ),
               Row(
                 children: [
                   Expanded(

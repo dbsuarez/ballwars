@@ -290,6 +290,14 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [ ] Cross-device synchronization passes.
 - [ ] Production deployment is verified.
 
+### Loadout presets (2026-10-29)
+
+- [x] Add built-in Military, Unique Weapons, Close Combat, Elemental and Power-ups Only pickup pools.
+- [x] Save named device-local selections, including independent custom skill IDs; rename and delete saved presets.
+- [x] Apply presets through the pickup selector while preserving automatic traps and independent per-mode match settings.
+- [x] Report unavailable custom skills and storage failures; validate empty/duplicate preset names.
+- [x] Document persistence scope and usage in [LOADOUT-PRESETS.md](LOADOUT-PRESETS.md).
+
 ## Current position
 
 2026-10-28 post-sprite follow-up:

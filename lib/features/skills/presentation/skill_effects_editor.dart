@@ -7,6 +7,7 @@ import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../sprites/presentation/sprites_screen.dart';
 import '../domain/skill_library.dart';
+import 'effect_placement_preview.dart';
 
 String effectRoleLabel(SkillVisualRole role) => switch (role) {
   SkillVisualRole.casting => 'Casting',
@@ -57,7 +58,9 @@ class SkillEffectsEditor extends StatefulWidget {
     required this.tuning,
     required this.onChanged,
     required this.onPreview,
+    this.roles,
   });
+  final Set<SkillVisualRole>? roles;
   final SkillLibrary library;
   final SkillDefinition skill;
   final PowerUpConfig tuning;
@@ -78,27 +81,29 @@ class _SkillEffectsEditorState extends State<SkillEffectsEditor> {
   Future<void> Function(SkillLibrary, SkillDefinition) get onPreview =>
       widget.onPreview;
   int _group = 0;
-  bool inGroup(SkillVisualRole role) => switch (_group) {
-    0 => {
-      SkillVisualRole.casting,
-      SkillVisualRole.muzzle,
-      SkillVisualRole.trail,
-      SkillVisualRole.impact,
-      SkillVisualRole.explosion,
-    }.contains(role),
-    1 => {
-      SkillVisualRole.ground,
-      SkillVisualRole.boundary,
-      SkillVisualRole.ownerStatus,
-      SkillVisualRole.targetStatus,
-    }.contains(role),
-    _ => {
-      SkillVisualRole.block,
-      SkillVisualRole.breakage,
-      SkillVisualRole.expiry,
-      SkillVisualRole.discard,
-    }.contains(role),
-  };
+  bool inGroup(SkillVisualRole role) => widget.roles != null
+      ? widget.roles!.contains(role)
+      : switch (_group) {
+          0 => {
+            SkillVisualRole.casting,
+            SkillVisualRole.muzzle,
+            SkillVisualRole.trail,
+            SkillVisualRole.impact,
+            SkillVisualRole.explosion,
+          }.contains(role),
+          1 => {
+            SkillVisualRole.ground,
+            SkillVisualRole.boundary,
+            SkillVisualRole.ownerStatus,
+            SkillVisualRole.targetStatus,
+          }.contains(role),
+          _ => {
+            SkillVisualRole.block,
+            SkillVisualRole.breakage,
+            SkillVisualRole.expiry,
+            SkillVisualRole.discard,
+          }.contains(role),
+        };
   bool available(SkillVisualRole role) {
     final flying = skill.isComposed
         ? skill.delivery == SkillDelivery.projectile ||
@@ -240,16 +245,17 @@ class _SkillEffectsEditorState extends State<SkillEffectsEditor> {
         'Shared artwork, separate from damage. Changes here are saved with this skill.',
       ),
       const SizedBox(height: 10),
-      SegmentedButton<int>(
-        segments: const [
-          ButtonSegment(value: 0, label: Text('Attack')),
-          ButtonSegment(value: 1, label: Text('Persistent')),
-          ButtonSegment(value: 2, label: Text('Events')),
-        ],
-        showSelectedIcon: false,
-        selected: {_group},
-        onSelectionChanged: (values) => setState(() => _group = values.first),
-      ),
+      if (widget.roles == null)
+        SegmentedButton<int>(
+          segments: const [
+            ButtonSegment(value: 0, label: Text('Attack')),
+            ButtonSegment(value: 1, label: Text('Persistent')),
+            ButtonSegment(value: 2, label: Text('Events')),
+          ],
+          showSelectedIcon: false,
+          selected: {_group},
+          onSelectionChanged: (values) => setState(() => _group = values.first),
+        ),
       for (final role in SkillVisualRole.values.where(inGroup))
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -459,6 +465,7 @@ class _EffectEditorState extends State<_EffectEditor> {
   late double sharedOpacity = widget.definition?.opacity ?? 1;
   late double opacity = widget.binding?.opacity ?? 1;
   String? error;
+  double _previewProgress = 0;
   @override
   void initState() {
     super.initState();
@@ -567,6 +574,7 @@ class _EffectEditorState extends State<_EffectEditor> {
     TextField(
       key: ValueKey('effect-field-$key'),
       controller: numbers[key],
+      onChanged: (_) => setState(() {}),
       keyboardType: const TextInputType.numberWithOptions(
         decimal: true,
         signed: true,
@@ -577,6 +585,75 @@ class _EffectEditorState extends State<_EffectEditor> {
         suffixText: suffix,
       ),
     ),
+  );
+  double safeNumber(String key, double fallback) {
+    final v = double.tryParse(numbers[key]!.text);
+    return v != null && v.isFinite ? v : fallback;
+  }
+
+  Widget placementPreview() => ValueListenableBuilder<int>(
+    valueListenable: SpriteRegistry.revision,
+    builder: (_, _, _) => Column(
+      children: [
+        EffectPlacementPreview(
+          key: const ValueKey('effect-placement-preview'),
+          height: MediaQuery.viewInsetsOf(context).bottom > 0 ? 64 : 140,
+          role: widget.role ?? SkillVisualRole.casting,
+          progress: _previewProgress,
+          effect: sprite == null
+              ? null
+              : ResolvedSkillEffect(
+                  spriteId: sprite!,
+                  scale:
+                      safeNumber('sharedSize', 1).clamp(.1, 4) *
+                      safeNumber('size', 1).clamp(.1, 4),
+                  opacity: sharedOpacity * opacity,
+                  tint: tint ?? widget.tint,
+                  attachment: attachment,
+                  facing: facing,
+                  offsetX: safeNumber('x', 0).clamp(-5, 5),
+                  offsetY: safeNumber('y', 0).clamp(-5, 5),
+                  rotationDegrees: safeNumber('rotation', 0).clamp(-360, 360),
+                  playback: playback,
+                  durationSeconds: fixed ? safeNumber('duration', .5) : null,
+                ),
+        ),
+        if (MediaQuery.viewInsetsOf(context).bottom == 0 &&
+            sprite != null &&
+            SpriteRegistry.frameCount(sprite!) > 1)
+          row(
+            'Animation frame',
+            Slider(
+              key: const ValueKey('effect-preview-frame'),
+              value: _previewProgress,
+              onChanged: (v) => setState(() => _previewProgress = v),
+            ),
+          ),
+      ],
+    ),
+  );
+  Widget adjustable(
+    String key,
+    String label,
+    double min,
+    double max, {
+    String? suffix,
+  }) => Column(
+    children: [
+      numeric(key, label, suffix: suffix),
+      Slider(
+        key: ValueKey('effect-slider-$key'),
+        value: safeNumber(key, 0).clamp(min, max),
+        min: min,
+        max: max,
+        label:
+            '${safeNumber(key, 0).toStringAsFixed(key == 'rotation' ? 0 : 2)}${suffix ?? ''}',
+        onChanged: (v) => setState(
+          () =>
+              numbers[key]!.text = v.toStringAsFixed(key == 'rotation' ? 0 : 2),
+        ),
+      ),
+    ],
   );
   Widget percent(String label, double value, ValueChanged<double> changed) =>
       row(
@@ -607,7 +684,15 @@ class _EffectEditorState extends State<_EffectEditor> {
       contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       content: SizedBox(
         width: 620,
-        height: math.min(620, MediaQuery.sizeOf(context).height * .68),
+        height: math.min(
+          620,
+          math.max(
+            180,
+            MediaQuery.sizeOf(context).height -
+                MediaQuery.viewInsetsOf(context).bottom -
+                180,
+          ),
+        ),
         child: Column(
           children: [
             if (error != null)
@@ -626,6 +711,7 @@ class _EffectEditorState extends State<_EffectEditor> {
                 const Tab(text: 'Playback'),
               ],
             ),
+            placementPreview(),
             Expanded(
               child: TabBarView(
                 children: [
@@ -674,7 +760,13 @@ class _EffectEditorState extends State<_EffectEditor> {
                           }
                         },
                       ),
-                      numeric('sharedSize', 'Shared size', suffix: 'x'),
+                      adjustable(
+                        'sharedSize',
+                        'Shared size',
+                        .1,
+                        4,
+                        suffix: 'x',
+                      ),
                       percent(
                         'Shared opacity',
                         sharedOpacity,
@@ -714,7 +806,7 @@ class _EffectEditorState extends State<_EffectEditor> {
                             onChanged: (v) => setState(() => attachment = v!),
                           ),
                         ),
-                        numeric('size', 'Local size', suffix: 'x'),
+                        adjustable('size', 'Local size', .1, 4, suffix: 'x'),
                         percent('Local opacity', opacity, (v) => opacity = v),
                         row(
                           'Use skill tint',
@@ -768,9 +860,15 @@ class _EffectEditorState extends State<_EffectEditor> {
                             onChanged: (v) => setState(() => facing = v!),
                           ),
                         ),
-                        numeric('x', 'Forward offset', suffix: 'r'),
-                        numeric('y', 'Side offset', suffix: 'r'),
-                        numeric('rotation', 'Rotation', suffix: 'deg'),
+                        adjustable('x', 'Forward offset', -5, 5, suffix: 'r'),
+                        adjustable('y', 'Side offset', -5, 5, suffix: 'r'),
+                        adjustable(
+                          'rotation',
+                          'Rotation',
+                          -360,
+                          360,
+                          suffix: 'deg',
+                        ),
                         const Text(
                           'Offsets are measured in ball radii along and across the attack direction. Placement does not change collision.',
                         ),

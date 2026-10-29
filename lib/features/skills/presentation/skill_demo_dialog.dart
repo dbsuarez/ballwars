@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../../../core/audio/game_audio.dart';
+import '../../../core/offline/device_prefs.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../arena_simulation/domain/power_up.dart';
@@ -42,6 +43,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   late final Ticker _ticker;
   Duration? _previous;
   bool _sound = true;
+  bool _speedChosen = false;
   bool _inspect = false;
   bool _preparing = false;
   String? _error;
@@ -56,9 +58,19 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   void initState() {
     super.initState();
     _ticker = createTicker(_tick);
+    _restoreSpeed();
     PowerUpSprites.load().then((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  Future<void> _restoreSpeed() async {
+    final speed = double.tryParse(
+      await DevicePrefs.read('skill-demo-speed') ?? '',
+    );
+    if (mounted && !_speedChosen && {.25, .5, 1.0}.contains(speed)) {
+      setState(() => _demo.speed = speed!);
+    }
   }
 
   void _audio() {
@@ -464,8 +476,12 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                                   child: Text('${value}x'),
                                 ),
                             ],
-                            onChanged: (value) =>
-                                setState(() => _demo.speed = value!),
+                            onChanged: (value) {
+                              if (value == null) return;
+                              _speedChosen = true;
+                              setState(() => _demo.speed = value);
+                              DevicePrefs.write('skill-demo-speed', value);
+                            },
                           ),
                         ],
                       ),

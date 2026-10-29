@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_battle_screen.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_canvas.dart';
+import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
@@ -49,6 +50,8 @@ bool _shows(String label) =>
     find.byTooltip(label).evaluate().isNotEmpty;
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() => Future<void>.sync(PowerUpSprites.load));
   testWidgets(
     'missing skill artwork waits for an explicit fallback before countdown',
     (tester) async {

@@ -287,7 +287,7 @@ owner dies. This also avoids permanent caster overlays.
 - [x] B. Add versioned EffectDefinition + SkillVisualBinding with backward-compatible slot migration. See [binding implementation](EFFECT-BINDINGS.md).
 - [x] C. Expose casting, muzzle, trail, hit and explosion roles with per-binding preview controls.
 - [x] D. Add ground/status/block/break roles and migrate native effects incrementally.
-- [ ] E. Freeze replay asset revisions; add decoded-memory and effect-instance budgets.
+- [x] E. Freeze replay asset revisions; add decoded-memory and effect-instance budgets. Android profiling acceptance remains pending.
 - [ ] F. Extend the mechanical effect graph only after the visual contract is reliable.
 
 Do not mark these recommendations implemented based on this audit.
@@ -299,3 +299,8 @@ Do not mark these recommendations implemented based on this audit.
 These protect current supported behavior; passing them does not prove the gaps
 above are covered. No new artwork was generated or edited, and no production
 database or asset changes were made.
+
+
+## Phase E implementation update, 2026-10-29
+
+Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Android performance and device/production acceptance remain manual; Phase F is pending. Migration 024 was applied by the user.

@@ -7,6 +7,31 @@ import 'custom_sprite_loader.dart';
 /// One dependency barrier shared by matches, demos and exports.
 class SkillSpriteReadiness {
   static CustomSpriteLoader? loader;
+  static final _historical = CustomSpriteLoader(null);
+  static Map<String, String> freezeIds(Iterable<String> ids) {
+    final result = <String, String>{};
+    for (final id in ids) {
+      if (!SpriteRegistry.has(id)) continue;
+      final custom = SpriteRegistry.frozenIds[id];
+      if (custom != null) {
+        result[id] = custom;
+        continue;
+      }
+      if (!id.startsWith('custom.') &&
+          !id.startsWith('built.') &&
+          RegExp(r'^[a-f0-9]{40}$').hasMatch(SpriteRegistry.assetRevision)) {
+        final target = 'built.${SpriteRegistry.assetRevision}.$id';
+        if (target.length > 128) continue;
+        SpriteRegistry.alias(
+          id,
+          target,
+          'built.${SpriteRegistry.assetRevision}',
+        );
+        result[id] = target;
+      }
+    }
+    return result;
+  }
 
   static Set<String> dependencies({
     required SkillLibrary library,
@@ -51,6 +76,8 @@ class SkillSpriteReadiness {
     Set<PowerUpKind>? kinds,
     Set<String>? customIds,
     bool includeTraps = true,
+    Iterable<String> extraIds = const [],
+    Map<String, Object> embedded = const {},
   }) async {
     final ids = dependencies(
       library: library,
@@ -59,12 +86,17 @@ class SkillSpriteReadiness {
       customIds: customIds,
       includeTraps: includeTraps,
     );
+    ids.addAll(extraIds);
+    if (embedded.isNotEmpty) await SpriteRegistry.restoreEmbedded(embedded);
     if (ids.isEmpty) return {};
     if (ids.every(SpriteRegistry.has) && loader?.isLoading != true) return {};
     if (ids.any((id) => !id.startsWith('custom.'))) await SpriteRegistry.load();
     if (loader != null) {
       await loader!.load().timeout(const Duration(seconds: 15));
     }
+    await (loader ?? _historical)
+        .loadRevisions(ids)
+        .timeout(const Duration(seconds: 30));
     return ids.where((id) => !SpriteRegistry.has(id)).toSet();
   }
 }

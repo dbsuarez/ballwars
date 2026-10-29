@@ -1,0 +1,22 @@
+{
+  "balls": 6,
+  "simulation_steps": 720,
+  "raster_frames": 120,
+  "cpu": {
+    "mean_us": 558.4722222222222,
+    "p95_us": 1300
+  },
+  "raster": {
+    "mean_us": 21253.333333333332,
+    "p95_us": 37900
+  },
+  "decoded_bytes": 4796416,
+  "peak_projectiles": 15,
+  "peak_sources": 7,
+  "peak_particles": 475,
+  "environment": {
+    "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "cores": 16,
+    "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001636) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  }
+}

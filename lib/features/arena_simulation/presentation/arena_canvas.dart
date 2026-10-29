@@ -1,3 +1,4 @@
+import '../../../core/sprites/visual_quality.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/simulation_state.dart';
@@ -12,6 +13,7 @@ class ArenaCanvas extends StatelessWidget {
   final double? rimInset;
   final double rimAngle;
   final bool showEffects;
+  final Map<String, String> artworkRevisions;
   final bool showBallGlow;
   final double ballGlowWidth;
   final String arenaTitle;
@@ -40,6 +42,7 @@ class ArenaCanvas extends StatelessWidget {
     this.rimInset,
     required this.rimAngle,
     this.showEffects = true,
+    this.artworkRevisions = const {},
     this.showBallGlow = true,
     this.ballGlowWidth = 4,
     this.arenaTitle = 'dbsuarez',
@@ -61,32 +64,37 @@ class ArenaCanvas extends StatelessWidget {
     final c = BallWarsColors.of(context);
     return AspectRatio(
       aspectRatio: 1,
-      child: CustomPaint(
-        painter: ArenaPainter(
-          state: state,
-          arenaRadius: arenaRadius,
-          worldRadius: worldRadius,
-          rimInset: rimInset,
-          rimAngle: rimAngle,
-          showEffects: showEffects,
-          showBallGlow: showBallGlow,
-          ballGlowWidth: ballGlowWidth,
-          arenaTitle: arenaTitle,
-          arenaSubtitle: arenaSubtitle,
-          wallSparkSize: wallSparkSize,
-          arenaDecoration: arenaDecoration,
-          handsOnPictures: handsOnPictures,
-          whitePickupBackgrounds: whitePickupBackgrounds,
-          projectileRenderMode: projectileRenderMode,
-          explosionRenderMode: explosionRenderMode,
-          freezeRenderMode: freezeRenderMode,
-          background: c.background,
-          rimColor: c.text,
-          repaint: repaint,
-          look: look,
-          showHpBars: showHpBars,
+      child: ValueListenableBuilder<EffectDensity>(
+        valueListenable: VisualQuality.density,
+        builder: (_, density, _) => CustomPaint(
+          painter: ArenaPainter(
+            state: state,
+            visualDensity: density,
+            arenaRadius: arenaRadius,
+            worldRadius: worldRadius,
+            rimInset: rimInset,
+            rimAngle: rimAngle,
+            showEffects: showEffects,
+            artworkRevisions: artworkRevisions,
+            showBallGlow: showBallGlow,
+            ballGlowWidth: ballGlowWidth,
+            arenaTitle: arenaTitle,
+            arenaSubtitle: arenaSubtitle,
+            wallSparkSize: wallSparkSize,
+            arenaDecoration: arenaDecoration,
+            handsOnPictures: handsOnPictures,
+            whitePickupBackgrounds: whitePickupBackgrounds,
+            projectileRenderMode: projectileRenderMode,
+            explosionRenderMode: explosionRenderMode,
+            freezeRenderMode: freezeRenderMode,
+            background: c.background,
+            rimColor: c.text,
+            repaint: repaint,
+            look: look,
+            showHpBars: showHpBars,
+          ),
+          size: Size.infinite,
         ),
-        size: Size.infinite,
       ),
     );
   }

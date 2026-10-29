@@ -1,3 +1,4 @@
+import 'core/sprites/visual_quality.dart';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -81,6 +82,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
   @override
   void initState() {
     super.initState();
+    VisualQuality.load();
     // The admin's music choice applies to every player's matches.
     _settings.addListener(_applyMusic);
     if (widget.sprites != null) {
@@ -483,6 +485,8 @@ class _HomeScreenState extends State<_HomeScreen> {
             customSkills: link.customSkills,
             tuning: link.tuning,
             skillLibrary: link.skillLibrary,
+            artworkRevisions: link.artworkRevisions,
+            artworkFrames: link.artworkFrames,
             dualWield: link.dualWield,
             endlessBattle: link.endlessBattle,
             mayhem: link.mayhem,

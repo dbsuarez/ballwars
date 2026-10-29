@@ -256,7 +256,7 @@ void main() {
     expect(
       SkillLibrary.decodeReplay(
         link({
-          'version': SkillLibrary.visualCompactVersion + 1,
+          'version': SkillLibrary.originCompactVersion + 1,
           'overrides': {},
           'custom': [],
         }),

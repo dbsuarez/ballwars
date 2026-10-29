@@ -38,6 +38,10 @@ class CustomAtlas {
   );
 }
 
+abstract class SpriteRevisionRepository {
+  Future<CustomAtlas?> loadRevision(String atlasId, String revisionId);
+}
+
 abstract class SpriteAtlasRepository {
   Future<List<CustomAtlas>> list();
   Future<CustomAtlas> save({
@@ -104,7 +108,8 @@ Future<ui.Image> validateSpriteSheet(
   }
 }
 
-class SupabaseSpriteAtlasRepository implements SpriteAtlasRepository {
+class SupabaseSpriteAtlasRepository
+    implements SpriteAtlasRepository, SpriteRevisionRepository {
   SupabaseSpriteAtlasRepository(this.reader, {SupabaseClient? writer})
     : writer = writer ?? reader;
   final SupabaseClient reader, writer;
@@ -197,7 +202,7 @@ class SupabaseSpriteAtlasRepository implements SpriteAtlasRepository {
       );
     }
     final atlasId = id ?? uuid;
-    String? oldPath;
+
     if (id != null && !restoreMissing) {
       if (expectedUpdatedAt == null) {
         throw StateError('Refresh the atlas before replacing its artwork.');
@@ -212,7 +217,6 @@ class SupabaseSpriteAtlasRepository implements SpriteAtlasRepository {
           'This atlas changed. Refresh Sprites and retry the replacement.',
         );
       }
-      oldPath = old['sheet_path'] as String;
     }
     final path =
         '$atlasId/${const Uuid().v4()}.${contentType == 'image/png' ? 'png' : 'webp'}';
@@ -259,13 +263,6 @@ class SupabaseSpriteAtlasRepository implements SpriteAtlasRepository {
       } catch (e) {
         debugPrint('Saved sprite manifest cache failed: $e');
       }
-      if (oldPath != null) {
-        try {
-          await bucket.remove([oldPath]);
-        } catch (e) {
-          debugPrint('Replaced sprite sheet cleanup failed: $e');
-        }
-      }
       return saved;
     } catch (_) {
       if (!published) {
@@ -280,13 +277,27 @@ class SupabaseSpriteAtlasRepository implements SpriteAtlasRepository {
   }
 
   @override
+  Future<CustomAtlas?> loadRevision(String atlasId, String revisionId) async {
+    final row = await reader
+        .from('sprite_atlas_revisions')
+        .select()
+        .eq('atlas_id', atlasId)
+        .eq('revision_id', revisionId)
+        .maybeSingle()
+        .timeout(const Duration(seconds: 8));
+    if (row == null) return null;
+    return CustomAtlas.fromJson({
+      ...row,
+      'id': row['atlas_id'],
+      'sheet_url': reader.storage
+          .from('sprite-sheets')
+          .getPublicUrl(row['sheet_path'] as String),
+    });
+  }
+
+  @override
   Future<void> delete(String id) async {
     // Delete the manifest first. Other devices then fall back to built-in art.
-    final row = await writer
-        .from('sprite_atlases')
-        .select('sheet_path')
-        .eq('id', id)
-        .single();
     await writer
         .from('sprite_atlases')
         .delete()
@@ -301,13 +312,6 @@ class SupabaseSpriteAtlasRepository implements SpriteAtlasRepository {
       );
     } catch (e) {
       debugPrint('Deleted sprite manifest cache failed: $e');
-    }
-    try {
-      await writer.storage.from('sprite-sheets').remove([
-        row['sheet_path'] as String,
-      ]);
-    } catch (e) {
-      debugPrint('Deleted atlas sheet cleanup failed: $e');
     }
   }
 }

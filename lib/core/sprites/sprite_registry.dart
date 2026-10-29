@@ -24,6 +24,265 @@ class SpriteRegistry {
 
   static Future<void>? _loading;
   static final Map<String, _CutSprite> _sprites = {};
+  static Map<String, String> _scope = const {};
+  static T withArtwork<T>(
+    Map<String, String> replacements,
+    T Function() paint,
+  ) {
+    final previous = _scope;
+    _scope = replacements;
+    try {
+      return paint();
+    } finally {
+      _scope = previous;
+    }
+  }
+
+  static String _id(String id) => _scope[id] ?? id;
+  static Future<Map<String, Object>> embedDrawn(
+    Map<String, String> replacements,
+  ) async {
+    final result = <String, Object>{};
+    var total = 0;
+    for (final e in replacements.entries) {
+      if (_owners[e.key] != 'drawn in code') continue;
+      final cached = _encodedDrawn[e.key];
+      if (cached != null) {
+        total += ((cached['png'] as String).length * 3) ~/ 4;
+        if (total > 262144) {
+          throw const FormatException('Too much generated replay artwork.');
+        }
+        result[e.value] = cached;
+        continue;
+      }
+      final cut = _sprites[e.value];
+      if (cut == null || cut.frames.length != 1) continue;
+      final image = cut.frames.single;
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (png == null ||
+          png.lengthInBytes > 65536 ||
+          image.width > 256 ||
+          image.height > 256) {
+        throw const FormatException(
+          'Generated replay artwork exceeds portable limits.',
+        );
+      }
+      total += png.lengthInBytes;
+      if (total > 262144) {
+        throw const FormatException('Too much generated replay artwork.');
+      }
+      final encoded = <String, Object>{
+        'png': base64Encode(png.buffer.asUint8List()),
+        'anchor': [cut.anchor.dx, cut.anchor.dy],
+        'scale': imageScale(image),
+        'opacity': imageOpacity(image),
+        'steps': cut.stepsPerFrame,
+      };
+      _encodedDrawn[e.key] = encoded;
+      result[e.value] = encoded;
+    }
+    return result;
+  }
+
+  static Future<void> restoreEmbedded(Map<String, Object> entries) async {
+    if (entries.length > 128) {
+      throw const FormatException('Too many embedded sprites.');
+    }
+    var total = 0;
+    for (final e in entries.entries) {
+      if (!RegExp(r'^built\.[a-f0-9]{40}\.').hasMatch(e.key) ||
+          e.value is! Map) {
+        throw const FormatException('Invalid embedded sprite.');
+      }
+      if (_sprites.containsKey(e.key)) continue;
+      final j = e.value as Map,
+          bytes = base64Decode((e.value as Map)['png'] as String);
+      total += bytes.length;
+      if (bytes.length < 24 ||
+          bytes.length > 65536 ||
+          total > 262144 ||
+          bytes[0] != 137 ||
+          bytes[1] != 80 ||
+          bytes[2] != 78 ||
+          bytes[3] != 71) {
+        throw const FormatException('Invalid embedded PNG.');
+      }
+      final data = ByteData.sublistView(bytes);
+      if (data.getUint32(16) > 256 || data.getUint32(20) > 256) {
+        throw const FormatException('Embedded dimensions exceed 256 pixels.');
+      }
+      final raw = j['anchor'];
+      if (raw is! List ||
+          raw.length != 2 ||
+          raw.any((v) => v is! num || !v.isFinite || v < 0 || v > 1)) {
+        throw const FormatException('Invalid embedded anchor.');
+      }
+      final scale = j['scale'], opacity = j['opacity'], steps = j['steps'];
+      if (scale is! num ||
+          !scale.isFinite ||
+          scale < .5 ||
+          scale > 2 ||
+          opacity is! num ||
+          !opacity.isFinite ||
+          opacity < 0 ||
+          opacity > 1 ||
+          steps is! int ||
+          steps < 1 ||
+          steps > 600) {
+        throw const FormatException('Invalid embedded playback settings.');
+      }
+      final gen = _generation, codec = await ui.instantiateImageCodec(bytes);
+      try {
+        final image = (await codec.getNextFrame()).image;
+        if (gen != _generation) {
+          image.dispose();
+          continue;
+        }
+        _imageScales[image] = scale.toDouble();
+        _imageOpacity[image] = opacity.toDouble();
+        final cut = _CutSprite(
+          [image],
+          steps,
+          Offset((raw[0] as num).toDouble(), (raw[1] as num).toDouble()),
+        );
+        _sprites[e.key] = cut;
+        (_customIds[e.key.substring(0, 46)] ??= {}).add(e.key);
+        _catalog[e.key] = (1, steps, cut.anchor);
+      } finally {
+        codec.dispose();
+      }
+    }
+  }
+
+  static const assetRevision = String.fromEnvironment('ASSET_REVISION');
+  static final Map<String, String> frozenIds = {};
+  static final Map<String, Map<String, Object>> _encodedDrawn = {};
+  static final Map<String, (int, int, Offset)> _catalog = {};
+  static final Map<String, Set<String>> _evicted = {};
+  static final Map<String, int> _pins = {};
+  static int cacheBudgetBytes = 128 * 1024 * 1024;
+  static int _clock = 0;
+  static int get decodedBytes => _sprites.values.toSet().fold(
+    0,
+    (n, s) => n + s.frames.fold<int>(0, (n, f) => n + f.width * f.height * 4),
+  );
+  static int get pinnedBytes {
+    final held = {
+      ..._pins.keys,
+      for (final group in _customIds.values)
+        if (group.any((id) => (_pins[id] ?? 0) > 0)) ...group,
+    };
+    return held
+        .map((id) => _sprites[id])
+        .whereType<_CutSprite>()
+        .toSet()
+        .fold(
+          0,
+          (n, s) =>
+              n + s.frames.fold<int>(0, (n, f) => n + f.width * f.height * 4),
+        );
+  }
+
+  static VoidCallback pin(Iterable<String> ids) {
+    final held = ids.toSet();
+    for (final id in held) {
+      _pins[id] = (_pins[id] ?? 0) + 1;
+    }
+    var released = false;
+    return () {
+      if (released) return;
+      released = true;
+      for (final id in held) {
+        final n = (_pins[id] ?? 1) - 1;
+        if (n == 0) {
+          _pins.remove(id);
+        } else {
+          _pins[id] = n;
+        }
+      }
+      trimCache();
+    };
+  }
+
+  /// Aliases share decoded frames; replacing a live upload cannot mutate a
+  /// pinned historical revision. Every owner releases its own reference.
+  static void alias(String source, String target, String group) {
+    if (_sprites.containsKey(target)) return;
+    final sprite = _sprites[source];
+    if (sprite == null) return;
+    sprite.references++;
+    _sprites[target] = sprite;
+    (_customIds[group] ??= {}).add(target);
+    _catalog[target] = (
+      sprite.frames.length,
+      sprite.stepsPerFrame,
+      sprite.anchor,
+    );
+    _collectionLabels[target] = displayLabel(source);
+  }
+
+  static void trimCache() {
+    final groups = _customIds.keys.toList()
+      ..sort((a, b) {
+        int age(String key) => _customIds[key]!
+            .map((id) => _sprites[_id(id)]?.lastUsed ?? 0)
+            .fold(0, math.max);
+        return age(a).compareTo(age(b));
+      });
+    for (final prefix in groups) {
+      if (decodedBytes <= cacheBudgetBytes) break;
+      final ids = _customIds[prefix]!;
+      if (ids.any((id) => (_pins[id] ?? 0) > 0)) continue;
+      _evicted[prefix] = {...ids};
+      for (final id in ids) {
+        _sprites.remove(id)?.dispose();
+      }
+      _customIds.remove(prefix);
+    }
+  }
+
+  /// Used only for trusted, commit-pinned bundled manifests.
+  static Future<void> registerHistorical(
+    SpriteAtlas atlas,
+    ui.Image sheet,
+    String commit,
+  ) async {
+    final issues = atlas.problems(
+      sheetSize: Size(sheet.width.toDouble(), sheet.height.toDouble()),
+    );
+    if (issues.isNotEmpty) throw FormatException(issues.join('\n'));
+    final gen = _generation;
+    if (atlas.sprites.values.fold<int>(
+          0,
+          (n, s) => n + s.output * s.height * s.frames.length * 4,
+        ) >
+        67108864) {
+      throw const FormatException('Historical atlas exceeds 64 MB decoded.');
+    }
+    final cut = await _cutAtlas(atlas, sheet);
+    if (gen != _generation) {
+      for (final e in cut.values) {
+        e.dispose();
+      }
+      return;
+    }
+    for (final e in cut.entries) {
+      final id = 'built.$commit.${e.key}';
+      if (_sprites.containsKey(id)) {
+        e.value.dispose();
+        continue;
+      }
+      _sprites[_id(id)] = e.value;
+      (_customIds['built.$commit'] ??= {}).add(id);
+      _catalog[id] = (
+        e.value.frames.length,
+        e.value.stepsPerFrame,
+        e.value.anchor,
+      );
+    }
+    revision.value++;
+  }
+
   static final Expando<double> _imageScales = Expando('sprite display scale');
   static final Expando<double> _imageOpacity = Expando('sprite opacity');
   static double imageOpacity(ui.Image image) => _imageOpacity[image] ?? 1;
@@ -73,17 +332,26 @@ class SpriteRegistry {
   static int _generation = 0;
 
   static List<String> get loadProblems => List.unmodifiable(_problems);
-  static List<String> get ids => List.unmodifiable(_sprites.keys);
-  static bool has(String id) => _sprites.containsKey(id);
-  static int frameCount(String id) => _sprites[id]?.frames.length ?? 0;
+  static List<String> get ids => List.unmodifiable(
+    {
+      ..._sprites.keys,
+      ..._catalog.keys,
+    }.where((id) => !id.startsWith('built.') && !id.contains('~')),
+  );
+  static bool has(String id) => _sprites.containsKey(_id(id));
+  static int frameCount(String id) =>
+      _sprites[_id(id)]?.frames.length ?? _catalog[_id(id)]?.$1 ?? 0;
   static int stepsPerFrame(String id) =>
-      _sprites[id]?.stepsPerFrame ?? _defaultStepsPerFrame;
+      _sprites[_id(id)]?.stepsPerFrame ??
+      _catalog[_id(id)]?.$2 ??
+      _defaultStepsPerFrame;
 
   /// The frame at [index] (wrapped modulo the frame count), or null when the
   /// id is unknown.
   static ui.Image? frame(String id, [int index = 0]) {
-    final sprite = _sprites[id];
+    final sprite = _sprites[_id(id)];
     if (sprite == null || sprite.frames.isEmpty) return null;
+    sprite.lastUsed = ++_clock;
     return sprite.frames[index % sprite.frames.length];
   }
 
@@ -107,8 +375,9 @@ class SpriteRegistry {
   }) {
     assert(stepsPerFrame == null || stepsPerFrame > 0);
     assert(frameCount == null || frameCount > 0);
-    final sprite = _sprites[id];
+    final sprite = _sprites[_id(id)];
     if (sprite == null || sprite.frames.isEmpty) return null;
+    sprite.lastUsed = ++_clock;
     assert(frameCount == null || frameCount <= sprite.frames.length);
     final count = frameCount ?? sprite.frames.length;
     final index =
@@ -121,8 +390,9 @@ class SpriteRegistry {
   /// `(t * frameCount).floor().clamp(0, frameCount - 1)`, so values outside
   /// 0..1 hold the first or last frame. Null when the id is unknown.
   static ui.Image? frameAtProgress(String id, double t) {
-    final sprite = _sprites[id];
+    final sprite = _sprites[_id(id)];
     if (sprite == null || sprite.frames.isEmpty) return null;
+    sprite.lastUsed = ++_clock;
     final count = sprite.frames.length;
     return sprite.frames[(t * count).floor().clamp(0, count - 1)];
   }
@@ -131,7 +401,8 @@ class SpriteRegistry {
   /// left) that painters put on their target point (see [placeRect]).
   /// [center] for sprites without one, drawn and custom sprites included,
   /// and for unknown ids. One map lookup, no allocation.
-  static Offset anchor(String id) => _sprites[id]?.anchor ?? center;
+  static Offset anchor(String id) =>
+      _sprites[_id(id)]?.anchor ?? _catalog[_id(id)]?.$3 ?? center;
 
   /// Pack normalized frames for an owner upload. Rendering does not edit the
   /// owner's file; only the optimized PNG and new frame metadata are uploaded.
@@ -292,6 +563,12 @@ class SpriteRegistry {
       s.dispose();
     }
     _sprites.clear();
+    _catalog.clear();
+    _evicted.clear();
+    _pins.clear();
+    frozenIds.clear();
+    _encodedDrawn.clear();
+    cacheBudgetBytes = 128 * 1024 * 1024;
     _customIds.clear();
     _collectionLabels.clear();
     _spriteLabels.clear();
@@ -359,6 +636,11 @@ class SpriteRegistry {
     cut.forEach((id, sprite) {
       final full = '$idPrefix.$id';
       _sprites[full] = sprite;
+      _catalog[full] = (
+        sprite.frames.length,
+        sprite.stepsPerFrame,
+        sprite.anchor,
+      );
       if (label != null) _collectionLabels[full] = label;
       if (atlas.sprites[id]?.label case final String name) {
         _spriteLabels[full] = name;
@@ -371,12 +653,16 @@ class SpriteRegistry {
 
   /// Removes the sprites registered under [idPrefix] and frees their images.
   static void unregister(String idPrefix) {
-    final old = _customIds.remove(idPrefix);
-    if (old == null) return;
+    final old = {
+      ...?_customIds.remove(idPrefix),
+      ...?_evicted.remove(idPrefix),
+    };
+    if (old.isEmpty) return;
     for (final id in old) {
       _sprites.remove(id)?.dispose();
       _collectionLabels.remove(id);
       _spriteLabels.remove(id);
+      _catalog.remove(id);
     }
     revision.value++;
   }
@@ -450,7 +736,10 @@ class SpriteRegistry {
       throw ArgumentError.value(id, 'id', 'is already in use');
     }
     _owners[id] = 'drawn in code';
-    _sprites[id] = sprite;
+    _sprites[_id(id)] = sprite;
+    if (RegExp(r'^[a-f0-9]{40}$').hasMatch(assetRevision)) {
+      await embedDrawn({id: id});
+    }
   }
 
   static void _problem(String text) {
@@ -773,12 +1062,15 @@ class SpriteRegistry {
 }
 
 class _CutSprite {
+  int references = 1;
+  int lastUsed = 0;
   final List<ui.Image> frames;
   final int stepsPerFrame;
   final Offset anchor;
   _CutSprite(this.frames, this.stepsPerFrame, this.anchor);
 
   void dispose() {
+    if (--references > 0) return;
     for (final f in frames) {
       f.dispose();
     }

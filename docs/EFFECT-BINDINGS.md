@@ -129,3 +129,8 @@ persistent handles, 256 transient events and 60 recent history messages. Skill
 Demo's **Inspect effects** shows active source/event counts, the latest eight
 history messages and physical outlines. These are demo-only overlays; exported
 matches do not contain inspector controls or outlines.
+
+
+## Phase E implementation update, 2026-10-29
+
+Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Android performance and device/production acceptance remain manual; Phase F is pending. Migration 024 was applied by the user.

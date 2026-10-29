@@ -1871,7 +1871,10 @@ class PowerUpSystem {
   }
 
   void _ignite(Offset at, SimulationBall owner) {
-    final radius = match.arenaRadius * _t.blastRadiusRatio;
+    final radius =
+        match.arenaRadius *
+        (visualSkill(PowerUpKind.molotov, ball: owner).areaRadiusRatio ??
+            _t.blastRadiusRatio);
     blasts++;
     burningZones.add(BurningZone(owner: owner, position: at, radius: radius));
     match.state.floatingTexts.spawn(at, 'BURN!', const Color(0xFFFF7A2F));
@@ -1973,7 +1976,8 @@ class PowerUpSystem {
     final skill = visualSkill(kind);
     final radius =
         match.arenaRadius *
-        (skill.explodesOnImpact ? skill.range : _t.blastRadiusRatio);
+        (skill.areaRadiusRatio ??
+            (skill.explodesOnImpact ? skill.range : _t.blastRadiusRatio));
     final balls = match.state.balls;
     blasts++;
     explosions.add(
@@ -2413,7 +2417,8 @@ class PowerUpSystem {
   ) {
     switch (skill.delivery) {
       case SkillDelivery.aura:
-        final radius = match.arenaRadius * skill.range;
+        final radius =
+            match.arenaRadius * (skill.areaRadiusRatio ?? skill.range);
         return targets
             .where(
               (target) =>
@@ -2422,7 +2427,8 @@ class PowerUpSystem {
             )
             .toList();
       case SkillDelivery.orbit:
-        final radius = match.arenaRadius * skill.range;
+        final radius =
+            match.arenaRadius * (skill.areaRadiusRatio ?? skill.range);
         return targets
             .where(
               (target) =>
@@ -2446,9 +2452,18 @@ class PowerUpSystem {
               .abs();
           return along > 0 && across <= width;
         }).toList();
+      case SkillDelivery.area:
+        if (skill.areaRadiusRatio == null) return targets;
+        return targets
+            .where(
+              (target) =>
+                  identical(target, owner) ||
+                  (target.position - owner.position).distance <=
+                      match.arenaRadius * skill.areaRadiusRatio!,
+            )
+            .toList();
       case SkillDelivery.instant:
       case SkillDelivery.projectile:
-      case SkillDelivery.area:
       case null:
         return targets;
     }
@@ -2486,14 +2501,32 @@ class PowerUpSystem {
         final shot = Projectile(
           owner: owner,
           kind: shotSkill.baseKind,
-          position: owner.position + direction * owner.radius,
+          position: projectileOrigin(
+            owner,
+            skill.projectileOriginForward != null ? skill : shotSkill,
+            (skill.projectileOriginForward != null ||
+                    shotSkill.projectileOriginForward != null)
+                ? baseDirection
+                : direction,
+          ),
           velocity:
               direction *
               match.arenaRadius *
               (shotSkill.projectileSpeed ?? _t.bulletSpeedRatio),
           target: shotSkill.homing ? target : null,
           homing: shotSkill.homing,
-          returnTo: shotSkill.returnsToOrigin ? owner.position : null,
+          returnTo: shotSkill.returnsToOrigin
+              ? ((skill.projectileOriginForward != null ||
+                        shotSkill.projectileOriginForward != null)
+                    ? projectileOrigin(
+                        owner,
+                        skill.projectileOriginForward != null
+                            ? skill
+                            : shotSkill,
+                        baseDirection,
+                      )
+                    : owner.position)
+              : null,
           renderScale: shotSkill.projectileSize,
           spinDegreesPerSecond: shotSkill.projectileSpin,
         );
@@ -2577,6 +2610,14 @@ class PowerUpSystem {
     Iterable<SimulationBall> targets,
     SkillDefinition skill,
   ) {
+    if ({SkillDelivery.area, SkillDelivery.aura}.contains(skill.delivery)) {
+      persistentEffects.area(
+        owner,
+        skill,
+        owner.position,
+        match.arenaRadius * (skill.areaRadiusRatio ?? skill.range),
+      );
+    }
     for (final target in targets) {
       if (!_alive(target)) continue;
       _applyComposedEffect(owner, target, skill, skill.effectType);
@@ -3258,6 +3299,28 @@ class PowerUpSystem {
     }
   }
 
+  /// Shared launch geometry for every flying native/composed projectile.
+  Offset projectileOrigin(
+    SimulationBall owner,
+    SkillDefinition skill,
+    Offset direction,
+  ) {
+    final unit = direction.distance == 0
+        ? const Offset(1, 0)
+        : direction / direction.distance;
+    final point =
+        owner.position +
+        unit * owner.radius * (skill.projectileOriginForward ?? 1) +
+        Offset(-unit.dy, unit.dx) *
+            owner.radius *
+            (skill.projectileOriginForward == null
+                ? 0
+                : skill.projectileOriginSide);
+    if (skill.projectileOriginForward == null) return point;
+    final limit = match.arenaRadius - 1;
+    return point.distance > limit ? point / point.distance * limit : point;
+  }
+
   /// Throws a grenade from [ball]'s edge at where [target] is now; it explodes on the first opponent it
   /// meets or where it lands.
   void _throwGrenade(SimulationBall ball, SimulationBall target) {
@@ -3273,7 +3336,11 @@ class PowerUpSystem {
           PowerUpKind.grenade,
           ball: ball,
         ).projectileSize,
-        position: ball.position + direction * ball.radius,
+        position: projectileOrigin(
+          ball,
+          visualSkill(PowerUpKind.grenade, ball: ball),
+          direction,
+        ),
         velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
         landAt: ball.position + direction * distance,
       ),
@@ -3295,7 +3362,11 @@ class PowerUpSystem {
           PowerUpKind.molotov,
           ball: ball,
         ).projectileSize,
-        position: ball.position + direction * ball.radius,
+        position: projectileOrigin(
+          ball,
+          visualSkill(PowerUpKind.molotov, ball: ball),
+          direction,
+        ),
         velocity: direction * (match.arenaRadius * _t.grenadeSpeedRatio),
         landAt: ball.position + direction * distance,
       ),
@@ -3313,7 +3384,11 @@ class PowerUpSystem {
       Projectile(
         owner: ball,
         kind: PowerUpKind.rocketLauncher,
-        position: ball.position + direction * ball.radius,
+        position: projectileOrigin(
+          ball,
+          visualSkill(PowerUpKind.rocketLauncher, ball: ball),
+          direction,
+        ),
         velocity: direction * (match.arenaRadius * _t.bulletSpeedRatio * 0.72),
         target: target,
         homing:
@@ -3537,7 +3612,13 @@ class PowerUpSystem {
       Projectile(
         owner: ball,
         kind: kind,
-        position: ball.position + direction * ball.radius,
+        position: projectileOrigin(
+          ball,
+          skill,
+          skill.projectileOriginForward != null
+              ? Offset.fromDirection(angle - turn)
+              : direction,
+        ),
         velocity:
             direction *
             (match.arenaRadius * (speedRatio ?? _t.projectileSpeedRatio(kind))),
@@ -3547,7 +3628,13 @@ class PowerUpSystem {
             : null,
         homing: visualSkill(kind, ball: ball).homing && !firesBackward,
         returnTo: visualSkill(kind, ball: ball).returnsToOrigin
-            ? ball.position
+            ? (skill.projectileOriginForward != null
+                  ? projectileOrigin(
+                      ball,
+                      skill,
+                      Offset.fromDirection(angle - turn),
+                    )
+                  : ball.position)
             : null,
         renderScale: visualSkill(kind, ball: ball).projectileSize,
         spinDegreesPerSecond: visualSkill(kind, ball: ball).projectileSpin,
@@ -3799,7 +3886,9 @@ class PowerUpSystem {
         } else {
           if (composed != null) {
             if (composed.explodesOnImpact) {
-              final radius = match.arenaRadius * composed.range;
+              final radius =
+                  match.arenaRadius *
+                  (composed.areaRadiusRatio ?? composed.range);
               blasts++;
               _sound(
                 composed.soundCue == 'default' ? 'bomb' : composed.soundCue,

@@ -8,6 +8,7 @@ import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/skills/presentation/skill_management_screen.dart';
 import 'package:ballwars/features/skills/presentation/skill_demo_dialog.dart';
+import 'package:ballwars/features/skills/presentation/effect_placement_preview.dart';
 
 void main() {
   late SkillManagementResult? saved;
@@ -130,6 +131,60 @@ void main() {
       await tester.enterText(
         find.byKey(const ValueKey('effect-field-size')),
         '1.5',
+      );
+      await tester.pump();
+      expect(
+        tester
+            .widget<EffectPlacementPreview>(
+              find.byKey(const ValueKey('effect-placement-preview')),
+            )
+            .effect!
+            .scale,
+        1.5,
+      );
+      final slider = find.byKey(const ValueKey('effect-slider-x'));
+      await tester.scrollUntilVisible(
+        slider,
+        250,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView).last,
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      tester.widget<Slider>(slider).onChanged!(.75);
+      await tester.pump();
+      final x = find.byKey(const ValueKey('effect-field-x'));
+      expect(tester.widget<TextField>(x).controller!.text, '0.75');
+      await tester.ensureVisible(x);
+      await tester.pumpAndSettle();
+      await tester.enterText(x, '-0.50');
+      await tester.pump();
+      expect(tester.widget<Slider>(slider).value, -.5);
+      expect(
+        tester
+            .widget<EffectPlacementPreview>(
+              find.byKey(const ValueKey('effect-placement-preview')),
+            )
+            .effect!
+            .offsetX,
+        -.5,
+      );
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      tester.view.viewInsets = const FakeViewPadding();
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('effect-attachment')),
+        -250,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView).last,
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.tap(find.byKey(const ValueKey('effect-attachment')));
       await tester.pumpAndSettle();

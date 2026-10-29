@@ -6,6 +6,24 @@ import '../domain/skill_visual_effect.dart';
 /// Shared playback/placement for arena, demo, cinematic and export painters.
 /// Callers own tint layers, preserving existing art tint behavior.
 class SkillEffectRenderer {
+  static int? _budget;
+  static T withBudget<T>(int limit, T Function() body) {
+    final old = _budget;
+    _budget = limit;
+    try {
+      return body();
+    } finally {
+      _budget = old;
+    }
+  }
+
+  static bool takeVisual() {
+    if (_budget == null) return true;
+    if (_budget! <= 0) return false;
+    _budget = _budget! - 1;
+    return true;
+  }
+
   static Image? frame(ResolvedSkillEffect effect, int age, int duration) {
     if (effect.playback == EffectPlayback.loop) {
       return SpriteRegistry.frameAt(effect.spriteId, age);
@@ -63,11 +81,13 @@ class SkillEffectRenderer {
     int age,
     int duration, {
     double fade = 1,
+    bool essential = false,
     Offset direction = const Offset(1, 0),
     double? unitRadius,
   }) {
     final image = frame(effect, age, duration);
     if (image == null) return false;
+    if (!essential && !takeVisual()) return true;
     final size = half * 2 * effect.scale;
     final unit = direction.distance > 0
         ? direction / direction.distance

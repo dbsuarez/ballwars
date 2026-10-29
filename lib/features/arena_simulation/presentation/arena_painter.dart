@@ -1,3 +1,5 @@
+import '../../../core/sprites/visual_quality.dart';
+import '../../skills/presentation/skill_effect_renderer.dart';
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -28,6 +30,8 @@ class ArenaPainter extends CustomPainter {
   /// Sparks and particles. Off only hides them: they are still simulated,
   /// so the match plays out the same either way.
   final bool showEffects;
+  final EffectDensity visualDensity;
+  final Map<String, String> artworkRevisions;
   final bool showBallGlow;
   final double ballGlowWidth;
   final String arenaTitle;
@@ -54,6 +58,8 @@ class ArenaPainter extends CustomPainter {
     this.rimInset,
     required this.rimAngle,
     this.showEffects = true,
+    this.visualDensity = EffectDensity.full,
+    this.artworkRevisions = const {},
     this.showBallGlow = true,
     this.ballGlowWidth = 4,
     this.arenaTitle = 'dbsuarez',
@@ -79,7 +85,15 @@ class ArenaPainter extends CustomPainter {
   final BallLook look;
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(Canvas canvas, Size size) => SpriteRegistry.withArtwork(
+    artworkRevisions,
+    () => SkillEffectRenderer.withBudget(
+      visualDensity.effectLimit,
+      () => _paintScene(canvas, size),
+    ),
+  );
+
+  void _paintScene(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     // Leave room for the rim's stroke and glow so they aren't clipped at the edges.
     final scale = rimInset == null
@@ -573,7 +587,12 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintParticles(Canvas canvas) {
-    for (final particle in state.particles.particles) {
+    for (final particle in state.particles.particles.skip(
+      math.max(
+        0,
+        state.particles.particles.length - visualDensity.particleLimit,
+      ),
+    )) {
       if (particle is Particle) {
         final lifeRatio =
             1.0 - (particle.age / particle.lifespan).clamp(0.0, 1.0);

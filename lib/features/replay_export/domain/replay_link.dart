@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'replay_assets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import '../../ball_management/domain/custom_ball.dart';
@@ -77,6 +78,8 @@ class ReplayLink {
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
   final SkillLibrary skillLibrary;
+  final Map<String, String> artworkRevisions;
+  final Map<String, Object> artworkFrames;
 
   /// Yes or No: the question asked (cosmetic, `q=`; old apps ignore it, which is fine).
   final String? question;
@@ -113,6 +116,8 @@ class ReplayLink {
     this.minimumArenaScale = 0.60,
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.skillLibrary = SkillLibrary.defaults,
+    this.artworkRevisions = const {},
+    this.artworkFrames = const {},
   });
 
   static const String _weaponsPrefix = 'w.';
@@ -141,6 +146,12 @@ class ReplayLink {
 
   /// [presets] are balls every copy of the app has; they are linked by id.
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
+    final assetSnapshot = ReplayAssets.encode(
+      skillLibrary,
+      artworkRevisions,
+      embedded: artworkFrames,
+    );
+
     final balls = contestants.map((b) {
       if (presetIds.contains(b.id)) return 'p.${b.id}';
       if (b.id.startsWith(_packPrefix)) {
@@ -154,6 +165,7 @@ class ReplayLink {
     final chosen = powerUps;
     final tokens = [
       if (simulationRevision >= 2) 'v.$simulationRevision',
+      if (assetSnapshot != null) 'a.1',
       if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
       if (mode != MatchMode.threads &&
           chosen != null &&
@@ -188,6 +200,7 @@ class ReplayLink {
     final arena = arenaDecoration == ArenaDecoration.defaultArena
         ? ''
         : '&arena=${arenaDecoration.name}';
+    final assets = assetSnapshot == null ? '' : '&assets=$assetSnapshot';
     final skillSnapshot = skillLibrary.encodeReplay();
     final skills = skillSnapshot == null ? '' : '&skills=$skillSnapshot';
     final glow = ballGlowWidth == 4
@@ -215,7 +228,7 @@ class ReplayLink {
     final query =
         'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$kc$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
-      '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals',
+      '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals$assets',
     );
   }
 
@@ -246,6 +259,9 @@ class ReplayLink {
       if (marker != 'v.2' && marker != 'v.3') return null;
       simulationRevision = marker == 'v.3' ? 3 : 2;
     }
+    final hasArtworkMarker = tokens.isNotEmpty && tokens.first == 'a.1';
+    if (hasArtworkMarker) tokens.removeAt(0);
+    if (hasArtworkMarker != params.containsKey('assets')) return null;
     if (tokens.isNotEmpty && tokens.first.startsWith(_modePrefix)) {
       final parsedMode = MatchMode.byId(
         tokens.removeAt(0).substring(_modePrefix.length),
@@ -406,6 +422,11 @@ class ReplayLink {
       skillLibrary = decoded;
     }
 
+    final artworkRevisions = ReplayAssets.decode(
+      params['assets'],
+      skillLibrary,
+    );
+    if (artworkRevisions == null) return null;
     final contestants = <CustomBall>[];
     for (var i = 0; i < tokens.length; i++) {
       final ball = _decodeBall(tokens[i], i, presets, packBalls);
@@ -442,6 +463,8 @@ class ReplayLink {
       minimumArenaScale: minimumArenaScale,
       arenaDecoration: arenaDecoration,
       skillLibrary: skillLibrary,
+      artworkRevisions: artworkRevisions.ids,
+      artworkFrames: artworkRevisions.embedded,
     );
   }
 
@@ -535,7 +558,7 @@ class ReplayLink {
   static const double maxSpeed = 4;
 
   /// Longest accepted query (four custom balls fit easily).
-  static const int maxLinkLength = 65536;
+  static const int maxLinkLength = 524288;
   static const int maxNameLength = 40;
 
   static bool _within(double v, double min, double max) =>

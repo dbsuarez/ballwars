@@ -15,8 +15,10 @@ class PersistentSkillEffect {
     this.samples,
     this.direction = const Offset(1, 0),
     this.steps = 180,
+    this.activation = false,
   });
   final Object key;
+  final bool activation;
   final SkillDefinition skill;
   final SkillVisualRole role;
   final SimulationBall? owner, target;
@@ -56,6 +58,34 @@ class PersistentSkillEffects {
   final PowerUpSystem system;
   final Map<Object, PersistentSkillEffect> _handles = {};
   final List<SkillVisualEvent> events = [];
+  final List<PersistentSkillEffect> _areas = [];
+  void area(
+    SimulationBall owner,
+    SkillDefinition skill,
+    Offset center,
+    double radius,
+  ) {
+    if (_areas.length >= 128) return;
+    final duration =
+        system.match.skillLibrary
+            .resolveVisual(skill, SkillVisualRole.ground)
+            ?.durationSeconds ??
+        .35;
+    final steps = (duration * 60).round().clamp(1, 600);
+    late final PersistentSkillEffect effect;
+    effect = PersistentSkillEffect(
+      key: Object(),
+      skill: skill,
+      role: SkillVisualRole.ground,
+      activation: true,
+      center: () => center,
+      radius: () => radius,
+      steps: steps,
+      active: () => effect.age < steps,
+    );
+    _areas.add(effect);
+  }
+
   final List<String> history = [];
   Iterable<PersistentSkillEffect> get handles => _handles.values;
   final Map<(SimulationBall, String, SkillVisualRole), PersistentSkillEffect>
@@ -184,6 +214,10 @@ class PersistentSkillEffects {
   void rememberEquipment(SimulationBall ball) => _equipment[ball] = _held(ball);
 
   void sync() {
+    for (final e in _areas) {
+      e.age++;
+    }
+    _areas.removeWhere((e) => !e.active());
     for (final event in events) {
       event.age++;
     }
@@ -262,6 +296,9 @@ class PersistentSkillEffects {
       ),
     );
     final p = system;
+    for (final e in _areas) {
+      add(e);
+    }
     for (final z in p.burningZones) {
       zone(
         z,
@@ -481,7 +518,7 @@ class PersistentSkillEffects {
         if (_handles.length >= 256) continue;
         _handles[entry.key] = entry.value;
         _log(entry.value.skill, entry.value.role, 'started');
-      } else {
+      } else if (!existing.activation) {
         existing.age++;
       }
     }

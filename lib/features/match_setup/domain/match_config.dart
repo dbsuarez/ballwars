@@ -137,6 +137,8 @@ class MatchConfig {
 
   /// Active skill variants and their cosmetic/audio choices.
   final SkillLibrary skillLibrary;
+  final Map<String, String> artworkRevisions;
+  final Map<String, Object> artworkFrames;
 
   /// Yes or No: the question the match answers (shown instead of the headline), or null.
   final String? question;
@@ -172,6 +174,8 @@ class MatchConfig {
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
+    this.artworkRevisions = const {},
+    this.artworkFrames = const {},
     this.mode = MatchMode.threads,
   });
 }

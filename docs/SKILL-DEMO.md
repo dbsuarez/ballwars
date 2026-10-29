@@ -51,3 +51,8 @@ their unsaved recipes for zone/boundary art, owner/target statuses and block,
 defense break, expiry and discard events. Use Test incoming hit for defenses;
 Pause or slower playback helps inspect brief events. Assigning art does not add a
 mechanical event to a skill that does not emit one.
+
+
+## Phase E implementation update, 2026-10-29
+
+Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Android performance and device/production acceptance remain manual; Phase F is pending. Migration 024 was applied by the user.

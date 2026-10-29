@@ -1,3 +1,4 @@
+import '../../../core/sprites/sprite_registry.dart';
 import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
@@ -109,244 +110,267 @@ class ReplayVideoExporter {
     bool Function()? isCancelled,
     Future<bool> Function()? confirmDurationLimit,
   }) async {
-    MatchSimulationController newMatch() => MatchSimulationController(
-      contestants,
-      simulationRevision: simulationRevision,
-      arenaRadius: arenaRadius,
-      seed: seed,
-      arenaBackground: style.background,
-      slowMotionLines: slowMotionLines,
-      slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
-      ballScale: ballScale,
-      mode: mode,
-      powerUpKinds: powerUps,
-      customSkillIds: customSkills,
-      nudgeSteps: nudgeSteps,
-      endAfterKnockoutStep: endStep,
-      tuning: tuning,
-      skillLibrary: skillLibrary,
-      endlessBattle: endlessBattle,
-      dualWield: dualWield,
-      mayhem: mayhem,
-      mayhemSeconds: mayhemSeconds,
-      shrinkingArena: shrinkingArena,
-      minimumArenaScale: minimumArenaScale,
-      bloodColor: style.bloodColor,
-      automaticSpeedUp: automaticSpeedUp,
-      arenaDecoration: style.arenaDecoration,
-      randomizedHairstyles: randomizedHairstyles,
-    );
-    final missing = await SkillSpriteReadiness.prepare(
-      library: skillLibrary,
-      tuning: tuning,
-      includeTraps: mode != MatchMode.threads,
-      kinds: mode == MatchMode.threads ? const {} : powerUps,
-      customIds: mode == MatchMode.threads ? const {} : customSkills,
-    );
-    if (missing.isNotEmpty) {
-      throw StateError(
-        'Cannot export: ${missing.length} artwork assets are missing. Open Sprites to reload them, then retry.',
-      );
-    }
-    final frameDelta = speedMultiplier / fps;
-
-    // Dry run (no rendering) to know the total frame count for progress.
-    final dryRun = newMatch();
-    final audioEvents = <ReplaySoundEvent>[];
-    final audioRecorder = _ReplaySoundRecorder(audioEvents);
-    var matchFrames = 0;
-    while (dryRun.state.status != MatchStatus.finished &&
-        matchFrames < matchFrameLimit) {
-      if (isCancelled?.call() ?? false) throw const ExportCancelled();
-      dryRun.tick(frameDelta);
-      matchFrames++;
-      audioRecorder.capture(dryRun, matchFrames / fps);
-    }
-    final truncated = dryRun.state.status != MatchStatus.finished;
-    if (truncated) {
-      if (confirmDurationLimit == null) throw const ExportDurationLimit();
-      if (!await confirmDurationLimit()) throw const ExportCancelled();
-    }
-    final holdFrames = truncated ? 0 : (finalHoldSeconds * fps).round();
-    final cardFrames = truncated ? 0 : (winnerCardSeconds * fps).round();
-    final loserFrames = truncated ? 0 : (loserSeconds * fps).round();
-    final finisherFrames =
-        !truncated && finishersEnabled && dryRun.winningMove != null
-        ? (finisherSeconds * fps).round()
-        : 0;
-    final totalFrames =
-        matchFrames +
-        (truncated ? 0 : 1) +
-        holdFrames +
-        finisherFrames +
-        loserFrames +
-        cardFrames;
-
-    if (truncated) {
-      // A shortened clip has no fabricated knockout, win sound or result card.
-    } else if (mayhem) {
-      audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'whistle', 0.8));
-    } else {
-      audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'out', 0.7));
-      if (!finishersEnabled) {
-        audioEvents.add(
-          ReplaySoundEvent(
-            (matchFrames + holdFrames + loserFrames) / fps,
-            'win',
-            0.85,
-          ),
-        );
-      }
-    }
-
-    ReplayAudio? audio;
-    if ((includeBgm || includeSfx) && encoder is AudioVideoEncoder) {
-      audio = await ReplayAudioMixer.mix(
-        durationSeconds: totalFrames / fps,
-        includeBgm: includeBgm,
-        includeSfx: includeSfx,
-        bgmAsset: bgmAsset,
-        bgmLevel: bgmLevel,
-        sfxLevel: sfxLevel,
-        events: audioEvents,
-      );
-    }
-
-    final match = newMatch();
-    await match.preloadImages();
-    if (mode != MatchMode.threads) await PowerUpSprites.load();
-    if (audio != null) {
-      await (encoder as AudioVideoEncoder).startWithAudio(
-        width: width,
-        height: height,
-        fps: fps,
-        pcm16le: audio.pcm16le,
-        sampleRate: audio.sampleRate,
-      );
-    } else {
-      await encoder.start(width: width, height: height, fps: fps);
-    }
-
-    var written = 0;
-    // Seconds into the video for the frame being drawn (moves the watermark).
-    double videoTime() => written / fps;
-    Future<void> emit(
-      void Function(ui.Canvas canvas, ui.Size size) paint,
-    ) async {
-      if (isCancelled?.call() ?? false) throw const ExportCancelled();
-      final recorder = ui.PictureRecorder();
-      paint(ui.Canvas(recorder), const ui.Size(width + 0.0, height + 0.0));
-      final picture = recorder.endRecording();
-      try {
-        await encoder.addFrame(await rasterize(picture, width, height));
-      } finally {
-        picture.dispose();
-      }
-      written++;
-      onProgress?.call(written / totalFrames);
-    }
-
+    final pinned = {
+      ...style.artworkRevisions.values,
+      ...SkillSpriteReadiness.dependencies(
+        library: skillLibrary,
+        tuning: tuning,
+        kinds: mode == MatchMode.threads ? const {} : powerUps,
+        customIds: mode == MatchMode.threads ? const {} : customSkills,
+        includeTraps: mode != MatchMode.threads,
+      ),
+    };
+    final releaseSprites = SpriteRegistry.pin(pinned);
     try {
-      for (var frame = 0; frame < matchFrames + (truncated ? 0 : 1); frame++) {
-        final state = match.state;
-        await emit(
-          (canvas, size) => ReplayFramePainter.paintMatch(
-            canvas,
-            size,
-            state,
-            match.arenaRadius,
-            worldRadius: arenaRadius,
-            videoTime: videoTime(),
-            showEffects: showEffects,
-            style: style,
-          ),
+      MatchSimulationController newMatch() => MatchSimulationController(
+        contestants,
+        simulationRevision: simulationRevision,
+        arenaRadius: arenaRadius,
+        seed: seed,
+        arenaBackground: style.background,
+        slowMotionLines: slowMotionLines,
+        slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
+        ballScale: ballScale,
+        mode: mode,
+        powerUpKinds: powerUps,
+        customSkillIds: customSkills,
+        nudgeSteps: nudgeSteps,
+        endAfterKnockoutStep: endStep,
+        tuning: tuning,
+        skillLibrary: skillLibrary,
+        endlessBattle: endlessBattle,
+        dualWield: dualWield,
+        mayhem: mayhem,
+        mayhemSeconds: mayhemSeconds,
+        shrinkingArena: shrinkingArena,
+        minimumArenaScale: minimumArenaScale,
+        bloodColor: style.bloodColor,
+        automaticSpeedUp: automaticSpeedUp,
+        arenaDecoration: style.arenaDecoration,
+        randomizedHairstyles: randomizedHairstyles,
+      );
+      final missing = await SkillSpriteReadiness.prepare(
+        extraIds: style.artworkRevisions.values,
+        embedded: style.artworkFrames,
+        library: skillLibrary,
+        tuning: tuning,
+        includeTraps: mode != MatchMode.threads,
+        kinds: mode == MatchMode.threads ? const {} : powerUps,
+        customIds: mode == MatchMode.threads ? const {} : customSkills,
+      );
+      if (missing.isNotEmpty) {
+        throw StateError(
+          'Cannot export: ${missing.length} artwork assets or recorded revisions are unavailable. Retry downloading them. Export stopped to preserve the recorded appearance.',
         );
-        if (frame < matchFrames) match.tick(frameDelta);
+      }
+      final frameDelta = speedMultiplier / fps;
+
+      // Dry run (no rendering) to know the total frame count for progress.
+      final dryRun = newMatch();
+      final audioEvents = <ReplaySoundEvent>[];
+      final audioRecorder = _ReplaySoundRecorder(audioEvents);
+      var matchFrames = 0;
+      while (dryRun.state.status != MatchStatus.finished &&
+          matchFrames < matchFrameLimit) {
+        if (isCancelled?.call() ?? false) throw const ExportCancelled();
+        dryRun.tick(frameDelta);
+        matchFrames++;
+        audioRecorder.capture(dryRun, matchFrames / fps);
+      }
+      final truncated = dryRun.state.status != MatchStatus.finished;
+      if (truncated) {
+        if (confirmDurationLimit == null) throw const ExportDurationLimit();
+        if (!await confirmDurationLimit()) throw const ExportCancelled();
+      }
+      final holdFrames = truncated ? 0 : (finalHoldSeconds * fps).round();
+      final cardFrames = truncated ? 0 : (winnerCardSeconds * fps).round();
+      final loserFrames = truncated ? 0 : (loserSeconds * fps).round();
+      final finisherFrames =
+          !truncated && finishersEnabled && dryRun.winningMove != null
+          ? (finisherSeconds * fps).round()
+          : 0;
+      final totalFrames =
+          matchFrames +
+          (truncated ? 0 : 1) +
+          holdFrames +
+          finisherFrames +
+          loserFrames +
+          cardFrames;
+
+      if (truncated) {
+        // A shortened clip has no fabricated knockout, win sound or result card.
+      } else if (mayhem) {
+        audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'whistle', 0.8));
+      } else {
+        audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'out', 0.7));
+        if (!finishersEnabled) {
+          audioEvents.add(
+            ReplaySoundEvent(
+              (matchFrames + holdFrames + loserFrames) / fps,
+              'win',
+              0.85,
+            ),
+          );
+        }
       }
 
-      final finalState = match.state;
-      for (var i = 0; i < holdFrames; i++) {
-        match.tick(frameDelta); // the match is over; only the last sparks move
-        await emit(
-          (canvas, size) => ReplayFramePainter.paintMatch(
-            canvas,
-            size,
-            finalState,
-            match.arenaRadius,
-            worldRadius: arenaRadius,
-            videoTime: videoTime(),
-            showEffects: showEffects,
-            style: style,
-          ),
+      ReplayAudio? audio;
+      if ((includeBgm || includeSfx) && encoder is AudioVideoEncoder) {
+        audio = await ReplayAudioMixer.mix(
+          durationSeconds: totalFrames / fps,
+          includeBgm: includeBgm,
+          includeSfx: includeSfx,
+          bgmAsset: bgmAsset,
+          bgmLevel: bgmLevel,
+          sfxLevel: sfxLevel,
+          events: audioEvents,
         );
       }
 
-      final loser = finalState.balls
-          .where((b) => b.config.id == match.lastEliminatedId)
-          .firstOrNull;
-      final winner = finalState.balls
-          .where((b) => b.config.id == finalState.winnerId)
-          .firstOrNull;
-      for (
-        var i = 0;
-        i < finisherFrames && winner != null && loser != null;
-        i++
-      ) {
-        await emit(
-          (canvas, size) => ReplayFramePainter.paintFinisher(
-            canvas,
-            size,
-            winner,
-            loser,
-            match.winningMove!,
-            i / finisherFrames,
-            videoTime: videoTime(),
-            style: style,
-            skillLibrary: skillLibrary,
-            skill: skillLibrary
-                .all(tuning)
-                .where((s) => s.name == match.winningMove)
-                .firstOrNull,
-          ),
+      final match = newMatch();
+      await match.preloadImages();
+      if (mode != MatchMode.threads) await PowerUpSprites.load();
+      if (audio != null) {
+        await (encoder as AudioVideoEncoder).startWithAudio(
+          width: width,
+          height: height,
+          fps: fps,
+          pcm16le: audio.pcm16le,
+          sampleRate: audio.sampleRate,
         );
-      }
-      for (var i = 0; i < loserFrames && loser != null; i++) {
-        match.tick(frameDelta);
-        await emit(
-          (canvas, size) => ReplayFramePainter.paintLoser(
-            canvas,
-            size,
-            finalState,
-            match.arenaRadius,
-            loser,
-            i / loserFrames,
-            worldRadius: arenaRadius,
-            videoTime: videoTime(),
-            showEffects: showEffects,
-            style: style,
-          ),
-        );
+      } else {
+        await encoder.start(width: width, height: height, fps: fps);
       }
 
-      for (var i = 0; i < cardFrames && winner != null; i++) {
-        await emit(
-          (canvas, size) =>
-              // Same number the in-app timer and winner card show.
-              ReplayFramePainter.paintWinnerCard(
-                canvas,
-                size,
-                winner,
-                match.elapsedSeconds,
-                videoTime: videoTime(),
-                style: style,
-              ),
-        );
+      var written = 0;
+      // Seconds into the video for the frame being drawn (moves the watermark).
+      double videoTime() => written / fps;
+      Future<void> emit(
+        void Function(ui.Canvas canvas, ui.Size size) paint,
+      ) async {
+        if (isCancelled?.call() ?? false) throw const ExportCancelled();
+        final recorder = ui.PictureRecorder();
+        paint(ui.Canvas(recorder), const ui.Size(width + 0.0, height + 0.0));
+        final picture = recorder.endRecording();
+        try {
+          await encoder.addFrame(await rasterize(picture, width, height));
+        } finally {
+          picture.dispose();
+        }
+        written++;
+        onProgress?.call(written / totalFrames);
       }
 
-      return await encoder.finish();
-    } catch (_) {
-      await encoder.cancel();
-      rethrow;
+      try {
+        for (
+          var frame = 0;
+          frame < matchFrames + (truncated ? 0 : 1);
+          frame++
+        ) {
+          final state = match.state;
+          await emit(
+            (canvas, size) => ReplayFramePainter.paintMatch(
+              canvas,
+              size,
+              state,
+              match.arenaRadius,
+              worldRadius: arenaRadius,
+              videoTime: videoTime(),
+              showEffects: showEffects,
+              style: style,
+            ),
+          );
+          if (frame < matchFrames) match.tick(frameDelta);
+        }
+
+        final finalState = match.state;
+        for (var i = 0; i < holdFrames; i++) {
+          match.tick(
+            frameDelta,
+          ); // the match is over; only the last sparks move
+          await emit(
+            (canvas, size) => ReplayFramePainter.paintMatch(
+              canvas,
+              size,
+              finalState,
+              match.arenaRadius,
+              worldRadius: arenaRadius,
+              videoTime: videoTime(),
+              showEffects: showEffects,
+              style: style,
+            ),
+          );
+        }
+
+        final loser = finalState.balls
+            .where((b) => b.config.id == match.lastEliminatedId)
+            .firstOrNull;
+        final winner = finalState.balls
+            .where((b) => b.config.id == finalState.winnerId)
+            .firstOrNull;
+        for (
+          var i = 0;
+          i < finisherFrames && winner != null && loser != null;
+          i++
+        ) {
+          await emit(
+            (canvas, size) => ReplayFramePainter.paintFinisher(
+              canvas,
+              size,
+              winner,
+              loser,
+              match.winningMove!,
+              i / finisherFrames,
+              videoTime: videoTime(),
+              style: style,
+              skillLibrary: skillLibrary,
+              skill: skillLibrary
+                  .all(tuning)
+                  .where((s) => s.name == match.winningMove)
+                  .firstOrNull,
+            ),
+          );
+        }
+        for (var i = 0; i < loserFrames && loser != null; i++) {
+          match.tick(frameDelta);
+          await emit(
+            (canvas, size) => ReplayFramePainter.paintLoser(
+              canvas,
+              size,
+              finalState,
+              match.arenaRadius,
+              loser,
+              i / loserFrames,
+              worldRadius: arenaRadius,
+              videoTime: videoTime(),
+              showEffects: showEffects,
+              style: style,
+            ),
+          );
+        }
+
+        for (var i = 0; i < cardFrames && winner != null; i++) {
+          await emit(
+            (canvas, size) =>
+                // Same number the in-app timer and winner card show.
+                ReplayFramePainter.paintWinnerCard(
+                  canvas,
+                  size,
+                  winner,
+                  match.elapsedSeconds,
+                  videoTime: videoTime(),
+                  style: style,
+                ),
+          );
+        }
+
+        return await encoder.finish();
+      } catch (_) {
+        await encoder.cancel();
+        rethrow;
+      }
+    } finally {
+      releaseSprites();
     }
   }
 }

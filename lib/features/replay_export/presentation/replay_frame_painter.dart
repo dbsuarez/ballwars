@@ -50,6 +50,7 @@ class ReplayFramePainter {
       canvas.translate((designSize.width - _arenaSide) / 2, _arenaTop);
       ArenaPainter(
         state: state,
+        artworkRevisions: _style.artworkRevisions,
         arenaRadius: arenaRadius,
         worldRadius: worldRadius,
         rimAngle: 0,
@@ -166,6 +167,7 @@ class ReplayFramePainter {
         progress,
         skill: skill,
         library: skillLibrary,
+        artworkRevisions: style.artworkRevisions,
         effectSprites:
             skill?.usesSpriteEffects(
               globalSprite: style.effectRenderMode == EffectRenderMode.sprite,
@@ -454,6 +456,8 @@ class ReplayFramePainter {
 
 /// The exported video's look: the app's headline and theme colors.
 class ReplayStyle {
+  final Map<String, String> artworkRevisions;
+  final Map<String, Object> artworkFrames;
   final EffectRenderMode effectRenderMode;
   final String headline;
   final Color background;
@@ -473,6 +477,8 @@ class ReplayStyle {
   final bool showHpBars;
 
   const ReplayStyle({
+    this.artworkRevisions = const {},
+    this.artworkFrames = const {},
     this.effectRenderMode = EffectRenderMode.sprite,
     this.headline = 'WHO WINS?',
     this.background = const Color(0xFF0A0A0B),

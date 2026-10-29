@@ -67,6 +67,8 @@ enum SkillBubbleType { shout, speech, thought, radio }
 
 enum SkillHandedness { carrierDefault, oneHanded, twoHanded }
 
+enum AreaGuideStyle { hidden, dashed, solid }
+
 enum SkillCategory { weapon, powerUp, trap, arenaTrap }
 
 enum SkillPurpose { attack, recovery, defense, hybrid, utility }
@@ -102,6 +104,11 @@ class SkillDefinition {
     this.range = 0.55,
     this.projectileSize = 1,
     this.projectileSpin = 0,
+    this.projectileOriginForward,
+    this.projectileOriginSide = 0,
+    this.areaRadiusRatio,
+    this.areaGuideStyle = AreaGuideStyle.dashed,
+    this.areaGuideOpacity = .65,
     this.homing = false,
     this.returnsToOrigin = false,
     this.trackNearestOpponent = false,
@@ -194,6 +201,11 @@ class SkillDefinition {
   final double range;
   final double projectileSize;
   final double projectileSpin;
+  final double? projectileOriginForward;
+  final double projectileOriginSide;
+  final double? areaRadiusRatio;
+  final AreaGuideStyle areaGuideStyle;
+  final double areaGuideOpacity;
   final bool homing;
   final bool returnsToOrigin;
   final bool trackNearestOpponent;
@@ -401,6 +413,11 @@ class SkillDefinition {
     double? range,
     double? projectileSize,
     double? projectileSpin,
+    Object? projectileOriginForward = _unset,
+    double? projectileOriginSide,
+    Object? areaRadiusRatio = _unset,
+    AreaGuideStyle? areaGuideStyle,
+    double? areaGuideOpacity,
     bool? homing,
     bool? returnsToOrigin,
     bool? trackNearestOpponent,
@@ -481,6 +498,15 @@ class SkillDefinition {
     range: range ?? this.range,
     projectileSize: projectileSize ?? this.projectileSize,
     projectileSpin: projectileSpin ?? this.projectileSpin,
+    projectileOriginForward: identical(projectileOriginForward, _unset)
+        ? this.projectileOriginForward
+        : (projectileOriginForward as num?)?.toDouble(),
+    projectileOriginSide: projectileOriginSide ?? this.projectileOriginSide,
+    areaRadiusRatio: identical(areaRadiusRatio, _unset)
+        ? this.areaRadiusRatio
+        : (areaRadiusRatio as num?)?.toDouble(),
+    areaGuideStyle: areaGuideStyle ?? this.areaGuideStyle,
+    areaGuideOpacity: areaGuideOpacity ?? this.areaGuideOpacity,
     homing: homing ?? this.homing,
     returnsToOrigin: returnsToOrigin ?? this.returnsToOrigin,
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
@@ -587,6 +613,14 @@ class SkillDefinition {
     'range': range,
     'projectile_size': projectileSize,
     'projectile_spin': projectileSpin,
+    if (projectileOriginForward != null)
+      'projectile_origin_forward': projectileOriginForward,
+    if (projectileOriginForward != null)
+      'projectile_origin_side': projectileOriginSide,
+    if (areaRadiusRatio != null) 'area_radius': areaRadiusRatio,
+    if (areaGuideStyle != AreaGuideStyle.dashed)
+      'area_guide': areaGuideStyle.name,
+    if (areaGuideOpacity != .65) 'area_guide_opacity': areaGuideOpacity,
     'homing': homing,
     'returns_to_origin': returnsToOrigin,
     'track_nearest_opponent': trackNearestOpponent,
@@ -700,6 +734,15 @@ class SkillDefinition {
       range: decimal('range') ?? 0.55,
       projectileSize: decimal('projectile_size') ?? 1,
       projectileSpin: decimal('projectile_spin') ?? 0,
+      projectileOriginForward: decimal('projectile_origin_forward'),
+      projectileOriginSide: decimal('projectile_origin_side') ?? 0,
+      areaRadiusRatio: decimal('area_radius'),
+      areaGuideStyle:
+          AreaGuideStyle.values
+              .where((v) => v.name == value['area_guide'])
+              .firstOrNull ??
+          AreaGuideStyle.dashed,
+      areaGuideOpacity: decimal('area_guide_opacity') ?? .65,
       homing: value['homing'] as bool? ?? false,
       returnsToOrigin: value['returns_to_origin'] as bool? ?? false,
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
@@ -828,6 +871,10 @@ class SkillDefinition {
     range: range.clamp(0.05, 12),
     projectileSize: projectileSize.clamp(0.1, 5),
     projectileSpin: projectileSpin.clamp(-2160, 2160),
+    projectileOriginForward: projectileOriginForward?.clamp(-5, 5),
+    projectileOriginSide: projectileOriginSide.clamp(-5, 5),
+    areaRadiusRatio: areaRadiusRatio?.clamp(.05, 1),
+    areaGuideOpacity: areaGuideOpacity.clamp(0, 1),
     weaponDisplayScale: weaponDisplayScale.clamp(0.25, 3),
     pickupDisplayScale: pickupDisplayScale.clamp(0.25, 3),
     effectDisplayScale: effectDisplayScale.clamp(0.25, 3),
@@ -1160,6 +1207,15 @@ class SkillLibrary {
 
   /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
   static const int compactVersion = 3;
+  static const int originVersion = 10;
+  static const int originCompactVersion = 11;
+  bool get hasProjectileOrigins => [...overrides.values, ...custom].any(
+    (s) =>
+        s.projectileOriginForward != null ||
+        s.areaRadiusRatio != null ||
+        s.areaGuideStyle != AreaGuideStyle.dashed ||
+        s.areaGuideOpacity != .65,
+  );
   static const int visualVersion = 8;
   static const int visualCompactVersion = 9;
   static const int maxImportCharacters = 1000000;
@@ -1594,8 +1650,39 @@ class SkillLibrary {
     return result;
   }
 
+  /// Rewrites only artwork references. Mechanical fields and skill IDs stay frozen.
+  SkillLibrary remapArtwork(Map<String, String> ids) {
+    Object? visit(Object? value, {String? key}) {
+      if (value is String &&
+          {
+            'icon_sprite',
+            'projectile_sprite',
+            'impact_sprite',
+            'casting_sprite',
+            'shell_sprite',
+            'sprite',
+          }.contains(key)) {
+        return ids[value] ?? value;
+      }
+      if (value is Map) {
+        return {
+          for (final e in value.entries)
+            e.key: visit(e.value, key: e.key as String),
+        };
+      }
+      if (value is List) return value.map((v) => visit(v)).toList();
+      return value;
+    }
+
+    return SkillLibrary.importJson(jsonEncode(visit(toJson())));
+  }
+
   Map<String, Object?> toJson() => {
-    'version': hasVisualEffects ? visualVersion : version,
+    'version': hasProjectileOrigins
+        ? originVersion
+        : hasVisualEffects
+        ? visualVersion
+        : version,
     if (effects.isNotEmpty)
       'effect_library': {
         'version': 1,
@@ -1625,7 +1712,11 @@ class SkillLibrary {
   /// reads both forms to the same library. Used for replay snapshots; saved libraries keep [toJson].
   Map<String, Object?> toCompactJson() => {
     ...toJson(),
-    'version': hasVisualEffects ? visualCompactVersion : compactVersion,
+    'version': hasProjectileOrigins
+        ? originCompactVersion
+        : hasVisualEffects
+        ? visualCompactVersion
+        : compactVersion,
     'overrides': {
       for (final entry in overrides.entries) entry.key: _diff(entry.value),
     },
@@ -1686,7 +1777,8 @@ class SkillLibrary {
     return version == compactVersion ||
         version == 5 ||
         version == 7 ||
-        version == visualCompactVersion;
+        version == visualCompactVersion ||
+        version == originCompactVersion;
   }
 
   /// Whether [stored] (this library as the server returned it) holds the
@@ -1827,9 +1919,9 @@ class SkillLibrary {
     final version = decoded['version'];
     if (version is! num ||
         version.toInt() < 1 ||
-        version.toInt() > visualCompactVersion) {
+        version.toInt() > originCompactVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected 1-$visualCompactVersion.',
+        'Unsupported skill-library version. Expected 1-$originCompactVersion.',
       );
     }
     final compact = _isCompact(decoded);
@@ -2129,3 +2221,29 @@ bool persistentRoleAvailable(SkillDefinition skill, SkillVisualRole role) {
     _ => false,
   };
 }
+
+bool skillHasArea(SkillDefinition skill) => skill.isComposed
+    ? {SkillDelivery.area, SkillDelivery.aura}.contains(skill.delivery) ||
+          skill.explodesOnImpact
+    : {
+            PowerUpKind.molotov,
+            PowerUpKind.grenade,
+            PowerUpKind.rocketLauncher,
+            PowerUpKind.mine,
+            PowerUpKind.phaseMine,
+          }.contains(skill.baseKind) ||
+          skill.explodesOnImpact;
+
+SkillVisualRole areaArtworkRole(SkillDefinition skill) =>
+    (skill.isComposed &&
+            {
+              SkillDelivery.area,
+              SkillDelivery.aura,
+            }.contains(skill.delivery)) ||
+        (!skill.isComposed &&
+            {
+              PowerUpKind.molotov,
+              PowerUpKind.fireWall,
+            }.contains(skill.baseKind))
+    ? SkillVisualRole.ground
+    : SkillVisualRole.explosion;

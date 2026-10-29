@@ -53,7 +53,7 @@ jobs:
       # versionName from the tag (v1.2.3 -> 1.2.3); versionCode keeps increasing.
       - name: Build APK
         run: |
-          flutter build apk --release \
+          flutter build apk --release --dart-define=ASSET_REVISION=${{ github.sha }} \
             --build-name "${GITHUB_REF_NAME#v}" \
             --build-number "${{ github.run_number }}"
           cp build/app/outputs/flutter-apk/app-release.apk "ballwars-${GITHUB_REF_NAME}.apk"

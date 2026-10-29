@@ -1,3 +1,4 @@
+import '../../skills/presentation/area_indicator.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -273,6 +274,7 @@ class PowerUpPainter {
       e.age,
       steps,
       direction: direction,
+      essential: true,
       unitRadius:
           e.owner?.radius ??
           e.target?.radius ??
@@ -332,6 +334,16 @@ class PowerUpPainter {
             painted;
       }
       return painted;
+    }
+    if (source is BurningZone) {
+      paintAreaIndicator(
+        canvas,
+        source.position,
+        source.radius,
+        e.skill.areaGuideStyle,
+        Color(e.skill.effectColor),
+        opacity: e.skill.areaGuideOpacity,
+      );
     }
     return _persistentPaint(
       canvas,
@@ -453,14 +465,18 @@ class PowerUpPainter {
         SkillVisualRole.muzzle,
       );
       if (resolved == null) continue;
-      final center = SkillEffectRenderer.attachment(
-        resolved,
-        SkillVisualRole.muzzle,
-        flash.owner.position,
-        owner: flash.owner.position,
-        direction: flash.direction,
-        radius: flash.owner.radius,
-      );
+      final center =
+          resolved.attachment == EffectAttachment.automatic &&
+              flash.skill.projectileOriginForward != null
+          ? system.projectileOrigin(flash.owner, flash.skill, flash.direction)
+          : SkillEffectRenderer.attachment(
+              resolved,
+              SkillVisualRole.muzzle,
+              flash.owner.position,
+              owner: flash.owner.position,
+              direction: flash.direction,
+              radius: flash.owner.radius,
+            );
       SkillArtworkTint.begin(canvas, resolved.tint);
       SkillEffectRenderer.paint(
         canvas,
@@ -602,7 +618,7 @@ class PowerUpPainter {
         final image = id == null
             ? null
             : SpriteRegistry.frameAtProgress(id, impact.age / steps);
-        if (image == null) continue;
+        if (image == null || !SkillEffectRenderer.takeVisual()) continue;
         SkillArtworkTint.begin(canvas, skill.spriteTint);
         try {
           _drawEffect(
@@ -634,7 +650,21 @@ class PowerUpPainter {
     final p = state.powerUps;
     if (p == null) return;
     final r = p.fieldRadius;
-
+    if (showEffects) {
+      for (final area in p.persistentEffects.handles.where(
+        (e) => e.activation,
+      )) {
+        paintPersistentZone(canvas, p, area.key, explosionRenderMode);
+        paintAreaIndicator(
+          canvas,
+          area.center(),
+          area.radius(),
+          area.skill.areaGuideStyle,
+          Color(area.skill.effectColor),
+          opacity: area.skill.areaGuideOpacity,
+        );
+      }
+    }
     if (p.ragingDemonAttacks.isNotEmpty) {
       canvas.drawCircle(
         Offset.zero,
@@ -848,13 +878,15 @@ class PowerUpPainter {
           Paint()
             ..color = const Color(0xFFFF5A20).withValues(alpha: 0.18 * life),
         );
-        canvas.drawCircle(
+        final areaSkill = p.visualSkill(PowerUpKind.molotov, ball: fire.owner);
+        paintAreaIndicator(
+          canvas,
           fire.position,
           fire.radius,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2, visualRadius * 0.14)
-            ..color = const Color(0xFFFFA126).withValues(alpha: 0.9 * life),
+          areaSkill.areaGuideStyle,
+          Color(areaSkill.effectColor),
+          opacity: areaSkill.areaGuideOpacity * life,
+          width: math.max(1, visualRadius * .1),
         );
         if (showEffects) {
           const fireSpots = [
@@ -1284,6 +1316,31 @@ class PowerUpPainter {
     }
 
     for (final e in p.explosions) {
+      final effectSkill = e.kind == null
+          ? null
+          : p.visualSkill(e.kind!, skillId: e.skillId);
+      if ((effectSkill == null ||
+              !effectSkill.visualBindings.containsKey(
+                SkillVisualRole.explosion,
+              )) &&
+          !SkillEffectRenderer.takeVisual()) {
+        continue;
+      }
+      if (showEffects && e.kind != null) {
+        final skill = p.visualSkill(e.kind!, skillId: e.skillId);
+        SkillArtworkTint.begin(canvas, skill.spriteTint);
+        paintAreaIndicator(
+          canvas,
+          e.position,
+          e.radius,
+          skill.areaGuideStyle,
+          Color(skill.effectColor),
+          opacity:
+              skill.areaGuideOpacity *
+              (1 - e.age / p.explosionVisualSteps(e)).clamp(0, 1),
+        );
+        SkillArtworkTint.end(canvas);
+      }
       final blastSkill = e.kind == null
           ? null
           : p.visualSkill(e.kind!, skillId: e.skillId);

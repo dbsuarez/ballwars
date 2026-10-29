@@ -81,10 +81,10 @@ production acceptance remain manual; deployment workflows are not monitored.
 
 ## E. Asset reproducibility and performance
 
-- [ ] Preserve immutable sprite revisions for historical replays and exports.
-- [ ] Add replay dependency manifests and an explicit missing-revision policy.
-- [ ] Add total decoded-memory estimates and a cache/eviction budget.
-- [ ] Add effect-instance budgets and visual-quality density settings without changing mechanics.
+- [x] Preserve immutable sprite revisions for historical replays and exports.
+- [x] Add replay dependency manifests and an explicit missing-revision policy.
+- [x] Add total decoded-memory estimates and a cache/eviction budget.
+- [x] Add effect-instance budgets and visual-quality density settings without changing mechanics.
 - [ ] Measure six-ball performance and memory on actual browser/Android devices.
 
 ## F. Mechanical effect composition
@@ -95,4 +95,8 @@ production acceptance remain manual; deployment workflows are not monitored.
 - [ ] Keep damage, reach, knockback and status timing independent of selected artwork.
 - [ ] Maintain old snapshots and add end-to-end composition regression coverage.
 
-A-D are implemented. E-F remain explicit follow-up work.
+A-E software is implemented. Phase E Android performance acceptance remains open; Phase F mechanical composition is next.
+
+Phase E verification: 928 tests passed (one opt-in performance test skipped), followed by 64 replay-focused checks, 28 production asset-revision checks and 15 final authoring/visual checks. Analysis and release web build pass. Phone-sized placement and AoE previews were rendered and inspected. Actual Windows Chrome profiling is documented in [SIX-BALL-PERFORMANCE.md](SIX-BALL-PERFORMANCE.md); no Android device was connected.
+
+Also delivered: remembered Skill Demo speed, pinned placement previews with sliders and numeric inputs, configurable projectile launch points, and reusable AoE artwork/boundary/radius editing. See [REPLAY-ARTWORK-REVISIONS.md](REPLAY-ARTWORK-REVISIONS.md). Migration 024 was applied by the user.

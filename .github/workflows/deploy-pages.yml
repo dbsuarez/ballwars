@@ -31,7 +31,7 @@ jobs:
       - run: flutter test
 
       # Pages serves the site from https://<user>.github.io/<repo>/
-      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - run: flutter build web --release --dart-define=ASSET_REVISION=${{ github.sha }} --base-href "/${{ github.event.repository.name }}/"
 
       - uses: actions/upload-pages-artifact@v3
         with:

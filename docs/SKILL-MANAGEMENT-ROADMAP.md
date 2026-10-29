@@ -331,3 +331,8 @@ A-D are implemented; E-F remain unchecked follow-up work.
 ```text
 [x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [x] Phase 11 -> [x] Phase 12 -> Fully complete
 ```
+
+
+## Phase E implementation update, 2026-10-29
+
+Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Android performance and device/production acceptance remain manual; Phase F is pending. Migration 024 was applied by the user.

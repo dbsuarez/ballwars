@@ -1,3 +1,4 @@
+import '../../../core/sprites/visual_quality.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -1572,6 +1573,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ),
       if (tab == 1)
         _settingsGroup('Appearance', [
+          const VisualQualityControl(),
           _choice<EffectRenderMode?>(
             Icons.auto_awesome,
             'Effect visuals',

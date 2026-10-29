@@ -103,6 +103,8 @@ class ExportVideoDialog extends StatefulWidget {
     int? endStep,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     SkillLibrary skillLibrary = SkillLibrary.defaults,
+    Map<String, String> artworkRevisions = const {},
+    Map<String, Object> artworkFrames = const {},
     bool endlessBattle = false,
     bool dualWield = false,
     bool mayhem = false,
@@ -153,6 +155,8 @@ class ExportVideoDialog extends StatefulWidget {
         finishersEnabled: finishersEnabled,
         randomizedHairstyles: randomizedHairstyles,
         style: ReplayStyle(
+          artworkRevisions: artworkRevisions,
+          artworkFrames: artworkFrames,
           effectRenderMode: effectRenderMode,
           headline: headline,
           background: colors?.background ?? const ReplayStyle().background,

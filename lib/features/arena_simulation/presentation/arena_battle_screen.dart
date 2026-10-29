@@ -1,3 +1,4 @@
+import '../../../core/sprites/sprite_registry.dart';
 import '../../../core/widgets/screen_awake.dart';
 import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:math' as math;
@@ -260,10 +261,32 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     });
   }
 
+  VoidCallback? _spriteLease;
+  Map<String, String> _roundArtwork = {};
+  Map<String, Object> _roundFrames = {};
+
   Future<void> _prepareRoundResources(int generation) async {
     _preparingRound = true;
+    _roundArtwork = widget.config.artworkRevisions;
+    _roundFrames = widget.config.artworkFrames;
+    final requiredSprites = SkillSpriteReadiness.dependencies(
+      library: widget.config.skillLibrary,
+      tuning: widget.config.tuning,
+      kinds: widget.config.mode == MatchMode.threads
+          ? const {}
+          : widget.config.powerUps,
+      customIds: widget.config.mode == MatchMode.threads
+          ? const {}
+          : widget.config.customSkills,
+      includeTraps: widget.config.mode != MatchMode.threads,
+    );
+    requiredSprites.addAll(widget.config.artworkRevisions.values);
+    _spriteLease?.call();
+    _spriteLease = SpriteRegistry.pin(requiredSprites);
     try {
       final missing = await SkillSpriteReadiness.prepare(
+        extraIds: widget.config.artworkRevisions.values,
+        embedded: widget.config.artworkFrames,
         includeTraps: widget.config.mode != MatchMode.threads,
         library: widget.config.skillLibrary,
         tuning: widget.config.tuning,
@@ -279,12 +302,38 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       if (missing.isNotEmpty) {
         setState(
           () => _resourceError =
-              '${missing.length} artwork assets are unavailable. Retry, or continue with fallback artwork.',
+              '${missing.length} artwork assets are unavailable. Retry, or continue with fallback artwork. Recorded revisions are included; fallback can change replay appearance.',
         );
         return;
       }
+      if (widget.config.mode != MatchMode.threads &&
+          RegExp(r'^[a-f0-9]{40}$').hasMatch(SpriteRegistry.assetRevision) &&
+          !PowerUpSprites.requiredIds.every(SpriteRegistry.has)) {
+        await PowerUpSprites.load();
+      }
+      if (!mounted || generation != _matchGeneration) return;
+      final roundArtwork = widget.config.artworkRevisions.isNotEmpty
+          ? widget.config.artworkRevisions
+          : SkillSpriteReadiness.freezeIds({
+              ...requiredSprites,
+              if (widget.config.mode != MatchMode.threads)
+                ...SpriteRegistry.ids.where((id) => !id.startsWith('custom.')),
+            });
+      final roundFrames = widget.config.artworkFrames.isNotEmpty
+          ? widget.config.artworkFrames
+          : await SpriteRegistry.embedDrawn(roundArtwork);
+      if (!mounted || generation != _matchGeneration) return;
+      _roundArtwork = roundArtwork;
+      _roundFrames = roundFrames;
+      final originalLease = _spriteLease;
+      final revisionsLease = SpriteRegistry.pin(_roundArtwork.values);
+      _spriteLease = () {
+        originalLease?.call();
+        revisionsLease();
+      };
       _startReadyCountdown();
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Match artwork preparation failed: $error');
       if (!mounted || generation != _matchGeneration) return;
       setState(
         () => _resourceError =
@@ -575,7 +624,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     shrinkingArena: widget.config.shrinkingArena,
     minimumArenaScale: widget.config.minimumArenaScale,
     arenaDecoration: widget.config.arenaDecoration,
-    skillLibrary: widget.config.skillLibrary,
+    skillLibrary: widget.config.skillLibrary.remapArtwork(_roundArtwork),
+    artworkRevisions: _roundArtwork,
+    artworkFrames: _roundFrames,
   ).toUri(presetIds: {for (final b in LocalBallRepository.presets) b.id});
 
   /// [_replayUri], or null after telling the user why there is none: the custom skill snapshot is
@@ -586,7 +637,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     } on FormatException {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Too many custom skills to share this replay'),
+          content: Text(
+            'This replay has too much skill or artwork data to share. Reduce enabled assets or custom descriptions.',
+          ),
         ),
       );
       return null;
@@ -764,6 +817,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
   @override
   void dispose() {
+    _spriteLease?.call();
     WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     _dissolveController.dispose();
@@ -925,6 +979,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           child: RepaintBoundary(
                             child: ArenaCanvas(
                               state: _state,
+                              artworkRevisions: _roundArtwork,
                               arenaRadius: _controller.arenaRadius,
                               worldRadius: _arenaRadius,
                               rimInset: 0,
@@ -1171,9 +1226,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     _loserBall != null)
                   Positioned.fill(
                     child: HarpoonCinematic(
+                      artworkRevisions: _roundArtwork,
                       winner: _winnerBall!,
                       loser: _loserBall!,
-                      skillLibrary: _controller.skillLibrary,
+                      skillLibrary: _controller.skillLibrary.remapArtwork(
+                        _roundArtwork,
+                      ),
                       move: _controller.winningMove ?? 'Collision',
                       skill: _controller.skillLibrary
                           .all(_controller.tuning)
@@ -1279,7 +1337,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 powerUps: widget.config.powerUps,
                                 customSkills: widget.config.customSkills,
                                 tuning: widget.config.tuning,
-                                skillLibrary: widget.config.skillLibrary,
+                                skillLibrary: widget.config.skillLibrary
+                                    .remapArtwork(_roundArtwork),
+                                artworkRevisions: _roundArtwork,
+                                artworkFrames: _roundFrames,
                                 endlessBattle: widget.config.endlessBattle,
                                 dualWield: widget.config.dualWield,
                                 mayhem: widget.config.mayhem,

@@ -31,6 +31,7 @@ class HarpoonCinematic extends StatefulWidget {
     this.effectSprites = true,
     this.skill,
     this.skillLibrary = SkillLibrary.defaults,
+    this.artworkRevisions = const {},
   });
 
   /// Draws [image] [half] in half-size with its sprite [anchor]
@@ -66,6 +67,7 @@ class HarpoonCinematic extends StatefulWidget {
   final bool effectSprites;
   final SkillDefinition? skill;
   final SkillLibrary skillLibrary;
+  final Map<String, String> artworkRevisions;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -80,6 +82,7 @@ class HarpoonCinematic extends StatefulWidget {
     double progress, {
     SkillDefinition? skill,
     SkillLibrary library = SkillLibrary.defaults,
+    Map<String, String> artworkRevisions = const {},
     bool effectSprites = true,
   }) {
     final profile = FinisherProfile.forMove(skill?.displayKind.label ?? move);
@@ -115,6 +118,7 @@ class HarpoonCinematic extends StatefulWidget {
       profile: profile,
       skill: skill,
       skillLibrary: library,
+      artworkRevisions: artworkRevisions,
       artworkTint: skill?.spriteTint ?? 0xffffffff,
       effectSprites: effectSprites,
     ).paint(canvas, size);
@@ -252,6 +256,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                           effectSprites: widget.effectSprites,
                           skill: widget.skill,
                           skillLibrary: widget.skillLibrary,
+                          artworkRevisions: widget.artworkRevisions,
                         ),
                       ),
                     ),
@@ -384,6 +389,7 @@ class _FinisherPainter extends CustomPainter {
     this.effectSprites = true,
     this.skill,
     this.skillLibrary = SkillLibrary.defaults,
+    this.artworkRevisions = const {},
   });
 
   final CustomBall winner;
@@ -400,6 +406,7 @@ class _FinisherPainter extends CustomPainter {
   final bool effectSprites;
   final SkillDefinition? skill;
   final SkillLibrary skillLibrary;
+  final Map<String, String> artworkRevisions;
   double get _projectileScale => skill?.projectileSize ?? 1;
   double get _weaponScale =>
       skill == null ? 1 : skillLibrary.weaponDisplayScaleFor(skill!);
@@ -467,7 +474,11 @@ class _FinisherPainter extends CustomPainter {
   }
 
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(Canvas canvas, Size size) => SpriteRegistry.withArtwork(
+    artworkRevisions,
+    () => _paintScene(canvas, size),
+  );
+  void _paintScene(Canvas canvas, Size size) {
     _pending.clear();
     _paintSpeedLines(canvas);
     if (impactProgress > 0 && impactProgress < 1) {

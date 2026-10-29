@@ -24,6 +24,8 @@ import '../domain/skill_library.dart';
 import 'grip_preview_dialog.dart';
 import 'skill_demo_dialog.dart';
 import 'skill_effects_editor.dart';
+import 'effect_placement_preview.dart';
+import 'area_effect_preview.dart';
 import '../../sprites/presentation/sprites_screen.dart';
 import 'skill_artwork_tint.dart';
 
@@ -1265,6 +1267,23 @@ class _SkillEditorState extends State<_SkillEditor> {
     'projectileSize': TextEditingController(
       text: '${widget.skill.projectileSize}',
     ),
+    'originForward': TextEditingController(
+      text: '${widget.skill.projectileOriginForward ?? 1}',
+    ),
+    'originSide': TextEditingController(
+      text: '${widget.skill.projectileOriginSide}',
+    ),
+    'areaRadius': TextEditingController(
+      text:
+          ((widget.skill.areaRadiusRatio ??
+                          ((widget.skill.isComposed ||
+                                  widget.skill.explodesOnImpact)
+                              ? widget.skill.range
+                              : widget.tuning.blastRadiusRatio))
+                      .clamp(.05, 1) *
+                  100)
+              .toStringAsFixed(1),
+    ),
     'projectileSpin': TextEditingController(
       text: '${widget.skill.projectileSpin}',
     ),
@@ -1344,6 +1363,10 @@ class _SkillEditorState extends State<_SkillEditor> {
   late bool? _shellEnabled = widget.skill.shellEnabled;
   late String? _iconSpriteId = widget.skill.iconSpriteId;
   late String? _projectileSpriteId = widget.skill.projectileSpriteId;
+  late bool _originEnabled = widget.skill.projectileOriginForward != null;
+  late bool _areaRadiusEnabled = widget.skill.areaRadiusRatio != null;
+  late AreaGuideStyle _areaGuideStyle = widget.skill.areaGuideStyle;
+  late double _areaGuideOpacity = widget.skill.areaGuideOpacity;
   late String? _impactSpriteId = widget.skill.impactSpriteId;
   late String? _castingSpriteId = widget.skill.castingSpriteId;
   late Map<SkillVisualRole, SkillVisualBinding> _visualBindings =
@@ -1636,6 +1659,21 @@ class _SkillEditorState extends State<_SkillEditor> {
       _shellEnabled = defaults.shellEnabled;
       _iconSpriteId = defaults.iconSpriteId;
       _projectileSpriteId = defaults.projectileSpriteId;
+      _originEnabled = defaults.projectileOriginForward != null;
+      _areaRadiusEnabled = defaults.areaRadiusRatio != null;
+      _areaGuideStyle = defaults.areaGuideStyle;
+      _areaGuideOpacity = defaults.areaGuideOpacity;
+      number('originForward', defaults.projectileOriginForward ?? 1);
+      number('originSide', defaults.projectileOriginSide);
+      number(
+        'areaRadius',
+        (defaults.areaRadiusRatio ??
+                    ((defaults.isComposed || defaults.explodesOnImpact)
+                        ? defaults.range
+                        : widget.tuning.blastRadiusRatio))
+                .clamp(.05, 1) *
+            100,
+      );
       _impactSpriteId = defaults.impactSpriteId;
       _castingSpriteId = defaults.castingSpriteId;
       _visualBindings = defaults.visualBindings;
@@ -1806,6 +1844,13 @@ class _SkillEditorState extends State<_SkillEditor> {
       range: _double('range'),
       projectileSize: _double('projectileSize'),
       projectileSpin: _double('projectileSpin'),
+      projectileOriginForward: _originEnabled ? _double('originForward') : null,
+      projectileOriginSide: _double('originSide'),
+      areaRadiusRatio: _areaRadiusEnabled
+          ? (_double('areaRadius') ?? 20) / 100
+          : null,
+      areaGuideStyle: _areaGuideStyle,
+      areaGuideOpacity: _areaGuideOpacity,
       homing: _homing,
       returnsToOrigin: _returnsToOrigin,
       trackNearestOpponent: _trackNearestOpponent,
@@ -1876,6 +1921,9 @@ class _SkillEditorState extends State<_SkillEditor> {
     'weaponGripSide': (-1.5, 1.5),
     'weaponGripRotation': (-180, 180),
     'projectileSize': (0.1, 5),
+    'originForward': (-5, 5),
+    'originSide': (-5, 5),
+    'areaRadius': (5, 100),
     'screenShake': (0, 1),
     'knockback': (0, 100),
     'meleeReach': (0, 3),
@@ -1912,6 +1960,8 @@ class _SkillEditorState extends State<_SkillEditor> {
 
   /// Number fields that may go below zero.
   static const _signedKeys = {
+    'originForward',
+    'originSide',
     'projectileSpin',
     'weaponGripInset',
     'weaponGripSide',
@@ -2224,6 +2274,245 @@ class _SkillEditorState extends State<_SkillEditor> {
         child: Text(mode == SkillVisualMode.sprite ? 'Sprite' : 'Vector'),
       ),
     ],
+  );
+
+  Widget _offsetSlider(String key, double min, double max) => Slider(
+    key: ValueKey('skill-slider-$key'),
+    value: (_double(key) ?? min).clamp(min, max),
+    min: min,
+    max: max,
+    onChanged: (v) =>
+        setState(() => _numbers[key]!.text = v.toStringAsFixed(2)),
+  );
+  Widget _projectileOriginEditor() => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          SwitchListTile.adaptive(
+            key: const ValueKey('skill-custom-origin'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Projectile launch point'),
+            subtitle: const Text('Set where the projectile leaves the ball.'),
+            value: _originEnabled,
+            onChanged: (v) => setState(() {
+              _originEnabled = v;
+              if (!v) {
+                _numbers['originForward']!.text = '1';
+                _numbers['originSide']!.text = '0';
+              }
+            }),
+          ),
+          EffectPlacementPreview(
+            role: SkillVisualRole.trail,
+            effect: ResolvedSkillEffect(
+              spriteId:
+                  _projectileSpriteId ??
+                  PowerUpSprites.projectileArtworkId(
+                    widget.skill.displayKind,
+                  ) ??
+                  '',
+              scale: .3 * (_double('projectileSize') ?? 1),
+              opacity: 1,
+              tint: _spriteTint,
+              playback: EffectPlayback.once,
+              facing: EffectFacing.direction,
+              offsetX: _originEnabled ? (_double('originForward') ?? 1) : 1,
+              offsetY: _originEnabled ? (_double('originSide') ?? 0) : 0,
+            ),
+          ),
+          const Text(
+            'Orange cross = launch point. Automatic keeps the existing weapon behavior.',
+            style: TextStyle(fontSize: 12),
+          ),
+          if (_originEnabled) ...[
+            _number('originForward', 'Forward/back', suffix: 'ball radii'),
+            _offsetSlider('originForward', -5, 5),
+            _number('originSide', 'Sideways', suffix: 'ball radii'),
+            _offsetSlider('originSide', -5, 5),
+            TextButton.icon(
+              onPressed: () => setState(() {
+                _originEnabled = false;
+                _numbers['originForward']!.text = '1';
+                _numbers['originSide']!.text = '0';
+              }),
+              icon: const Icon(Icons.restore),
+              label: const Text('Reset launch point'),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+  Future<void> _editAreaArtwork() async {
+    final initial = _result;
+    if (initial == null) return;
+    var library = _effectLibrary;
+    var bindings = {..._visualBindings};
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: const Text('Area artwork'),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 20,
+          ),
+          content: SizedBox(
+            width: 620,
+            height: MediaQuery.sizeOf(context).height * .6,
+            child: SingleChildScrollView(
+              child: SkillEffectsEditor(
+                roles: {areaArtworkRole(initial)},
+                library: library.withDefinition(
+                  initial.copyWith(visualBindings: bindings),
+                  widget.tuning,
+                ),
+                skill: initial.copyWith(visualBindings: bindings),
+                tuning: widget.tuning,
+                onChanged: (next, nextBindings) => update(() {
+                  library = next;
+                  bindings = {...nextBindings};
+                }),
+                onPreview: (next, skill) => showDialog<void>(
+                  context: context,
+                  builder: (_) => SkillDemoDialog(
+                    skill: skill,
+                    library: next,
+                    tuning: widget.tuning,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Use artwork'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true && mounted) {
+      setState(() {
+        _effectLibrary = library;
+        _visualBindings = bindings;
+      });
+    }
+  }
+
+  Widget _areaEditor(SkillDefinition result) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          const Text(
+            'Area of effect',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          AreaEffectPreview(
+            key: const ValueKey('skill-area-preview'),
+            skill: result,
+            library: _effectLibrary,
+            radiusRatio:
+                result.areaRadiusRatio ??
+                ((result.isComposed || result.explodesOnImpact)
+                    ? result.range
+                    : widget.tuning.blastRadiusRatio),
+          ),
+          const Text(
+            'Boundary = affected area. Artwork size can be adjusted separately.',
+            style: TextStyle(fontSize: 12),
+          ),
+          _fixedRow(
+            'Boundary',
+            DropdownButton<AreaGuideStyle>(
+              key: const ValueKey('skill-area-style'),
+              isExpanded: true,
+              value: _areaGuideStyle,
+              items: [
+                for (final style in AreaGuideStyle.values)
+                  DropdownMenuItem(
+                    value: style,
+                    child: Text(switch (style) {
+                      AreaGuideStyle.hidden => 'Hidden',
+                      AreaGuideStyle.dashed => 'Dash-dot',
+                      AreaGuideStyle.solid => 'Solid',
+                    }),
+                  ),
+              ],
+              onChanged: (v) {
+                if (v != null) setState(() => _areaGuideStyle = v);
+              },
+            ),
+          ),
+          _fixedRow(
+            'Boundary opacity',
+            Slider(
+              key: const ValueKey('skill-area-opacity'),
+              value: _areaGuideOpacity,
+              onChanged: (v) => setState(() => _areaGuideOpacity = v),
+            ),
+          ),
+          OutlinedButton.icon(
+            key: const ValueKey('skill-area-artwork'),
+            onPressed: _editAreaArtwork,
+            icon: const Icon(Icons.layers_outlined),
+            label: const Text('Edit area artwork'),
+          ),
+          _fixedRow(
+            'Boundary color',
+            OutlinedButton.icon(
+              icon: Icon(
+                Icons.palette_outlined,
+                color: Color(_colorValue ?? 0xffff7a2f),
+              ),
+              label: const Text('Choose'),
+              onPressed: () async {
+                final color = await showColorPicker(
+                  context,
+                  initialColor: Color(_colorValue ?? 0xffff7a2f),
+                  title: 'Effect color',
+                );
+                if (color != null && mounted) {
+                  setState(
+                    () => _effectColor.text = (color.toARGB32() & 0xffffff)
+                        .toRadixString(16)
+                        .padLeft(6, '0'),
+                  );
+                }
+              },
+            ),
+          ),
+          const Text(
+            'Uses the skill Effect color. Artwork size and damage radius stay independent.',
+            style: TextStyle(fontSize: 12),
+          ),
+          SwitchListTile.adaptive(
+            key: const ValueKey('skill-area-radius-override'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Custom area radius'),
+            value: _areaRadiusEnabled,
+            onChanged: (v) => setState(() {
+              _areaRadiusEnabled = v;
+              if (!v) {
+                _numbers['areaRadius']!.text =
+                    '${((result.isComposed || result.explodesOnImpact) ? result.range : widget.tuning.blastRadiusRatio).clamp(.05, 1) * 100}';
+              }
+            }),
+          ),
+          if (_areaRadiusEnabled) ...[
+            _number('areaRadius', 'Damage radius', suffix: '% of arena'),
+            _offsetSlider('areaRadius', 5, 100),
+          ],
+        ],
+      ),
+    ),
   );
 
   Widget _number(
@@ -3394,6 +3683,17 @@ class _SkillEditorState extends State<_SkillEditor> {
                             ),
                           ),
                       ],
+                      if (widget.skill.isComposed
+                          ? _delivery == SkillDelivery.projectile ||
+                                _payload != null
+                          : SkillLibrary.isProjectileKind(
+                                  widget.skill.baseKind,
+                                ) &&
+                                widget.skill.baseKind !=
+                                    PowerUpKind.sniperRifle)
+                        _projectileOriginEditor(),
+                      if (result != null && skillHasArea(result))
+                        _areaEditor(result),
                       if (_usesProjectileDelivery)
                         _number(
                           'projectileSize',

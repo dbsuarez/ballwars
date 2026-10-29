@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../arena_simulation/domain/power_up.dart';
+import '../domain/skill_library.dart';
+import 'area_indicator.dart';
 
 /// Debug geometry reads physical sources, never artwork scale/offsets.
 class SkillDemoCollisionPainter extends CustomPainter {
@@ -17,7 +19,15 @@ class SkillDemoCollisionPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
       ..color = Colors.yellowAccent;
-    void circle(Offset at, double r) => canvas.drawCircle(at, r, pen);
+    void circle(Offset at, double r) => paintAreaIndicator(
+      canvas,
+      at,
+      r,
+      AreaGuideStyle.dashed,
+      Colors.yellowAccent,
+      opacity: .9,
+      width: 1.2,
+    );
     circle(Offset.zero, match.arenaRadius);
     for (final b in match.state.balls) {
       if (!b.isEliminated) circle(b.position, b.radius);

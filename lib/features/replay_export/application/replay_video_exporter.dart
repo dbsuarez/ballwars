@@ -1,3 +1,4 @@
+import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
@@ -135,6 +136,18 @@ class ReplayVideoExporter {
       arenaDecoration: style.arenaDecoration,
       randomizedHairstyles: randomizedHairstyles,
     );
+    final missing = await SkillSpriteReadiness.prepare(
+      library: skillLibrary,
+      tuning: tuning,
+      includeTraps: mode != MatchMode.threads,
+      kinds: mode == MatchMode.threads ? const {} : powerUps,
+      customIds: mode == MatchMode.threads ? const {} : customSkills,
+    );
+    if (missing.isNotEmpty) {
+      throw StateError(
+        'Cannot export: ${missing.length} artwork assets are missing. Open Sprites to reload them, then retry.',
+      );
+    }
     final frameDelta = speedMultiplier / fps;
 
     // Dry run (no rendering) to know the total frame count for progress.

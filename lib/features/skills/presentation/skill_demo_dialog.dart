@@ -1,3 +1,4 @@
+import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -40,6 +41,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   late final Ticker _ticker;
   Duration? _previous;
   bool _sound = true;
+  bool _preparing = false;
   String? _error;
   final _heard = <String, int>{};
   int _hits = 0,
@@ -107,18 +109,41 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     }
   }
 
-  void _start() {
+  Future<void> _ensureArtwork() async {
+    final missing = await SkillSpriteReadiness.prepare(
+      library: _demo.match.skillLibrary,
+      tuning: widget.tuning,
+      kinds: widget.skill.custom ? const {} : {widget.skill.baseKind},
+      customIds: widget.skill.custom ? {widget.skill.id} : const {},
+      includeTraps: false,
+    );
+    if (missing.isNotEmpty) {
+      throw StateError(
+        '${missing.length} artwork assets are unavailable. Reload Sprites, then retry.',
+      );
+    }
+  }
+
+  Future<void> _start() async {
     _ticker.stop();
     _previous = null;
     _heard.clear();
     _hits = _shots = _slashes = _blocks = _blasts = _pickups = 0;
+    setState(() {
+      _preparing = true;
+      _error = null;
+    });
     try {
+      await _ensureArtwork();
+      if (!mounted) return;
       _demo.activate();
       _audio();
       setState(() => _error = null);
       _ticker.start();
     } catch (error) {
-      setState(() => _error = 'Demo could not start: $error');
+      if (mounted) setState(() => _error = 'Demo could not start: $error');
+    } finally {
+      if (mounted) setState(() => _preparing = false);
     }
   }
 
@@ -400,12 +425,16 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                         Expanded(
                           child: FilledButton.icon(
                             key: const ValueKey('use-demo-skill'),
-                            onPressed: _start,
+                            onPressed: _preparing ? null : _start,
                             icon: Icon(
                               _demo.started ? Icons.replay : Icons.play_arrow,
                             ),
                             label: Text(
-                              _demo.started ? 'Replay skill' : 'Use skill',
+                              _preparing
+                                  ? 'Getting ready'
+                                  : _demo.started
+                                  ? 'Replay skill'
+                                  : 'Use skill',
                             ),
                           ),
                         ),
@@ -425,34 +454,43 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                         IconButton.outlined(
                           key: const ValueKey('reset-demo-skill'),
                           tooltip: 'Reset demo',
-                          onPressed: _reset,
+                          onPressed: _preparing ? null : _reset,
                           icon: const Icon(Icons.restart_alt),
                         ),
                       ],
                     ),
                     TextButton.icon(
                       key: const ValueKey('demo-incoming-hit'),
-                      onPressed: () {
-                        try {
-                          if (!_demo.started ||
-                              _demo.elapsed >= _demo.duration) {
-                            _heard.clear();
-                            _hits = _shots = _slashes = _blocks = _blasts =
-                                _pickups = 0;
-                          }
-                          _demo.incomingHit();
-                          _audio();
-                          _previous = null;
-                          if (!_ticker.isActive) _ticker.start();
-                          setState(() => _error = null);
-                        } catch (error) {
-                          _ticker.stop();
-                          setState(
-                            () => _error =
-                                'Incoming-hit test could not start: $error',
-                          );
-                        }
-                      },
+                      onPressed: _preparing
+                          ? null
+                          : () async {
+                              setState(() => _preparing = true);
+                              try {
+                                await _ensureArtwork();
+                                if (!mounted) return;
+                                if (!_demo.started ||
+                                    _demo.elapsed >= _demo.duration) {
+                                  _heard.clear();
+                                  _hits = _shots = _slashes = _blocks =
+                                      _blasts = _pickups = 0;
+                                }
+                                _demo.incomingHit();
+                                _audio();
+                                _previous = null;
+                                if (!_ticker.isActive) _ticker.start();
+                                setState(() => _error = null);
+                              } catch (error) {
+                                _ticker.stop();
+                                if (mounted) {
+                                  setState(
+                                    () => _error =
+                                        'Incoming-hit test could not start: $error',
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => _preparing = false);
+                              }
+                            },
                       icon: const Icon(Icons.shield_outlined),
                       label: const Text('Test incoming hit'),
                     ),

@@ -64,6 +64,11 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                     winner: _winner,
                     loser: _loser,
                     move: move,
+                    skillLibrary: AppSettingsScope.of(context).skillLibrary,
+                    skill: AppSettingsScope.of(context).skillLibrary
+                        .all(AppSettingsScope.of(context).powerUps)
+                        .where((skill) => skill.name == move)
+                        .firstOrNull,
                     artworkTint:
                         AppSettingsScope.of(context).skillLibrary
                             .all(AppSettingsScope.of(context).powerUps)

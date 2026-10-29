@@ -1,5 +1,9 @@
 # Recommended Skill Model
 
+See the [2026-10-29 skill/sprite integration audit](SKILL-SPRITE-INTEGRATION-AUDIT-2026-10-29.md)
+for verified implementation limits and the proposed reusable effect-binding layer.
+The audit separates current behavior from recommendations that are not yet implemented.
+
 This is the source of truth for Ball Wars skills. A skill's identity is separate from the legacy item whose art or defaults it may reuse, so a custom skill is an independent playable entry rather than a replacement for a built-in one.
 
 ## Goals

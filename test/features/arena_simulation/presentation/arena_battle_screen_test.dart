@@ -50,6 +50,48 @@ bool _shows(String label) =>
 
 void main() {
   testWidgets(
+    'missing skill artwork waits for an explicit fallback before countdown',
+    (tester) async {
+      final skill = SkillLibrary.defaults
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .copyWith(iconSpriteId: 'custom.unavailable.pistol');
+      await tester.pumpWidget(
+        _app(
+          MatchConfig(
+            contestants: _balls,
+            mode: MatchMode.arsenal,
+            powerUps: {PowerUpKind.pistol},
+            skillLibrary: SkillLibrary.defaults.withDefinition(
+              skill,
+              PowerUpConfig.defaults,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 10));
+      expect(
+        find.textContaining('artwork assets are unavailable'),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('match-timer'))).data,
+        '0:00.0',
+      );
+      await tester.tap(find.text('Use fallback'));
+      await tester.pump();
+      expect(find.text('ROUND START'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      expect(
+        find.textContaining('artwork assets are unavailable'),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
     'a fresh match shows the headline, round, both balls at half the rim and the timer',
     (tester) async {
       await tester.pumpWidget(_app(const MatchConfig(contestants: _balls)));

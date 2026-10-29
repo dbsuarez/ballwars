@@ -28,6 +28,7 @@ import 'features/settings/presentation/app_settings_scope.dart';
 import 'features/settings/presentation/settings_screen.dart';
 import 'features/sprites/data/sprite_atlas_repository.dart';
 import 'features/sprites/application/custom_sprite_loader.dart';
+import 'features/sprites/application/skill_sprite_readiness.dart';
 
 class BallWarsApp extends StatefulWidget {
   /// User-made groups (Supabase); null hides My Groups (e.g. in tests).
@@ -64,6 +65,7 @@ class BallWarsApp extends StatefulWidget {
 }
 
 class _BallWarsAppState extends State<BallWarsApp> {
+  CustomSpriteLoader? _spriteLoader;
   final ValueNotifier<AppSettings> _settings = ValueNotifier(
     AppSettings.defaults,
   );
@@ -81,7 +83,12 @@ class _BallWarsAppState extends State<BallWarsApp> {
     super.initState();
     // The admin's music choice applies to every player's matches.
     _settings.addListener(_applyMusic);
-    if (widget.sprites != null) CustomSpriteLoader(widget.sprites!).load();
+    if (widget.sprites != null) {
+      final loader = CustomSpriteLoader(widget.sprites!);
+      _spriteLoader = loader;
+      SkillSpriteReadiness.loader = loader;
+      loader.load();
+    }
   }
 
   void _applyMusic() {
@@ -124,6 +131,9 @@ class _BallWarsAppState extends State<BallWarsApp> {
 
   @override
   void dispose() {
+    if (identical(SkillSpriteReadiness.loader, _spriteLoader)) {
+      SkillSpriteReadiness.loader = null;
+    }
     _settings.dispose();
     _progress.dispose();
     super.dispose();

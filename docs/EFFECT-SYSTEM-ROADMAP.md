@@ -1,0 +1,75 @@
+# Skill and sprite effect-system improvements
+
+Source: [2026-10-29 audit](SKILL-SPRITE-INTEGRATION-AUDIT-2026-10-29.md).
+This tracks implementation separately from the original source findings.
+
+## A. Existing integration correctness
+
+- [x] Keep rendered spike angles tied to collision sample spacing when artwork scale changes.
+- [x] Remove the custom-art finisher fast path that replaced native choreography with one traveling image.
+- [x] Resolve custom art inside item, bullet, shotgun volley, arrow, Boomerang and missile rendering paths.
+- [x] Honor projectile and held-item scale independently; use effective global/per-skill effect scale for custom impacts/explosions.
+- [x] Pass the skill library to match, editor, Power-up Test and gallery finishers; use a custom skill's visual template when no explicit visual move is supplied.
+- [x] Add a match dependency barrier for enabled skill artwork, payload dependencies and automatic traps.
+- [x] Keep Threads independent of trap/pickup asset requirements.
+- [x] Present Retry / Use fallback if required match artwork is missing, before countdown.
+- [x] Preflight custom sprite dependencies before exporting video; report missing assets before rendering starts.
+- [x] Check unsaved draft artwork before both Skill Demo activation and incoming-hit tests.
+- [x] Coalesce concurrent loads by loader and reuse unchanged decoded atlas revisions.
+- [x] Keep bounded preparation waits; keep existing ball-image/built-in background loading behavior.
+
+Verification: full suite 875 tests passed, plus the added rendered-spike geometry
+regression test passed separately. New tests exercise native seven-pellet
+choreography with custom artwork, independent held/projectile scales, actual
+rendered spike angles at 1x/3x, explicit fallback interaction, dependency traversal
+and unchanged-atlas reuse. Web release build passed. Phone/network and GPU-memory
+verification remain manual.
+
+These changes fix existing integration paths. They do not introduce arbitrary
+sprite bindings for procedural beams/status effects, a new Effect Library, or
+immutable historical replay artwork. No mechanics or replay simulation version
+was changed.
+
+## B. Versioned Effect Library and bindings
+
+- [ ] Define reusable EffectDefinition entries with stable IDs and a schema version.
+- [ ] Define SkillVisualBinding roles separately from mechanical effects.
+- [ ] Add shared visual resolution for arena, demo, finisher and export.
+- [ ] Migrate existing slots through explicit fallbacks, preserving old skill/replay appearance.
+- [ ] Preserve bindings through save/reload, duplicate, reset, import/export and compact replay encoding.
+- [ ] Include effect assets in readiness, replacement warnings and sprite usage searches.
+
+## C. Initial editable visual roles
+
+- [ ] Separate casting, muzzle, projectile trail, direct hit and explosion bindings.
+- [ ] Expose sprite, attachment, size, opacity, tint, facing, offset, playback and lifetime controls.
+- [ ] Keep the four Skill Editor tabs; group these controls under Appearance > Effects.
+- [ ] Provide thumbnails, role explanations, reset and preview controls.
+- [ ] Add effect-local age and once/loop/hold-last/natural-duration policies.
+- [ ] Preview each role through actual runtime events in Skill Demo.
+
+## D. Persistent and defensive effects
+
+- [ ] Add ground-zone and curved-boundary bindings without changing hit areas.
+- [ ] Add owner/target status, block, break, expiry and discard event bindings.
+- [ ] Tie channel/status artwork to activation handles, ending on interruption, death or respawn.
+- [ ] Migrate native effects incrementally while preserving signature choreography.
+- [ ] Add collision outlines and an effect-event inspector to the demo.
+
+## E. Asset reproducibility and performance
+
+- [ ] Preserve immutable sprite revisions for historical replays and exports.
+- [ ] Add replay dependency manifests and an explicit missing-revision policy.
+- [ ] Add total decoded-memory estimates and a cache/eviction budget.
+- [ ] Add effect-instance budgets and visual-quality density settings without changing mechanics.
+- [ ] Measure six-ball performance and memory on actual browser/Android devices.
+
+## F. Mechanical effect composition
+
+- [ ] Replace the two-effect ceiling with a bounded ordered list of effect steps.
+- [ ] Give each step its own parameters and targeting rules.
+- [ ] Validate loops, scheduled-event limits, repeated hits and interruption cleanup.
+- [ ] Keep damage, reach, knockback and status timing independent of selected artwork.
+- [ ] Maintain old snapshots and add end-to-end composition regression coverage.
+
+Only A is implemented in this batch. B-F remain explicit follow-up work.

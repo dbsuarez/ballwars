@@ -1284,7 +1284,8 @@ class PowerUpPainter {
       SkillArtworkTint.begin(canvas, p.artworkTint(PowerUpKind.spikeWall));
       try {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.spikeWall);
-        final spacing = trapRadius * 0.96;
+        // Artwork size cannot move the angular collision samples along the rim.
+        final spacing = r * 0.96;
         for (final rawBase in wall.spikePositions(spacing)) {
           // Old/replayed walls may have been spawned slightly farther inward.
           // Project every visual base to the rim so the wooden rail touches it.

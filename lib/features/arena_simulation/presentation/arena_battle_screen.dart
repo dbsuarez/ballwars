@@ -1,4 +1,5 @@
 import '../../../core/widgets/screen_awake.dart';
+import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -158,7 +159,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   bool _started = false;
   double _startCountdown = 3;
   int _countdownBeat = 3;
-  bool _audioPreparing = false;
+  bool _preparingRound = false;
+  String? _resourceError;
 
   @override
   void didChangeDependencies() {
@@ -246,13 +248,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _heardGatling = 0;
     _matchGeneration++;
     final generation = _matchGeneration;
-    _audioPreparing = true;
-    _audio.prepareMatchAudio().whenComplete(() {
-      if (!mounted || generation != _matchGeneration) return;
-      setState(() => _audioPreparing = false);
-      _skipNextDelta = true;
-      _audio.interaction('countdown');
-    });
+    _resourceError = null;
+    _prepareRoundResources(generation);
     if (widget.config.mode != MatchMode.threads) {
       PowerUpSprites.load().then((_) {
         if (mounted) setState(() {});
@@ -261,6 +258,48 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _controller.preloadImages().then((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  Future<void> _prepareRoundResources(int generation) async {
+    _preparingRound = true;
+    try {
+      final missing = await SkillSpriteReadiness.prepare(
+        includeTraps: widget.config.mode != MatchMode.threads,
+        library: widget.config.skillLibrary,
+        tuning: widget.config.tuning,
+        kinds: widget.config.mode == MatchMode.threads
+            ? const {}
+            : widget.config.powerUps,
+        customIds: widget.config.mode == MatchMode.threads
+            ? const {}
+            : widget.config.customSkills,
+      );
+      await _audio.prepareMatchAudio();
+      if (!mounted || generation != _matchGeneration) return;
+      if (missing.isNotEmpty) {
+        setState(
+          () => _resourceError =
+              '${missing.length} artwork assets are unavailable. Retry, or continue with fallback artwork.',
+        );
+        return;
+      }
+      _startReadyCountdown();
+    } catch (_) {
+      if (!mounted || generation != _matchGeneration) return;
+      setState(
+        () => _resourceError =
+            'Some match artwork could not load. Retry, or continue with fallback artwork.',
+      );
+    }
+  }
+
+  void _startReadyCountdown() {
+    setState(() {
+      _preparingRound = false;
+      _resourceError = null;
+    });
+    _skipNextDelta = true;
+    _audio.interaction('countdown');
   }
 
   void _onTick(Duration elapsed) {
@@ -274,7 +313,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     _lastElapsed = elapsed;
     if (dt <= 0 || _isPaused || !_foreground) return;
 
-    if (_audioPreparing) return;
+    if (_preparingRound) return;
 
     if (_startCountdown > 0) {
       final before = _startCountdown;
@@ -928,6 +967,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         if (_startCountdown > 0)
                           Positioned.fill(
                             child: IgnorePointer(
+                              ignoring: _resourceError == null,
                               child: Center(
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
@@ -944,7 +984,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          _audioPreparing
+                                          _preparingRound
                                               ? 'GETTING READY'
                                               : 'ROUND START',
                                           style: AppText.ui(
@@ -953,18 +993,51 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                             color: c.text,
                                           ),
                                         ),
-                                        Text(
-                                          _audioPreparing
-                                              ? '...'
-                                              : '${_startCountdown.ceil()}',
-                                          key: const ValueKey(
-                                            'round-start-countdown',
+                                        if (_resourceError != null) ...[
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 280,
+                                            ),
+                                            child: Text(
+                                              _resourceError!,
+                                              textAlign: TextAlign.center,
+                                            ),
                                           ),
-                                          style: AppText.mono(
-                                            44,
-                                            color: c.text,
+                                          Wrap(
+                                            alignment: WrapAlignment.center,
+                                            children: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  setState(
+                                                    () => _resourceError = null,
+                                                  );
+                                                  _prepareRoundResources(
+                                                    _matchGeneration,
+                                                  );
+                                                },
+                                                child: const Text('Retry'),
+                                              ),
+                                              TextButton(
+                                                onPressed: _startReadyCountdown,
+                                                child: const Text(
+                                                  'Use fallback',
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
+                                        ] else
+                                          Text(
+                                            _preparingRound
+                                                ? '...'
+                                                : '${_startCountdown.ceil()}',
+                                            key: const ValueKey(
+                                              'round-start-countdown',
+                                            ),
+                                            style: AppText.mono(
+                                              44,
+                                              color: c.text,
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -1100,6 +1173,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                     child: HarpoonCinematic(
                       winner: _winnerBall!,
                       loser: _loserBall!,
+                      skillLibrary: _controller.skillLibrary,
                       move: _controller.winningMove ?? 'Collision',
                       skill: _controller.skillLibrary
                           .all(_controller.tuning)

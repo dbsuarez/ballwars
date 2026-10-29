@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../data/sprite_atlas_repository.dart';
@@ -9,16 +10,31 @@ class CustomSpriteLoader {
   final Future<Uint8List> Function(Uri) fetch;
   final List<String> problems = [];
   static final Set<String> _loaded = {};
-  Future<void> load() async {
+  static final Map<String, String> _revisions = {};
+  Future<void>? _inFlight;
+  bool get isLoading => _inFlight != null;
+  Future<void> load() =>
+      _inFlight ??= _load().whenComplete(() => _inFlight = null);
+
+  Future<void> _load() async {
     problems.clear();
     try {
       final atlases = await repository.list();
       final present = atlases.map((a) => 'custom.${a.id}').toSet();
       for (final old in _loaded.difference(present)) {
         SpriteRegistry.unregister(old);
+        _revisions.remove(old);
       }
       _loaded.removeWhere((id) => !present.contains(id));
       for (final a in atlases) {
+        final prefix = 'custom.${a.id}';
+        final revision = jsonEncode(a.toJson());
+        if (_revisions[prefix] == revision &&
+            a.atlas.sprites.keys.every(
+              (id) => SpriteRegistry.has('$prefix.$id'),
+            )) {
+          continue;
+        }
         try {
           if (a.atlas.sprites.isEmpty ||
               a.atlas.sprites.length > 64 ||
@@ -46,7 +62,8 @@ class CustomSpriteLoader {
               idPrefix: 'custom.${a.id}',
               label: a.name,
             );
-            _loaded.add('custom.${a.id}');
+            _loaded.add(prefix);
+            _revisions[prefix] = revision;
           } finally {
             image.dispose();
           }

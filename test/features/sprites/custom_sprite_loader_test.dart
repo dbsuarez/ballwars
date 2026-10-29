@@ -92,17 +92,28 @@ void main() {
         picture.dispose();
         final repo = FakeSpriteRepository()
           ..items = [custom('first'), custom('bad'), custom('second')];
+        var fetches = 0;
         final loader = CustomSpriteLoader(
           repo,
-          fetch: (u) async => u.path.contains('bad') ? Uint8List(4) : bytes,
+          fetch: (u) async {
+            fetches++;
+            return u.path.contains('bad') ? Uint8List(4) : bytes;
+          },
         );
-        await loader.load();
+        final firstLoad = loader.load();
+        expect(identical(firstLoad, loader.load()), isTrue);
+        await firstLoad;
         expect(SpriteRegistry.has('custom.first.sprite'), isTrue);
         expect(SpriteRegistry.has('custom.second.sprite'), isTrue);
         expect(loader.problems, hasLength(1));
         repo.items = [custom('second')];
         await loader.load();
         expect(SpriteRegistry.has('custom.first.sprite'), isFalse);
+        expect(
+          fetches,
+          3,
+          reason: 'An unchanged second atlas keeps its decoded frames',
+        );
         repo.fails = true;
         await loader.load();
         expect(SpriteRegistry.has('custom.second.sprite'), isTrue);

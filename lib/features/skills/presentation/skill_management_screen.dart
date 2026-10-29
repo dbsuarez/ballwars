@@ -1661,6 +1661,7 @@ class _SkillEditorState extends State<_SkillEditor> {
                     loser: loser,
                     move: skill.name,
                     skill: skill,
+                    skillLibrary: widget.library,
                     visualMove: skill.displayKind.label,
                     artworkTint: skill.spriteTint,
                     effectSprites: skill.usesSpriteEffects(

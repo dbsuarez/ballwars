@@ -29,6 +29,7 @@ class HarpoonCinematic extends StatefulWidget {
     this.artworkTint = 0xFFFFFFFF,
     this.effectSprites = true,
     this.skill,
+    this.skillLibrary = SkillLibrary.defaults,
   });
 
   /// Draws [image] [half] in half-size with its sprite [anchor]
@@ -63,6 +64,7 @@ class HarpoonCinematic extends StatefulWidget {
   final int artworkTint;
   final bool effectSprites;
   final SkillDefinition? skill;
+  final SkillLibrary skillLibrary;
   final VoidCallback onFinished;
   final VoidCallback? onHookFired;
   final VoidCallback? onImpact;
@@ -117,7 +119,9 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
   @override
   Widget build(BuildContext context) {
     final colors = BallWarsColors.of(context);
-    final profile = FinisherProfile.forMove(widget.visualMove ?? widget.move);
+    final profile = FinisherProfile.forMove(
+      widget.visualMove ?? widget.skill?.displayKind.label ?? widget.move,
+    );
     return Semantics(
       label: '${widget.move} finishing move cinematic',
       child: DecoratedBox(
@@ -196,6 +200,7 @@ class _HarpoonCinematicState extends State<HarpoonCinematic>
                           artworkTint: widget.artworkTint,
                           effectSprites: widget.effectSprites,
                           skill: widget.skill,
+                          skillLibrary: widget.skillLibrary,
                         ),
                       ),
                     ),
@@ -327,6 +332,7 @@ class _FinisherPainter extends CustomPainter {
     this.artworkTint = 0xFFFFFFFF,
     this.effectSprites = true,
     this.skill,
+    this.skillLibrary = SkillLibrary.defaults,
   });
 
   final CustomBall winner;
@@ -342,6 +348,21 @@ class _FinisherPainter extends CustomPainter {
   final int artworkTint;
   final bool effectSprites;
   final SkillDefinition? skill;
+  final SkillLibrary skillLibrary;
+  double get _projectileScale => skill?.projectileSize ?? 1;
+  double get _weaponScale =>
+      skill == null ? 1 : skillLibrary.weaponDisplayScaleFor(skill!);
+  double get _effectScale =>
+      skill == null ? 1 : skillLibrary.effectDisplayScaleFor(skill!);
+
+  String _projectileId(String fallback) {
+    final id = skill?.projectileSpriteId;
+    return skill?.spriteMode != SkillVisualMode.vector &&
+            id != null &&
+            SpriteRegistry.has(id)
+        ? id
+        : fallback;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -370,25 +391,6 @@ class _FinisherPainter extends CustomPainter {
     final from = winnerCenter + Offset(radius * 0.65, -radius * 0.05);
     final to = Offset.lerp(from, loserCenter, hookProgress)!;
     final kind = _kind;
-    final customId = skill?.projectileSpriteId ?? skill?.iconSpriteId;
-    final custom =
-        customId == null || skill?.spriteMode == SkillVisualMode.vector
-        ? null
-        : SpriteRegistry.frameAt(customId, (hookProgress * 90).floor());
-    if (custom != null && hookProgress > 0) {
-      HarpoonCinematic.paintRaster(
-        canvas,
-        custom,
-        to,
-        radius * .8,
-        anchor: SpriteRegistry.anchor(customId!),
-        rotation: math.atan2(
-          loserCenter.dy - from.dy,
-          loserCenter.dx - from.dx,
-        ),
-      );
-      return;
-    }
     final arenaTrap = switch (profile.move) {
       'Laser Gate' => ArenaThemeHazardKind.laserGate,
       'Quicksand' => ArenaThemeHazardKind.quicksand,
@@ -566,8 +568,12 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.shotgun:
         if (hookProgress > 0 && hookProgress < 1) {
-          final pelletSprite = SpriteRegistry.frame(
+          final id = _projectileId(
             PowerUpSprites.projectileId(ProjectileSprite.shotgun),
+          );
+          final pelletSprite = SpriteRegistry.frameAt(
+            id,
+            (hookProgress * 90).floor(),
           );
           for (var i = -3; i <= 3; i++) {
             final target = loserCenter + Offset(0, i * radius * 0.34);
@@ -583,10 +589,8 @@ class _FinisherPainter extends CustomPainter {
                 canvas,
                 pelletSprite,
                 pellet,
-                radius * 0.3,
-                anchor: SpriteRegistry.anchor(
-                  PowerUpSprites.projectileId(ProjectileSprite.shotgun),
-                ),
+                radius * 0.3 * _projectileScale,
+                anchor: SpriteRegistry.anchor(id),
               );
             }
           }
@@ -827,19 +831,19 @@ class _FinisherPainter extends CustomPainter {
                   winnerCenter,
                   (hookProgress - 0.58) / 0.42,
                 )!;
-          final sprite = SpriteRegistry.frame(
-            PowerUpSprites.boomerangProjectileId,
+          final id = _projectileId(PowerUpSprites.boomerangProjectileId);
+          final sprite = SpriteRegistry.frameAt(
+            id,
+            (hookProgress * 90).floor(),
           );
           if (sprite != null) {
             _paintRaster(
               canvas,
               sprite,
               point,
-              radius * 1.25,
+              radius * 1.25 * _projectileScale,
               rotation: hookProgress * math.pi * 8,
-              anchor: SpriteRegistry.anchor(
-                PowerUpSprites.boomerangProjectileId,
-              ),
+              anchor: SpriteRegistry.anchor(id),
             );
           } else {
             _paintItem(canvas, point, radius * 1.25);
@@ -990,7 +994,11 @@ class _FinisherPainter extends CustomPainter {
         }
       case PowerUpKind.rocketLauncher:
         if (hookProgress > 0 && hookProgress < 1) {
-          final missile = SpriteRegistry.frame(PowerUpSprites.rocketMissileId);
+          final id = _projectileId(PowerUpSprites.rocketMissileId);
+          final missile = SpriteRegistry.frameAt(
+            id,
+            (hookProgress * 90).floor(),
+          );
           final arc = math.sin(hookProgress * math.pi) * radius * 0.45;
           final point = to - Offset(0, arc);
           final direction = loserCenter - point;
@@ -1001,9 +1009,9 @@ class _FinisherPainter extends CustomPainter {
               canvas,
               missile,
               point,
-              radius * 1.3 * pulse,
+              radius * 1.3 * pulse * _projectileScale,
               rotation: angle,
-              anchor: SpriteRegistry.anchor(PowerUpSprites.rocketMissileId),
+              anchor: SpriteRegistry.anchor(id),
             );
           } else {
             _paintItem(canvas, point, radius * 1.3);
@@ -1173,11 +1181,14 @@ class _FinisherPainter extends CustomPainter {
   }
 
   void _paintBullet(Canvas canvas, Offset center, double size) {
-    final projectileId = PowerUpSprites.projectileId(
-      _kind == PowerUpKind.gatling
-          ? ProjectileSprite.gatling
-          : ProjectileSprite.pistol,
+    final projectileId = _projectileId(
+      PowerUpSprites.projectileId(
+        _kind == PowerUpKind.gatling
+            ? ProjectileSprite.gatling
+            : ProjectileSprite.pistol,
+      ),
     );
+    size *= _projectileScale;
     final projectile = SpriteRegistry.frame(projectileId);
     if (projectile != null) {
       _paintRaster(
@@ -1221,19 +1232,21 @@ class _FinisherPainter extends CustomPainter {
     Color color, {
     double angle = 0,
   }) {
-    final sprite = SpriteRegistry.frame(
+    final spriteId = _projectileId(
       PowerUpSprites.projectileId(ProjectileSprite.bow),
+    );
+    final sprite = SpriteRegistry.frameAt(
+      spriteId,
+      (hookProgress * 90).floor(),
     );
     if (sprite != null) {
       _paintRaster(
         canvas,
         sprite,
         point,
-        radius * 0.95,
+        radius * 0.95 * _projectileScale,
         rotation: angle,
-        anchor: SpriteRegistry.anchor(
-          PowerUpSprites.projectileId(ProjectileSprite.bow),
-        ),
+        anchor: SpriteRegistry.anchor(spriteId),
       );
       return;
     }
@@ -1261,13 +1274,28 @@ class _FinisherPainter extends CustomPainter {
     return null;
   }
 
-  void _paintItem(Canvas canvas, Offset center, double size) {
+  void _paintItem(
+    Canvas canvas,
+    Offset center,
+    double size, {
+    bool held = false,
+  }) {
     final kind = _kind;
     if (kind == null) {
       _paintSymbol(canvas, center, profile.symbol, size * 0.7);
       return;
     }
-    final sprite = PowerUpSprites.of(kind);
+    final projectile = !held && kind.isGun;
+    size *= projectile ? _projectileScale : _weaponScale;
+    final customId = projectile
+        ? skill?.projectileSpriteId ?? skill?.iconSpriteId
+        : skill?.iconSpriteId;
+    final id = customId != null && SpriteRegistry.has(customId)
+        ? customId
+        : PowerUpSprites.iconId(kind);
+    final sprite = skill?.spriteMode == SkillVisualMode.vector
+        ? null
+        : SpriteRegistry.frameAt(id, (hookProgress * 90).floor());
     if (sprite == null) {
       PowerUpSprites.paintIcon(
         canvas,
@@ -1280,7 +1308,7 @@ class _FinisherPainter extends CustomPainter {
         sprite,
         center,
         size / 2,
-        anchor: SpriteRegistry.anchor(PowerUpSprites.iconId(kind)),
+        anchor: SpriteRegistry.anchor(id),
       );
     }
   }
@@ -1288,6 +1316,21 @@ class _FinisherPainter extends CustomPainter {
   void _paintExplosion(Canvas canvas, Offset center, double progress) {
     final burst = Curves.easeOut.transform(progress);
     final fade = 1 - progress;
+    final customId = skill?.impactSpriteId;
+    final custom = customId == null || !effectSprites
+        ? null
+        : SpriteRegistry.frameAtProgress(customId, progress);
+    if (custom != null) {
+      _paintRaster(
+        canvas,
+        custom,
+        center,
+        radius * (0.8 + burst * 2.5) * _effectScale,
+        opacity: fade,
+        anchor: SpriteRegistry.anchor(customId!),
+      );
+      return;
+    }
     final sprite = effectSprites
         ? ArenaEffectLibrary.frame(
             ArenaEffectKind.explosion,
@@ -1299,7 +1342,7 @@ class _FinisherPainter extends CustomPainter {
         canvas,
         sprite,
         center,
-        radius * (0.8 + burst * 2.5),
+        radius * (0.8 + burst * 2.5) * _effectScale,
         opacity: fade,
         anchor: ArenaEffectLibrary.anchor(ArenaEffectKind.explosion),
       );
@@ -1400,6 +1443,7 @@ class _FinisherPainter extends CustomPainter {
           canvas,
           raisedGlove + Offset(radius * 0.38, -radius * 0.18),
           radius * 1.35,
+          held: true,
         );
         SkillArtworkTint.end(canvas);
       }
@@ -1555,7 +1599,7 @@ class _FinisherPainter extends CustomPainter {
         canvas,
         custom,
         center,
-        radius * 1.8,
+        radius * 1.8 * _effectScale,
         anchor: SpriteRegistry.anchor(id!),
       );
       return;
@@ -1583,6 +1627,10 @@ class _FinisherPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_FinisherPainter old) =>
+      old.skill != skill ||
+      old.skillLibrary != skillLibrary ||
+      old.artworkTint != artworkTint ||
+      old.effectSprites != effectSprites ||
       old.winnerCenter != winnerCenter ||
       old.loserCenter != loserCenter ||
       old.hookProgress != hookProgress ||

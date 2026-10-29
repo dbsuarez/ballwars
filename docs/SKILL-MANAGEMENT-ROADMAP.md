@@ -301,6 +301,10 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 
 ## Current position
 
+New source audit: [Skill/sprite integration, 2026-10-29](SKILL-SPRITE-INTEGRATION-AUDIT-2026-10-29.md).
+Implementation is tracked in [EFFECT-SYSTEM-ROADMAP.md](EFFECT-SYSTEM-ROADMAP.md):
+A is implemented; B-F remain unchecked follow-up work.
+
 2026-10-28 post-sprite follow-up:
 - [x] Add [Skill Demo](SKILL-DEMO.md) beside Preview, Live Arena and Finisher: manual draft activation, four artwork references, actual arena effects, repeat/pause/reset, facing, slow playback, health, bubbles/sound and incoming-hit interactions. Preserve unsaved editor state and normal match behavior.
 - [x] Fix custom-skill selection/remembering and independent dual-wield slot IDs in Live Arena; include saved and unsaved draft skills in their proper picker categories.

@@ -595,6 +595,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                       loser: _balls[1 - index],
                       move: skill.name,
                       skill: skill,
+                      skillLibrary: _match!.skillLibrary,
                       effectSprites: skill.usesSpriteEffects(
                         globalSprite:
                             AppSettingsScope.of(context).explosionRenderMode ==

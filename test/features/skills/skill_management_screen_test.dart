@@ -1143,13 +1143,13 @@ void main() {
 
     final button = find.byKey(const ValueKey('skill-grip-preview'));
     await _revealEditor(tester, button);
-    for (final (key, label) in const [
-      ('weaponGripInset', 'Grip forward/back'),
-      ('weaponGripSide', 'Grip sideways'),
-      ('weaponGripRotation', 'Grip rotation'),
+    for (final (key, label, suffix) in const [
+      ('weaponGripInset', 'Grip forward/back', 'ball radius'),
+      ('weaponGripSide', 'Grip sideways', 'ball radius'),
+      ('weaponGripRotation', 'Grip rotation', 'degrees'),
     ]) {
       await _revealEditor(tester, find.byKey(ValueKey('skill-field-$key')));
-      expect(find.text(label), findsOneWidget);
+      expect(find.text('$label ($suffix)'), findsOneWidget);
     }
     await _revealEditor(tester, button);
 

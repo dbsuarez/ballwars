@@ -245,18 +245,11 @@ void main() {
       await tester.ensureVisible(find.widgetWithText(Tab, 'Appearance'));
       await tester.tap(find.widgetWithText(Tab, 'Appearance'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Projectiles'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Projectiles'));
+      await tester.pumpAndSettle();
       Future<void> reveal(Finder f) async {
-        await tester.scrollUntilVisible(
-          f,
-          300,
-          scrollable: find
-              .descendant(
-                of: find.byType(ListView).last,
-                matching: find.byType(Scrollable),
-              )
-              .first,
-          maxScrolls: 35,
-        );
         await tester.ensureVisible(f);
         await tester.pumpAndSettle();
       }
@@ -274,6 +267,10 @@ void main() {
       tester.widget<Slider>(side).onChanged!(-.25);
       await tester.pump();
       final areaPreview = find.byKey(const ValueKey('skill-area-preview'));
+      await tester.ensureVisible(find.text('Area'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Area'));
+      await tester.pumpAndSettle();
       await reveal(areaPreview);
       expect(tester.getSize(areaPreview).width, greaterThan(200));
       final radius = find.byKey(const ValueKey('skill-area-radius-override'));

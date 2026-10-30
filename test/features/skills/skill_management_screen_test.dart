@@ -1105,8 +1105,8 @@ void main() {
       ),
       isTrue,
     );
-    expect(find.text('Melee reach'), findsOneWidget);
-    expect(find.text('ball radii'), findsOneWidget);
+    expect(find.text('Melee reach (ball radii)'), findsOneWidget);
+    expect(find.text('ball radii'), findsNothing);
     await tester.enterText(
       find.byKey(const ValueKey('skill-field-meleeReach')),
       '1.5',

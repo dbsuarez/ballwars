@@ -1,3 +1,4 @@
+import '../../../core/widgets/number_stepper.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/sprites/sprite_registry.dart';
@@ -579,10 +580,29 @@ class _EffectEditorState extends State<_EffectEditor> {
         decimal: true,
         signed: true,
       ),
-      decoration: InputDecoration(
-        isDense: true,
-        border: const OutlineInputBorder(),
-        suffixText: suffix,
+      decoration: numberStepperDecoration(
+        controller: numbers[key]!,
+        label: label,
+        onChanged: () => setState(() {}),
+        min: switch (key) {
+          'x' || 'y' => -5,
+          'rotation' => -360,
+          'duration' => .1,
+          _ => .1,
+        },
+        max: switch (key) {
+          'x' || 'y' => 5,
+          'rotation' => 360,
+          'duration' => 10,
+          _ => 4,
+        },
+        step: key == 'rotation' ? 1 : .1,
+        id: 'effect-step-$key',
+        decoration: InputDecoration(
+          isDense: true,
+          border: const OutlineInputBorder(),
+          suffixText: suffix,
+        ),
       ),
     ),
   );

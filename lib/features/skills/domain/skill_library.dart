@@ -959,7 +959,7 @@ class SkillDefinition {
     visualBindings: Map.unmodifiable(visualBindings),
     shellSprite: _cleanSpriteReference(shellSprite),
     shellSize: shellSize.isFinite ? shellSize.clamp(0.25, 10) : 1,
-    shellCount: shellCount.clamp(1, 20),
+    shellCount: shellCount.clamp(1, 100),
   );
 
   /// [text] as a card description: whitespace and newlines collapsed to single spaces, trimmed and

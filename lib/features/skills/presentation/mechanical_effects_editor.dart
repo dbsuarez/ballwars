@@ -1,3 +1,4 @@
+import '../../../core/widgets/number_stepper.dart';
 import 'package:flutter/material.dart';
 import '../domain/skill_library.dart';
 
@@ -107,11 +108,37 @@ class _MechanicalEffectsEditorState extends State<MechanicalEffectsEditor> {
       key: ValueKey('step-$key'),
       controller: draft.fields[key],
       textAlign: TextAlign.right,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        hintText: _hint(key, hint),
-        suffixText: unit,
-        isDense: true,
+      keyboardType: TextInputType.numberWithOptions(
+        decimal: !{'threads', 'shield_hits'}.contains(key),
+      ),
+      decoration: numberStepperDecoration(
+        controller: draft.fields[key]!,
+        label: label,
+        integer: {'threads', 'shield_hits'}.contains(key),
+        step: {'threads', 'shield_hits'}.contains(key) ? 1 : .1,
+        min: switch (key) {
+          'target_range' => 5,
+          'duration' || 'tick' => .1,
+          'frozen_multiplier' => 1,
+          _ => 0,
+        },
+        max: switch (key) {
+          'threads' => 360,
+          'shield_hits' => 20,
+          'damage' || 'healing' => 500,
+          'duration' => 60,
+          'delay' || 'tick' || 'strength' => 10,
+          'frozen_multiplier' => 5,
+          'frozen_collision' => 200,
+          _ => 100,
+        },
+        onChanged: () => setState(() {}),
+        id: 'step-number-$key',
+        decoration: InputDecoration(
+          hintText: _hint(key, hint),
+          suffixText: unit,
+          isDense: true,
+        ),
       ),
     ),
   );

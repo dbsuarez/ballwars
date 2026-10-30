@@ -15,15 +15,7 @@ import 'package:ballwars/features/skills/presentation/skill_demo_dialog.dart';
 
 Future<void> _revealEditor(WidgetTester tester, Finder target) async {
   if (target.hitTestable().evaluate().isNotEmpty) return;
-  for (final label in [
-    'Identity',
-    'Damage & Timing',
-    'Appearance',
-    'Callouts & Sounds',
-  ]) {
-    await tester.ensureVisible(find.widgetWithText(Tab, label));
-    await tester.tap(find.widgetWithText(Tab, label));
-    await tester.pumpAndSettle();
+  Future<bool> scan() async {
     final list = find.byType(ListView).last;
     final scrollable = find
         .descendant(of: list, matching: find.byType(Scrollable))
@@ -35,12 +27,42 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
       if (target.evaluate().isNotEmpty) {
         await tester.ensureVisible(target);
         await tester.pumpAndSettle();
-        return;
+        if (target.hitTestable().evaluate().isNotEmpty) return true;
       }
       if (position.pixels >= position.maxScrollExtent) break;
       await tester.drag(list, const Offset(0, -280));
       await tester.pumpAndSettle();
     }
+    return false;
+  }
+
+  for (final label in [
+    'Identity',
+    'Damage & Timing',
+    'Appearance',
+    'Callouts & Sounds',
+  ]) {
+    await tester.ensureVisible(find.widgetWithText(Tab, label));
+    await tester.tap(find.widgetWithText(Tab, label));
+    await tester.pumpAndSettle();
+    if (label == 'Appearance') {
+      for (final sub in [
+        'Artwork',
+        'Held & pickup',
+        'Projectiles',
+        'Effects',
+        'Area',
+        'Shells',
+        'Legacy',
+      ]) {
+        final tab = find.widgetWithText(Tab, sub);
+        await tester.ensureVisible(tab);
+        await tester.tap(tab);
+        await tester.pumpAndSettle();
+        if (await scan()) return;
+      }
+    } else if (await scan())
+      return;
   }
   fail('Editor control not found: $target');
 }
@@ -1319,6 +1341,94 @@ void main() {
     expect(saved.shellRandomRest, isFalse);
     expect(saved.shellSprite, isNull);
   });
+
+  testWidgets(
+    'phone subtab drafts, decimal steppers and linked shell counts survive save and reopen',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (result) async => saved = result,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Shotgun',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Shotgun'));
+      await tester.pumpAndSettle();
+      final shots = find.byKey(const ValueKey('skill-field-count'));
+      final shells = find.byKey(const ValueKey('skill-field-shellCount'));
+      final scale = find.byKey(const ValueKey('skill-field-shellSize'));
+      await _revealEditor(tester, shots);
+      await tester.enterText(shots, '3');
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, shells);
+      expect(tester.widget<TextField>(shells).controller!.text, '3');
+      await tester.tap(find.byKey(const ValueKey('skill-increase-shellCount')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(shells).controller!.text, '4');
+      await _revealEditor(tester, scale);
+      await tester.enterText(scale, '1.2');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('skill-increase-shellSize')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(scale).controller!.text, '1.3');
+      // Leaving Appearance and returning retains the active subtab and draft.
+      await tester.ensureVisible(find.widgetWithText(Tab, 'Identity'));
+      await tester.tap(find.widgetWithText(Tab, 'Identity'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.widgetWithText(Tab, 'Appearance'));
+      await tester.tap(find.widgetWithText(Tab, 'Appearance'));
+      await tester.pumpAndSettle();
+      expect(shells.hitTestable(), findsOneWidget);
+      expect(tester.widget<TextField>(scale).controller!.text, '1.3');
+      await _revealEditor(tester, shots);
+      expect(tester.widget<TextField>(shots).controller!.text, '4');
+      await tester.enterText(shots, '100');
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, shells);
+      expect(tester.widget<TextField>(shells).controller!.text, '100');
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey('skill-increase-shellCount')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.enterText(shells, '6');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      final skill = saved!.library.builtIn(PowerUpKind.shotgun, saved!.tuning);
+      expect(skill.projectileCount, 6);
+      expect(skill.shellCount, 6);
+      expect(skill.shellSize, 1.3);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byIcon(Icons.close).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Shotgun'));
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, shots);
+      expect(tester.widget<TextField>(shots).controller!.text, '6');
+      await _revealEditor(tester, shells);
+      expect(tester.widget<TextField>(shells).controller!.text, '6');
+      await _revealEditor(tester, scale);
+      expect(tester.widget<TextField>(scale).controller!.text, '1.3');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('a composed skill that is not aimed has no shell settings', (
     tester,

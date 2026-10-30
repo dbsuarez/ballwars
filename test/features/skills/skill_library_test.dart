@@ -638,7 +638,13 @@ void main() {
         expect(back.shellSize, 10);
         expect(back.shellCount, 7);
       }
-      for (final (raw, expected) in [(0, 1), (99, 20), ('bad', 1), (1.5, 1)]) {
+      for (final (raw, expected) in [
+        (0, 1),
+        (99, 99),
+        (101, 100),
+        ('bad', 1),
+        (1.5, 1),
+      ]) {
         final json = Map<String, Object?>.from(skill.toJson())
           ..['shell_count'] = raw;
         expect(SkillDefinition.fromJson(json)!.shellCount, expected);

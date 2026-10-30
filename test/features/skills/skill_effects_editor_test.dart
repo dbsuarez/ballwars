@@ -56,6 +56,9 @@ void main() {
     await tester.ensureVisible(find.widgetWithText(Tab, 'Appearance'));
     await tester.tap(find.widgetWithText(Tab, 'Appearance'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(Tab, 'Effects'));
+    await tester.tap(find.widgetWithText(Tab, 'Effects'));
+    await tester.pumpAndSettle();
   }
 
   Future<void> sprite(WidgetTester tester) async {

@@ -106,6 +106,22 @@ void main() {
     }
   });
 
+  test(
+    'linked maximum shot count supports 100 cosmetic shells without escaping the storage cap',
+    () {
+      final casings = _fireOnce(
+        PowerUpKind.pistol,
+        library: _with(
+          [(s) => s.copyWith(shellEnabled: true, shellCount: 100)],
+          [PowerUpKind.pistol],
+        ),
+      );
+      expect(casings, hasLength(PowerUpSystem.maxShellCasings));
+      expect(casings.last.sequence, 99);
+      expect(casings.length, lessThanOrEqualTo(PowerUpSystem.maxShellCasings));
+    },
+  );
+
   test('composed volley shell count does not multiply by projectile count', () {
     final skill = SkillLibrary.defaults
         .create('Spray', PowerUpKind.pistol)

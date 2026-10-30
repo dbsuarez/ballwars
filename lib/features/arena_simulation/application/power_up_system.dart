@@ -3830,7 +3830,7 @@ class PowerUpSystem {
     SkillDefinition skill,
   ) {
     final side = Offset(-shotDirection.dy, shotDirection.dx);
-    for (var index = 0; index < skill.shellCount.clamp(1, 20); index++) {
+    for (var index = 0; index < skill.shellCount.clamp(1, 100); index++) {
       final sequence = _shellSequence++;
       // Preserve the first casing exactly. Extra casings fan out cosmetically,
       // using a stable hash rather than consuming simulation RNG draws.

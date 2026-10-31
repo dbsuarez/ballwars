@@ -247,6 +247,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _mayhem = false;
   int _mayhemSeconds = 120;
   bool _shrinkingArena = false;
+  ArenaShape _arenaShape = ArenaShape.circle;
   ArenaDecoration? _arenaDecoration;
   bool _finishersOn = true;
   bool _settingCards = true;
@@ -275,6 +276,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Rounds, speed and effects start the way this device last left them.
   Future<void> _loadPrefs({bool? mayhemOverride}) async {
     final rememberedMode = MatchMode.byId(await DevicePrefs.read('mode'));
+    final rememberedShape = ArenaShape.byName(await DevicePrefs.read('arena-shape'));
+    _arenaShape = rememberedShape ?? ArenaShape.circle;
     final profileMode =
         widget.initialMode ?? rememberedMode ?? MatchMode.threads;
     final profileMayhem =
@@ -689,6 +692,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
+        simulationRevision: _arenaShape == ArenaShape.square ? 5 : 4,
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
@@ -715,6 +719,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mayhem: _mode == MatchMode.arsenal && _mayhem,
         mayhemSeconds: _mayhemSeconds,
         shrinkingArena: _shrinkingArena,
+        arenaShape: _arenaShape,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
         arenaDecoration:
             _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
@@ -1566,6 +1571,17 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 ),
             ],
           ],
+          _choice(
+            Icons.crop_square,
+            'Arena shape',
+            ArenaShape.values,
+            _arenaShape,
+            (shape) => shape.label,
+            (shape) {
+              _update(() => _arenaShape = shape);
+              DevicePrefs.write('arena-shape', shape.name);
+            },
+          ),
           _choice(
             Icons.zoom_in_map,
             'Shrinking arena',

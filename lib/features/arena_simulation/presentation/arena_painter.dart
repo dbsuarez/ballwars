@@ -199,13 +199,18 @@ class ArenaPainter extends CustomPainter {
     }
   }
 
+  Path _arenaOutline(double radius) {
+    final rect = Rect.fromLTRB(-radius, -radius, radius, radius);
+    return state.arenaShape == ArenaShape.square
+        ? (Path()..addRect(rect))
+        : (Path()..addOval(rect));
+  }
+
   void _paintBackground(Canvas canvas) {
     final visibleRadius = state.arenaRadius;
     canvas.save();
-    canvas.clipPath(
-      Path()
-        ..addOval(Rect.fromCircle(center: Offset.zero, radius: visibleRadius)),
-    );
+    canvas.clipPath(Path()..addPath(_arenaOutline(visibleRadius), Offset.zero));
+    canvas.drawPath(_arenaOutline(visibleRadius), Paint()..color = background);
     switch (arenaDecoration) {
       case ArenaDecoration.defaultArena:
         _paintDefaultFloor(canvas, visibleRadius);
@@ -230,7 +235,7 @@ class ArenaPainter extends CustomPainter {
         Color.lerp(background, rimColor, 0.05)!,
         background,
       ]);
-    canvas.drawCircle(Offset.zero, visibleRadius, paint);
+    canvas.drawPath(_arenaOutline(visibleRadius), paint);
     _paintGrid(canvas);
   }
 
@@ -447,11 +452,11 @@ class ArenaPainter extends CustomPainter {
     final halo = Paint()
       ..style = PaintingStyle.stroke
       ..color = rimColor.withValues(alpha: 0.12);
-    canvas.drawCircle(Offset.zero, visibleRadius, halo..strokeWidth = 6.5);
-    canvas.drawCircle(Offset.zero, visibleRadius, halo..strokeWidth = 4.5);
-    canvas.drawCircle(
-      Offset.zero,
-      visibleRadius,
+    final outline = _arenaOutline(visibleRadius);
+    canvas.drawPath(outline, halo..strokeWidth = 6.5);
+    canvas.drawPath(outline, halo..strokeWidth = 4.5);
+    canvas.drawPath(
+      outline,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/utils/seeded_random.dart';
 import 'simulation_ball.dart';
+import '../../match_setup/domain/match_config.dart';
 
 class CollisionResult {
   final Offset contactPoint;
@@ -21,10 +22,11 @@ class ArenaPhysicsEngine {
   double arenaRadius;
   final SeededRandom rng;
   final double restitution;
+  final ArenaShape shape;
 
   static const double _jitterMaxRadians = 2 * math.pi / 180.0;
 
-  ArenaPhysicsEngine(this.arenaRadius, this.rng, {this.restitution = 0.85});
+  ArenaPhysicsEngine(this.arenaRadius, this.rng, {this.restitution = 0.85, this.shape = ArenaShape.circle});
 
   /// Reflects [ball] off the arena wall if it has reached or crossed the boundary.
   /// Uses continuous collision detection to handle high velocities.
@@ -33,6 +35,9 @@ class ArenaPhysicsEngine {
     SimulationBall ball, {
     Offset? previousPosition,
   }) {
+    if (shape == ArenaShape.square) {
+      return _resolveSquareWall(ball);
+    }
     final d = ball.position.distance;
     final maxDist = arenaRadius - ball.radius;
 
@@ -111,6 +116,44 @@ class ArenaPhysicsEngine {
       normal: normal,
       relativeImpactSpeed: dot.abs() * restitution,
       wallAnchorPoint: wallAnchorPoint,
+    );
+  }
+
+
+  /// Resolves square walls using the ball's radius as padding. Both corner
+  /// components are reflected, with a deterministic jitter draw per contact.
+  CollisionResult? _resolveSquareWall(SimulationBall ball) {
+    final bound = math.max(0.0, arenaRadius - ball.radius);
+    final x = ball.position.dx;
+    final y = ball.position.dy;
+    final hitX = x.abs() >= bound;
+    final hitY = y.abs() >= bound;
+    if (!hitX && !hitY) return null;
+
+    final nx = hitX ? (x < 0 ? -1.0 : 1.0) : 0.0;
+    final ny = hitY ? (y < 0 ? -1.0 : 1.0) : 0.0;
+    final normal = Offset(nx, ny) / math.sqrt(nx * nx + ny * ny);
+    final contact = Offset(x.clamp(-bound, bound).toDouble(),
+        y.clamp(-bound, bound).toDouble());
+    final impact = ball.velocity.dx * normal.dx +
+        ball.velocity.dy * normal.dy;
+    var vx = hitX ? -ball.velocity.dx : ball.velocity.dx;
+    var vy = hitY ? -ball.velocity.dy : ball.velocity.dy;
+    final jitter = rng.nextDoubleRange(-_jitterMaxRadians, _jitterMaxRadians);
+    final cosJ = math.cos(jitter);
+    final sinJ = math.sin(jitter);
+    ball.velocity = Offset(vx * cosJ - vy * sinJ,
+        vx * sinJ + vy * cosJ) * restitution;
+    ball.position = contact;
+    final anchor = Offset(
+      hitX ? nx * arenaRadius : contact.dx,
+      hitY ? ny * arenaRadius : contact.dy,
+    );
+    return CollisionResult(
+      contactPoint: contact,
+      normal: normal,
+      relativeImpactSpeed: impact.abs() * restitution,
+      wallAnchorPoint: anchor,
     );
   }
 

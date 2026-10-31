@@ -3,6 +3,7 @@ import 'floating_text.dart';
 import 'particle_system.dart';
 import 'simulation_ball.dart';
 import 'fan_line.dart';
+import '../../match_setup/domain/match_config.dart';
 
 enum MatchStatus { running, slowMotion, beamAttack, finished }
 
@@ -27,6 +28,7 @@ class SimulationState {
 
   /// Live collision boundary. This changes while shrinking-arena mode runs.
   final double arenaRadius;
+  final ArenaShape arenaShape;
 
   const SimulationState({
     required this.balls,
@@ -41,6 +43,7 @@ class SimulationState {
     this.powerUps,
     this.step = 0,
     required this.arenaRadius,
+    this.arenaShape = ArenaShape.circle,
   });
 
   // All active fan lines across all balls (for rendering)

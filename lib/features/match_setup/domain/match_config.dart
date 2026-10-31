@@ -8,6 +8,18 @@ import '../../skills/domain/skill_library.dart';
 
 enum WinCondition { domination, timeAttack }
 
+/// Physical shape of the outer arena. Independent of match mode.
+enum ArenaShape {
+  circle('Circle'),
+  square('Square');
+
+  final String label;
+  const ArenaShape(this.label);
+
+  static ArenaShape? byName(String? value) =>
+      values.where((shape) => shape.name == value).firstOrNull;
+}
+
 /// How big every ball in a match is, relative to today's (medium) size. All
 /// balls share it, so it's fair; bigger balls cut more and end matches
 /// sooner. It changes the match, so replay links carry it ([id]).
@@ -100,6 +112,7 @@ class MatchConfig {
   final BallSize ballSize;
 
   final MatchMode mode;
+  final ArenaShape arenaShape;
 
   /// Maximum owned threads per ball in Thread Growth (includes the starting one).
   /// Other game modes ignore this setting.
@@ -184,6 +197,7 @@ class MatchConfig {
     this.artworkRevisions = const {},
     this.artworkFrames = const {},
     this.mode = MatchMode.threads,
+    this.arenaShape = ArenaShape.circle,
     this.threadGrowthMaxThreads = 180,
   });
 }

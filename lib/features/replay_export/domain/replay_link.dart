@@ -77,6 +77,7 @@ class ReplayLink {
   final bool shrinkingArena;
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
+  final ArenaShape arenaShape;
   final SkillLibrary skillLibrary;
   final Map<String, String> artworkRevisions;
   final Map<String, Object> artworkFrames;
@@ -116,6 +117,7 @@ class ReplayLink {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaShape = ArenaShape.circle,
     this.skillLibrary = SkillLibrary.defaults,
     this.artworkRevisions = const {},
     this.artworkFrames = const {},
@@ -200,6 +202,7 @@ class ReplayLink {
     final mayhemToken = mode == MatchMode.arsenal && mayhem
         ? '&mayhem=1&duration=$mayhemSeconds'
         : '';
+    final shapeToken = arenaShape == ArenaShape.circle ? '' : '&shape=${arenaShape.name}';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
     final minimumArena = shrinkingArena && minimumArenaScale != 0.60
         ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
@@ -234,7 +237,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals$assets',
     );
@@ -264,7 +267,7 @@ class ReplayLink {
     var simulationRevision = 1;
     if (tokens.isNotEmpty && tokens.first.startsWith('v.')) {
       final marker = tokens.removeAt(0);
-      if (marker != 'v.2' && marker != 'v.3' && marker != 'v.4') return null;
+      if (marker != 'v.2' && marker != 'v.3' && marker != 'v.4' && marker != 'v.5') return null;
       simulationRevision = int.parse(marker.substring(2));
     }
     final hasArtworkMarker = tokens.isNotEmpty && tokens.first == 'a.1';
@@ -387,6 +390,9 @@ class ReplayLink {
         return null;
       }
     }
+    final arenaShape = ArenaShape.byName(params['shape'] ?? 'circle');
+    if (arenaShape == null ||
+        (arenaShape == ArenaShape.square && simulationRevision < 5)) return null;
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
     final minimumArenaScale = double.tryParse(params['minarena'] ?? '0.60');
@@ -480,6 +486,7 @@ class ReplayLink {
       shrinkingArena: shrinkingArena,
       minimumArenaScale: minimumArenaScale,
       arenaDecoration: arenaDecoration,
+      arenaShape: arenaShape,
       skillLibrary: skillLibrary,
       artworkRevisions: artworkRevisions.ids,
       artworkFrames: artworkRevisions.embedded,

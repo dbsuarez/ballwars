@@ -61,6 +61,26 @@ String _legacyTuning() {
 }
 
 void main() {
+  test('square arena replay round-trips with revision 5', () {
+    final link = ReplayLink(
+      simulationRevision: 5,
+      seed: 123,
+      speedMultiplier: 1,
+      contestants: _presets.take(2).toList(),
+      arenaShape: ArenaShape.square,
+    );
+    final uri = link.toUri(presetIds: _presetIds);
+    expect(uri.queryParameters['shape'], 'square');
+    final decoded = ReplayLink.fromUri(uri, presets: _presets);
+    expect(decoded?.arenaShape, ArenaShape.square);
+    expect(decoded?.simulationRevision, 5);
+    final legacy = uri.replace(queryParameters: {
+      ...uri.queryParameters,
+      'shape': 'unknown',
+    });
+    expect(ReplayLink.fromUri(legacy, presets: _presets), isNull);
+  });
+
   test('new mirrored-origin rules keep older replay versions readable', () {
     for (final revision in [1, 2, 3, 4]) {
       final link = ReplayLink(

@@ -35,6 +35,7 @@ class ExportVideoDialog extends StatefulWidget {
   final double ballScale;
   final MatchMode mode;
   final int threadGrowthMaxThreads;
+  final ArenaShape arenaShape;
   final Set<PowerUpKind>? powerUps;
   final Set<String>? customSkills;
   final List<int> nudgeSteps;
@@ -67,6 +68,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
     this.threadGrowthMaxThreads = 180,
+    this.arenaShape = ArenaShape.circle,
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
@@ -101,6 +103,7 @@ class ExportVideoDialog extends StatefulWidget {
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
     int threadGrowthMaxThreads = 180,
+    ArenaShape arenaShape = ArenaShape.circle,
     Set<PowerUpKind>? powerUps,
     Set<String>? customSkills,
     List<int> nudgeSteps = const [],
@@ -145,6 +148,7 @@ class ExportVideoDialog extends StatefulWidget {
         ballScale: ballScale,
         mode: mode,
         threadGrowthMaxThreads: threadGrowthMaxThreads,
+        arenaShape: arenaShape,
         powerUps: powerUps,
         customSkills: customSkills,
         nudgeSteps: nudgeSteps,
@@ -236,6 +240,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         ballScale: widget.ballScale,
         mode: widget.mode,
         threadGrowthMaxThreads: widget.threadGrowthMaxThreads,
+        arenaShape: widget.arenaShape,
         powerUps: widget.powerUps,
         customSkills: widget.customSkills,
         nudgeSteps: widget.nudgeSteps,

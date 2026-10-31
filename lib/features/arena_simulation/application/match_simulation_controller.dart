@@ -72,6 +72,7 @@ class MatchSimulationController {
 
   final double initialArenaRadius;
   final bool shrinkingArena;
+  final ArenaShape arenaShape;
   final double minimumArenaScale;
   final Color bloodColor;
   final ArenaDecoration arenaDecoration;
@@ -87,6 +88,33 @@ class MatchSimulationController {
     final progress = ((_stepCount - shrinkGraceSteps) / shrinkDurationSteps)
         .clamp(0.0, 1.0);
     return initialArenaRadius * (1 - (1 - minimumArenaScale) * progress);
+  }
+
+  /// True when a point reaches the current outer boundary.
+  bool touchesOuterBoundary(Offset point) => arenaShape == ArenaShape.square
+      ? math.max(point.dx.abs(), point.dy.abs()) >= arenaRadius
+      : point.distance >= arenaRadius;
+
+  /// Constrain a point just inside the outer boundary.
+  Offset clampToArena(Offset point, {double inset = 2}) {
+    final limit = math.max(0.0, arenaRadius - inset);
+    if (arenaShape == ArenaShape.square) {
+      return Offset(point.dx.clamp(-limit, limit).toDouble(),
+          point.dy.clamp(-limit, limit).toDouble());
+    }
+    return point.distance > limit ? point / point.distance * limit : point;
+  }
+
+  /// Normal of the outer wall at the collision point.
+  Offset outerWallNormal(Offset point) {
+    if (arenaShape == ArenaShape.circle) {
+      return point.distance == 0 ? const Offset(1, 0) : point / point.distance;
+    }
+    final x = point.dx.abs();
+    final y = point.dy.abs();
+    if (x > y) return Offset(point.dx < 0 ? -1 : 1, 0);
+    if (y > x) return Offset(0, point.dy < 0 ? -1 : 1);
+    return Offset(point.dx < 0 ? -1 : 1, point.dy < 0 ? -1 : 1) / math.sqrt2;
   }
 
   /// The seed this match runs on. Re-running the same contestants with this
@@ -310,6 +338,7 @@ class MatchSimulationController {
     this.mayhem = false,
     this.mayhemSeconds = 120,
     this.shrinkingArena = false,
+    this.arenaShape = ArenaShape.circle,
     this.minimumArenaScale = 0.60,
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaDecoration = ArenaDecoration.defaultArena,
@@ -346,6 +375,7 @@ class MatchSimulationController {
       mayhem: mayhem,
       mayhemSeconds: mayhemSeconds,
       shrinkingArena: shrinkingArena,
+      arenaShape: arenaShape,
       minimumArenaScale: minimumArenaScale,
       bloodColor: bloodColor,
       arenaDecoration: arenaDecoration,
@@ -356,7 +386,7 @@ class MatchSimulationController {
     );
     _predict();
     _rng = SeededRandom(this.seed);
-    _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution);
+    _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution, shape: arenaShape);
     _slotOwners = List<SimulationBall?>.filled(rimSlotCount, null);
     _layoutRotation = layoutRotation ?? _rng.nextDoubleRange(0, 2 * math.pi);
 
@@ -544,6 +574,13 @@ class MatchSimulationController {
     }
   }
 
+  Offset _rimPoint(double angle) {
+    final direction = Offset(math.cos(angle), math.sin(angle));
+    if (arenaShape == ArenaShape.circle) return direction * arenaRadius;
+    final extent = math.max(direction.dx.abs(), direction.dy.abs());
+    return direction * (arenaRadius / extent);
+  }
+
   void _claimSlot(SimulationBall ball, int slot) {
     _slotOwners[slot] = ball;
     final angle = _slotAngle(slot);
@@ -552,10 +589,7 @@ class MatchSimulationController {
         ownerBallId: ball.config.id,
         slotIndex: slot,
         rimAngle: angle,
-        startPoint: Offset(
-          math.cos(angle) * arenaRadius,
-          math.sin(angle) * arenaRadius,
-        ),
+        startPoint: _rimPoint(angle),
         endPoint: ball.position,
       ),
     );
@@ -724,6 +758,7 @@ class MatchSimulationController {
     powerUps: _powerUps,
     step: _stepCount,
     arenaRadius: arenaRadius,
+    arenaShape: arenaShape,
   );
 
   void tick(double realDeltaSeconds) {
@@ -992,7 +1027,7 @@ class MatchSimulationController {
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
       for (final line in ball.fanLines) {
-        line.startPoint = line.rimPoint(arenaRadius);
+        line.startPoint = _rimPoint(line.rimAngle);
         line.endPoint = ball.position;
       }
     }

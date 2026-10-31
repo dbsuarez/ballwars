@@ -4,6 +4,7 @@ import 'package:ballwars/core/utils/seeded_random.dart';
 import 'package:ballwars/features/arena_simulation/domain/arena_physics_engine.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
+import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
 SimulationBall _ball({
   required Offset position,
@@ -71,6 +72,41 @@ void main() {
       expect(result, isNull);
       expect(ball.position, Offset.zero);
       expect(ball.velocity, const Offset(10, 0));
+    });
+  });
+
+  group('square outer boundary', () {
+    test('right wall reflects and clamps a ball', () {
+      final engine = ArenaPhysicsEngine(100, SeededRandom(7),
+          shape: ArenaShape.square);
+      final ball = _ball(position: const Offset(98, 30),
+          velocity: const Offset(12, 2), radius: 10);
+      final hit = engine.resolveWallCollision(ball);
+      expect(hit, isNotNull);
+      expect(ball.position.dx, 90);
+      expect(ball.position.dy, 30);
+      expect(ball.velocity.dx, lessThan(0));
+      expect(hit!.wallAnchorPoint!.dx, 100);
+    });
+
+    test('corner contact clamps both axes and reflects both', () {
+      final engine = ArenaPhysicsEngine(100, SeededRandom(8),
+          shape: ArenaShape.square);
+      final ball = _ball(position: const Offset(100, -105),
+          velocity: const Offset(12, -12), radius: 10);
+      final hit = engine.resolveWallCollision(ball);
+      expect(hit, isNotNull);
+      expect(ball.position, const Offset(90, -90));
+      expect(ball.velocity.dx, lessThan(0));
+      expect(ball.velocity.dy, greaterThan(0));
+    });
+
+    test('inside square corners does not bounce early', () {
+      final engine = ArenaPhysicsEngine(100, SeededRandom(9),
+          shape: ArenaShape.square);
+      final ball = _ball(position: const Offset(75, 75),
+          velocity: const Offset(2, 3), radius: 10);
+      expect(engine.resolveWallCollision(ball), isNull);
     });
   });
 

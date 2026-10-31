@@ -495,6 +495,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             shrinkingArena: link.shrinkingArena,
             minimumArenaScale: link.minimumArenaScale,
             arenaDecoration: link.arenaDecoration,
+            arenaShape: link.arenaShape,
             showEffects: link.showEffects,
             effectRenderMode: link.effectRenderMode,
             ballGlowWidth: link.ballGlowWidth,

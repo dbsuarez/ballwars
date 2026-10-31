@@ -3467,8 +3467,7 @@ class PowerUpSystem {
           mirror: match.simulationRevision >= 4,
         );
     if (skill.projectileOriginForward == null) return point;
-    final limit = match.arenaRadius - 1;
-    return point.distance > limit ? point / point.distance * limit : point;
+    return match.clampToArena(point, inset: 1);
   }
 
   /// Throws a grenade from [ball]'s edge at where [target] is now; it explodes on the first opponent it
@@ -3972,7 +3971,7 @@ class PowerUpSystem {
         final left = (landAt - from).distance;
         final landed = struck == null && (to - from).distance >= left;
         if (landed) end = landAt;
-        if (struck != null || landed || end.distance >= match.arenaRadius) {
+        if (struck != null || landed || match.touchesOuterBoundary(end)) {
           p
             ..position = end
             ..spent = true;
@@ -4129,24 +4128,22 @@ class PowerUpSystem {
             );
           }
         }
-      } else if (end.distance >= match.arenaRadius &&
+      } else if (match.touchesOuterBoundary(end) &&
           (p.kind != PowerUpKind.rocketLauncher || !p.homing)) {
         final composed = _composedProjectiles[p];
         if (returnsToOrigin) {
           p
-            ..position = end / end.distance * (match.arenaRadius - 2)
+            ..position = match.clampToArena(end)
             ..returning = true;
         } else if ((p.kind == PowerUpKind.ricochetDisc ||
                 p.kind == PowerUpKind.prismLaser ||
                 composed != null ||
                 _t.maxBounces(p.kind) > 0) &&
             p.wallBounces < (composed?.maxBounces ?? _t.maxBounces(p.kind))) {
-          final normal = end.distance == 0
-              ? const Offset(1, 0)
-              : end / end.distance;
+          final normal = match.outerWallNormal(end);
           final along = p.velocity.dx * normal.dx + p.velocity.dy * normal.dy;
           p
-            ..position = normal * (match.arenaRadius - 2)
+            ..position = match.clampToArena(end)
             ..velocity -= normal * (2 * along);
           p.wallBounces++;
           if (p.kind == PowerUpKind.prismLaser &&

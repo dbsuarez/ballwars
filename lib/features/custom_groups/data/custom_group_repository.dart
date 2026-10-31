@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/painting.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -118,6 +120,20 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   StorageFileApi get _images =>
       _client.storage.from(SupabaseConfig.imageBucket);
 
+  /// Deletes [paths] from the image bucket without failing the caller. Row
+  /// changes are the source of truth, so a storage hiccup must not turn a
+  /// successful edit into an error (and must not leave the new picture
+  /// behind); whatever is left over is removed later by
+  /// [cleanUpUnusedImages].
+  Future<void> _removeImagesBestEffort(List<String> paths) async {
+    if (paths.isEmpty) return;
+    try {
+      await _images.remove(paths);
+    } catch (_) {
+      // Orphans are collected by cleanUpUnusedImages.
+    }
+  }
+
   /// Every device gets an anonymous account the first time it needs one.
   Future<String> _userId() async {
     final user =
@@ -139,6 +155,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
             .eq('owner', uid)
             .order('created_at')
             .order('position', referencedTable: 'group_balls')
+            .order('id', referencedTable: 'group_balls')
             .retry(enabled: false),
       );
     });
@@ -155,6 +172,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
             .select(_groupColumns(withGender))
             .order('created_at', ascending: false)
             .order('position', referencedTable: 'group_balls')
+            .order('id', referencedTable: 'group_balls')
             .retry(enabled: false),
       );
     });
@@ -175,6 +193,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
             )
             .order('name')
             .order('position', referencedTable: 'group_balls')
+            .order('id', referencedTable: 'group_balls')
             .retry(enabled: false),
       );
     });
@@ -190,6 +209,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
           .select(_groupColumns(withGender))
           .eq('id', groupId)
           .order('position', referencedTable: 'group_balls')
+          .order('id', referencedTable: 'group_balls')
           .maybeSingle(),
     );
     return row == null ? null : _group(row);
@@ -237,7 +257,12 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
       final rows = await query().timeout(const Duration(seconds: 10));
       await OfflineStore.instance.write(key, utf8.encode(jsonEncode(rows)));
       return rows;
-    } catch (_) {
+    } on TimeoutException {
+      final saved = await OfflineStore.instance.read(key);
+      if (saved == null) rethrow;
+      return (jsonDecode(utf8.decode(saved)) as List)
+          .cast<Map<String, dynamic>>();
+    } on SocketException {
       final saved = await OfflineStore.instance.read(key);
       if (saved == null) rethrow;
       return (jsonDecode(utf8.decode(saved)) as List)
@@ -268,7 +293,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   Future<void> deleteGroup(CustomGroup group) async {
     final paths = [for (final b in group.balls) ?_pathOf(b)];
     await _client.from('ball_groups').delete().eq('id', group.id);
-    if (paths.isNotEmpty) await _images.remove(paths);
+    await _removeImagesBestEffort(paths);
   }
 
   @override
@@ -282,7 +307,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
   }) async {
     final path = png == null ? null : await _upload(png);
     try {
-      final position = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final position = DateTime.now().millisecondsSinceEpoch;
       final row = await _gender.run(
         (withGender) => _client
             .from('group_balls')
@@ -298,7 +323,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
       );
       return _ball(row);
     } catch (_) {
-      if (path != null) await _images.remove([path]);
+      if (path != null) await _removeImagesBestEffort([path]);
       rethrow;
     }
   }
@@ -337,10 +362,14 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
             .select(_ballColumns(withGender))
             .single(),
       );
-      if (newPath != null && oldPath != null) await _images.remove([oldPath]);
+      if (newPath != null) {
+        // The row already points at the new picture; an old file that won't
+        // go away is an orphan, not a failed edit.
+        await _removeImagesBestEffort([?oldPath]);
+      }
       return _ball(row);
     } catch (_) {
-      if (newPath != null) await _images.remove([newPath]);
+      if (newPath != null) await _removeImagesBestEffort([newPath]);
       rethrow;
     }
   }
@@ -384,6 +413,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
             .not('pack_id', 'is', null)
             .order('name')
             .order('position', referencedTable: 'group_balls')
+            .order('id', referencedTable: 'group_balls')
             .retry(enabled: false),
       );
     });
@@ -443,7 +473,7 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
         .delete()
         .eq('id', CustomGroup.uuidOf(ball));
     final path = _pathOf(ball);
-    if (path != null) await _images.remove([path]);
+    if (path != null) await _removeImagesBestEffort([path]);
   }
 
   @override
@@ -535,7 +565,7 @@ class OptionalColumn {
 class AccountAwareCustomGroupRepository implements CustomGroupRepository {
   final CustomGroupRepository device;
   final CustomGroupRepository account;
-  final Future<bool> Function() isAccountActive;
+  final Future<bool?> Function() isAccountActive;
   final Future<int> Function(String sourceOwner) adoptGroupsFrom;
   Future<void>? _adoption;
 
@@ -547,7 +577,13 @@ class AccountAwareCustomGroupRepository implements CustomGroupRepository {
   });
 
   Future<CustomGroupRepository> _active() async {
-    if (!await isAccountActive()) return device;
+    final status = await isAccountActive();
+    if (status == null) {
+      throw StateError(
+        'Cannot verify admin account right now. Check your connection and retry.',
+      );
+    }
+    if (!status) return device;
     _adoption ??= _adoptDeviceGroups();
     await _adoption;
     return account;

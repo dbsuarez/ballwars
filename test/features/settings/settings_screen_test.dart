@@ -21,6 +21,9 @@ class _Admin implements AdminAuth {
   Future<bool> isAdmin() async => true;
 
   @override
+  Future<bool?> adminStatus() async => true;
+
+  @override
   String? get email => 'admin@example.com';
 
   @override
@@ -42,6 +45,9 @@ class _SignedOutAdmin implements AdminAuth {
   String? get email => signedIn ? 'admin@example.com' : null;
   @override
   Future<bool> isAdmin() async => signedIn;
+
+  @override
+  Future<bool?> adminStatus() async => signedIn;
   @override
   Future<void> signIn(
     String email,

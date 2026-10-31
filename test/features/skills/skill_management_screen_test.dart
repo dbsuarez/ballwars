@@ -59,10 +59,13 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
         await tester.ensureVisible(tab);
         await tester.tap(tab);
         await tester.pumpAndSettle();
-        if (await scan()) return;
+        if (await scan()) {
+          return;
+        }
       }
-    } else if (await scan())
+    } else if (await scan()) {
       return;
+    }
   }
   fail('Editor control not found: $target');
 }

@@ -199,6 +199,21 @@ void main() {
     expect(account.myGroupsCalls, 0);
   });
 
+  test('unverifiable admin status never falls back to device groups', () async {
+    final device = _FakeGroups(const []);
+    final account = _FakeGroups(const []);
+    final repository = AccountAwareCustomGroupRepository(
+      device: device,
+      account: account,
+      isAccountActive: () async => null,
+      adoptGroupsFrom: (_) async => fail('must not adopt when unverifiable'),
+    );
+
+    await expectLater(repository.myGroups(), throwsA(isA<StateError>()));
+    expect(device.myGroupsCalls, 0);
+    expect(account.myGroupsCalls, 0);
+  });
+
   test(
     'group balls travel in links as g.<uuid> and resolve from the group store',
     () {

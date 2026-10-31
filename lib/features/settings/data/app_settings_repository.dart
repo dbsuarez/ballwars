@@ -1,6 +1,7 @@
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../skills/domain/skill_library.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/auth/device_session_guard.dart';
@@ -22,6 +23,12 @@ abstract class AppSettingsRepository {
 abstract class AdminAuth {
   /// Whether this device is signed in as an admin.
   Future<bool> isAdmin();
+
+  /// Like [isAdmin], but null when the answer can't be verified right now
+  /// (offline or the database unreachable), so callers can avoid silently
+  /// treating an admin as signed out. The real implementation caches the
+  /// verified answer for the current session.
+  Future<bool?> adminStatus() async => isAdmin();
 
   /// Signs in with email and password; throws if wrong or not an admin.
   Future<void> signIn(String email, String password, {bool rememberMe = false});
@@ -294,6 +301,11 @@ class SupabaseAdminAuth implements AdminAuth {
   late final Future<void> _restored;
   bool _rememberSession = false;
 
+  /// The last verified answer, kept for the session it was checked under
+  /// ([_verifiedFor] is that session's access token).
+  bool? _verified;
+  String? _verifiedFor;
+
   /// Watches the device client from construction, before a remembered admin
   /// session is recovered and broadcasts itself.
   final DeviceSessionGuard _deviceGuard;
@@ -314,7 +326,7 @@ class SupabaseAdminAuth implements AdminAuth {
     // Supabase client can emit an initial-session event immediately; the old
     // ordering handled that while `_rememberSession` was still false and
     // replaced a valid saved session with an empty value on hard refresh.
-    _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
+    _rememberSession = !kIsWeb && await DevicePrefs.read(_rememberKey) == '1';
     final saved = _rememberSession ? await DevicePrefs.read(_sessionKey) : null;
 
     if (!_rememberSession) {
@@ -356,15 +368,37 @@ class SupabaseAdminAuth implements AdminAuth {
   String? get email => client.auth.currentUser?.email;
 
   @override
-  Future<bool> isAdmin() async {
+  Future<bool> isAdmin() async => (await adminStatus()) ?? false;
+
+  @override
+  Future<bool?> adminStatus() async {
     await _restore();
+    final session = client.auth.currentSession;
     final user = client.auth.currentUser;
-    if (user == null || user.isAnonymous) return false;
-    try {
-      return await client.rpc('is_admin') as bool? ?? false;
-    } catch (_) {
+    if (session == null || user == null || user.isAnonymous) {
+      _verifiedFor = null;
+      _verified = null;
       return false;
     }
+    if (_verifiedFor == session.accessToken) return _verified;
+    final bool verified;
+    try {
+      verified = await client.rpc('is_admin') as bool? ?? false;
+    } catch (_) {
+      // Unverifiable (offline, server error): nothing to cache either way.
+      return null;
+    }
+    // A sign-in/out may have landed while the call was in flight; only keep
+    // the answer for the session it was asked under.
+    if (client.auth.currentSession?.accessToken == session.accessToken) {
+      _verifiedFor = session.accessToken;
+      _verified = verified;
+    }
+    // Do not report a result for a session that changed during the RPC.
+    if (client.auth.currentSession?.accessToken != session.accessToken) {
+      return null;
+    }
+    return verified;
   }
 
   @override
@@ -376,8 +410,8 @@ class SupabaseAdminAuth implements AdminAuth {
     // Finish startup restoration before beginning a new login. Otherwise the
     // lazy restore can recover an old token over the newly authenticated one.
     await _restore();
-    _rememberSession = rememberMe;
-    await DevicePrefs.write(_rememberKey, rememberMe ? '1' : '');
+    _rememberSession = rememberMe && !kIsWeb;
+    await DevicePrefs.write(_rememberKey, _rememberSession ? '1' : '');
     try {
       await client.auth.signInWithPassword(
         email: email.trim(),
@@ -388,7 +422,7 @@ class SupabaseAdminAuth implements AdminAuth {
         throw StateError('That account is not an admin.');
       }
       final session = client.auth.currentSession;
-      if (rememberMe && session != null) {
+      if (_rememberSession && session != null) {
         final encoded = jsonEncode(session.toJson());
         await DevicePrefs.write(_sessionKey, encoded);
         if (await DevicePrefs.read(_sessionKey) != encoded) {

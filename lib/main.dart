@@ -46,7 +46,7 @@ Future<void> main() async {
   final groups = AccountAwareCustomGroupRepository(
     device: deviceGroups,
     account: adminGroups,
-    isAccountActive: admin.isAdmin,
+    isAccountActive: admin.adminStatus,
     adoptGroupsFrom: adminGroups.adoptGroupsFrom,
   );
   runApp(

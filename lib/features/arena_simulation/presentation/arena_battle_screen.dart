@@ -35,6 +35,16 @@ import '../../../core/audio/game_audio.dart';
 import '../../../core/audio/audio_channel_button.dart';
 import '../../settings/data/effects_prefs.dart';
 
+/// Finds a matching ball without assuming the live simulation still contains
+/// every contestant referenced by the match result.
+SimulationBall? findResultBall(List<SimulationBall> balls, String? id) {
+  if (id == null) return null;
+  for (final ball in balls) {
+    if (ball.config.id == id) return ball;
+  }
+  return null;
+}
+
 class ArenaBattleScreen extends StatefulWidget {
   final MatchConfig config;
   final int? seed;
@@ -405,18 +415,18 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       Future.delayed(_endPause, () {
         if (!current()) return;
         setState(() {
-          _winnerBall = _state.balls
-              .firstWhere((b) => b.config.id == _state.winnerId)
-              .config;
-          // Mayhem supplies last place by final KO/life ranking; other modes use the last knockout.
+          _winnerBall = findResultBall(_state.balls, _state.winnerId)?.config ??
+              widget.config.contestants.firstWhere(
+                (ball) => ball.id == _state.winnerId,
+                orElse: () => widget.config.contestants.first,
+              );
+          // Prefer the actual last eliminated ball; tolerate a missing id.
           final loserId = _controller.lastEliminatedId;
-          _loserBall = _state.balls
-              .firstWhere(
-                (b) => loserId != null
-                    ? b.config.id == loserId
-                    : b.config.id != _state.winnerId,
-              )
-              .config;
+          _loserBall = findResultBall(_state.balls, loserId)?.config ??
+              widget.config.contestants.firstWhere(
+                (ball) => ball.id != _winnerBall?.id,
+                orElse: () => widget.config.contestants.first,
+              );
           _showDissolve = true;
         });
         _audio.out();
@@ -1399,12 +1409,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                   ball: b,
                                   wins: _roundWins[b.id] ?? 0,
                                   losses: _roundLosses[b.id] ?? 0,
-                                  hp: _state.balls
-                                      .firstWhere(
-                                        (stateBall) =>
-                                            stateBall.config.id == b.id,
-                                      )
-                                      .life,
+                                  hp: findResultBall(_state.balls, b.id)?.life ?? 0,
                                 ),
                             ]
                           : null,

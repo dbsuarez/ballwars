@@ -69,7 +69,9 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
 
   Future<void> _rename(SavedReplay entry) async {
     final controller = TextEditingController(text: entry.displayName);
-    final name = await showDialog<String>(
+    String? name;
+    try {
+      name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Rename replay'),
@@ -91,7 +93,10 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
           ),
         ],
       ),
-    );
+      );
+    } finally {
+      controller.dispose();
+    }
     if (name == null) return;
     try {
       await SavedReplayStore.rename(entry.id, name);

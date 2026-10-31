@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'ball_studio_screen.dart';
 import '../../../core/widgets/legacy_tag.dart';
 import 'package:flutter/material.dart';
@@ -1478,10 +1479,10 @@ class _SignInDialogState extends State<_SignInDialog> {
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
-            title: const Text('Remember me'),
+            title: Text(kIsWeb ? 'Remember me (unavailable on web)' : 'Remember me'),
             subtitle: const Text('Stay signed in on this device'),
             value: _rememberMe,
-            onChanged: (value) => setState(() => _rememberMe = value ?? false),
+            onChanged: kIsWeb ? null : (value) => setState(() => _rememberMe = value ?? false),
           ),
         ],
       ),

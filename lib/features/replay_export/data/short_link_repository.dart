@@ -62,6 +62,11 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
             'Server replay storage needs migration 020_replay_documents.sql.',
           );
         }
+        if (e.code == 'P0001' &&
+            (e.message.contains('Daily replay sharing limit') ||
+             e.message.contains('Replay exceeds the maximum size'))) {
+          throw StateError(e.message);
+        }
         if (e.code != '23505') {
           rethrow; // 23505: duplicate key, try another code
         }

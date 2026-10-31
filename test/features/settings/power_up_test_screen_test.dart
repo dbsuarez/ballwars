@@ -25,6 +25,9 @@ class _Auth implements AdminAuth {
   Future<bool> isAdmin() async => allowed;
 
   @override
+  Future<bool?> adminStatus() async => allowed;
+
+  @override
   Future<void> signIn(
     String email,
     String password, {

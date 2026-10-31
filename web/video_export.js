@@ -99,8 +99,14 @@
     async addFrame(rgba) {
       const s = current();
       while (s.encoder.encodeQueueSize > MAX_QUEUE) {
+        // Encoder errors can stop the queue from draining permanently.
+        // Check on every iteration so callers can cancel/report the failure.
+        if (s.error) throw s.error;
+        if (session !== s) throw new Error('Video export was cancelled.');
         await new Promise((resolve) => setTimeout(resolve, 1));
       }
+      if (s.error) throw s.error;
+      if (session !== s) throw new Error('Video export was cancelled.');
       const frame = new VideoFrame(rgba, {
         format: 'RGBA',
         codedWidth: s.width,

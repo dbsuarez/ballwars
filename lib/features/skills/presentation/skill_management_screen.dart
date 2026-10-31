@@ -505,9 +505,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     };
     String? fieldError(TuningField field) {
       final value = double.tryParse(controllers[field.id]!.text);
-      if (value == null || !value.isFinite) return 'Enter a number';
-      if (field.integer && value != value.roundToDouble())
+      if (value == null || !value.isFinite) {
+        return 'Enter a number';
+      }
+      if (field.integer && value != value.roundToDouble()) {
         return 'Use a whole number';
+      }
       if (value < field.min || value > field.max) {
         return 'Enter ${_formatTuning(field, field.min)} to ${_formatTuning(field, field.max)}';
       }
@@ -628,8 +631,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                         (field) => field.id != 'arenaTrapsEnabled',
                       )) {
                         final value = num.tryParse(controllers[field.id]!.text);
-                        if (value != null)
+                        if (value != null) {
                           draft = draft.withValue(field.id, value);
+                        }
                       }
                       Navigator.pop(context, draft);
                     },
@@ -2113,7 +2117,9 @@ class _SkillEditorState extends State<_SkillEditor>
   String? _numberError(String key) {
     final raw = _numbers[key]?.text ?? '';
     final value = double.tryParse(raw);
-    if (value == null || !value.isFinite) return 'Enter a number';
+    if (value == null || !value.isFinite) {
+        return 'Enter a number';
+      }
     if (value < 0 && !_signedKeys.contains(key)) return 'Must be zero or more';
     if (_wholeNumberKeys.contains(key) && value != value.roundToDouble()) {
       return 'Use a whole number';

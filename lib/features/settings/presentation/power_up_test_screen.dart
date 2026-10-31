@@ -70,6 +70,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   int _heardBallHits = 0;
   double _speed = 1;
   MatchMode _mode = MatchMode.arsenal;
+  ArenaShape _arenaShape = ArenaShape.circle;
 
   /// The arena picked in the bottom bar; null follows the admin's setting.
   ArenaDecoration? _arenaChoice;
@@ -165,6 +166,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             widget.initialSkill!,
             settings.powerUps,
           );
+    final savedShape = await DevicePrefs.read('power-test-arena-shape');
+    _arenaShape = ArenaShape.values.where((shape) => shape.name == savedShape).firstOrNull ?? ArenaShape.circle;
     final savedArena = await DevicePrefs.read('power-test-arena');
     _arenaChoice = ArenaDecoration.values
         .where((d) => d.name == savedArena)
@@ -260,6 +263,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     _match = MatchSimulationController(
       _balls,
       arenaRadius: 200,
+      arenaShape: _arenaShape,
       seed: 42,
       mode: _mode,
       tuning: settings.powerUps,
@@ -1194,6 +1198,20 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     ),
                   ],
                   onChanged: (value) => change(() => _mode = value!),
+                ),
+                DropdownButtonFormField<ArenaShape>(
+                  key: ValueKey('power-test-arena-shape-${_arenaShape.name}'),
+                  initialValue: _arenaShape,
+                  decoration: const InputDecoration(labelText: 'Arena shape'),
+                  items: const [
+                    DropdownMenuItem(value: ArenaShape.circle, child: Text('Circle')),
+                    DropdownMenuItem(value: ArenaShape.square, child: Text('Square')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    DevicePrefs.write('power-test-arena-shape', value.name);
+                    change(() => _arenaShape = value);
+                  },
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: _layout,

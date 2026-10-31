@@ -10,6 +10,7 @@ import '../domain/simulation_state.dart';
 import '../domain/floating_text.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/particle_system.dart';
+import '../domain/arena_boundary_geometry.dart';
 import 'ball_face_painter.dart';
 import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
@@ -600,21 +601,13 @@ class ArenaPainter extends CustomPainter {
     final coneAngle = beamAngle + math.pi;
     final halfWidth = 0.15; // Small fixed width
 
-    final path = Path();
-    path.moveTo(target.position.dx, target.position.dy);
-    final rimAngle1 = coneAngle - halfWidth;
-    final rimPt1 = Offset(
-      math.cos(rimAngle1) * arenaRadius,
-      math.sin(rimAngle1) * arenaRadius,
-    );
-    path.lineTo(rimPt1.dx, rimPt1.dy);
-    path.arcTo(
-      Rect.fromCircle(center: Offset.zero, radius: arenaRadius),
-      rimAngle1,
-      halfWidth * 2,
-      false,
-    );
-    path.lineTo(target.position.dx, target.position.dy);
+    final path = Path()..moveTo(target.position.dx, target.position.dy);
+    const segments = 16;
+    for (var i = 0; i <= segments; i++) {
+      final angle = coneAngle - halfWidth + 2 * halfWidth * i / segments;
+      final point = arenaBoundaryPoint(angle, arenaRadius, state.arenaShape);
+      path.lineTo(point.dx, point.dy);
+    }
     path.close();
 
     final paint = Paint()

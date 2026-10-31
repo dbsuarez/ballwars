@@ -670,6 +670,15 @@ class _HomeScreenState extends State<_HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () =>
+                              _openMatchSetup(MatchMode.threadGrowth),
+                          child: const Text('Thread Growth'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(

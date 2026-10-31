@@ -6,6 +6,7 @@ import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../domain/arena_boundary_geometry.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/arena_physics_engine.dart';
@@ -1087,7 +1088,7 @@ class MatchSimulationController {
         for (final line in cut) {
           _particles.spawnRimArcs(
             origin: line.startPoint,
-            normal: Offset(math.cos(line.rimAngle), math.sin(line.rimAngle)),
+            normal: arenaBoundaryNormal(line.startPoint, arenaShape),
             arenaRadius: arenaRadius,
             rng: _rng,
             arenaShape: arenaShape,

@@ -9,6 +9,8 @@ import '../domain/power_up.dart';
 import '../application/power_up_system.dart';
 import '../domain/simulation_ball.dart';
 import '../domain/simulation_state.dart';
+import '../domain/arena_boundary_geometry.dart';
+import '../../match_setup/domain/match_config.dart';
 import 'power_up_sprites.dart';
 import 'lightning_strike_painter.dart';
 import 'arena_effect_library.dart';
@@ -1201,11 +1203,7 @@ class PowerUpPainter {
         final end = start + direction * arenaRadius * 2.4;
         // The translucent fan records the area already swept by the beam.
         canvas.save();
-        canvas.clipPath(
-          Path()..addOval(
-            Rect.fromCircle(center: Offset.zero, radius: arenaRadius),
-          ),
-        );
+        canvas.clipPath(arenaBoundaryPath(arenaRadius, state.arenaShape));
         canvas.drawArc(
           Rect.fromCircle(
             center: wave.owner.position,
@@ -1715,16 +1713,15 @@ class PowerUpPainter {
         final trapRadius = r * p.effectDisplayScale(PowerUpKind.spikeWall);
         // Artwork size cannot move the angular collision samples along the rim.
         final spacing = r * 0.96;
-        for (final rawBase in wall.spikePositions(spacing)) {
+        for (final rawBase in (state.arenaShape == ArenaShape.circle
+            ? wall.spikePositions(spacing)
+            : arenaRimSamples(wall.position, arenaRadius, spacing, wall.spikeCount, state.arenaShape))) {
           // Old/replayed walls may have been spawned slightly farther inward.
           // Project every visual base to the rim so the wooden rail touches it.
-          final base = rawBase.distance == 0
-              ? rawBase
-              : rawBase /
-                    rawBase.distance *
-                    spikeBaseRadius(arenaRadius, trapRadius);
+          final normal = arenaBoundaryNormal(rawBase, state.arenaShape);
+          final base = rawBase - normal * (arenaRadius - spikeBaseRadius(arenaRadius, trapRadius));
           final angle = math.atan2(base.dy, base.dx);
-          final radial = Offset(math.cos(angle), math.sin(angle));
+          final radial = normal;
           final tangent = Offset(-radial.dy, radial.dx);
           final skill = p.visualSkill(PowerUpKind.spikeWall);
           if (!_customEffect(
@@ -1764,6 +1761,7 @@ class PowerUpPainter {
           arenaRadius,
           trapRadius,
           pulse,
+          shape: state.arenaShape,
           spriteId:
               p.usesEffectSprite(
                 PowerUpKind.stickyGoo,
@@ -1793,6 +1791,7 @@ class PowerUpPainter {
           arenaRadius,
           trapRadius,
           pulse,
+          shape: state.arenaShape,
           tint: const Color(0xFF669B22),
           spriteId:
               p.usesEffectSprite(
@@ -1807,10 +1806,8 @@ class PowerUpPainter {
           final angle =
               math.atan2(swamp.position.dy, swamp.position.dx) +
               (i - 2) * trapRadius * 0.82 / arenaRadius;
-          final spot = Offset.fromDirection(
-            angle,
-            arenaRadius - trapRadius * 0.7,
-          );
+          final rim = arenaBoundaryPoint(angle, arenaRadius, state.arenaShape);
+          final spot = rim - arenaBoundaryNormal(rim, state.arenaShape) * trapRadius * 0.7;
           canvas.drawCircle(
             spot +
                 Offset(0, math.sin(state.step * 0.12 + i) * trapRadius * 0.12),
@@ -2616,6 +2613,7 @@ class PowerUpPainter {
     double arenaRadius,
     double r,
     double pulse, {
+    ArenaShape shape = ArenaShape.circle,
     Color? tint,
     String? spriteId,
     int step = 0,
@@ -2629,14 +2627,20 @@ class PowerUpPainter {
     final sourceWidth = sprite.width / slices;
     final destinationWidth = arcWidth / slices + 1.4;
     final destinationHeight = r * 1.55;
+    final squareAnchors = shape == ArenaShape.square
+        ? arenaRimSamples(goo.position, arenaRadius, arcWidth / slices, slices, shape)
+        : null;
     for (var i = 0; i < slices; i++) {
       final u = (i + 0.5) / slices;
       final angle = centerAngle - sweep / 2 + sweep * u;
-      final anchor = Offset.fromDirection(angle, arenaRadius);
+      final anchor = squareAnchors == null
+          ? Offset.fromDirection(angle, arenaRadius)
+          : squareAnchors[i];
+      final normal = arenaBoundaryNormal(anchor, shape);
       canvas.save();
       canvas.translate(anchor.dx, anchor.dy);
       // Local x follows the tangent; local y points inward into the arena.
-      canvas.rotate(angle + math.pi / 2);
+      canvas.rotate(math.atan2(normal.dy, normal.dx) + math.pi / 2);
       canvas.drawImageRect(
         sprite,
         Rect.fromLTWH(

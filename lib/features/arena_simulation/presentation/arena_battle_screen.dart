@@ -278,11 +278,31 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   VoidCallback? _spriteLease;
   Map<String, String> _roundArtwork = {};
   Map<String, Object> _roundFrames = {};
+  Future<void>? _replayArtworkPreparation;
+
+  Future<void> _ensureReplayArtwork() async {
+    if (_roundFrames.isNotEmpty || widget.config.artworkFrames.isNotEmpty) return;
+    final generation = _matchGeneration;
+    final artwork = Map<String, String>.of(_roundArtwork);
+    final pending = _replayArtworkPreparation ??= () async {
+      final frames = await SpriteRegistry.embedDrawn(artwork);
+      if (mounted && generation == _matchGeneration) {
+        _roundFrames = frames;
+      }
+    }();
+    try {
+      await pending;
+    } catch (_) {
+      if (generation == _matchGeneration) _replayArtworkPreparation = null;
+      rethrow;
+    }
+  }
 
   Future<void> _prepareRoundResources(int generation) async {
     _preparingRound = true;
     _roundArtwork = widget.config.artworkRevisions;
     _roundFrames = widget.config.artworkFrames;
+    _replayArtworkPreparation = null;
     final requiredSprites = SkillSpriteReadiness.dependencies(
       library: widget.config.skillLibrary,
       tuning: widget.config.tuning,
@@ -297,7 +317,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     requiredSprites.addAll(widget.config.artworkRevisions.values);
     _spriteLease?.call();
     _spriteLease = SpriteRegistry.pin(requiredSprites);
+    final startupWatch = Stopwatch()..start();
     try {
+      // Audio and sprite preparation are independent. Start them together
+      // instead of making Mayhem wait for both costs sequentially.
+      final audioWatch = Stopwatch()..start();
+      final audioReady = _audio.prepareMatchAudio();
       final missing = await SkillSpriteReadiness.prepare(
         extraIds: widget.config.artworkRevisions.values,
         embedded: widget.config.artworkFrames,
@@ -311,7 +336,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
             ? const {}
             : widget.config.customSkills,
       );
-      await _audio.prepareMatchAudio();
+      debugPrint(
+        'Match startup: sprite readiness ${startupWatch.elapsedMilliseconds}ms',
+      );
+      await audioReady;
+      debugPrint('Match startup: audio ${audioWatch.elapsedMilliseconds}ms');
       if (!mounted || generation != _matchGeneration) return;
       if (missing.isNotEmpty) {
         setState(
@@ -333,18 +362,17 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
               if (!widget.config.mode.isThreadOnly)
                 ...SpriteRegistry.ids.where((id) => !id.startsWith('custom.')),
             });
-      final roundFrames = widget.config.artworkFrames.isNotEmpty
-          ? widget.config.artworkFrames
-          : await SpriteRegistry.embedDrawn(roundArtwork);
       if (!mounted || generation != _matchGeneration) return;
       _roundArtwork = roundArtwork;
-      _roundFrames = roundFrames;
       final originalLease = _spriteLease;
       final revisionsLease = SpriteRegistry.pin(_roundArtwork.values);
       _spriteLease = () {
         originalLease?.call();
         revisionsLease();
       };
+      debugPrint(
+        'Match startup: countdown ready in ${startupWatch.elapsedMilliseconds}ms',
+      );
       _startReadyCountdown();
     } catch (error) {
       debugPrint('Match artwork preparation failed: $error');
@@ -587,8 +615,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   /// Copies a link that replays this exact match in the web app: a short
   /// `?r=<code>` link when the server is reachable, else the long one.
   Future<void> _copyReplayLink() async {
-    final long = _replayUriOrExplain();
-    if (long == null) return;
+    final long = await _replayUriOrExplain();
+    if (long == null || !mounted) return;
     Uri link = long;
     final shortLinks = AppSettingsScope.maybeScope(context)?.shortLinks;
     if (shortLinks != null) {
@@ -649,10 +677,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
   /// [_replayUri], or null after telling the user why there is none: the custom skill snapshot is
   /// over `SkillLibrary.maxReplayCharacters`.
-  Uri? _replayUriOrExplain() {
+  Future<Uri?> _replayUriOrExplain() async {
     try {
+      await _ensureReplayArtwork();
+      if (!mounted) return null;
       return _replayUri();
     } on FormatException {
+      if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -665,7 +696,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   }
 
   Future<void> _saveReplay() async {
-    final uri = _replayUriOrExplain();
+    final uri = await _replayUriOrExplain();
     if (uri == null) return;
     await SavedReplayStore.add(
       uri,
@@ -1322,16 +1353,27 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                       winningMove: _controller.winningMove,
                       onSaveVideo: _videoExport == null
                           ? null
-                          : () {
+                          : () async {
                               _audio.click();
+                              final exportSettings = AppSettingsScope.of(context);
+                              try {
+                                await _ensureReplayArtwork();
+                              } catch (error) {
+                                debugPrint('Replay artwork preparation failed: $error');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Replay artwork could not be prepared for video export.')),
+                                  );
+                                }
+                                return;
+                              }
+                              if (!context.mounted) return;
                               ExportVideoDialog.show(
                                 simulationRevision:
                                     widget.config.simulationRevision,
                                 effectRenderMode:
                                     widget.config.effectRenderMode ??
-                                    AppSettingsScope.of(
-                                      context,
-                                    ).explosionRenderMode,
+                                    exportSettings.explosionRenderMode,
                                 context,
                                 contestants: widget.config.contestants,
                                 seed: _controller.seed,
@@ -1342,12 +1384,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 automaticSpeedUp:
                                     widget.config.automaticSpeedUp,
                                 showEffects: _showEffects,
-                                slowMotionLines: AppSettingsScope.of(
-                                  context,
-                                ).slowMotionLines,
-                                slowMotionBeforeWinSeconds: AppSettingsScope.of(
-                                  context,
-                                ).slowMotionBeforeWinSeconds,
+                                slowMotionLines: exportSettings.slowMotionLines,
+                                slowMotionBeforeWinSeconds: exportSettings.slowMotionBeforeWinSeconds,
                                 ballScale: widget.config.ballSize.scale,
                                 mode: widget.config.mode,
                                 threadGrowthMaxThreads: widget.config.threadGrowthMaxThreads,
@@ -1376,17 +1414,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 arenaDecoration: widget.config.arenaDecoration,
                                 headline: headline,
                                 colors: c,
-                                ballGlowEnabled: AppSettingsScope.of(
-                                  context,
-                                ).ballGlowEnabled,
+                                ballGlowEnabled: exportSettings.ballGlowEnabled,
                                 ballGlowWidth: widget.config.ballGlowWidth,
                                 bloodColor: widget.config.bloodColor,
-                                arenaTitle: AppSettingsScope.of(
-                                  context,
-                                ).arenaTitle,
-                                arenaSubtitle: AppSettingsScope.of(
-                                  context,
-                                ).arenaSubtitle,
+                                arenaTitle: exportSettings.arenaTitle,
+                                arenaSubtitle: exportSettings.arenaSubtitle,
                                 backend: _videoExport,
                               );
                             },

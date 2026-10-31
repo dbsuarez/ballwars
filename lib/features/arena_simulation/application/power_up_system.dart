@@ -9,6 +9,7 @@ import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/fan_line.dart';
+import '../domain/arena_boundary_geometry.dart';
 import '../domain/floating_text.dart';
 import '../domain/power_up.dart';
 import '../domain/power_up_config.dart';
@@ -1509,7 +1510,9 @@ class PowerUpSystem {
   void _triggerStickyGoo() {
     if (stickyGoo.isEmpty) return;
     for (final goo in List<StickyGoo>.of(stickyGoo)) {
-      final blobs = goo.blobPositions(fieldRadius * 0.36);
+      final blobs = match.arenaShape == ArenaShape.circle
+          ? goo.blobPositions(fieldRadius * 0.36)
+          : arenaRimSamples(goo.position, match.arenaRadius, fieldRadius * 0.36, 15, match.arenaShape);
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         final touches = blobs.any(
@@ -1534,7 +1537,9 @@ class PowerUpSystem {
 
   void _triggerPoisonSwamps() {
     for (final swamp in List<PoisonSwamp>.of(poisonSwamps)) {
-      final samples = swamp.samplePositions(fieldRadius * 0.36);
+      final samples = match.arenaShape == ArenaShape.circle
+          ? swamp.samplePositions(fieldRadius * 0.36)
+          : arenaRimSamples(swamp.position, match.arenaRadius, fieldRadius * 0.36, 15, match.arenaShape);
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         if (!samples.any(
@@ -1675,7 +1680,9 @@ class PowerUpSystem {
   void _triggerSpikeWalls() {
     if (spikeWalls.isEmpty) return;
     for (final wall in List<SpikeWall>.of(spikeWalls)) {
-      final spikes = wall.spikePositions(fieldRadius * 0.96);
+      final spikes = match.arenaShape == ArenaShape.circle
+          ? wall.spikePositions(fieldRadius * 0.96)
+          : arenaRimSamples(wall.position, match.arenaRadius, fieldRadius * 0.96, wall.spikeCount, match.arenaShape);
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         final reach = ball.radius + fieldRadius * 0.48;
@@ -2457,9 +2464,14 @@ class PowerUpSystem {
             )
             .toList();
       case SkillDelivery.boundaryHazard:
-        final edge = match.arenaRadius * (1 - skill.range).clamp(0, 1);
+        final bandWidth = match.arenaRadius * skill.range.clamp(0, 1);
         return targets
-            .where((target) => target.position.distance >= edge)
+            .where((target) => inArenaBoundaryBand(
+                  target.position,
+                  match.arenaRadius,
+                  bandWidth,
+                  match.arenaShape,
+                ))
             .toList();
       case SkillDelivery.beam:
         final direction = _chosenDirection(owner, targets.firstOrNull);
@@ -4525,7 +4537,7 @@ class PowerUpSystem {
     }
     match.state.particles.spawnRimArcs(
       origin: line.startPoint,
-      normal: Offset(math.cos(line.rimAngle), math.sin(line.rimAngle)),
+      normal: arenaBoundaryNormal(line.startPoint, match.arenaShape),
       arenaRadius: match.arenaRadius,
       rng: rng,
       arenaShape: match.arenaShape,

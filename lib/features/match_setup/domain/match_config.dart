@@ -101,6 +101,10 @@ class MatchConfig {
 
   final MatchMode mode;
 
+  /// Maximum owned threads per ball in Thread Growth (includes the starting one).
+  /// Other game modes ignore this setting.
+  final int threadGrowthMaxThreads;
+
   final BallLook look;
   final bool handsOnPictures;
 
@@ -180,5 +184,6 @@ class MatchConfig {
     this.artworkRevisions = const {},
     this.artworkFrames = const {},
     this.mode = MatchMode.threads,
+    this.threadGrowthMaxThreads = 180,
   });
 }

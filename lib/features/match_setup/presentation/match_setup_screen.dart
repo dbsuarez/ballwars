@@ -255,6 +255,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Which kind of categories the dropdown lists; remembered per device.
   _CategoryFilter _filter = _CategoryFilter.defaults;
   int _winsNeeded = 1;
+  int _threadGrowthMaxThreads = 180;
   String? _category;
   List<BallPack> _packs = const [];
   // The user's groups, listed before the built-in packs.
@@ -317,6 +318,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         await DevicePrefs.read('match-settings-layout') != 'list';
     final wallSparkSize = WallSparkSize.byId(
       await _readProfile(profileMode, 'wall-spark-size', mayhem: profileMayhem),
+    );
+    final growthLimit = int.tryParse(
+      await _readProfile(profileMode, 'growth-max-threads', mayhem: profileMayhem) ?? '',
     );
     final rounds = int.tryParse(
       await _readProfile(profileMode, 'rounds', mayhem: profileMayhem) ?? '',
@@ -444,6 +448,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _settingCards = settingCards;
       _wallSparkSize = wallSparkSize ?? WallSparkSize.normal;
       _winsNeeded = const [1, 2, 3].contains(rounds) ? rounds! : 1;
+      _threadGrowthMaxThreads =
+          const [5, 10, 20, 40, 80, 180].contains(growthLimit)
+          ? growthLimit!
+          : 180;
       _speedMultiplier = _speeds.contains(speed) ? speed! : 1;
       _automaticSpeedUp = automaticSpeedUp != '0';
     });
@@ -692,6 +700,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         winsNeeded: _winsNeeded,
         ballSize: _mayhem ? BallSize.small : _ballSize,
         mode: _mayhem ? MatchMode.arsenal : _mode,
+        threadGrowthMaxThreads: _threadGrowthMaxThreads,
         finishersEnabled: _finishersOn,
         look: _look,
         handsOnPictures: _handsOnPictures,
@@ -1177,6 +1186,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   if (_mayhem) 'Mayhem',
                   if (_endlessBattle && !_mayhem && _mode == MatchMode.arsenal)
                     'Endless',
+                  if (_mode == MatchMode.threadGrowth)
+                    'Max $_threadGrowthMaxThreads threads',
                   if (_shrinkingArena) 'Shrinking arena',
                 ].join(' / '),
                 maxLines: 2,
@@ -1448,6 +1459,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               _writeProfile('rounds', v);
             },
           ),
+          if (_mode == MatchMode.threadGrowth)
+            _choice(
+              Icons.linear_scale,
+              'Maximum threads per ball',
+              const [5, 10, 20, 40, 80, 180],
+              _threadGrowthMaxThreads,
+              (v) => '$v',
+              (v) {
+                _update(() => _threadGrowthMaxThreads = v);
+                _writeProfile('growth-max-threads', v);
+              },
+            ),
           _choice(
             Icons.speed,
             'Speed',

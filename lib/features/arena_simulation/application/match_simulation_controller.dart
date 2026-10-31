@@ -93,6 +93,8 @@ class MatchSimulationController {
   /// seed reproduces the match exactly (used for replays and video export).
   final int seed;
   final int rimSlotCount;
+  /// Per-ball limit for Thread Growth only.
+  final int threadGrowthMaxThreads;
   late final SeededRandom _rng;
   late final ArenaPhysicsEngine _physics;
   final ParticleSystem _particles = ParticleSystem();
@@ -290,6 +292,7 @@ class MatchSimulationController {
     int? seed,
     double restitution = 1.0,
     this.rimSlotCount = kRimSlotCount,
+    this.threadGrowthMaxThreads = 180,
     double? layoutRotation,
     Color arenaBackground = const Color(0xFF0A0A0B),
     this.slowMotionLines = slowMotionLineThreshold,
@@ -328,6 +331,7 @@ class MatchSimulationController {
       seed: this.seed,
       restitution: restitution,
       rimSlotCount: rimSlotCount,
+      threadGrowthMaxThreads: threadGrowthMaxThreads,
       layoutRotation: layoutRotation,
       slowMotionLines: slowMotionLines,
       lookAhead: false,
@@ -876,7 +880,9 @@ class MatchSimulationController {
 
         if (!arsenal) {
           final claimed = mode == MatchMode.threadGrowth
-              ? claimFreeSlots(ball, 1)
+              ? (ball.fanLines.length < threadGrowthMaxThreads
+                    ? claimFreeSlots(ball, 1)
+                    : 0)
               : _claimFromWallHit(ball, collision.contactPoint);
           if (claimed > 0) {
             _floatingTexts.spawn(

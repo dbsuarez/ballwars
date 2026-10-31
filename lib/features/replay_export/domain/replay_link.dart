@@ -101,6 +101,7 @@ class ReplayLink {
     this.randomizedHairstyles = false,
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
+    this.threadGrowthMaxThreads = 180,
     this.question,
     this.look,
     this.powerUps,
@@ -144,6 +145,9 @@ class ReplayLink {
   /// `m.` prefix, so a mode link never plays back as the wrong game there.
   final MatchMode mode;
 
+  /// Thread Growth cap; older links default to the original 180-slot limit.
+  final int threadGrowthMaxThreads;
+
   /// [presets] are balls every copy of the app has; they are linked by id.
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
     final assetSnapshot = ReplayAssets.encode(
@@ -166,7 +170,7 @@ class ReplayLink {
     final tokens = [
       if (simulationRevision >= 2) 'v.$simulationRevision',
       if (assetSnapshot != null) 'a.1',
-      if (!mode.isThreadOnly) '$_modePrefix${mode.id}',
+      if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
       if (!mode.isThreadOnly &&
           chosen != null &&
           chosen.length < PowerUpKind.values.length)
@@ -176,6 +180,10 @@ class ReplayLink {
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
+    final growthCap =
+        mode == MatchMode.threadGrowth && threadGrowthMaxThreads != 180
+        ? '&growthmax=$threadGrowthMaxThreads'
+        : '';
     final q = question == null
         ? ''
         : '&q=${Uri.encodeQueryComponent(question!)}';
@@ -226,7 +234,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$q$t$kc$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals$assets',
     );
@@ -268,6 +276,15 @@ class ReplayLink {
       );
       if (parsedMode == null) return null;
       mode = parsedMode;
+    }
+    final growthText = params['growthmax'];
+    final growthMax = growthText == null ? 180 : int.tryParse(growthText);
+    if (growthMax == null ||
+        growthMax < 1 ||
+        growthMax > 180 ||
+        (growthText != null &&
+            (mode != MatchMode.threadGrowth || '$growthMax' != growthText))) {
+      return null;
     }
     // The kinds that existed when the link was made (`kc`, strict); before `kc` there were
     // [legacyKindCount]. Later kinds are left out of the pool so the match replays as it was played.
@@ -448,6 +465,7 @@ class ReplayLink {
       randomizedHairstyles: randomizedHairstyles,
       ballSize: ballSize,
       mode: mode,
+      threadGrowthMaxThreads: growthMax,
       question: cleanQuestion(params['q']),
       look: BallLook.byName(params['look']),
       powerUps: powerUps,

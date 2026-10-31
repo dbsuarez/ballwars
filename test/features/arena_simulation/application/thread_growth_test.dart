@@ -18,6 +18,30 @@ void main() {
     expect(simulation.state.balls.map((b) => b.fanLines.length), [1, 1]);
   });
 
+  test('thread growth stops earning threads at configured maximum', () {
+    final simulation = MatchSimulationController(
+      contestants, arenaRadius: 260, seed: 42,
+      mode: MatchMode.threadGrowth, threadGrowthMaxThreads: 2,
+      lookAhead: false,
+    );
+    final ball = simulation.state.balls.first;
+    for (var i = 0; i < 4; i++) {
+      ball.position = Offset(260 - ball.radius - 0.1, 0);
+      ball.velocity = const Offset(400, 0);
+      simulation.tick(MatchSimulationController.fixedTimestep);
+    }
+    expect(ball.fanLines.length, 2);
+  });
+
+  test('growth cap does not change original Threads allocation', () {
+    final simulation = MatchSimulationController(
+      contestants, arenaRadius: 260, seed: 42,
+      mode: MatchMode.threads, threadGrowthMaxThreads: 1,
+      lookAhead: false,
+    );
+    expect(simulation.state.balls.first.fanLines.length, greaterThan(1));
+  });
+
   test('existing Threads mode retains original starting allocation', () {
     final simulation = MatchSimulationController(
       contestants, arenaRadius: 260, seed: 42,

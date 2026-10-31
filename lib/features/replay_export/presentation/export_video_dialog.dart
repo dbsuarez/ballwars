@@ -34,6 +34,7 @@ class ExportVideoDialog extends StatefulWidget {
   final double? slowMotionBeforeWinSeconds;
   final double ballScale;
   final MatchMode mode;
+  final int threadGrowthMaxThreads;
   final Set<PowerUpKind>? powerUps;
   final Set<String>? customSkills;
   final List<int> nudgeSteps;
@@ -65,6 +66,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.slowMotionBeforeWinSeconds,
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
+    this.threadGrowthMaxThreads = 180,
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
@@ -98,6 +100,7 @@ class ExportVideoDialog extends StatefulWidget {
     double? slowMotionBeforeWinSeconds,
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
+    int threadGrowthMaxThreads = 180,
     Set<PowerUpKind>? powerUps,
     Set<String>? customSkills,
     List<int> nudgeSteps = const [],
@@ -141,6 +144,7 @@ class ExportVideoDialog extends StatefulWidget {
         slowMotionBeforeWinSeconds: slowMotionBeforeWinSeconds,
         ballScale: ballScale,
         mode: mode,
+        threadGrowthMaxThreads: threadGrowthMaxThreads,
         powerUps: powerUps,
         customSkills: customSkills,
         nudgeSteps: nudgeSteps,
@@ -231,6 +235,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         slowMotionBeforeWinSeconds: widget.slowMotionBeforeWinSeconds,
         ballScale: widget.ballScale,
         mode: widget.mode,
+        threadGrowthMaxThreads: widget.threadGrowthMaxThreads,
         powerUps: widget.powerUps,
         customSkills: widget.customSkills,
         nudgeSteps: widget.nudgeSteps,

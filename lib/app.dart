@@ -480,6 +480,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             automaticSpeedUp: link.automaticSpeedUp,
             ballSize: link.ballSize,
             mode: link.mode,
+            threadGrowthMaxThreads: link.threadGrowthMaxThreads,
             question: link.question,
             powerUps: link.powerUps,
             customSkills: link.customSkills,

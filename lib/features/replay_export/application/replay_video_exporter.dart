@@ -115,9 +115,9 @@ class ReplayVideoExporter {
       ...SkillSpriteReadiness.dependencies(
         library: skillLibrary,
         tuning: tuning,
-        kinds: mode == MatchMode.threads ? const {} : powerUps,
-        customIds: mode == MatchMode.threads ? const {} : customSkills,
-        includeTraps: mode != MatchMode.threads,
+        kinds: mode.isThreadOnly ? const {} : powerUps,
+        customIds: mode.isThreadOnly ? const {} : customSkills,
+        includeTraps: !mode.isThreadOnly,
       ),
     };
     final releaseSprites = SpriteRegistry.pin(pinned);
@@ -154,9 +154,9 @@ class ReplayVideoExporter {
         embedded: style.artworkFrames,
         library: skillLibrary,
         tuning: tuning,
-        includeTraps: mode != MatchMode.threads,
-        kinds: mode == MatchMode.threads ? const {} : powerUps,
-        customIds: mode == MatchMode.threads ? const {} : customSkills,
+        includeTraps: !mode.isThreadOnly,
+        kinds: mode.isThreadOnly ? const {} : powerUps,
+        customIds: mode.isThreadOnly ? const {} : customSkills,
       );
       if (missing.isNotEmpty) {
         throw StateError(
@@ -229,7 +229,7 @@ class ReplayVideoExporter {
 
       final match = newMatch();
       await match.preloadImages();
-      if (mode != MatchMode.threads) await PowerUpSprites.load();
+      if (!mode.isThreadOnly) await PowerUpSprites.load();
       if (audio != null) {
         await (encoder as AudioVideoEncoder).startWithAudio(
           width: width,

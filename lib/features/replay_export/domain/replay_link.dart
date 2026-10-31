@@ -166,8 +166,8 @@ class ReplayLink {
     final tokens = [
       if (simulationRevision >= 2) 'v.$simulationRevision',
       if (assetSnapshot != null) 'a.1',
-      if (mode != MatchMode.threads) '$_modePrefix${mode.id}',
-      if (mode != MatchMode.threads &&
+      if (!mode.isThreadOnly) '$_modePrefix${mode.id}',
+      if (!mode.isThreadOnly &&
           chosen != null &&
           chosen.length < PowerUpKind.values.length)
         '$_weaponsPrefix${_mask(chosen).toRadixString(36)}',
@@ -179,13 +179,13 @@ class ReplayLink {
     final q = question == null
         ? ''
         : '&q=${Uri.encodeQueryComponent(question!)}';
-    final encoded = mode == MatchMode.threads ? null : tuning.encode();
+    final encoded = mode.isThreadOnly ? null : tuning.encode();
     final t = encoded == null ? '' : '&t=$encoded';
     // Pins the kind pool: kinds added after this link was made never spawn when it plays back.
-    final kc = mode == MatchMode.threads
+    final kc = mode.isThreadOnly
         ? ''
         : '&kc=${PowerUpKind.values.length}';
-    final dw = mode != MatchMode.threads && dualWield ? '&dw=1' : '';
+    final dw = !mode.isThreadOnly && dualWield ? '&dw=1' : '';
     final endless = mode == MatchMode.arsenal && endlessBattle
         ? '&endless=1'
         : '';
@@ -219,7 +219,7 @@ class ReplayLink {
         endStep != null && mode == MatchMode.arsenal && endlessBattle && !mayhem
         ? '&end=$endStep'
         : '';
-    final customToken = mode == MatchMode.threads || chosenCustom == null
+    final customToken = mode.isThreadOnly || chosenCustom == null
         ? ''
         : '&cs=${(chosenCustom.toList()..sort()).join(',')}';
     final effectVisuals = effectRenderMode == null
@@ -274,7 +274,7 @@ class ReplayLink {
     final kcText = params['kc'];
     final kindCount = kcText == null ? legacyKindCount : int.tryParse(kcText);
     if (kcText != null &&
-        (mode == MatchMode.threads ||
+        (mode.isThreadOnly ||
             kindCount == null ||
             kindCount < firstLinkKindCount ||
             kindCount > PowerUpKind.values.length ||
@@ -288,7 +288,7 @@ class ReplayLink {
           ? BigInt.tryParse(text, radix: 36)
           : null;
       // Only with a power-up mode, never empty, no kinds the link's app didn't have.
-      if (mode == MatchMode.threads ||
+      if (mode.isThreadOnly ||
           mask == null ||
           mask <= BigInt.zero ||
           mask.bitLength > kindCount!) {
@@ -298,7 +298,7 @@ class ReplayLink {
         for (final k in PowerUpKind.values)
           if (k.index < kindCount && (mask >> k.index).isOdd) k,
       };
-    } else if (mode != MatchMode.threads &&
+    } else if (!mode.isThreadOnly &&
         kindCount! < PowerUpKind.values.length) {
       powerUps = {
         for (final k in PowerUpKind.values)
@@ -339,7 +339,7 @@ class ReplayLink {
     final cs = params['cs'];
     if (cs != null) {
       // Only with a power-up mode; only ids the app makes (custom.<slug>), and not too many.
-      if (mode == MatchMode.threads) return null;
+      if (mode.isThreadOnly) return null;
       final ids = cs.split(',').where((id) => id.isNotEmpty).toSet();
       final valid = RegExp(r'^custom\.[a-z0-9-]{1,80}$');
       if (ids.length > 64 || !ids.every(valid.hasMatch)) return null;
@@ -347,7 +347,7 @@ class ReplayLink {
     }
     final dualWield = params['dw'] == '1';
     if (params.containsKey('dw') && params['dw'] != '1') return null;
-    if (mode == MatchMode.threads && dualWield) return null;
+    if (mode.isThreadOnly && dualWield) return null;
     final endlessBattle = params['endless'] == '1';
     if (params.containsKey('endless') && params['endless'] != '1') return null;
     if (mode != MatchMode.arsenal && endlessBattle) return null;
@@ -407,7 +407,7 @@ class ReplayLink {
     final t = params['t'];
     if (t != null) {
       // Only with a power-up mode, and only something PowerUpConfig.encode could have made.
-      final decoded = mode == MatchMode.threads
+      final decoded = mode.isThreadOnly
           ? null
           : PowerUpConfig.decode(t);
       if (decoded == null) return null;
@@ -416,7 +416,7 @@ class ReplayLink {
     var skillLibrary = SkillLibrary.defaults;
     final skills = params['skills'];
     if (skills != null) {
-      if (mode == MatchMode.threads) return null;
+      if (mode.isThreadOnly) return null;
       final decoded = SkillLibrary.decodeReplay(skills);
       if (decoded == null) return null;
       skillLibrary = decoded;

@@ -458,12 +458,16 @@ class MatchSimulationController {
         ball.life = PowerUpTuning.arenaLife;
       }
     } else {
-      _assignStartingSlots();
+      if (mode == MatchMode.threadGrowth) {
+        _assignGrowthStartingSlots();
+      } else {
+        _assignStartingSlots();
+      }
       for (final ball in _balls) {
         ball.startLines = ball.fanLines.length;
       }
     }
-    if (mode != MatchMode.threads) _powerUps = PowerUpSystem(this, _rng);
+    if (!mode.isThreadOnly) _powerUps = PowerUpSystem(this, _rng);
   }
 
   double _startAngle(int index, int count) =>
@@ -508,6 +512,28 @@ class MatchSimulationController {
           (_slotAngle(slot) - _layoutRotation + share / 2) % (2 * math.pi);
       final owner = _balls[(shifted / share).floor() % _balls.length];
       _claimSlot(owner, slot);
+    }
+    for (final ball in _balls) {
+      ball.lineCount = ball.fanLines.length;
+    }
+  }
+
+  /// Thread Growth starts each contestant with one distinct rim anchor.
+  /// The existing Threads mode retains its original equal-share allocation.
+  void _assignGrowthStartingSlots() {
+    for (var i = 0; i < _balls.length; i++) {
+      final slot = _slotAt(_startAngle(i, _balls.length));
+      if (_slotOwners[slot] == null) {
+        _claimSlot(_balls[i], slot);
+      } else {
+        for (var offset = 1; offset < rimSlotCount; offset++) {
+          final next = (slot + offset) % rimSlotCount;
+          if (_slotOwners[next] == null) {
+            _claimSlot(_balls[i], next);
+            break;
+          }
+        }
+      }
     }
     for (final ball in _balls) {
       ball.lineCount = ball.fanLines.length;
@@ -849,7 +875,9 @@ class MatchSimulationController {
         ball.rotation += collision.normal.dx * 0.1;
 
         if (!arsenal) {
-          final claimed = _claimFromWallHit(ball, collision.contactPoint);
+          final claimed = mode == MatchMode.threadGrowth
+              ? claimFreeSlots(ball, 1)
+              : _claimFromWallHit(ball, collision.contactPoint);
           if (claimed > 0) {
             _floatingTexts.spawn(
               collision.contactPoint,

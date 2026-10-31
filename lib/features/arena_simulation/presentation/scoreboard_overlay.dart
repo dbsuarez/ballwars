@@ -325,7 +325,7 @@ class ScoreboardOverlay extends StatelessWidget {
                     color: ball.config.primaryColor,
                     empty: c.border,
                   ),
-                ] else if (mode == MatchMode.threads) ...[
+                ] else if (mode.isThreadOnly) ...[
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),

@@ -261,7 +261,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final generation = _matchGeneration;
     _resourceError = null;
     _prepareRoundResources(generation);
-    if (widget.config.mode != MatchMode.threads) {
+    if (!widget.config.mode.isThreadOnly) {
       PowerUpSprites.load().then((_) {
         if (mounted) setState(() {});
       });
@@ -282,13 +282,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     final requiredSprites = SkillSpriteReadiness.dependencies(
       library: widget.config.skillLibrary,
       tuning: widget.config.tuning,
-      kinds: widget.config.mode == MatchMode.threads
+      kinds: widget.config.mode.isThreadOnly
           ? const {}
           : widget.config.powerUps,
-      customIds: widget.config.mode == MatchMode.threads
+      customIds: widget.config.mode.isThreadOnly
           ? const {}
           : widget.config.customSkills,
-      includeTraps: widget.config.mode != MatchMode.threads,
+      includeTraps: !widget.config.mode.isThreadOnly,
     );
     requiredSprites.addAll(widget.config.artworkRevisions.values);
     _spriteLease?.call();
@@ -297,13 +297,13 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       final missing = await SkillSpriteReadiness.prepare(
         extraIds: widget.config.artworkRevisions.values,
         embedded: widget.config.artworkFrames,
-        includeTraps: widget.config.mode != MatchMode.threads,
+        includeTraps: !widget.config.mode.isThreadOnly,
         library: widget.config.skillLibrary,
         tuning: widget.config.tuning,
-        kinds: widget.config.mode == MatchMode.threads
+        kinds: widget.config.mode.isThreadOnly
             ? const {}
             : widget.config.powerUps,
-        customIds: widget.config.mode == MatchMode.threads
+        customIds: widget.config.mode.isThreadOnly
             ? const {}
             : widget.config.customSkills,
       );
@@ -316,7 +316,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         );
         return;
       }
-      if (widget.config.mode != MatchMode.threads &&
+      if (!widget.config.mode.isThreadOnly &&
           RegExp(r'^[a-f0-9]{40}$').hasMatch(SpriteRegistry.assetRevision) &&
           !PowerUpSprites.requiredIds.every(SpriteRegistry.has)) {
         await PowerUpSprites.load();
@@ -326,7 +326,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
           ? widget.config.artworkRevisions
           : SkillSpriteReadiness.freezeIds({
               ...requiredSprites,
-              if (widget.config.mode != MatchMode.threads)
+              if (!widget.config.mode.isThreadOnly)
                 ...SpriteRegistry.ids.where((id) => !id.startsWith('custom.')),
             });
       final roundFrames = widget.config.artworkFrames.isNotEmpty

@@ -138,7 +138,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         );
 
   String? get _rarityError {
-    if (_mode == MatchMode.threads) return null;
+    if (_mode.isThreadOnly) return null;
     if (_rarityWeights == null) {
       return 'Use weights from 0 to 100, with at least one above zero.';
     }
@@ -698,9 +698,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         showHpBars: _showHpBars,
         whitePickupBackgrounds: _whitePickupBackgrounds,
         randomizedHairstyles: _randomizedHairstyles,
-        powerUps: _mode == MatchMode.threads ? null : _powerUps,
-        customSkills: _mode == MatchMode.threads ? null : _customChoice,
-        dualWield: _mode != MatchMode.threads && _dualWield,
+        powerUps: _mode.isThreadOnly ? null : _powerUps,
+        customSkills: _mode.isThreadOnly ? null : _customChoice,
+        dualWield: !_mode.isThreadOnly && _dualWield,
         endlessBattle:
             _mode == MatchMode.arsenal && (_endlessBattle || _mayhem),
         mayhem: _mode == MatchMode.arsenal && _mayhem,
@@ -710,10 +710,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         arenaDecoration:
             _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
         // The admin's power-up numbers; part of the match (and of its replay link).
-        tuning: _mode == MatchMode.threads
+        tuning: _mode.isThreadOnly
             ? PowerUpConfig.defaults
             : _matchTuning,
-        skillLibrary: _mode == MatchMode.threads
+        skillLibrary: _mode.isThreadOnly
             ? SkillLibrary.defaults
             : AppSettingsScope.of(context).skillLibrary,
         // Only for matches with Yes or No balls.
@@ -1172,8 +1172,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   _ballSize.label,
                   'Effects ${_showEffects ? "on" : "off"}',
                   'Finishers ${_finishersOn ? "on" : "off"}',
-                  if (_mode != MatchMode.threads) pickups,
-                  if (_dualWield && _mode != MatchMode.threads) 'Dual wield',
+                  if (!_mode.isThreadOnly) pickups,
+                  if (_dualWield && !_mode.isThreadOnly) 'Dual wield',
                   if (_mayhem) 'Mayhem',
                   if (_endlessBattle && !_mayhem && _mode == MatchMode.arsenal)
                     'Endless',
@@ -1470,7 +1470,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               _writeProfile('automatic-speed-up', v ? '1' : '0');
             },
           ),
-          if (_mode != MatchMode.threads) ...[
+          if (!_mode.isThreadOnly) ...[
             ListTile(
               leading: const Icon(Icons.auto_awesome),
               title: Text(_pickupsLabel()),
@@ -1555,7 +1555,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             },
           ),
         ]),
-      if (tab == 0 && _mode != MatchMode.threads)
+      if (tab == 0 && !_mode.isThreadOnly)
         RarityPresetPanel(
           key: ValueKey('rarity-panel-$_activeProfileId-$_rarityGeneration'),
           preset: _rarityPreset,

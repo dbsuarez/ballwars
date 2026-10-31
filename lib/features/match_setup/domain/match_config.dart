@@ -31,6 +31,7 @@ enum BallSize {
 /// others add power-ups. It changes the match, so replay links carry it ([id]).
 enum MatchMode {
   threads('threads', 'Threads'),
+  threadGrowth('threadgrowth', 'Thread Growth'),
   arsenal('arsenal', 'Arsenal'),
   allOut('allout', 'All-Out');
 
@@ -38,6 +39,8 @@ enum MatchMode {
   final String label;
 
   const MatchMode(this.id, this.label);
+
+  bool get isThreadOnly => this == MatchMode.threads || this == MatchMode.threadGrowth;
 
   static MatchMode? byId(String? id) =>
       values.where((m) => m.id == id).firstOrNull;

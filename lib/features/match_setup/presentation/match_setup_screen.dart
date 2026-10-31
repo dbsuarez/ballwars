@@ -22,6 +22,8 @@ import '../../settings/data/effects_prefs.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../replay_export/domain/replay_link.dart';
 import '../domain/match_config.dart';
+import '../domain/arena_rotation.dart';
+import 'arena_geometry_editor.dart';
 import '../domain/pickup_count.dart';
 import '../domain/rarity_preset.dart';
 import 'rarity_preset_panel.dart';
@@ -248,6 +250,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   int _mayhemSeconds = 120;
   bool _shrinkingArena = false;
   ArenaShape _arenaShape = ArenaShape.circle;
+  bool _rotateThemes = false;
+  bool _rotateShapes = false;
+  int _rotationInterval = 60;
   CenterObstacle _centerObstacle = CenterObstacle.none;
   double _centerObstacleScale = 0.22;
   ArenaDecoration? _arenaDecoration;
@@ -280,6 +285,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final rememberedMode = MatchMode.byId(await DevicePrefs.read('mode'));
     final rememberedShape = ArenaShape.byName(await DevicePrefs.read('arena-shape'));
     _arenaShape = rememberedShape ?? ArenaShape.circle;
+    _rotateThemes = await DevicePrefs.read('arena-rotate-themes') == '1';
+    _rotateShapes = await DevicePrefs.read('arena-rotate-shapes') == '1';
+    _rotationInterval = int.tryParse(await DevicePrefs.read('arena-rotation-interval') ?? '') ?? 60;
     _centerObstacle = CenterObstacle.byName(
           await DevicePrefs.read('center-obstacle')) ?? CenterObstacle.none;
     _centerObstacleScale = double.tryParse(
@@ -726,6 +734,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mayhemSeconds: _mayhemSeconds,
         shrinkingArena: _shrinkingArena,
         arenaShape: _arenaShape,
+        arenaRotation: ArenaRotation(rotateThemes: _rotateThemes, rotateShapes: _rotateShapes, intervalSeconds: _rotationInterval),
         centerObstacle: _centerObstacle,
         centerObstacleScale: _centerObstacleScale,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
@@ -1579,6 +1588,25 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 ),
             ],
           ],
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('Arena geometry editor'),
+            subtitle: const Text('Preview and edit outer shape and central obstacle'),
+            onTap: () async {
+              final selection = await showArenaGeometryEditor(context,
+                  shape: _arenaShape, obstacle: _centerObstacle,
+                  scale: _centerObstacleScale);
+              if (selection == null || !mounted) return;
+              _update(() {
+                _arenaShape = selection.shape;
+                _centerObstacle = selection.obstacle;
+                _centerObstacleScale = selection.scale;
+              });
+              DevicePrefs.write('arena-shape', selection.shape.name);
+              DevicePrefs.write('center-obstacle', selection.obstacle.name);
+              DevicePrefs.write('center-obstacle-scale', selection.scale.toString());
+            },
+          ),
           _choice(
             Icons.crop_square,
             'Arena shape',
@@ -1590,6 +1618,40 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               DevicePrefs.write('arena-shape', shape.name);
             },
           ),
+          _choice(
+            Icons.palette,
+            'Rotate arena themes',
+            const [false, true],
+            _rotateThemes,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _rotateThemes = v);
+              DevicePrefs.write('arena-rotate-themes', v ? '1' : '0');
+            },
+          ),
+          _choice(
+            Icons.sync,
+            'Rotate circle / square',
+            const [false, true],
+            _rotateShapes,
+            (v) => v ? 'On' : 'Off',
+            (v) {
+              _update(() => _rotateShapes = v);
+              DevicePrefs.write('arena-rotate-shapes', v ? '1' : '0');
+            },
+          ),
+          if (_rotateThemes || _rotateShapes)
+            _choice(
+              Icons.timer_outlined,
+              'Arena rotation interval',
+              const [30, 60, 90, 120, 180, 300],
+              _rotationInterval,
+              (v) => '${v}s',
+              (v) {
+                _update(() => _rotationInterval = v);
+                DevicePrefs.write('arena-rotation-interval', v);
+              },
+            ),
           _choice(
             Icons.adjust,
             'Center obstacle',

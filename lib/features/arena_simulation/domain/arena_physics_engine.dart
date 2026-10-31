@@ -22,7 +22,7 @@ class ArenaPhysicsEngine {
   double arenaRadius;
   final SeededRandom rng;
   final double restitution;
-  final ArenaShape shape;
+  ArenaShape shape;
 
   static const double _jitterMaxRadians = 2 * math.pi / 180.0;
 

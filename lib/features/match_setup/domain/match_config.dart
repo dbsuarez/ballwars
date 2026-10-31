@@ -1,5 +1,6 @@
 import 'package:flutter/painting.dart';
 
+import 'arena_rotation.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
@@ -126,6 +127,7 @@ class MatchConfig {
 
   final MatchMode mode;
   final ArenaShape arenaShape;
+  final ArenaRotation arenaRotation;
   final CenterObstacle centerObstacle;
   /// Obstacle half-width or radius as a fraction of the arena radius.
   final double centerObstacleScale;
@@ -214,6 +216,7 @@ class MatchConfig {
     this.artworkFrames = const {},
     this.mode = MatchMode.threads,
     this.arenaShape = ArenaShape.circle,
+    this.arenaRotation = const ArenaRotation(),
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
     this.threadGrowthMaxThreads = 180,

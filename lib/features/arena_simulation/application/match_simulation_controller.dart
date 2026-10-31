@@ -6,6 +6,7 @@ import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
+import '../../match_setup/domain/arena_rotation.dart';
 import '../domain/arena_boundary_geometry.dart';
 import '../../skills/domain/skill_library.dart';
 import '../../settings/domain/app_settings.dart';
@@ -73,12 +74,15 @@ class MatchSimulationController {
 
   final double initialArenaRadius;
   final bool shrinkingArena;
-  final ArenaShape arenaShape;
+  ArenaShape arenaShape;
+  final ArenaRotation arenaRotation;
+  late final ArenaShape _initialShape;
+  late final ArenaDecoration _initialDecoration;
   final CenterObstacle centerObstacle;
   final double centerObstacleScale;
   final double minimumArenaScale;
   final Color bloodColor;
-  final ArenaDecoration arenaDecoration;
+  ArenaDecoration arenaDecoration;
   final bool automaticSpeedUp;
   final bool randomizedHairstyles;
 
@@ -342,6 +346,7 @@ class MatchSimulationController {
     this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.arenaShape = ArenaShape.circle,
+    this.arenaRotation = const ArenaRotation(),
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
     this.minimumArenaScale = 0.60,
@@ -380,17 +385,20 @@ class MatchSimulationController {
       mayhem: mayhem,
       mayhemSeconds: mayhemSeconds,
       shrinkingArena: shrinkingArena,
-      arenaShape: arenaShape,
+      arenaShape: _initialShape,
+      arenaRotation: arenaRotation,
       centerObstacle: centerObstacle,
       centerObstacleScale: centerObstacleScale,
       minimumArenaScale: minimumArenaScale,
       bloodColor: bloodColor,
-      arenaDecoration: arenaDecoration,
+      arenaDecoration: _initialDecoration,
       automaticSpeedUp: automaticSpeedUp,
       randomizedHairstyles: randomizedHairstyles,
       nudgeSteps: nudges,
       endAfterKnockoutStep: endAfterKnockoutStep,
     );
+    _initialShape = arenaShape;
+    _initialDecoration = arenaDecoration;
     _predict();
     _rng = SeededRandom(this.seed);
     _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution, shape: arenaShape);
@@ -806,11 +814,41 @@ class MatchSimulationController {
     while (_accumulator >= fixedTimestep && _status != MatchStatus.finished) {
       _stepPhysics(fixedTimestep);
       _stepCount++;
+      _updateArenaRotation();
       _accumulator -= fixedTimestep;
     }
 
     _particles.update(realDeltaSeconds);
     _floatingTexts.update(realDeltaSeconds);
+  }
+
+  /// Change arenas using simulation time so pauses do not advance rotation.
+  /// Wall anchors and ball positions are reconciled before the next physics step.
+  void _updateArenaRotation() {
+    final duration = mayhem ? mayhemSeconds : null;
+    final nextTheme = arenaRotation.themeAt(
+      _initialDecoration, _stepCount * fixedTimestep, matchDurationSeconds: duration);
+    if (nextTheme != arenaDecoration) {
+      arenaDecoration = nextTheme;
+      _powerUps?.arenaThemeHazards.clear();
+    }
+    final nextShape = arenaRotation.shapeAt(
+      _initialShape, _stepCount * fixedTimestep, matchDurationSeconds: duration);
+    if (nextShape == arenaShape) return;
+    arenaShape = nextShape;
+    _physics.shape = nextShape;
+    for (final ball in _balls) {
+      final limit = math.max(0.0, arenaRadius - ball.radius - 0.01);
+      if (nextShape == ArenaShape.circle && ball.position.distance > limit) {
+        ball.position = ball.position / ball.position.distance * limit;
+      } else if (nextShape == ArenaShape.square) {
+        ball.position = Offset(ball.position.dx.clamp(-limit, limit).toDouble(),
+            ball.position.dy.clamp(-limit, limit).toDouble());
+      }
+      for (final line in ball.fanLines) {
+        line.startPoint = _rimPoint(line.rimAngle);
+      }
+    }
   }
 
   void _finishMayhem() {

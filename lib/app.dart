@@ -663,8 +663,28 @@ class _HomeScreenState extends State<_HomeScreen> {
                           Expanded(
                             child: FilledButton(
                               onPressed: () =>
+                                  _openMatchSetup(MatchMode.threadGrowth),
+                              child: const Text('Neo Threads'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () =>
                                   _openMatchSetup(MatchMode.arsenal),
                               child: const Text('Arsenal'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () =>
+                                  _openMatchSetup(MatchMode.arsenal, true),
+                              child: const Text('Mayhem'),
                             ),
                           ),
                         ],
@@ -674,29 +694,9 @@ class _HomeScreenState extends State<_HomeScreen> {
                         width: double.infinity,
                         child: FilledButton(
                           onPressed: () =>
-                              _openMatchSetup(MatchMode.threadGrowth),
-                          child: const Text('Thread Growth'),
+                              _openMatchSetup(MatchMode.allOut),
+                          child: const Text('All-Out'),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () =>
-                                  _openMatchSetup(MatchMode.arsenal, true),
-                              child: const Text('Mayhem'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () =>
-                                  _openMatchSetup(MatchMode.allOut),
-                              child: const Text('All-Out'),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),

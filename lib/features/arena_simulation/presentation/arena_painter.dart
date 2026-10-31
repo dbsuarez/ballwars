@@ -688,12 +688,12 @@ class ArenaPainter extends CustomPainter {
       canvas.drawCircle(
         ball.position,
         ball.radius + ballGlowWidth,
-        Paint()..color = ball.config.glowColor.withValues(alpha: 0.18),
+        Paint()..color = Color(ballAppearance.glowColorValue ?? ball.config.glowColor.toARGB32()).withValues(alpha: 0.18),
       );
       canvas.drawCircle(
         ball.position,
         ball.radius + ballGlowWidth * 0.5,
-        Paint()..color = ball.config.glowColor.withValues(alpha: 0.28),
+        Paint()..color = Color(ballAppearance.glowColorValue ?? ball.config.glowColor.toARGB32()).withValues(alpha: 0.28),
       );
     }
 

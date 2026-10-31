@@ -120,7 +120,7 @@ void paintSmiley(
     ..strokeWidth = math.max(1.2, r * 0.09)
     ..strokeCap = StrokeCap.round
     ..color = const Color(0xFF111114);
-  final eyeR = r * 0.22;
+  final eyeR = r * 0.22 * appearance.eyeScale;
   final eyes = [
     c + Offset(-r * 0.34, -r * 0.18),
     c + Offset(r * 0.34, -r * 0.18),
@@ -203,7 +203,7 @@ void paintSmiley(
     }
   }
 
-  final mouth = c + Offset(0, r * 0.38);
+  final mouth = c + Offset(0, r * (0.38 + appearance.mouthOffset));
   final w = r * 0.42;
   switch (expression) {
     case FaceExpression.happy:

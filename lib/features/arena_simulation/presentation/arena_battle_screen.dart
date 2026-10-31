@@ -215,6 +215,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       mode: widget.config.mode,
       threadGrowthMaxThreads: widget.config.threadGrowthMaxThreads,
       arenaShape: widget.config.arenaShape,
+      arenaRotation: widget.config.arenaRotation,
       centerObstacle: widget.config.centerObstacle,
       centerObstacleScale: widget.config.centerObstacleScale,
       powerUpKinds: widget.config.powerUps,
@@ -1044,7 +1045,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               arenaSubtitle: AppSettingsScope.of(
                                 context,
                               ).arenaSubtitle,
-                              arenaDecoration: widget.config.arenaDecoration,
+                              arenaDecoration: _controller.arenaDecoration,
                               wallSparkSize: widget.config.wallSparkSize,
                               repaint: _frame,
                               look: widget.config.look,

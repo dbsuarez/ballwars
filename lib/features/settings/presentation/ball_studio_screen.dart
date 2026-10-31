@@ -180,7 +180,7 @@ class _BallStudioScreenState extends State<BallStudioScreen>
         id: 'studio',
         name: 'Preview',
         primaryColor: _color,
-        glowColor: _color,
+        glowColor: Color(_appearance.glowColorValue ?? _color.toARGB32()),
       ),
       position: Offset.zero,
       velocity: const Offset(100, 0),
@@ -284,6 +284,32 @@ class _BallStudioScreenState extends State<BallStudioScreen>
                     12,
                     (v) => _edit(() => _glowWidth = v),
                     key: const ValueKey('studio-glow-width'),
+                  ),
+                  _row(
+                    'Glow color',
+                    Row(children: [
+                      Expanded(child: OutlinedButton.icon(
+                        key: const ValueKey('studio-glow-color'),
+                        icon: Icon(Icons.circle, color: Color(_appearance.glowColorValue ?? _color.toARGB32())),
+                        label: Text(_appearance.glowColorValue == null ? 'Ball color' : 'Custom'),
+                        onPressed: () async {
+                          final chosen = await showColorPicker(context,
+                            initialColor: Color(_appearance.glowColorValue ?? _color.toARGB32()),
+                            title: 'Glow color');
+                          if (chosen != null && mounted) {
+                            _edit(() => _appearance = _appearance.copyWith(
+                              glowColorValue: chosen.toARGB32(),
+                            ));
+                          }
+                        },
+                      )),
+                      IconButton(
+                        tooltip: 'Use each ball color',
+                        onPressed: () => _edit(() => _appearance =
+                          _appearance.copyWith(resetGlowColor: true)),
+                        icon: const Icon(Icons.restart_alt),
+                      ),
+                    ]),
                   ),
                   const Divider(),
                   const Text(
@@ -390,6 +416,12 @@ class _BallStudioScreenState extends State<BallStudioScreen>
                     key: const ValueKey('studio-hand-scale'),
                     unit: '×',
                   ),
+                  _slider('Eye size', _appearance.eyeScale, .5, 1.5,
+                    (v) => _edit(() => _appearance = _appearance.copyWith(eyeScale: v)),
+                    key: const ValueKey('studio-eye-size'), unit: '×'),
+                  _slider('Mouth position', _appearance.mouthOffset, -.25, .25,
+                    (v) => _edit(() => _appearance = _appearance.copyWith(mouthOffset: v)),
+                    key: const ValueKey('studio-mouth-position')),
                   const Divider(),
                   const Text(
                     'Preview only',

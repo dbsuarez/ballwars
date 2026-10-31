@@ -149,6 +149,47 @@ void main() {
       expect(expressionFor(b, .1), FaceExpression.wince);
     },
   );
+  test('eye, mouth and glow settings round-trip and clamp safely', () {
+    const appearance = BallAppearance(
+      eyeScale: 1.3,
+      mouthOffset: -0.15,
+      glowColorValue: 0xFFAB34EF,
+    );
+    expect(BallAppearance.fromJson(jsonDecode(jsonEncode(appearance.toJson()))), appearance);
+    expect(BallAppearance.fromJson({'eye_scale': 99, 'mouth_offset': -99}).eyeScale, 1.5);
+    expect(BallAppearance.fromJson({'eye_scale': 99, 'mouth_offset': -99}).mouthOffset, -.25);
+    expect(appearance.copyWith(resetGlowColor: true).glowColorValue, isNull);
+  });
+  testWidgets('Ball Studio eye and mouth controls update the live painter', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: BallStudioScreen(initial: AppSettings.defaults, onSave: (_) async {}),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Face & hands'));
+    await tester.pumpAndSettle();
+    // These controls are below the fold in the lazily built tab ListView.
+    // Scroll them into the widget tree before reading their callbacks.
+    final eyeSlider = find.byKey(const ValueKey('studio-eye-size'));
+    final mouthSlider = find.byKey(const ValueKey('studio-mouth-position'));
+    final controlsList = find.byType(ListView).last;
+    await tester.scrollUntilVisible(eyeSlider, 160, scrollable: find.descendant(
+      of: controlsList,
+      matching: find.byType(Scrollable),
+    ).first);
+    tester.widget<Slider>(eyeSlider).onChanged!(1.4);
+    await tester.pump();
+    await tester.scrollUntilVisible(mouthSlider, 160, scrollable: find.descendant(
+      of: controlsList,
+      matching: find.byType(Scrollable),
+    ).first);
+    tester.widget<Slider>(mouthSlider).onChanged!(.2);
+    await tester.pump();
+    final painter = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey('ball-studio-preview')),
+    ).painter! as ArenaPainter;
+    expect(painter.ballAppearance.eyeScale, 1.4);
+    expect(painter.ballAppearance.mouthOffset, .2);
+  });
   test('all eleven code-drawn expressions are visually distinct', () async {
     final frames = <String>{};
     for (final expression in FaceExpression.values) {

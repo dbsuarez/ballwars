@@ -29,6 +29,8 @@ class SimulationState {
   /// Live collision boundary. This changes while shrinking-arena mode runs.
   final double arenaRadius;
   final ArenaShape arenaShape;
+  final CenterObstacle centerObstacle;
+  final double centerObstacleScale;
 
   const SimulationState({
     required this.balls,
@@ -44,6 +46,8 @@ class SimulationState {
     this.step = 0,
     required this.arenaRadius,
     this.arenaShape = ArenaShape.circle,
+    this.centerObstacle = CenterObstacle.none,
+    this.centerObstacleScale = 0.22,
   });
 
   // All active fan lines across all balls (for rendering)

@@ -2207,10 +2207,13 @@ class PowerUpSystem {
           : kind.isTrap
           ? match.arenaRadius - radius * 1.6
           : math.sqrt(rng.nextDoubleRange(inner * inner, outer * outer));
-      final spot = Offset(
-        math.cos(angle) * distance,
-        math.sin(angle) * distance,
-      );
+      // For square arenas, project the chosen direction to the square wall
+      // instead of placing perimeter traps on an imaginary circular rim.
+      final direction = Offset(math.cos(angle), math.sin(angle));
+      final squareScale = math.max(direction.dx.abs(), direction.dy.abs());
+      final spot = match.arenaShape == ArenaShape.square
+          ? direction * (distance / squareScale)
+          : direction * distance;
       final clear =
           balls.every(
             (b) =>
@@ -3864,7 +3867,9 @@ class PowerUpSystem {
       casing.position += casing.velocity * dt;
       casing.angle += 7.5 * dt;
       final x = casing.position.dx.clamp(-radius + 2, radius - 2);
-      final floorY = math.sqrt(math.max(0, radius * radius - x * x)) - 2;
+      final floorY = match.arenaShape == ArenaShape.square
+          ? radius - 2
+          : math.sqrt(math.max(0, radius * radius - x * x)) - 2;
       if (casing.position.dy >= floorY) {
         casing
           ..position = Offset(x.toDouble(), floorY)
@@ -3940,6 +3945,67 @@ class PowerUpSystem {
           p.velocity *
               MatchSimulationController.fixedTimestep *
               projectileScale;
+
+      // The center wall blocks shots before they can strike a ball behind it.
+      // Only outer-wall impacts can grant threads.
+      final obstacle = match.centerObstacle;
+      if (obstacle != CenterObstacle.none) {
+        final extent = match.arenaRadius * match.centerObstacleScale;
+        final delta = to - from;
+        double? hitT;
+        Offset? normal;
+        if (obstacle == CenterObstacle.circle) {
+          hitT = _entry(from, to, Offset.zero,
+              extent + projectileCollisionRadius(p));
+          if (hitT != null) {
+            final contact = from + delta * hitT;
+            normal = contact.distance == 0
+                ? const Offset(1, 0)
+                : contact / contact.distance;
+          }
+        } else {
+          final bound = extent + projectileCollisionRadius(p);
+          // Slab intersection finds the first entered face, including fast shots.
+          var entry = 0.0;
+          var exit = 1.0;
+          Offset? entryNormal;
+          var intersects = true;
+          for (var axis = 0; axis < 2; axis++) {
+            final start = axis == 0 ? from.dx : from.dy;
+            final speed = axis == 0 ? delta.dx : delta.dy;
+            if (speed.abs() < 1e-9) {
+              if (start.abs() > bound) intersects = false;
+              continue;
+            }
+            final t1 = (-bound - start) / speed;
+            final t2 = (bound - start) / speed;
+            final near = math.min(t1, t2);
+            final far = math.max(t1, t2);
+            if (near > entry) {
+              entry = near;
+              entryNormal = axis == 0
+                  ? Offset(speed > 0 ? -1 : 1, 0)
+                  : Offset(0, speed > 0 ? -1 : 1);
+            }
+            exit = math.min(exit, far);
+          }
+          if (intersects && entry <= exit && entryNormal != null &&
+              entry >= 0 && entry <= 1) {
+            hitT = entry;
+            normal = entryNormal;
+          }
+        }
+        if (hitT != null && normal != null && hitT >= 0 && hitT <= 1) {
+          p.position = from + delta * hitT + normal * 0.1;
+          final dot = p.velocity.dx * normal.dx +
+              p.velocity.dy * normal.dy;
+          p.velocity -= normal * (2 * dot);
+          p.wallBounces++;
+          // Avoid indefinite ricochets in enclosed geometries.
+          if (p.wallBounces > 8) p.spent = true;
+          continue;
+        }
+      }
 
       SimulationBall? struck;
       var strikeAt = double.infinity;

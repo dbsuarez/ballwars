@@ -78,6 +78,8 @@ class ReplayLink {
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
   final ArenaShape arenaShape;
+  final CenterObstacle centerObstacle;
+  final double centerObstacleScale;
   final SkillLibrary skillLibrary;
   final Map<String, String> artworkRevisions;
   final Map<String, Object> artworkFrames;
@@ -118,6 +120,8 @@ class ReplayLink {
     this.minimumArenaScale = 0.60,
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.arenaShape = ArenaShape.circle,
+    this.centerObstacle = CenterObstacle.none,
+    this.centerObstacleScale = 0.22,
     this.skillLibrary = SkillLibrary.defaults,
     this.artworkRevisions = const {},
     this.artworkFrames = const {},
@@ -203,6 +207,8 @@ class ReplayLink {
         ? '&mayhem=1&duration=$mayhemSeconds'
         : '';
     final shapeToken = arenaShape == ArenaShape.circle ? '' : '&shape=${arenaShape.name}';
+    final obstacleToken = centerObstacle == CenterObstacle.none ? ''
+        : '&obstacle=${centerObstacle.name}&obsize=${centerObstacleScale.toStringAsFixed(2)}';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
     final minimumArena = shrinkingArena && minimumArenaScale != 0.60
         ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
@@ -237,7 +243,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$obstacleToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals$assets',
     );
@@ -392,7 +398,18 @@ class ReplayLink {
     }
     final arenaShape = ArenaShape.byName(params['shape'] ?? 'circle');
     if (arenaShape == null ||
-        (arenaShape == ArenaShape.square && simulationRevision < 5)) return null;
+        (arenaShape == ArenaShape.square && simulationRevision < 5)) {
+      return null;
+    }
+    final centerObstacle = CenterObstacle.byName(params['obstacle'] ?? 'none');
+    final centerObstacleScale = double.tryParse(params['obsize'] ?? '0.22');
+    if (centerObstacle == null || centerObstacleScale == null ||
+        !centerObstacleScale.isFinite || centerObstacleScale < 0.10 ||
+        centerObstacleScale > 0.35 ||
+        (centerObstacle != CenterObstacle.none && simulationRevision < 6) ||
+        (centerObstacle == CenterObstacle.none && params.containsKey('obsize'))) {
+      return null;
+    }
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
     final minimumArenaScale = double.tryParse(params['minarena'] ?? '0.60');
@@ -487,6 +504,8 @@ class ReplayLink {
       minimumArenaScale: minimumArenaScale,
       arenaDecoration: arenaDecoration,
       arenaShape: arenaShape,
+      centerObstacle: centerObstacle,
+      centerObstacleScale: centerObstacleScale,
       skillLibrary: skillLibrary,
       artworkRevisions: artworkRevisions.ids,
       artworkFrames: artworkRevisions.embedded,

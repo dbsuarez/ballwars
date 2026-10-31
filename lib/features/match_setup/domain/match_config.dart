@@ -20,6 +20,19 @@ enum ArenaShape {
       values.where((shape) => shape.name == value).firstOrNull;
 }
 
+/// Optional solid central wall. The empty space around it remains playable.
+enum CenterObstacle {
+  none('None'),
+  circle('Circle'),
+  square('Square');
+
+  final String label;
+  const CenterObstacle(this.label);
+
+  static CenterObstacle? byName(String? value) =>
+      values.where((item) => item.name == value).firstOrNull;
+}
+
 /// How big every ball in a match is, relative to today's (medium) size. All
 /// balls share it, so it's fair; bigger balls cut more and end matches
 /// sooner. It changes the match, so replay links carry it ([id]).
@@ -113,6 +126,9 @@ class MatchConfig {
 
   final MatchMode mode;
   final ArenaShape arenaShape;
+  final CenterObstacle centerObstacle;
+  /// Obstacle half-width or radius as a fraction of the arena radius.
+  final double centerObstacleScale;
 
   /// Maximum owned threads per ball in Thread Growth (includes the starting one).
   /// Other game modes ignore this setting.
@@ -198,6 +214,8 @@ class MatchConfig {
     this.artworkFrames = const {},
     this.mode = MatchMode.threads,
     this.arenaShape = ArenaShape.circle,
+    this.centerObstacle = CenterObstacle.none,
+    this.centerObstacleScale = 0.22,
     this.threadGrowthMaxThreads = 180,
   });
 }

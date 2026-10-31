@@ -248,6 +248,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   int _mayhemSeconds = 120;
   bool _shrinkingArena = false;
   ArenaShape _arenaShape = ArenaShape.circle;
+  CenterObstacle _centerObstacle = CenterObstacle.none;
+  double _centerObstacleScale = 0.22;
   ArenaDecoration? _arenaDecoration;
   bool _finishersOn = true;
   bool _settingCards = true;
@@ -278,6 +280,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final rememberedMode = MatchMode.byId(await DevicePrefs.read('mode'));
     final rememberedShape = ArenaShape.byName(await DevicePrefs.read('arena-shape'));
     _arenaShape = rememberedShape ?? ArenaShape.circle;
+    _centerObstacle = CenterObstacle.byName(
+          await DevicePrefs.read('center-obstacle')) ?? CenterObstacle.none;
+    _centerObstacleScale = double.tryParse(
+          await DevicePrefs.read('center-obstacle-scale') ?? '') ?? 0.22;
     final profileMode =
         widget.initialMode ?? rememberedMode ?? MatchMode.threads;
     final profileMayhem =
@@ -692,7 +698,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
-        simulationRevision: _arenaShape == ArenaShape.square ? 5 : 4,
+        simulationRevision: _centerObstacle != CenterObstacle.none ? 6 : (_arenaShape == ArenaShape.square ? 5 : 4),
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
@@ -720,6 +726,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mayhemSeconds: _mayhemSeconds,
         shrinkingArena: _shrinkingArena,
         arenaShape: _arenaShape,
+        centerObstacle: _centerObstacle,
+        centerObstacleScale: _centerObstacleScale,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
         arenaDecoration:
             _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
@@ -1582,6 +1590,29 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               DevicePrefs.write('arena-shape', shape.name);
             },
           ),
+          _choice(
+            Icons.adjust,
+            'Center obstacle',
+            CenterObstacle.values,
+            _centerObstacle,
+            (obstacle) => obstacle.label,
+            (obstacle) {
+              _update(() => _centerObstacle = obstacle);
+              DevicePrefs.write('center-obstacle', obstacle.name);
+            },
+          ),
+          if (_centerObstacle != CenterObstacle.none)
+            _choice(
+              Icons.aspect_ratio,
+              'Obstacle size',
+              const [0.12, 0.18, 0.22, 0.28, 0.34],
+              _centerObstacleScale,
+              (size) => '${(size * 100).round()}%',
+              (size) {
+                _update(() => _centerObstacleScale = size);
+                DevicePrefs.write('center-obstacle-scale', size.toString());
+              },
+            ),
           _choice(
             Icons.zoom_in_map,
             'Shrinking arena',

@@ -110,6 +110,41 @@ void main() {
     });
   });
 
+  group('central obstacles', () {
+    test('circle reflects inward-moving ball without rim anchor', () {
+      final engine = ArenaPhysicsEngine(100, SeededRandom(11));
+      final ball = _ball(position: const Offset(26, 0),
+          velocity: const Offset(-15, 0), radius: 10);
+      final hit = engine.resolveObstacleCollision(ball,
+          obstacle: CenterObstacle.circle, obstacleScale: 0.22);
+      expect(hit, isNotNull);
+      expect(hit!.wallAnchorPoint, isNull);
+      expect(ball.position.dx, closeTo(32, 1e-6));
+      expect(ball.velocity.dx, greaterThan(0));
+    });
+
+    test('square reflects from left face', () {
+      final engine = ArenaPhysicsEngine(100, SeededRandom(12));
+      final ball = _ball(position: const Offset(-28, 4),
+          velocity: const Offset(15, 0), radius: 10);
+      final hit = engine.resolveObstacleCollision(ball,
+          obstacle: CenterObstacle.square, obstacleScale: 0.22,
+          previousPosition: const Offset(-40, 4));
+      expect(hit, isNotNull);
+      expect(ball.position.dx, closeTo(-32, 1e-6));
+      expect(ball.velocity.dx, lessThan(0));
+      expect(hit!.wallAnchorPoint, isNull);
+    });
+
+    test('disabled obstacle does not affect a ball', () {
+      final engine = ArenaPhysicsEngine(100, SeededRandom(13));
+      final ball = _ball(position: Offset.zero,
+          velocity: const Offset(3, 0));
+      expect(engine.resolveObstacleCollision(ball,
+          obstacle: CenterObstacle.none, obstacleScale: 0.22), isNull);
+    });
+  });
+
   group('resolveBallCollision', () {
     test('returns null when balls do not overlap', () {
       final engine = ArenaPhysicsEngine(200.0, SeededRandom(1));

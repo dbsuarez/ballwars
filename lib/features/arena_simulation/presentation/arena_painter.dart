@@ -226,7 +226,24 @@ class ArenaPainter extends CustomPainter {
         _paintChaoticFloor(canvas, visibleRadius);
     }
     canvas.restore();
+    _paintCenterObstacle(canvas, visibleRadius);
     _paintArenaText(canvas);
+  }
+
+  void _paintCenterObstacle(Canvas canvas, double radius) {
+    if (state.centerObstacle == CenterObstacle.none) return;
+    final extent = radius * state.centerObstacleScale;
+    final outline = state.centerObstacle == CenterObstacle.circle
+        ? (Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: extent)))
+        : (Path()..addRect(Rect.fromLTRB(-extent, -extent, extent, extent)));
+    canvas.drawPath(outline, Paint()..color = const Color(0xFF101827));
+    canvas.drawPath(
+      outline,
+      Paint()
+        ..color = const Color(0xFF5EEAD4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
   }
 
   void _paintDefaultFloor(Canvas canvas, double visibleRadius) {

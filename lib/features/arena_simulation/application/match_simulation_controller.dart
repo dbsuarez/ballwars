@@ -73,6 +73,8 @@ class MatchSimulationController {
   final double initialArenaRadius;
   final bool shrinkingArena;
   final ArenaShape arenaShape;
+  final CenterObstacle centerObstacle;
+  final double centerObstacleScale;
   final double minimumArenaScale;
   final Color bloodColor;
   final ArenaDecoration arenaDecoration;
@@ -339,6 +341,8 @@ class MatchSimulationController {
     this.mayhemSeconds = 120,
     this.shrinkingArena = false,
     this.arenaShape = ArenaShape.circle,
+    this.centerObstacle = CenterObstacle.none,
+    this.centerObstacleScale = 0.22,
     this.minimumArenaScale = 0.60,
     this.bloodColor = const Color(0xFFD9152B),
     this.arenaDecoration = ArenaDecoration.defaultArena,
@@ -376,6 +380,8 @@ class MatchSimulationController {
       mayhemSeconds: mayhemSeconds,
       shrinkingArena: shrinkingArena,
       arenaShape: arenaShape,
+      centerObstacle: centerObstacle,
+      centerObstacleScale: centerObstacleScale,
       minimumArenaScale: minimumArenaScale,
       bloodColor: bloodColor,
       arenaDecoration: arenaDecoration,
@@ -759,6 +765,8 @@ class MatchSimulationController {
     step: _stepCount,
     arenaRadius: arenaRadius,
     arenaShape: arenaShape,
+    centerObstacle: centerObstacle,
+    centerObstacleScale: centerObstacleScale,
   );
 
   void tick(double realDeltaSeconds) {
@@ -897,6 +905,20 @@ class MatchSimulationController {
       final move = ball.velocity * dt * (slowedByBubble ? 0.35 : 1.0);
       // A speed boost moves the ball faster without changing its stored velocity, so it ends cleanly.
       ball.position += ball.speedLeft > 0 ? move * ball.speedFactor : move;
+      final obstacleHit = _physics.resolveObstacleCollision(
+        ball,
+        obstacle: centerObstacle,
+        obstacleScale: centerObstacleScale,
+        previousPosition: previousPosition,
+      );
+      if (obstacleHit != null) {
+        _particles.spawnBurst(
+          origin: obstacleHit.contactPoint,
+          normal: obstacleHit.normal,
+          color: ball.config.primaryColor,
+          rng: _rng,
+        );
+      }
       final collision = _physics.resolveWallCollision(
         ball,
         previousPosition: previousPosition,

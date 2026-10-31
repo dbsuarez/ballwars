@@ -36,6 +36,8 @@ class ExportVideoDialog extends StatefulWidget {
   final MatchMode mode;
   final int threadGrowthMaxThreads;
   final ArenaShape arenaShape;
+  final CenterObstacle centerObstacle;
+  final double centerObstacleScale;
   final Set<PowerUpKind>? powerUps;
   final Set<String>? customSkills;
   final List<int> nudgeSteps;
@@ -69,6 +71,8 @@ class ExportVideoDialog extends StatefulWidget {
     this.mode = MatchMode.threads,
     this.threadGrowthMaxThreads = 180,
     this.arenaShape = ArenaShape.circle,
+    this.centerObstacle = CenterObstacle.none,
+    this.centerObstacleScale = 0.22,
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
@@ -104,6 +108,8 @@ class ExportVideoDialog extends StatefulWidget {
     MatchMode mode = MatchMode.threads,
     int threadGrowthMaxThreads = 180,
     ArenaShape arenaShape = ArenaShape.circle,
+    CenterObstacle centerObstacle = CenterObstacle.none,
+    double centerObstacleScale = 0.22,
     Set<PowerUpKind>? powerUps,
     Set<String>? customSkills,
     List<int> nudgeSteps = const [],
@@ -149,6 +155,8 @@ class ExportVideoDialog extends StatefulWidget {
         mode: mode,
         threadGrowthMaxThreads: threadGrowthMaxThreads,
         arenaShape: arenaShape,
+        centerObstacle: centerObstacle,
+        centerObstacleScale: centerObstacleScale,
         powerUps: powerUps,
         customSkills: customSkills,
         nudgeSteps: nudgeSteps,
@@ -241,6 +249,8 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         mode: widget.mode,
         threadGrowthMaxThreads: widget.threadGrowthMaxThreads,
         arenaShape: widget.arenaShape,
+        centerObstacle: widget.centerObstacle,
+        centerObstacleScale: widget.centerObstacleScale,
         powerUps: widget.powerUps,
         customSkills: widget.customSkills,
         nudgeSteps: widget.nudgeSteps,

@@ -157,6 +157,61 @@ class ArenaPhysicsEngine {
     );
   }
 
+  /// Central obstacles are separate from the outer wall: their impacts must
+  /// never award rim slots or Thread Growth lines.
+  CollisionResult? resolveObstacleCollision(
+    SimulationBall ball, {
+    required CenterObstacle obstacle,
+    required double obstacleScale,
+    Offset? previousPosition,
+  }) {
+    if (obstacle == CenterObstacle.none) return null;
+    final size = arenaRadius * obstacleScale;
+    if (size <= 0) return null;
+    final point = ball.position;
+    Offset normal;
+    Offset contact;
+    if (obstacle == CenterObstacle.circle) {
+      final limit = size + ball.radius;
+      if (point.distance >= limit) return null;
+      normal = point.distance > 0
+          ? point / point.distance
+          : (previousPosition != null && previousPosition.distance > 0
+              ? previousPosition / previousPosition.distance
+              : const Offset(1, 0));
+      contact = normal * limit;
+    } else {
+      final limit = size + ball.radius;
+      if (point.dx.abs() >= limit || point.dy.abs() >= limit) return null;
+      final previous = previousPosition ?? point;
+      // Prefer the face approached from outside; otherwise use the nearest face.
+      final fromX = previous.dx.abs() >= limit && previous.dy.abs() < limit;
+      final fromY = previous.dy.abs() >= limit && previous.dx.abs() < limit;
+      final useX = fromX || (!fromY &&
+          (limit - point.dx.abs()) <= (limit - point.dy.abs()));
+      if (useX) {
+        final sign = (point.dx == 0 ? previous.dx : point.dx) < 0 ? -1.0 : 1.0;
+        normal = Offset(sign, 0);
+        contact = Offset(sign * limit, point.dy);
+      } else {
+        final sign = (point.dy == 0 ? previous.dy : point.dy) < 0 ? -1.0 : 1.0;
+        normal = Offset(0, sign);
+        contact = Offset(point.dx, sign * limit);
+      }
+    }
+    final impact = ball.velocity.dx * normal.dx + ball.velocity.dy * normal.dy;
+    // Push the ball out even when it is already moving away.
+    ball.position = contact;
+    if (impact < 0) {
+      ball.velocity = (ball.velocity - normal * (2 * impact)) * restitution;
+    }
+    return CollisionResult(
+      contactPoint: contact,
+      normal: normal,
+      relativeImpactSpeed: impact.abs(),
+    );
+  }
+
   CollisionResult? resolveBallCollision(SimulationBall a, SimulationBall b) {
     final delta = b.position - a.position;
     final dist = delta.distance;

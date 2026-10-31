@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/utils/seeded_random.dart';
+import '../../match_setup/domain/match_config.dart';
 
 abstract class BaseParticle {
   double age = 0.0;
@@ -45,6 +46,7 @@ class RimArcParticle extends BaseParticle {
   final double arcLength;
   final double arenaRadius;
   final double rimAngle;
+  final ArenaShape arenaShape;
 
   RimArcParticle({
     required this.origin,
@@ -54,6 +56,7 @@ class RimArcParticle extends BaseParticle {
     required this.arcLength,
     required this.arenaRadius,
     required this.rimAngle,
+    this.arenaShape = ArenaShape.circle,
   });
 
   @override
@@ -63,6 +66,19 @@ class RimArcParticle extends BaseParticle {
 
   /// Returns the arc segment start and end points for rendering
   (Offset, Offset) getArcSegment() {
+    if (arenaShape == ArenaShape.square) {
+      // Travel around the actual square perimeter, including its corners.
+      final perimeter = arenaRadius * 8;
+      if (perimeter <= 0) return (origin, origin);
+      final start = _squareDistance(origin, arenaRadius);
+      final direction = velocity.dx * _squareTangent(origin, arenaRadius).dx +
+          velocity.dy * _squareTangent(origin, arenaRadius).dy >= 0 ? 1.0 : -1.0;
+      final center = start + direction * velocity.distance * age;
+      return (
+        _squarePoint(center - arcLength, arenaRadius),
+        _squarePoint(center + arcLength, arenaRadius),
+      );
+    }
     final traveled = velocity.distance * (lifespan - age);
     final angleOffset = traveled / arenaRadius;
 
@@ -81,6 +97,30 @@ class RimArcParticle extends BaseParticle {
 
     return (startPt, endPt);
   }
+}
+
+/// Clockwise distance along a square rim, starting at the top-left corner.
+double _squareDistance(Offset p, double r) {
+  if (p.dy <= -r + 0.001) return (p.dx + r).clamp(0.0, 2 * r);
+  if (p.dx >= r - 0.001) return 2 * r + (p.dy + r).clamp(0.0, 2 * r);
+  if (p.dy >= r - 0.001) return 4 * r + (r - p.dx).clamp(0.0, 2 * r);
+  return 6 * r + (r - p.dy).clamp(0.0, 2 * r);
+}
+
+Offset _squarePoint(double distance, double r) {
+  if (r <= 0) return Offset.zero;
+  final d = distance % (8 * r);
+  if (d < 2 * r) return Offset(-r + d, -r);
+  if (d < 4 * r) return Offset(r, -r + d - 2 * r);
+  if (d < 6 * r) return Offset(r - (d - 4 * r), r);
+  return Offset(-r, r - (d - 6 * r));
+}
+
+Offset _squareTangent(Offset p, double r) {
+  if (p.dy <= -r + 0.001) return const Offset(1, 0);
+  if (p.dx >= r - 0.001) return const Offset(0, 1);
+  if (p.dy >= r - 0.001) return const Offset(-1, 0);
+  return const Offset(0, -1);
 }
 
 class ParticleSystem {
@@ -265,13 +305,16 @@ class ParticleSystem {
     required Offset normal, // Direction of cut (for arc direction)
     required double arenaRadius,
     required SeededRandom rng,
+    ArenaShape arenaShape = ArenaShape.circle,
   }) {
     final arcCount = 2 + rng.nextInt(3); // 2-4 arcs
     // Tangent direction at rim point
     final rimAngle = math.atan2(origin.dy, origin.dx);
     // Two tangent directions (both ways along rim)
-    final tangent1 = Offset(-math.sin(rimAngle), math.cos(rimAngle));
-    final tangent2 = Offset(math.sin(rimAngle), -math.cos(rimAngle));
+    final tangent1 = arenaShape == ArenaShape.square
+        ? _squareTangent(origin, arenaRadius)
+        : Offset(-math.sin(rimAngle), math.cos(rimAngle));
+    final tangent2 = -tangent1;
 
     for (var i = 0; i < arcCount; i++) {
       // Alternate directions
@@ -296,6 +339,7 @@ class ParticleSystem {
           arcLength: arcLength,
           arenaRadius: arenaRadius,
           rimAngle: rimAngle,
+          arenaShape: arenaShape,
         ),
       );
     }

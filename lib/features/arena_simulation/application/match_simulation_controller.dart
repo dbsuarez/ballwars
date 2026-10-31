@@ -1090,6 +1090,7 @@ class MatchSimulationController {
             normal: Offset(math.cos(line.rimAngle), math.sin(line.rimAngle)),
             arenaRadius: arenaRadius,
             rng: _rng,
+            arenaShape: arenaShape,
           );
         }
       }

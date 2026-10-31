@@ -4528,6 +4528,7 @@ class PowerUpSystem {
       normal: Offset(math.cos(line.rimAngle), math.sin(line.rimAngle)),
       arenaRadius: match.arenaRadius,
       rng: rng,
+      arenaShape: match.arenaShape,
     );
     return true;
   }

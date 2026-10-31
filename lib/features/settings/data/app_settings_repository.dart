@@ -3,6 +3,7 @@ import '../../skills/domain/skill_library.dart';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/auth/device_session_guard.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/offline/device_prefs.dart';
 import '../../../core/offline/offline_store.dart';
@@ -275,6 +276,12 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 /// client keeps this device's anonymous session, which owns its groups and
 /// the groups it added, so signing in or out as admin never orphans them.
 /// The admin session is kept across restarts only with "Remember me".
+///
+/// GoTrue makes every client for the project share one browser
+/// `BroadcastChannel`, so the admin client's sign-in reaches the device client
+/// too. [DeviceSessionGuard] puts the device session back; without it the
+/// device client would adopt (and persist) the admin session, and lose the
+/// anonymous identity that owns this device's groups.
 class SupabaseAdminAuth implements AdminAuth {
   /// Use for admin-only work (saving settings, editing anyone's groups).
   final SupabaseClient client = SupabaseClient(
@@ -287,8 +294,19 @@ class SupabaseAdminAuth implements AdminAuth {
   late final Future<void> _restored;
   bool _rememberSession = false;
 
-  SupabaseAdminAuth() {
+  /// Watches the device client from construction, before a remembered admin
+  /// session is recovered and broadcasts itself.
+  final DeviceSessionGuard _deviceGuard;
+
+  SupabaseAdminAuth(SupabaseClient deviceClient)
+    : _deviceGuard = DeviceSessionGuard.forClient(deviceClient) {
     _restored = _initialize();
+  }
+
+  /// Stops watching the device client and releases the admin client.
+  Future<void> dispose() async {
+    await _deviceGuard.dispose();
+    client.dispose();
   }
 
   Future<void> _initialize() async {

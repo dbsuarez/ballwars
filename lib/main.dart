@@ -40,7 +40,7 @@ Future<void> main() async {
       await client.auth.signOut();
     } catch (_) {}
   }
-  final admin = SupabaseAdminAuth();
+  final admin = SupabaseAdminAuth(client);
   final deviceGroups = SupabaseCustomGroupRepository(client);
   final adminGroups = SupabaseCustomGroupRepository(admin.client);
   final groups = AccountAwareCustomGroupRepository(

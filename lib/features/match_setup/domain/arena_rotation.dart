@@ -67,17 +67,23 @@ class ArenaRotation {
         (matchDurationSeconds != null && matchDurationSeconds < 60)) {
       return 0;
     }
-    return elapsedSeconds ~/ intervalForMatch(matchDurationSeconds: matchDurationSeconds);
+    // Fixed-timestep accumulation can land infinitesimally below a boundary
+    // (for example 1800 * (1 / 60) < 30). Tolerate only rounding noise.
+    final interval = intervalForMatch(matchDurationSeconds: matchDurationSeconds);
+    return ((elapsedSeconds + 1e-9) / interval).floor();
   }
 
   ArenaDecoration themeAt(ArenaDecoration initial, double elapsedSeconds,
       {int? matchDurationSeconds}) {
     if (!rotateThemes) return initial;
+    final transitions = transitionsAt(elapsedSeconds,
+        matchDurationSeconds: matchDurationSeconds);
+    // A manually selected Chaotic arena stays visible until the first change.
+    if (transitions == 0) return initial;
     final start = themes.indexOf(initial);
     // Chaotic is intentionally never included in automatic rotation.
     final index = start < 0 ? 0 : start;
-    return themes[(index + transitionsAt(elapsedSeconds,
-        matchDurationSeconds: matchDurationSeconds)) % themes.length];
+    return themes[(index + transitions) % themes.length];
   }
 
   ArenaShape shapeAt(ArenaShape initial, double elapsedSeconds,

@@ -841,6 +841,20 @@ class MatchSimulationController {
       _initialDecoration, _stepCount * fixedTimestep, matchDurationSeconds: duration);
     if (nextTheme != arenaDecoration) {
       arenaDecoration = nextTheme;
+      // Release balls held by outgoing quicksand before removing its hazard.
+      // Otherwise the old theme can leave an invisible movement restriction.
+      for (final hazard in _powerUps?.arenaThemeHazards ?? <ArenaThemeHazard>[]) {
+        if (hazard.kind != ArenaThemeHazardKind.quicksand) continue;
+        for (final ball in hazard.affected) {
+          if (ball.isEliminated) continue;
+          final away = ball.position - hazard.position;
+          final direction = away.distance == 0
+              ? const Offset(1, 0)
+              : away / away.distance;
+          ball.velocity = direction *
+              math.max(ball.velocity.distance, arenaRadius * 0.42);
+        }
+      }
       _powerUps?.arenaThemeHazards.clear();
     }
     final nextShape = arenaRotation.shapeAt(
@@ -871,6 +885,18 @@ class MatchSimulationController {
       } else if (nextShape == ArenaShape.square) {
         ball.position = Offset(ball.position.dx.clamp(-limit, limit).toDouble(),
             ball.position.dy.clamp(-limit, limit).toDouble());
+      }
+      // A circle can cut off a square corner. If the ball is moved onto
+      // the new rim, reflect its outward velocity before the next step.
+      final normal = outerWallNormal(ball.position);
+      final outwardSpeed = ball.velocity.dx * normal.dx +
+          ball.velocity.dy * normal.dy;
+      if (outwardSpeed > 0 &&
+          (nextShape == ArenaShape.circle
+              ? ball.position.distance >= limit - 1e-6
+              : ball.position.dx.abs() >= limit - 1e-6 ||
+                  ball.position.dy.abs() >= limit - 1e-6)) {
+        ball.velocity -= normal * (2 * outwardSpeed);
       }
       for (final line in ball.fanLines) {
         line.startPoint = _rimPoint(line.rimAngle);

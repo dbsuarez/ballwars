@@ -741,6 +741,17 @@ class MatchSimulationController {
   /// (so slow motion counts at the speed it is watched). Stops at the finish.
   double get elapsedSeconds => _elapsedSeconds;
 
+  /// Remaining simulation seconds before an arena transition.
+  double? get secondsUntilArenaRotation => arenaRotation.secondsUntilNext(
+    _stepCount * fixedTimestep,
+    matchDurationSeconds: mayhem ? mayhemSeconds : null,
+  );
+
+  double get arenaTransitionFlash => arenaRotation.transitionFlash(
+    _stepCount * fixedTimestep,
+    matchDurationSeconds: mayhem ? mayhemSeconds : null,
+  );
+
   Future<void> preloadImages() async {
     for (final ball in _balls) {
       ball.cachedUiImage = await BallImageLoader.load(ball.config);
@@ -837,6 +848,22 @@ class MatchSimulationController {
     if (nextShape == arenaShape) return;
     arenaShape = nextShape;
     _physics.shape = nextShape;
+    // Projectiles are not recreated during a transition. Reconcile their
+    // positions and outward velocities before the next physics tick so a
+    // circle transition cannot strand a bouncing shot outside the wall.
+    for (final projectile in _powerUps?.projectiles ?? <Projectile>[]) {
+      if (projectile.spent) continue;
+      final oldPosition = projectile.position;
+      final newPosition = clampToArena(oldPosition, inset: 2);
+      if (newPosition == oldPosition) continue;
+      projectile.position = newPosition;
+      final normal = outerWallNormal(oldPosition);
+      final outwardSpeed = projectile.velocity.dx * normal.dx +
+          projectile.velocity.dy * normal.dy;
+      if (outwardSpeed > 0) {
+        projectile.velocity -= normal * (2 * outwardSpeed);
+      }
+    }
     for (final ball in _balls) {
       final limit = math.max(0.0, arenaRadius - ball.radius - 0.01);
       if (nextShape == ArenaShape.circle && ball.position.distance > limit) {

@@ -1069,6 +1069,49 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                             ),
                           ),
                         ),
+                        // The warning and flash use the same simulation clock as
+                        // rotation, so pause and playback speed remain consistent.
+                        if (_controller.secondsUntilArenaRotation != null &&
+                            _controller.secondsUntilArenaRotation! > 0 &&
+                            _controller.secondsUntilArenaRotation! <= 3)
+                          Positioned(
+                            top: 12,
+                            left: 0,
+                            right: 0,
+                            child: IgnorePointer(
+                              child: Center(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.78),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Text(
+                                      'ARENA CHANGING IN ${_controller.secondsUntilArenaRotation!.ceil()}',
+                                      key: const ValueKey('arena-rotation-warning'),
+                                      style: AppText.mono(16, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (_controller.arenaTransitionFlash > 0)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.white.withValues(
+                                      alpha: _controller.arenaTransitionFlash * 0.7,
+                                    ),
+                                    width: 5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         if (_startCountdown > 0)
                           Positioned.fill(
                             child: IgnorePointer(

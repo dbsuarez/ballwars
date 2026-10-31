@@ -78,6 +78,43 @@ class _SpriteEditorCardState extends State<SpriteEditorCard> {
             onChanged: (value) => _change(() => widget.edit.name = value),
           ),
         ),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text('Sprite orientation', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            OutlinedButton.icon(
+              key: ValueKey('sprite-rotate-left-${widget.sprite.id}'),
+              onPressed: () => _change(() => widget.edit.rotationQuarterTurns =
+                  (widget.edit.rotationQuarterTurns + 3) % 4),
+              icon: const Icon(Icons.rotate_left),
+              label: const Text('Rotate left 90°'),
+            ),
+            OutlinedButton.icon(
+              key: ValueKey('sprite-rotate-right-${widget.sprite.id}'),
+              onPressed: () => _change(() => widget.edit.rotationQuarterTurns =
+                  (widget.edit.rotationQuarterTurns + 1) % 4),
+              icon: const Icon(Icons.rotate_right),
+              label: const Text('Rotate right 90°'),
+            ),
+            FilterChip(
+              key: ValueKey('sprite-flip-horizontal-${widget.sprite.id}'),
+              label: const Text('Flip horizontal'),
+              selected: widget.edit.flipHorizontal,
+              onSelected: (v) => _change(() => widget.edit.flipHorizontal = v),
+            ),
+            FilterChip(
+              key: ValueKey('sprite-flip-vertical-${widget.sprite.id}'),
+              label: const Text('Flip vertical'),
+              selected: widget.edit.flipVertical,
+              onSelected: (v) => _change(() => widget.edit.flipVertical = v),
+            ),
+          ],
+        ),
+        const Text('Applied to every frame when saving. The original uploaded artwork is not modified.'),
         _row(
           'Frames / second',
           Row(
@@ -174,10 +211,10 @@ class _SpriteEditorCardState extends State<SpriteEditorCard> {
           ],
         ),
         const Text(
-          'Drag frames to change playback order. Uncheck a frame to exclude it.',
+          'Drag to reorder. Duplicate a frame to hold it longer; remove a duplicate to shorten playback. Unchecking a source frame excludes all its copies.',
         ),
-        if (_order.length != widget.sprite.frames.length ||
-            _order.any((i) => i >= widget.sprite.frames.length))
+        if (_order.isEmpty ||
+            _order.any((i) => i < 0 || i >= widget.sprite.frames.length))
           const Text('Cuts changed. Reset this sprite to edit its new frames.')
         else
           ReorderableListView.builder(
@@ -194,7 +231,7 @@ class _SpriteEditorCardState extends State<SpriteEditorCard> {
             itemBuilder: (context, index) {
               final source = _order[index], d = widget.diagnostics[source];
               return ListTile(
-                key: ValueKey('frame-${widget.sprite.id}-$source'),
+                key: ValueKey('frame-${widget.sprite.id}-$index'),
                 contentPadding: EdgeInsets.zero,
                 leading: Checkbox(
                   value: !widget.edit.excluded.contains(source),
@@ -226,12 +263,39 @@ class _SpriteEditorCardState extends State<SpriteEditorCard> {
                 subtitle: Text(
                   '${d.transparencyPercent.toStringAsFixed(1)}% transparent, ${d.partial} partial-alpha pixels\n${d.edges} visible edge pixels${d.bounds == null ? '' : ', art ${d.bounds!.width.round()} x ${d.bounds!.height.round()}'}',
                 ),
-                trailing: ReorderableDragStartListener(
-                  index: index,
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.drag_handle),
-                  ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: ValueKey('duplicate-frame-${widget.sprite.id}-$index'),
+                      tooltip: 'Duplicate this frame after this position',
+                      onPressed: _order.length >= SpriteEdit.maxPlaybackFrames
+                          ? null
+                          : () => _change(() {
+                              final order = [..._order];
+                              order.insert(index + 1, source);
+                              widget.edit.order = order;
+                            }),
+                      icon: const Icon(Icons.copy),
+                    ),
+                    if (_order.where((i) => i == source).length > 1)
+                      IconButton(
+                        key: ValueKey('remove-frame-copy-${widget.sprite.id}-$index'),
+                        tooltip: 'Remove this playback copy',
+                        onPressed: () => _change(() {
+                          final order = [..._order]..removeAt(index);
+                          widget.edit.order = order;
+                        }),
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(Icons.drag_handle),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },

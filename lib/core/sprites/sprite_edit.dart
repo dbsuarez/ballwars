@@ -10,7 +10,12 @@ class SpriteEdit {
   Offset? anchor;
   double? displayScale;
   double? opacity;
+  int rotationQuarterTurns = 0;
+  bool flipHorizontal = false;
+  bool flipVertical = false;
+  /// Playback sequence. Source indexes may repeat to hold a frame longer.
   List<int>? order;
+  static const int maxPlaybackFrames = 240;
   final Set<int> excluded = {};
   bool allowBlankFrames = false;
   List<int> indexes(int count) => (order ?? List.generate(count, (i) => i))
@@ -29,7 +34,17 @@ class SpriteEdit {
       );
     }
     final indices = indexes(original.frames.length);
-    if (order != null && order!.length != original.frames.length) {
+    if (order != null && order!.isEmpty) {
+      throw FormatException(
+        '$id needs at least one playback frame.',
+      );
+    }
+    if (indices.length > maxPlaybackFrames) {
+      throw FormatException(
+        '$id exceeds the $maxPlaybackFrames playback frame limit.',
+      );
+    }
+    if (order != null && order!.any((i) => i < 0 || i >= original.frames.length)) {
       throw FormatException(
         '$id cuts changed. Reset this sprite before editing the new frames.',
       );

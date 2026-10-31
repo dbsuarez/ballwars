@@ -330,13 +330,22 @@ class _SpriteImportScreenState extends State<SpriteImportScreen> {
         !_smooth &&
         atlas.sprites.values.every(
           (s) => s.output <= _frameSize && s.height <= _frameSize,
-        )) {
+        ) &&
+        !_edits.values.any((e) => e.rotationQuarterTurns != 0 || e.flipHorizontal || e.flipVertical)) {
       return (atlas: atlas, bytes: _bytes!);
     }
     return SpriteRegistry.normalizeUpload(
       atlas,
       sheet,
       frameSize: _frameSize,
+      transforms: {
+        for (final original in _cuts!.sprites.values)
+          (_edits[original.id] ?? SpriteEdit()).apply(original).id: (
+            quarterTurns: _edits[original.id]?.rotationQuarterTurns ?? 0,
+            flipHorizontal: _edits[original.id]?.flipHorizontal ?? false,
+            flipVertical: _edits[original.id]?.flipVertical ?? false,
+          ),
+      },
       filterQuality: _smooth ? FilterQuality.medium : FilterQuality.none,
     );
   }

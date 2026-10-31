@@ -27,12 +27,46 @@ class ArenaRotation {
   int intervalForMatch({int? matchDurationSeconds}) {
     if (matchDurationSeconds == null) return intervalSeconds;
     final maximum = ((matchDurationSeconds / 2) / 30).round() * 30;
+    // There is no valid interval for a match shorter than one minute.
+    // Keep the configured interval but do not schedule a transition.
     if (maximum < 30) return intervalSeconds;
     return intervalSeconds.clamp(30, maximum);
   }
 
+  /// Seconds until the next transition. Null when rotation is disabled or
+  /// the match is too short to permit a transition.
+  double? secondsUntilNext(double elapsedSeconds, {int? matchDurationSeconds}) {
+    if ((!rotateThemes && !rotateShapes) ||
+        (matchDurationSeconds != null && matchDurationSeconds < 60)) {
+      return null;
+    }
+    final interval = intervalForMatch(matchDurationSeconds: matchDurationSeconds);
+    if (matchDurationSeconds != null && elapsedSeconds >= matchDurationSeconds) {
+      return null;
+    }
+    final next = (elapsedSeconds ~/ interval + 1) * interval;
+    if (matchDurationSeconds != null && next > matchDurationSeconds) return null;
+    return next - elapsedSeconds;
+  }
+
+  /// Normalized 0..1 flash progress after the most recent transition.
+  /// This is derived from simulation time and does not affect physics.
+  double transitionFlash(double elapsedSeconds, {int? matchDurationSeconds}) {
+    if ((!rotateThemes && !rotateShapes) ||
+        (matchDurationSeconds != null && matchDurationSeconds < 60)) {
+      return 0;
+    }
+    final interval = intervalForMatch(matchDurationSeconds: matchDurationSeconds);
+    if (elapsedSeconds < interval) return 0;
+    final since = elapsedSeconds % interval;
+    return (1 - since / 0.55).clamp(0.0, 1.0);
+  }
+
   int transitionsAt(double elapsedSeconds, {int? matchDurationSeconds}) {
-    if (elapsedSeconds < 0) return 0;
+    if (elapsedSeconds < 0 ||
+        (matchDurationSeconds != null && matchDurationSeconds < 60)) {
+      return 0;
+    }
     return elapsedSeconds ~/ intervalForMatch(matchDurationSeconds: matchDurationSeconds);
   }
 

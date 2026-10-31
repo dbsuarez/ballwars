@@ -406,10 +406,45 @@ class SpriteRegistry {
 
   /// Pack normalized frames for an owner upload. Rendering does not edit the
   /// owner's file; only the optimized PNG and new frame metadata are uploaded.
+  /// Rotate/flip isolated frames, retaining their transparent canvas size.
+  /// Nearest-neighbor sampling keeps pixel art crisp.
+  static Future<ui.Image> _orientSpriteFrame(
+    ui.Image image,
+    int quarterTurns,
+    bool flipHorizontal,
+    bool flipVertical,
+  ) async {
+    final turns = quarterTurns % 4;
+    final width = image.width.toDouble();
+    final height = image.height.toDouble();
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    canvas.translate(width / 2, height / 2);
+    canvas.rotate(turns * math.pi / 2);
+    canvas.scale(flipHorizontal ? -1 : 1, flipVertical ? -1 : 1);
+    // Preserve the entire image for non-square frames after a quarter turn.
+    if (turns.isOdd) {
+      final fit = math.min(width / height, height / width);
+      canvas.scale(fit);
+    }
+    canvas.drawImage(
+      image,
+      ui.Offset(-width / 2, -height / 2),
+      ui.Paint()..filterQuality = ui.FilterQuality.none,
+    );
+    final picture = recorder.endRecording();
+    try {
+      return await picture.toImage(image.width, image.height);
+    } finally {
+      picture.dispose();
+    }
+  }
+
   static Future<({SpriteAtlas atlas, Uint8List bytes})> normalizeUpload(
     SpriteAtlas atlas,
     ui.Image sheet, {
     required int frameSize,
+    Map<String, ({int quarterTurns, bool flipHorizontal, bool flipVertical})> transforms = const {},
     FilterQuality filterQuality = FilterQuality.none,
   }) async {
     if (frameSize != 128 && frameSize != 256) {
@@ -463,9 +498,28 @@ class SpriteRegistry {
           sheet,
           filterQuality: filterQuality,
         );
-        images.addAll(cuts);
-        final frames = <Rect>[];
+        final transform = transforms[s.id];
+        final oriented = <ui.Image>[];
         for (final cut in cuts) {
+          if (transform == null ||
+              (transform.quarterTurns % 4 == 0 &&
+                  !transform.flipHorizontal && !transform.flipVertical)) {
+            oriented.add(cut);
+          } else {
+            oriented.add(await _orientSpriteFrame(
+              cut,
+              transform.quarterTurns,
+              transform.flipHorizontal,
+              transform.flipVertical,
+            ));
+          }
+        }
+        images.addAll(cuts);
+        for (var i = 0; i < cuts.length; i++) {
+          if (!identical(cuts[i], oriented[i])) images.add(oriented[i]);
+        }
+        final frames = <Rect>[];
+        for (final cut in oriented) {
           final x = (index % columns) * frameSize,
               y = (index ~/ columns) * frameSize;
           canvas.drawImage(

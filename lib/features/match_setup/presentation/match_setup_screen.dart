@@ -1595,16 +1595,24 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             onTap: () async {
               final selection = await showArenaGeometryEditor(context,
                   shape: _arenaShape, obstacle: _centerObstacle,
-                  scale: _centerObstacleScale);
+                  scale: _centerObstacleScale,
+                  rotateThemes: _rotateThemes, rotateShapes: _rotateShapes,
+                  intervalSeconds: _rotationInterval);
               if (selection == null || !mounted) return;
               _update(() {
                 _arenaShape = selection.shape;
                 _centerObstacle = selection.obstacle;
                 _centerObstacleScale = selection.scale;
+                _rotateThemes = selection.rotateThemes;
+                _rotateShapes = selection.rotateShapes;
+                _rotationInterval = selection.intervalSeconds;
               });
               DevicePrefs.write('arena-shape', selection.shape.name);
               DevicePrefs.write('center-obstacle', selection.obstacle.name);
               DevicePrefs.write('center-obstacle-scale', selection.scale.toString());
+              DevicePrefs.write('arena-rotate-themes', selection.rotateThemes ? '1' : '0');
+              DevicePrefs.write('arena-rotate-shapes', selection.rotateShapes ? '1' : '0');
+              DevicePrefs.write('arena-rotation-interval', selection.intervalSeconds);
             },
           ),
           _choice(

@@ -242,8 +242,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Molotov'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.widgetWithText(Tab, 'Appearance'));
-      await tester.tap(find.widgetWithText(Tab, 'Appearance'));
+      await tester.ensureVisible(find.widgetWithText(Tab, 'Visuals & Sprites'));
+      await tester.tap(find.widgetWithText(Tab, 'Visuals & Sprites'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Projectiles'));
       await tester.pumpAndSettle();

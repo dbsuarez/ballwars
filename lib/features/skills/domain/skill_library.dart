@@ -47,6 +47,12 @@ enum SkillDelivery {
   boundaryHazard,
 }
 
+/// Presentation taxonomy independent of the mechanical SkillDelivery runtime.
+/// Null on older saves preserves inference from existing skills.
+enum SkillWeaponClass { melee, ranged, hybrid }
+
+enum SkillAttackDelivery { swing, thrust, fireProjectile, throwWeapon, beam, summon }
+
 enum SkillEffectType {
   damage,
   damageOverTime,
@@ -113,6 +119,9 @@ class SkillDefinition {
     this.areaGuideOpacity = .65,
     this.homing = false,
     this.returnsToOrigin = false,
+    this.hideHeldWhileThrown,
+    this.weaponClass,
+    this.attackDelivery,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
     this.pickupDisplayScale = 1,
@@ -162,6 +171,8 @@ class SkillDefinition {
     this.description = '',
     this.shellEnabled,
     this.iconSpriteId,
+    this.pickupSpriteId,
+    this.heldSpriteId,
     this.projectileSpriteId,
     this.impactSpriteId,
     this.castingSpriteId,
@@ -214,6 +225,32 @@ class SkillDefinition {
   final double areaGuideOpacity;
   final bool homing;
   final bool returnsToOrigin;
+  /// Null preserves the built-in Boomerang default; otherwise explicit visibility.
+  final bool? hideHeldWhileThrown;
+  /// Optional authoring metadata, not a replacement for mechanical delivery.
+  final SkillWeaponClass? weaponClass;
+  final SkillAttackDelivery? attackDelivery;
+
+  SkillWeaponClass get effectiveWeaponClass => weaponClass ??
+      (meleeReach > 0 && (delivery == SkillDelivery.projectile ||
+       baseKind.isGun) ? SkillWeaponClass.hybrid :
+       (baseKind.isGun || delivery == SkillDelivery.projectile ||
+        baseKind == PowerUpKind.boomerang) ? SkillWeaponClass.ranged :
+       SkillWeaponClass.melee);
+
+  SkillAttackDelivery get effectiveAttackDelivery => attackDelivery ??
+      (baseKind == PowerUpKind.boomerang ? SkillAttackDelivery.throwWeapon :
+       delivery == SkillDelivery.beam ? SkillAttackDelivery.beam :
+       delivery == SkillDelivery.projectile || baseKind.isGun
+         ? SkillAttackDelivery.fireProjectile : SkillAttackDelivery.swing);
+
+
+  /// Presentation-only rule. A null override retains the original Boomerang
+  /// default and leaves every other weapon visible while its shots travel.
+  /// The caller must also confirm an active, unspent owned projectile.
+  bool get hidesHeldDuringFlight =>
+      hideHeldWhileThrown ?? (baseKind == PowerUpKind.boomerang);
+
   final bool trackNearestOpponent;
   final double weaponDisplayScale;
   final double pickupDisplayScale;
@@ -304,6 +341,13 @@ class SkillDefinition {
   /// The [SpriteRegistry] id its casings are drawn with. Null (or an id that isn't loaded): the brass
   /// vector shell.
   final String? iconSpriteId;
+  /// Optional arena pickup art. Falls back to [iconSpriteId].
+  final String? pickupSpriteId;
+  /// Optional equipped/held art. Falls back to [iconSpriteId].
+  /// A future animation binding can use this slot without changing its meaning.
+  final String? heldSpriteId;
+  String? get effectivePickupSpriteId => pickupSpriteId ?? iconSpriteId;
+  String? get effectiveHeldSpriteId => heldSpriteId ?? iconSpriteId;
   final String? projectileSpriteId;
   final String? impactSpriteId;
   final String? castingSpriteId;
@@ -450,6 +494,9 @@ class SkillDefinition {
     double? areaGuideOpacity,
     bool? homing,
     bool? returnsToOrigin,
+    Object? hideHeldWhileThrown = _unset,
+    Object? weaponClass = _unset,
+    Object? attackDelivery = _unset,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
     double? pickupDisplayScale,
@@ -499,6 +546,8 @@ class SkillDefinition {
     String? description,
     Object? shellEnabled = _unset,
     Object? iconSpriteId = _unset,
+    Object? pickupSpriteId = _unset,
+    Object? heldSpriteId = _unset,
     Object? projectileSpriteId = _unset,
     Object? impactSpriteId = _unset,
     Object? castingSpriteId = _unset,
@@ -541,6 +590,12 @@ class SkillDefinition {
     areaGuideOpacity: areaGuideOpacity ?? this.areaGuideOpacity,
     homing: homing ?? this.homing,
     returnsToOrigin: returnsToOrigin ?? this.returnsToOrigin,
+    hideHeldWhileThrown: identical(hideHeldWhileThrown, _unset)
+        ? this.hideHeldWhileThrown : hideHeldWhileThrown as bool?,
+    weaponClass: identical(weaponClass, _unset)
+        ? this.weaponClass : weaponClass as SkillWeaponClass?,
+    attackDelivery: identical(attackDelivery, _unset)
+        ? this.attackDelivery : attackDelivery as SkillAttackDelivery?,
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
@@ -605,6 +660,10 @@ class SkillDefinition {
     iconSpriteId: identical(iconSpriteId, _unset)
         ? this.iconSpriteId
         : iconSpriteId as String?,
+    pickupSpriteId: identical(pickupSpriteId, _unset)
+        ? this.pickupSpriteId : pickupSpriteId as String?,
+    heldSpriteId: identical(heldSpriteId, _unset)
+        ? this.heldSpriteId : heldSpriteId as String?,
     projectileSpriteId: identical(projectileSpriteId, _unset)
         ? this.projectileSpriteId
         : projectileSpriteId as String?,
@@ -658,6 +717,9 @@ class SkillDefinition {
     if (areaGuideOpacity != .65) 'area_guide_opacity': areaGuideOpacity,
     'homing': homing,
     'returns_to_origin': returnsToOrigin,
+    if (hideHeldWhileThrown != null) 'hide_held_while_thrown': hideHeldWhileThrown,
+    if (weaponClass != null) 'weapon_class': weaponClass!.name,
+    if (attackDelivery != null) 'attack_delivery': attackDelivery!.name,
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
     'pickup_display_scale': pickupDisplayScale,
@@ -710,6 +772,8 @@ class SkillDefinition {
     // Shell settings are left out at their defaults, so replay snapshots stay small.
     if (shellEnabled != null) 'shell': shellEnabled,
     if (iconSpriteId != null) 'icon_sprite': iconSpriteId,
+    if (pickupSpriteId != null) 'pickup_sprite': pickupSpriteId,
+    if (heldSpriteId != null) 'held_sprite': heldSpriteId,
     if (projectileSpriteId != null) 'projectile_sprite': projectileSpriteId,
     if (impactSpriteId != null) 'impact_sprite': impactSpriteId,
     if (castingSpriteId != null) 'casting_sprite': castingSpriteId,
@@ -782,7 +846,11 @@ class SkillDefinition {
           AreaGuideStyle.dashed,
       areaGuideOpacity: decimal('area_guide_opacity') ?? .65,
       homing: value['homing'] as bool? ?? false,
-      returnsToOrigin: value['returns_to_origin'] as bool? ?? false,
+      returnsToOrigin: value['returns_to_origin'] == true,
+      hideHeldWhileThrown: value['hide_held_while_thrown'] is bool
+          ? value['hide_held_while_thrown'] as bool : null,
+      weaponClass: nullableEnum('weapon_class', SkillWeaponClass.values),
+      attackDelivery: nullableEnum('attack_delivery', SkillAttackDelivery.values),
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,
@@ -860,6 +928,10 @@ class SkillDefinition {
       iconSpriteId: value['icon_sprite'] is String
           ? value['icon_sprite'] as String
           : null,
+      pickupSpriteId: value['pickup_sprite'] is String
+          ? value['pickup_sprite'] as String : null,
+      heldSpriteId: value['held_sprite'] is String
+          ? value['held_sprite'] as String : null,
       projectileSpriteId: value['projectile_sprite'] is String
           ? value['projectile_sprite'] as String
           : null,
@@ -948,6 +1020,8 @@ class SkillDefinition {
     rarity: custom && !baseKind.isTrap ? rarity : null,
     description: cleanDescription(description),
     iconSpriteId: _cleanSpriteReference(iconSpriteId),
+    pickupSpriteId: _cleanSpriteReference(pickupSpriteId),
+    heldSpriteId: _cleanSpriteReference(heldSpriteId),
     projectileSpriteId: _cleanSpriteReference(projectileSpriteId),
     impactSpriteId: _cleanSpriteReference(impactSpriteId),
     castingSpriteId: _cleanSpriteReference(castingSpriteId),
@@ -1034,6 +1108,29 @@ SkillCategory _legacyCategory(PowerUpKind kind) => kind.isWeapon
     : SkillCategory.powerUp;
 
 const Object _unset = Object();
+
+/// Dry-run accounting for legacy artwork conversion. Counts artwork slots,
+/// not skills, because each skill may contain both Casting and Impact.
+class LegacyVfxMigrationPlan {
+  const LegacyVfxMigrationPlan({
+    required this.affectedSkills,
+    required this.newEffects,
+    required this.reusedEffects,
+    required this.supersededSlots,
+    required this.blockedSlots,
+    required this.availableEffectSlots,
+  });
+
+  final int affectedSkills;
+  final int newEffects;
+  final int reusedEffects;
+  final int supersededSlots;
+  final int blockedSlots;
+  final int availableEffectSlots;
+
+  bool get fitsCapacity => newEffects <= availableEffectSlots;
+  bool get hasChanges => newEffects + reusedEffects + supersededSlots > 0;
+}
 
 class SkillLibrary {
   const SkillLibrary({
@@ -1300,6 +1397,304 @@ class SkillLibrary {
     );
   }
 
+  /// Only a neutral event can stand in for a legacy sprite. Reusing an
+  /// authored event with altered timing, opacity, or scale changes playback.
+  static bool _matchesLegacyArtwork(EffectDefinition effect, String spriteId) =>
+      effect.spriteId == spriteId &&
+      effect.scale == 1 &&
+      effect.opacity == 1 &&
+      effect.playback == EffectPlayback.once &&
+      effect.durationSeconds == null;
+
+  ({SkillLibrary library, String effectId}) _legacyEffectFor({
+    required SkillDefinition skill,
+    required SkillVisualRole role,
+    required String spriteId,
+  }) {
+    final prefix = 'legacy.${skill.id}.${role.name}';
+    var index = 0;
+    while (true) {
+      final suffix = index == 0 ? '' : '.$index';
+      final limit = 128 - suffix.length;
+      final id = '${prefix.length > limit ? prefix.substring(0, limit) : prefix}$suffix';
+      final existing = effects[id];
+      if (existing == null) {
+        final name = '${role.name}: ${skill.name}';
+        return (
+          library: withEffect(EffectDefinition(
+            id: id,
+            name: name.length > 80 ? name.substring(0, 80) : name,
+            spriteId: spriteId,
+          )),
+          effectId: id,
+        );
+      }
+      if (_matchesLegacyArtwork(existing, spriteId)) {
+        return (library: this, effectId: id);
+      }
+      index++;
+    }
+  }
+
+  /// Converts legacy Casting and Impact artwork to reusable visual events.
+  /// Existing event bindings always win. This is opt-in so old saves remain
+  /// readable and existing arena behavior is unchanged until conversion.
+  ({SkillLibrary library, SkillDefinition skill}) migrateLegacyArtwork(
+    SkillDefinition skill,
+  ) {
+    var library = this;
+    var updated = skill;
+    for (final role in [SkillVisualRole.casting, SkillVisualRole.impact]) {
+      final legacy = role == SkillVisualRole.casting
+          ? updated.castingSpriteId
+          : updated.impactSpriteId;
+      if (legacy == null) continue;
+      // A valid explicit Impact event may differ from the old Explosion
+      // fallback. Preserve both by migrating the fallback to its own event.
+      final explicitBinding = updated.visualBindings[role];
+      if (explicitBinding != null) {
+        if (!library.effects.containsKey(explicitBinding.effectId)) {
+          // A dangling event cannot replace the playable legacy artwork.
+          continue;
+        }
+        if (role == SkillVisualRole.impact) {
+          final explosionBinding =
+              updated.visualBindings[SkillVisualRole.explosion];
+          if (explosionBinding == null) {
+            final migrated = library._legacyEffectFor(
+              skill: skill,
+              role: SkillVisualRole.explosion,
+              spriteId: legacy,
+            );
+            library = migrated.library;
+            updated = updated.copyWith(
+              impactSpriteId: null,
+              visualBindings: {
+                ...updated.visualBindings,
+                SkillVisualRole.explosion:
+                    SkillVisualBinding(effectId: migrated.effectId),
+              },
+            );
+          } else if (library.effects.containsKey(explosionBinding.effectId)) {
+            updated = updated.copyWith(impactSpriteId: null);
+          }
+        } else {
+          updated = updated.copyWith(castingSpriteId: null);
+        }
+        continue;
+      }
+      // A missing Explosion event still relies on the old Impact fallback.
+      // Do not clear that fallback just to migrate the Impact role: doing so
+      // would silently remove the Explosion artwork from existing saves.
+      if (role == SkillVisualRole.impact) {
+        final explosionBinding =
+            updated.visualBindings[SkillVisualRole.explosion];
+        if (explosionBinding != null &&
+            !library.effects.containsKey(explosionBinding.effectId)) {
+          continue;
+        }
+      }
+      final migrated = library._legacyEffectFor(
+        skill: skill,
+        role: role,
+        spriteId: legacy,
+      );
+      library = migrated.library;
+      final id = migrated.effectId;
+      updated = updated.copyWith(
+        visualBindings: {
+          ...updated.visualBindings,
+          role: SkillVisualBinding(effectId: id),
+          // The old Impact slot was also the Explosion fallback. Preserve
+          // that behavior by sharing the migrated effect with Explosion,
+          // unless an explicit Explosion binding already exists.
+          if (role == SkillVisualRole.impact &&
+              !updated.visualBindings.containsKey(SkillVisualRole.explosion))
+            SkillVisualRole.explosion: SkillVisualBinding(effectId: id),
+        },
+        castingSpriteId: role == SkillVisualRole.casting ? null : updated.castingSpriteId,
+        impactSpriteId: role == SkillVisualRole.impact ? null : updated.impactSpriteId,
+      );
+    }
+    return (library: library, skill: updated);
+  }
+
+  /// Compute the exact migration outcome without modifying the library.
+  /// Uses the same converter as the actual operation, including ID collision
+  /// handling and effect reuse. A capacity failure is reported, not applied.
+  LegacyVfxMigrationPlan planLegacyArtworkMigration() {
+    var affected = 0;
+    var added = 0;
+    var reused = 0;
+    var superseded = 0;
+    var blocked = 0;
+    // Simulate with additional headroom so the plan remains informative when
+    // the production library is already at the 256-effect capacity.
+    final planningEffects = <String, EffectDefinition>{...effects};
+    for (final skill in [...overrides.values, ...custom]) {
+      var changed = false;
+      for (final role in [SkillVisualRole.casting, SkillVisualRole.impact]) {
+        final sprite = role == SkillVisualRole.casting
+            ? skill.castingSpriteId : skill.impactSpriteId;
+        if (sprite == null) continue;
+        final binding = skill.visualBindings[role];
+        if (binding != null) {
+          if (effects.containsKey(binding.effectId)) {
+            // An Impact fallback cannot be removed until Explosion has a
+            // valid explicit binding, because both roles used that sprite.
+            final explosionBinding =
+                skill.visualBindings[SkillVisualRole.explosion];
+            final explosionCovered = explosionBinding != null &&
+                effects.containsKey(explosionBinding.effectId);
+            if (role == SkillVisualRole.casting || explosionCovered) {
+              superseded++;
+              changed = true;
+            } else if (explosionBinding == null) {
+              // An existing Impact event needs a separate Explosion event
+              // to preserve the old fallback artwork.
+              final prefix = 'legacy.${skill.id}.explosion';
+              var index = 0;
+              while (true) {
+                final suffix = index == 0 ? '' : '.$index';
+                final limit = 128 - suffix.length;
+                final id = '${prefix.length > limit ? prefix.substring(0, limit) : prefix}$suffix';
+                final existing = planningEffects[id];
+                if (existing == null) {
+                  planningEffects[id] = EffectDefinition(
+                    id: id, name: 'Migration preview', spriteId: sprite,
+                  );
+                  added++;
+                  break;
+                }
+                if (_matchesLegacyArtwork(existing, sprite)) {
+                  reused++;
+                  break;
+                }
+                index++;
+              }
+              changed = true;
+            } else {
+              blocked++;
+            }
+          } else {
+            blocked++;
+          }
+          continue;
+        }
+        // A dangling Explosion binding still needs the Impact fallback.
+        // Match the converter's refusal to remove that playable artwork.
+        if (role == SkillVisualRole.impact) {
+          final explosionBinding =
+              skill.visualBindings[SkillVisualRole.explosion];
+          if (explosionBinding != null &&
+              !effects.containsKey(explosionBinding.effectId)) {
+            blocked++;
+            continue;
+          }
+        }
+        // Count an existing matching generated ID as reused; a new ID as
+        // created. Mirror the migration's deterministic collision search.
+        final prefix = 'legacy.${skill.id}.${role.name}';
+        var index = 0;
+        var found = false;
+        while (true) {
+          final suffix = index == 0 ? '' : '.$index';
+          final limit = 128 - suffix.length;
+          final id = '${prefix.length > limit ? prefix.substring(0, limit) : prefix}$suffix';
+          final existing = planningEffects[id];
+          if (existing == null) {
+            planningEffects[id] = EffectDefinition(
+              id: id, name: 'Migration preview', spriteId: sprite,
+            );
+            added++;
+            break;
+          }
+          if (_matchesLegacyArtwork(existing, sprite)) {
+            found = true;
+            break;
+          }
+          index++;
+        }
+        if (found) reused++;
+        changed = true;
+      }
+      if (changed) affected++;
+    }
+    return LegacyVfxMigrationPlan(
+      affectedSkills: affected,
+      newEffects: added,
+      reusedEffects: reused,
+      supersededSlots: superseded,
+      blockedSlots: blocked,
+      availableEffectSlots: 256 - effects.length,
+    );
+  }
+
+  /// Convert legacy artwork for every persisted skill in one transaction.
+  ///
+  /// The factory definitions are intentionally excluded: only user-authored
+  /// overrides and custom skills are persisted. If the effect library reaches
+  /// its capacity or any definition is invalid, this method throws without
+  /// returning a partially migrated library. The original library is immutable.
+  /// Missing external Visual Events retain their playable legacy fallback.
+  /// Fail closed if a migration changes the artwork a player would see.
+  /// Compare the resolved presentation rather than raw legacy fields because
+  /// an explicit Visual Event can intentionally override those fields.
+  static void _verifyMigratedArtwork(
+    SkillDefinition before,
+    SkillDefinition after,
+    SkillLibrary original,
+    SkillLibrary migrated,
+  ) {
+    for (final role in [
+      SkillVisualRole.casting,
+      SkillVisualRole.impact,
+      SkillVisualRole.explosion,
+    ]) {
+      final oldVisual = original.resolveVisual(before, role);
+      final newVisual = migrated.resolveVisual(after, role);
+      if (oldVisual?.spriteId != newVisual?.spriteId ||
+          oldVisual?.scale != newVisual?.scale ||
+          oldVisual?.opacity != newVisual?.opacity ||
+          oldVisual?.tint != newVisual?.tint ||
+          oldVisual?.attachment != newVisual?.attachment ||
+          oldVisual?.facing != newVisual?.facing ||
+          oldVisual?.offsetX != newVisual?.offsetX ||
+          oldVisual?.offsetY != newVisual?.offsetY ||
+          oldVisual?.rotationDegrees != newVisual?.rotationDegrees ||
+          oldVisual?.playback != newVisual?.playback ||
+          oldVisual?.durationSeconds != newVisual?.durationSeconds) {
+        throw FormatException(
+          'Legacy VFX conversion would change ${before.id} '
+          '${role.name} artwork. No changes were applied.',
+        );
+      }
+    }
+  }
+
+  SkillLibrary migrateAllLegacyArtwork() {
+    var working = this;
+    final migratedOverrides = <String, SkillDefinition>{};
+    final migratedCustom = <SkillDefinition>[];
+    for (final entry in overrides.entries) {
+      final before = entry.value;
+      final converted = working.migrateLegacyArtwork(before);
+      _verifyMigratedArtwork(before, converted.skill, working, converted.library);
+      working = converted.library;
+      migratedOverrides[entry.key] = converted.skill;
+    }
+    for (final skill in custom) {
+      final converted = working.migrateLegacyArtwork(skill);
+      _verifyMigratedArtwork(skill, converted.skill, working, converted.library);
+      working = converted.library;
+      migratedCustom.add(converted.skill);
+    }
+    return working._withSkills(
+      overrides: Map.unmodifiable(migratedOverrides),
+      custom: List.unmodifiable(migratedCustom),
+    );
+  }
+
   SkillLibrary withEffectDefinitions(
     Map<String, EffectDefinition> definitions,
   ) {
@@ -1361,6 +1756,8 @@ class SkillLibrary {
   Set<String> spriteReferences(SkillDefinition skill) => {
     ...[
       skill.iconSpriteId,
+      skill.pickupSpriteId,
+      skill.heldSpriteId,
       skill.projectileSpriteId,
       skill.impactSpriteId,
       skill.castingSpriteId,
@@ -1376,6 +1773,8 @@ class SkillLibrary {
   Set<String> activeSpriteReferences(SkillDefinition skill) => {
     ...[
       skill.iconSpriteId,
+      skill.pickupSpriteId,
+      skill.heldSpriteId,
       skill.projectileSpriteId,
       skill.shellSprite,
     ].whereType<String>(),

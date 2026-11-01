@@ -985,7 +985,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
         skillById: (id) =>
             _controller.skillLibrary.byId(id, _controller.tuning),
         iconSpriteId: (ball, kind) =>
-            _state.powerUps?.visualSkill(kind, ball: ball).iconSpriteId,
+            _state.powerUps?.visualSkill(kind, ball: ball).effectiveHeldSpriteId,
         artworkTint: (ball, kind) =>
             _state.powerUps?.artworkTint(kind, ball: ball) ?? 0xFFFFFFFF,
         itemRarity: (ball, kind) =>

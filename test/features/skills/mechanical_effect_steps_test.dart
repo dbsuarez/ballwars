@@ -294,8 +294,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(Tab, 'Custom'));
-      await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextField, 'Search skills'),
         original.name,
@@ -303,16 +301,32 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, original.name));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('edit-mechanical-steps')),
-        250,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView).last,
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
+      // Ordered effect steps currently live in the Identity tab's
+      // Behavior section, not in the Mechanics tab. Select that section
+      // explicitly before searching the lazily built ListView.
+      final identityTab = find.byKey(const ValueKey('skill-editor-tab-identity'));
+      final editorTabs = DefaultTabController.of(tester.element(identityTab));
+      editorTabs.animateTo(0);
+      await tester.pumpAndSettle();
+      expect(editorTabs.index, 0);
+      final editSteps = find.byKey(const ValueKey('edit-mechanical-steps'));
+      // This long tab is lazily built. Drive the active editor scroll
+      // position directly instead of dragging an overlapping ListView.
+      final scrollable = find.descendant(
+        of: find.byType(ListView).last,
+        matching: find.byType(Scrollable),
+      ).first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+      for (var attempt = 0; attempt < 200 && editSteps.evaluate().isEmpty; attempt++) {
+        if (position.pixels >= position.maxScrollExtent) break;
+        position.jumpTo((position.pixels + 250).clamp(0.0, position.maxScrollExtent));
+        await tester.pumpAndSettle();
+      }
+      expect(editSteps, findsOneWidget);
+      await tester.ensureVisible(editSteps);
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('edit-mechanical-steps')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const ValueKey('step-damage')), '9');

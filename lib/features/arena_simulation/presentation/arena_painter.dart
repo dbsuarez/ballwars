@@ -14,6 +14,7 @@ import '../domain/arena_boundary_geometry.dart';
 import 'ball_face_painter.dart';
 import 'ball_hair_painter.dart';
 import 'power_up_painter.dart';
+import 'held_weapon_visibility.dart';
 import '../../skills/presentation/skill_artwork_tint.dart';
 import '../../skills/domain/skill_library.dart';
 import 'ball_face_expression.dart';
@@ -734,6 +735,23 @@ class ArenaPainter extends CustomPainter {
           ) ??
           true,
       step: state.step,
+      // A thrown weapon is hidden only while an owned projectile is active.
+      hideHeldWeapon: (kind, slot) {
+        final powerUps = state.powerUps;
+        if (powerUps == null) return false;
+        return shouldHideHeldWeapon(
+          skill: powerUps.visualSkill(
+            kind,
+            ball: ball,
+            skillId: slot < 0
+                ? null
+                : slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+          ),
+          owner: ball,
+          kind: kind,
+          projectiles: powerUps.projectiles,
+        );
+      },
       iconSpriteId: (kind, slot) => state.powerUps
           ?.visualSkill(
             kind,
@@ -744,7 +762,7 @@ class ArenaPainter extends CustomPainter {
                 ? ball.heldSkillId
                 : ball.heldSecondarySkillId,
           )
-          .iconSpriteId,
+          .effectiveHeldSpriteId,
       artworkTint: (kind, slot) =>
           state.powerUps?.artworkTint(
             kind,

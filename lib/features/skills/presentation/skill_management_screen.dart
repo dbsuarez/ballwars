@@ -79,6 +79,10 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   late PowerUpConfig _tuning = widget.tuning;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  String _categoryFilter = 'All';
+  String _sourceFilter = 'All';
+  String _statusFilter = 'All';
+  String _rarityFilter = 'All';
 
   @override
   void dispose() {
@@ -169,6 +173,58 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
   }
 
+  Future<void> _convertAllLegacyVfx() async {
+    final plan = _library.planLegacyArtworkMigration();
+    if (!plan.hasChanges) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(plan.blockedSlots == 0
+            ? 'No saved skills need legacy VFX conversion.'
+            : '${plan.blockedSlots} legacy artwork slots are blocked by missing Visual Events.'),
+      ));
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Review legacy VFX conversion'),
+        content: Text(
+          'Skills affected: ${plan.affectedSkills}\n'
+          'New Visual Events: ${plan.newEffects}\n'
+          'Existing events reused: ${plan.reusedEffects}\n'
+          'Legacy slots superseded: ${plan.supersededSlots}\n'
+          'Blocked by missing events: ${plan.blockedSlots}\n'
+          'Available effect slots: ${plan.availableEffectSlots}\n\n'
+          '${plan.fitsCapacity ? 'Conversion fits within the effect library limit.' : 'Conversion exceeds the 256-effect limit. Remove unused events first.'}\n\n'
+          'This stays a draft until you save the library.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm-convert-all-legacy-vfx'),
+            onPressed: plan.fitsCapacity
+                ? () => Navigator.pop(dialogContext, true) : null,
+            child: const Text('Convert draft'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    try {
+      final converted = _library.migrateAllLegacyArtwork();
+      setState(() => _library = converted);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Converted VFX for ${plan.affectedSkills} skills. Save to publish.'),
+      ));
+    } on FormatException catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Conversion cancelled without changes: ${error.message}'),
+      ));
+    }
+  }
+
   /// A built-in's tier lives in the tuning (`tier.<kind>`); a custom skill keeps its own, so editing it
   /// never changes the built-in it is based on. An unchanged custom tier keeps following its base kind.
   (SkillDefinition, PowerUpConfig) _applyRarity(
@@ -201,8 +257,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             : (edited) async {
                 final (definition, tuning) = _applyRarity(skill, edited);
                 final library = _library
-                    .withDefinition(definition, tuning)
-                    .withEffectDefinitions(edited.effects ?? _library.effects);
+                    .withEffectDefinitions(edited.effects ?? _library.effects)
+                    .withDefinition(definition, tuning);
                 await widget.onSave!(
                   SkillManagementResult(
                     library: library,
@@ -224,8 +280,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       final (definition, tuning) = _applyRarity(skill, edited);
       _tuning = tuning;
       _library = _library
-          .withDefinition(definition, _tuning)
-          .withEffectDefinitions(edited.effects ?? _library.effects);
+          .withEffectDefinitions(edited.effects ?? _library.effects)
+          .withDefinition(definition, _tuning);
     });
   }
 
@@ -334,52 +390,119 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   }
 
   Widget _list(
-    bool custom, {
+    bool? custom, {
     String? category,
     List<Widget> headers = const [],
+    bool showResultCount = false,
   }) {
-    final query = _query.trim().toLowerCase();
+    // Match search words independently across name, description and base type.
+    // For example, "lightning ranged" can match terms in different fields.
+    final searchTerms = _query.trim().toLowerCase().split(RegExp(r'\s+'))
+        .where((term) => term.isNotEmpty)
+        .toList();
     final skills =
         _library
             .all(_tuning)
-            .where((skill) => skill.custom == custom)
+            .where((skill) => custom == null || skill.custom == custom)
+            .where((skill) => _sourceFilter == 'All' ||
+                (_sourceFilter == 'Built-in' && !skill.custom) ||
+                (_sourceFilter == 'Custom' && skill.custom))
+            .where((skill) => _statusFilter == 'All' ||
+                (_statusFilter == 'Enabled' && skill.enabled) ||
+                (_statusFilter == 'Disabled' && !skill.enabled))
+            .where((skill) {
+              if (_rarityFilter == 'All') return true;
+              final category = skill.resolvedCategory;
+              final label = category == SkillCategory.trap ||
+                      category == SkillCategory.arenaTrap
+                  ? 'Special'
+                  : SkillLibrary.rarityOf(skill, _tuning)?.label;
+              return label == _rarityFilter;
+            })
             .where(
               (skill) =>
-                  query.isNotEmpty ||
                   category == null ||
-                  _categoryOf(skill) == category,
+                  category == 'All' ||
+                  _categoryOf(skill) == category ||
+                  (category == 'Traps' &&
+                      skill.resolvedCategory == SkillCategory.arenaTrap),
             )
             .where(
-              (skill) =>
-                  query.isEmpty ||
-                  skill.name.toLowerCase().contains(query) ||
-                  skill.baseKind.label.toLowerCase().contains(query),
+              (skill) {
+                if (searchTerms.isEmpty) return true;
+                final skillCategory = skill.resolvedCategory;
+                final rarityLabel = skillCategory == SkillCategory.trap ||
+                        skillCategory == SkillCategory.arenaTrap
+                    ? 'Special'
+                    : (SkillLibrary.rarityOf(skill, _tuning)?.label ??
+                        'Unassigned');
+                final searchable = [
+                  skill.name,
+                  skill.description,
+                  skill.baseKind.label,
+                  _categoryOf(skill),
+                  _categoryLabel(skillCategory),
+                  rarityLabel,
+                  skill.custom ? 'custom' : 'built-in',
+                  skill.enabled ? 'enabled' : 'disabled',
+                ].join(' ').toLowerCase();
+                return searchTerms.every(searchable.contains);
+              },
             )
             .toList()
           ..sort(
             (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
           );
     final visibleHeaders = headers;
+    final resultCount = skills.length + visibleHeaders.length;
     if (skills.isEmpty && visibleHeaders.isEmpty) {
-      return AnimatedEmptyState(
-        icon: custom ? Icons.auto_awesome_outlined : Icons.search_off,
-        message: custom
-            ? 'No custom skills yet. Duplicate a built-in skill to create one.'
-            : 'No matching skills.',
+      final emptyState = AnimatedEmptyState(
+        icon: Icons.search_off,
+        message: 'No matching skills. Adjust the filters or search.',
+      );
+      if (!showResultCount) return emptyState;
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '0 matching items',
+                key: const ValueKey('skill-library-result-count'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ),
+          Expanded(child: emptyState),
+        ],
       );
     }
     final descriptionTuning = _library.applyTo(_tuning);
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-      itemCount: skills.length + visibleHeaders.length,
+      itemCount: resultCount + (showResultCount ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index < visibleHeaders.length) return visibleHeaders[index];
-        final skill = skills[index - visibleHeaders.length];
+        if (showResultCount && index == 0) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+            child: Text(
+              '$resultCount matching ${resultCount == 1 ? 'item' : 'items'}',
+              key: const ValueKey('skill-library-result-count'),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          );
+        }
+        final itemIndex = index - (showResultCount ? 1 : 0);
+        if (itemIndex < visibleHeaders.length) return visibleHeaders[itemIndex];
+        final skill = skills[itemIndex - visibleHeaders.length];
+        // Rarity can be absent for an imported or partially configured skill.
+        // Keep that record visible rather than throwing while building the list.
         final tierLabel =
             skill.resolvedCategory == SkillCategory.trap ||
                 skill.resolvedCategory == SkillCategory.arenaTrap
             ? 'Special'
-            : SkillLibrary.rarityOf(skill, _tuning)!.label;
+            : (SkillLibrary.rarityOf(skill, _tuning)?.label ?? 'Unassigned');
         final details = <String>[
           tierLabel,
           if (skill.custom) skill.enabled ? 'Active' : 'Inactive',
@@ -1038,45 +1161,128 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
   }
 
-  Widget _builtInSkills() => DefaultTabController(
-    length: 4,
-    // Opens on Weapons; Global sits first, one tap away.
-    initialIndex: 1,
-    child: Column(
-      children: [
-        const TabBar(
-          key: ValueKey('built-in-skill-tabs'),
-          tabs: [
-            Tab(text: 'Global'),
-            Tab(text: 'Weapons'),
-            Tab(text: 'Power-ups'),
-            Tab(text: 'Traps'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
+  Widget _libraryFilters() {
+    Widget dropdown(String key, String value, List<String> choices,
+        ValueChanged<String> update) {
+      return DropdownButton<String>(
+        key: ValueKey('skill-filter-$key'),
+        value: value,
+        items: [
+          for (final choice in choices)
+            DropdownMenuItem(value: choice, child: Text(choice)),
+        ],
+        onChanged: (choice) {
+          if (choice != null) setState(() => update(choice));
+        },
+      );
+    }
+
+    final activeFilters = <(String, String, VoidCallback)>[
+      if (_categoryFilter != 'All')
+        ('Category', _categoryFilter, () => _categoryFilter = 'All'),
+      if (_sourceFilter != 'All')
+        ('Source', _sourceFilter, () => _sourceFilter = 'All'),
+      if (_statusFilter != 'All')
+        ('Status', _statusFilter, () => _statusFilter = 'All'),
+      if (_rarityFilter != 'All')
+        ('Rarity', _rarityFilter, () => _rarityFilter = 'All'),
+      if (_query.trim().isNotEmpty)
+        ('Search', _query.trim(), () {
+          _searchController.clear();
+          _query = '';
+        }),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _globalSettings(),
-              _list(false, category: 'Weapons'),
-              _list(false, category: 'Power-ups'),
-              _list(
-                false,
-                category: 'Traps',
-                headers: [
-                  for (final trapName in _arenaTrapFields.keys)
-                    if (_query.trim().isEmpty ||
-                        trapName.toLowerCase().contains(
-                          _query.trim().toLowerCase(),
-                        ) ||
-                        'arena'.contains(_query.trim().toLowerCase()))
-                      _arenaTrapCard(trapName),
-                ],
-              ),
+          dropdown('category', _categoryFilter,
+              const ['All', 'Weapons', 'Power-ups', 'Traps'],
+              (value) => _categoryFilter = value),
+          dropdown('source', _sourceFilter,
+              const ['All', 'Built-in', 'Custom'],
+              (value) => _sourceFilter = value),
+          dropdown('status', _statusFilter,
+              const ['All', 'Enabled', 'Disabled'],
+              (value) => _statusFilter = value),
+          dropdown('rarity', _rarityFilter,
+              const ['All', 'Normal', 'Rare', 'Epic', 'Special'],
+              (value) => _rarityFilter = value),
+          TextButton(
+            key: const ValueKey('clear-skill-filters'),
+            onPressed: _categoryFilter == 'All' &&
+                    _sourceFilter == 'All' &&
+                    _statusFilter == 'All' &&
+                    _rarityFilter == 'All' && _query.trim().isEmpty
+                ? null
+                : () => setState(() {
+              _categoryFilter = 'All';
+              _sourceFilter = 'All';
+              _statusFilter = 'All';
+              _rarityFilter = 'All';
+              _searchController.clear();
+              _query = '';
+            }),
+            child: const Text('Clear filters'),
+          ),
             ],
           ),
+          if (activeFilters.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Wrap(
+                key: const ValueKey('active-skill-filters'),
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final filter in activeFilters)
+                    InputChip(
+                      label: Text('${filter.$1}: ${filter.$2}'),
+                      tooltip: 'Remove ${filter.$1.toLowerCase()} filter',
+                      onDeleted: () => setState(filter.$3),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _unifiedLibrary() => Column(
+    children: [
+      _libraryFilters(),
+      Expanded(
+        child: _list(
+          null,
+          showResultCount: true,
+          category: _categoryFilter,
+          headers: _categoryFilter == 'Traps' &&
+                  (_sourceFilter == 'All' || _sourceFilter == 'Built-in') &&
+                  (_statusFilter == 'All' ||
+                      (_statusFilter == 'Enabled' && _tuning.arenaTrapsEnabled) ||
+                      (_statusFilter == 'Disabled' && !_tuning.arenaTrapsEnabled)) &&
+                  (_rarityFilter == 'All' || _rarityFilter == 'Special')
+              ? [
+                  for (final trapName in _arenaTrapFields.keys)
+                    if (_query.trim().isEmpty ||
+                        _query.trim().toLowerCase().split(RegExp(r'\s+')).every(
+                          (term) => '$trapName arena trap'
+                              .toLowerCase().contains(term),
+                        ))
+                      _arenaTrapCard(trapName),
+                ]
+              : const [],
         ),
-      ],
-    ),
+      ),
+    ],
   );
 
   @override
@@ -1109,6 +1315,12 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 },
               ),
             IconButton(
+              key: const ValueKey('convert-all-legacy-vfx'),
+              tooltip: 'Convert legacy Casting and Impact artwork in saved skills',
+              onPressed: _convertAllLegacyVfx,
+              icon: const Icon(Icons.auto_fix_high_outlined),
+            ),
+            IconButton(
               key: const ValueKey('import-skill-library'),
               tooltip: 'Import versioned JSON',
               onPressed: _importLibrary,
@@ -1123,8 +1335,8 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           ],
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Built-in'),
-              Tab(text: 'Custom'),
+              Tab(text: 'Skill Library'),
+              Tab(text: 'Global Defaults'),
             ],
           ),
         ),
@@ -1136,6 +1348,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   labelText: 'Search skills',
+                  hintText: 'Name, description, rarity, source or status',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _query.isEmpty
                       ? null
@@ -1155,7 +1368,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
               child: Text(
-                'Built-in edits affect gameplay immediately. Custom skills keep their own identity and may share a visual template without replacing one another.',
+                'Browse all skills together. Use filters to narrow by category, source, status, or rarity.',
                 style: AppText.ui(
                   12,
                   FontWeight.w500,
@@ -1165,7 +1378,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               ),
             ),
             Expanded(
-              child: TabBarView(children: [_builtInSkills(), _list(true)]),
+              child: TabBarView(children: [_unifiedLibrary(), _globalSettings()]),
             ),
           ],
         ),
@@ -1238,6 +1451,30 @@ class _SkillEditorState extends State<_SkillEditor>
     with SingleTickerProviderStateMixin {
   late final TabController _appearanceTabs;
   late SkillLibrary _effectLibrary = widget.library;
+
+  // Conversion is user initiated. The draft library and artwork fields change
+  // together, so cancelling the editor does not persist a partial migration.
+  void _migrateLegacyVfx() {
+    final draft = _result;
+    if (draft == null) return;
+    try {
+      final converted = _effectLibrary.migrateLegacyArtwork(draft);
+      setState(() {
+        _effectLibrary = converted.library;
+        _visualBindings = converted.skill.visualBindings;
+        _castingSpriteId = converted.skill.castingSpriteId;
+        _impactSpriteId = converted.skill.impactSpriteId;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Legacy VFX converted to Visual Events. Save the skill to keep changes.'),
+      ));
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Could not convert legacy VFX: $error'),
+      ));
+    }
+  }
+
   bool _saving = false;
   final _saveMessages = GlobalKey<ScaffoldMessengerState>();
 
@@ -1430,6 +1667,8 @@ class _SkillEditorState extends State<_SkillEditor>
   /// Shell settings (gun skills): Default (null) / On / Off, the sprite id (null: brass) and rest.
   late bool? _shellEnabled = widget.skill.shellEnabled;
   late String? _iconSpriteId = widget.skill.iconSpriteId;
+  late String? _pickupSpriteId = widget.skill.pickupSpriteId;
+  late String? _heldSpriteId = widget.skill.heldSpriteId;
   late String? _projectileSpriteId = widget.skill.projectileSpriteId;
   late bool _originEnabled = widget.skill.projectileOriginForward != null;
   late bool _areaRadiusEnabled = widget.skill.areaRadiusRatio != null;
@@ -1449,6 +1688,9 @@ class _SkillEditorState extends State<_SkillEditor>
   late bool _enabled = widget.skill.enabled;
   late bool _homing = widget.skill.homing;
   late bool _returnsToOrigin = widget.skill.returnsToOrigin;
+  late bool? _hideHeldWhileThrown = widget.skill.hideHeldWhileThrown;
+  late SkillWeaponClass? _weaponClass = widget.skill.weaponClass;
+  late SkillAttackDelivery? _attackDelivery = widget.skill.attackDelivery;
   late bool _trackNearestOpponent = widget.skill.trackNearestOpponent;
   late SkillTrigger? _trigger = widget.skill.trigger;
   late SkillTargeting? _targeting = widget.skill.targeting;
@@ -1695,6 +1937,9 @@ class _SkillEditorState extends State<_SkillEditor>
       _enabled = defaults.enabled;
       _homing = defaults.homing;
       _returnsToOrigin = defaults.returnsToOrigin;
+      _hideHeldWhileThrown = defaults.hideHeldWhileThrown;
+      _weaponClass = defaults.weaponClass;
+      _attackDelivery = defaults.attackDelivery;
       _trackNearestOpponent = defaults.trackNearestOpponent;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
@@ -1756,6 +2001,8 @@ class _SkillEditorState extends State<_SkillEditor>
       number('shellCount', defaults.shellCount);
       _shellEnabled = defaults.shellEnabled;
       _iconSpriteId = defaults.iconSpriteId;
+      _pickupSpriteId = defaults.pickupSpriteId;
+      _heldSpriteId = defaults.heldSpriteId;
       _projectileSpriteId = defaults.projectileSpriteId;
       _originEnabled = defaults.projectileOriginForward != null;
       _areaRadiusEnabled = defaults.areaRadiusRatio != null;
@@ -1861,13 +2108,13 @@ class _SkillEditorState extends State<_SkillEditor>
     );
   }
 
-  Future<void> _demoSkill() async {
+  Future<void> _demoSkill(TabController editorTabs) async {
     final skill = _result;
     if (skill == null) return;
     final effectMode = AppSettingsScope.of(context).explosionRenderMode;
     final library = _effectLibrary;
     final tuning = widget.tuning;
-    await showDialog<void>(
+    final editMode = await showDialog<String>(
       context: context,
       builder: (_) => SkillDemoDialog(
         skill: skill,
@@ -1876,6 +2123,17 @@ class _SkillEditorState extends State<_SkillEditor>
         effectMode: effectMode,
       ),
     );
+    if (!mounted || editMode == null) return;
+    // The demo returns the requested artwork role; keep the current draft.
+    // Open Visuals & Sprites and select its relevant existing subsection.
+    final subsection = switch (editMode) {
+      'Equipped' || 'Pickup' => 1,
+      'Projectile' => 2,
+      'Impact' => 3,
+      _ => 0,
+    };
+    _appearanceTabs.animateTo(subsection);
+    editorTabs.animateTo(3);
   }
 
   Future<void> _testInLiveArena() async {
@@ -1891,33 +2149,139 @@ class _SkillEditorState extends State<_SkillEditor>
     );
   }
 
-  void _showInfo() => showDialog<void>(
+  void _showArtworkFacingHelp() => showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Skill settings guide'),
-      content: const SingleChildScrollView(
-        child: Text(
-          'TABS: Identity holds behavior; Damage & Timing holds mechanics. Appearance has Artwork, Held & pickup, Projectiles, Effects, Area, Shells and Legacy subtabs. Draft values survive switching tabs. Numeric fields support manual entry and minus/plus steps.\n\n'
-          'ACTIVE IN MATCHES makes this independent custom skill available alongside the built-in skills.\n\n'
-          'VISUAL TEMPLATE supplies existing artwork and starting defaults. Custom skills keep their own settings.\n\n'
-          'TRIGGER decides when the behavior runs: on pickup, after aiming and firing, on collision, on a repeating match timer, after its owner takes damage, or after its owner eliminates an opponent. Timer and reactive triggers are innate while the custom skill is active; they do not require collecting the carrier.\n\n'
-          'TARGETING chooses the owner, nearest opponent, every opponent, the opponent in the ball\'s travel direction, or the opponent nearest a projected arena location.\n\n'
-          'DELIVERY supports immediate, projectile, area, beam, aura, orbit, and boundary-hazard behavior.\n\n'
-          'EFFECT decides what happens: damage, DoT, healing, shielding, freezing, stunning, speed, pulling, knockback, teleporting, equipping the carrier weapon, or disarming. The editor only shows parameters used by the selected effect and delivery. Weapons hide healing unless Healing effect is intentionally enabled. Damage fields apply to Arsenal life and All-Out lines. Duration controls timed effects. Shield hits controls how many attacks armor blocks. For skills with a configurable projectile / hit count, editing that count or Shells per shot updates both.\n\n'
-          'SECONDARY EFFECT runs immediately after the primary effect. START DELAY postpones the first activation. REPEAT COUNT includes the first activation; the interval controls the pause between later activations. DoT uses its own TICK INTERVAL. COOLDOWN prevents the same ball from activating the skill again too soon.\n\n'
-          'EFFECT COLOR tints generated impact particles. SCREEN SHAKE controls impact camera movement from none (0) to maximum (1). HANDEDNESS can preserve the carrier default or explicitly make a weapon one-handed or two-handed. GRIP INSET moves the held artwork inward by a fraction of the ball radius so its handle sits in the hand. TRACK NEAREST OPPONENT turns an equipped weapon artwork toward its nearest target.\n\n'
-          'ITEM and IMPACT visuals choose pixel-art sprites or vector rendering. Their previews update immediately.\n\n'
-          'SOUND plays when the skill activates. Use the Play button to preview it. YELL is the comic callout shown by the ball. BUBBLE SHAPE offers Shout for attacks, Speech for recovery, Thought for quiet or psychic skills, and Radio for tech or command skills.',
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Artwork facing'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Controls how held weapon artwork is oriented when the ball or its aim changes. '
+              'It affects appearance, not attack targeting or damage.',
+            ),
+            const SizedBox(height: 12),
+            for (final mode in SkillHeldFacing.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('${mode.label}: ${switch (mode) {
+                  SkillHeldFacing.automatic => 'Use the skill default orientation behavior.',
+                  SkillHeldFacing.mirror => 'Flip the artwork when facing left.',
+                  SkillHeldFacing.rotate => 'Rotate the artwork with the aim direction.',
+                  SkillHeldFacing.upright => 'Keep the artwork upright.',
+                }}'),
+              ),
+          ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(dialogContext),
           child: const Text('Close'),
         ),
       ],
     ),
   );
+
+  void _showInfoForSection(int section, TabController editorTabs) {
+    const sectionNames = [
+      'Identity & Availability',
+      'Mechanics',
+      'Timing & Delivery',
+      'Visuals & Sprites',
+      'Audio & Callouts',
+      'Test & Preview',
+    ];
+    const sectionGuides = [
+      'Configure name, description, category, availability, trigger, targeting, and effects. Changes are saved only when Save is pressed.',
+      'Configure damage, projectile count, hit radius, speed, spread, homing, return, explosions, and knockback. Visual scale does not change collision.',
+      'Configure start delay, repeat count, repeat interval, cooldown, damage-over-time tick interval, and overall duration. Repeat count includes the first activation.',
+      'Configure artwork, held and pickup presentation, projectile sprites, impact effects, area, shells, and legacy visual compatibility.',
+      'Configure the activation callout and audio. Sound and callout styling do not change damage.',
+      'Preview the current unsaved skill in the demo, live arena, or finisher preview before saving. Unsupported previews are disabled.',
+    ];
+    // Each Visuals & Sprites subsection has its own help. Keep the seven existing
+    // subsections and their backing controls unchanged for save compatibility.
+    const appearanceNames = [
+      'Artwork', 'Held & pickup', 'Projectiles', 'Effects',
+      'Area', 'Shells', 'Legacy',
+    ];
+    const appearanceGuides = [
+      'Artwork configures the shared tint and artwork previews. Tint changes '
+          'presentation, not damage or collision radius.',
+      'Held & pickup controls how the equipped weapon and pickup artwork '
+          'appear. Artwork Facing supports Automatic, Mirror when facing '
+          'left, Rotate with aim, and Stay upright. Equipped size and pickup '
+          'size are separate from damage and pickup collision.',
+      'Projectiles controls projectile artwork and its visual alignment. '
+          'Visual size is independent of the projectile hitbox and flight '
+          'behavior configured under Mechanics and Timing & Delivery.',
+      'Effects controls activation and impact artwork. Preview each effect '
+          'before saving. Changing effect artwork does not change damage.',
+      'Area shows the affected boundary. Boundary visibility, opacity, '
+          'color, and damage radius are separate from area artwork size. '
+          'Use Custom area radius only when an override is needed.',
+      'Shells configures casing ejection for supported projectile weapons. '
+          'Shell count may be linked to the shot count. Unsupported weapons '
+          'show a reason instead of enabling shell controls.',
+      'Legacy contains compatibility settings for existing skills and '
+          'artwork. Keep legacy values intact unless intentionally changing '
+          'an existing effect.',
+    ];
+    final appearanceIndex = _appearanceTabs.index.clamp(0, appearanceNames.length - 1);
+    final safeSection = section.clamp(0, sectionNames.length - 1);
+    final isAppearance = safeSection == 3;
+    final heading = isAppearance
+        ? '${sectionNames[safeSection]} / ${appearanceNames[appearanceIndex]}'
+        : sectionNames[safeSection];
+    final guidance = isAppearance
+        ? appearanceGuides[appearanceIndex]
+        : sectionGuides[safeSection];
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Skill settings guide'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(heading, style: Theme.of(dialogContext).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Text(guidance),
+              const SizedBox(height: 16),
+              const Text('Jump to section'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (var index = 0; index < sectionNames.length; index++)
+                    ActionChip(
+                      key: ValueKey('skill-guide-jump-$index'),
+                      tooltip: 'Open ${sectionNames[index]} in the skill editor',
+                      label: Text(sectionNames[index]),
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        editorTabs.animateTo(index);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   SkillDefinition? get _result {
     if (_name.text.trim().isEmpty ||
@@ -1954,6 +2318,9 @@ class _SkillEditorState extends State<_SkillEditor>
       areaGuideOpacity: _areaGuideOpacity,
       homing: _homing,
       returnsToOrigin: _returnsToOrigin,
+      hideHeldWhileThrown: _hideHeldWhileThrown,
+      weaponClass: _weaponClass,
+      attackDelivery: _attackDelivery,
       trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
       pickupDisplayScale: _double('pickupDisplayScale'),
@@ -2001,6 +2368,8 @@ class _SkillEditorState extends State<_SkillEditor>
       payloadSkillId: _payload,
       shellEnabled: _shellEnabled,
       iconSpriteId: _iconSpriteId,
+      pickupSpriteId: _pickupSpriteId,
+      heldSpriteId: _heldSpriteId,
       projectileSpriteId: _projectileSpriteId,
       impactSpriteId: _impactSpriteId,
       castingSpriteId: _castingSpriteId,
@@ -2135,7 +2504,9 @@ class _SkillEditorState extends State<_SkillEditor>
   List<Widget> _combineSection(SkillDefinition? result) {
     final current = result ?? widget.skill;
     final candidates = _effectLibrary.payloadCandidates(current, widget.tuning);
-    final problem = result == null ? null : _payloadProblem(result);
+    // Keep broken references visible even when another draft field is invalid.
+    // A missing payload is actionable independently of numeric validation.
+    final problem = _payloadProblem(result ?? widget.skill);
     final known = candidates.any((c) => c.id == _payload);
     Widget option(PowerUpKind kind, String label) => Row(
       children: [
@@ -2302,7 +2673,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _number('shellSize', 'Shell size', suffix: 'x'),
       _number('shellCount', 'Shells per shot / volley'),
       Text(_numbers.containsKey('count')
-        ? 'Linked to Projectile / hit count in Damage & Timing: changing either updates both. Gatling ejects on each round.'
+        ? 'Linked to Projectile / hit count in Mechanics: changing either updates both. Gatling ejects on each round.'
         : 'Casings ejected per shot. This built-in weapon has no adjustable projectile count.'),
       SwitchListTile(
         key: const ValueKey('skill-shell-random-rest'),
@@ -2317,6 +2688,57 @@ class _SkillEditorState extends State<_SkillEditor>
     ];
   }
 
+  // Reusable, keyboard/touch-accessible help for commonly edited fields.
+  // Descriptions intentionally document existing behavior only.
+  static const Map<String, String> _fieldHelp = {
+    'Skill name': 'The name displayed in the library and skill cards. Changing it does not change the skill identifier.',
+    'Description': 'Shown on the skill card. This text does not change the skill mechanics.',
+    'Category': 'Weapon is an equippable attack, Power-up grants an effect, Trap is placed by a skill, and Arena trap is an environmental hazard.',
+    'Item rarity': 'Controls the item tier used by the configured spawn rules. Built-in and custom skills may use different rarity sources.',
+    'Trigger': 'Selects the event that activates a composed skill, such as pickup, aimed fire, collision, timer, damage taken, or elimination.',
+    'Targeting': 'Chooses who or what receives the effect. The available choices depend on the skill behavior.',
+    'Delivery': 'Determines how an effect reaches its target: instantly, as a projectile, area, beam, aura, orbit, or boundary hazard.',
+    'Visual mode': 'Sprite uses artwork frames; vector draws the built-in shape. Visual mode does not change damage.',
+    'Artwork facing': 'Automatic follows the default orientation, Mirror flips when facing left, Rotate follows aim, and Upright stays upright.',
+    'Held facing': 'Automatic follows the default orientation, Mirror flips when facing left, Rotate follows aim, and Upright stays upright.',
+    'Projectile count': 'Number of projectiles created by a volley. Affects gameplay and may also determine casing count.',
+    'Cooldown': 'Minimum wait before the skill can activate again. Measured in seconds.',
+    'Start delay': 'Wait before the first activation. Measured in seconds.',
+    'Repeat count': 'Total activations including the first activation.',
+    'Repeat interval': 'Time between repeated activations. Measured in seconds.',
+    'Duration': 'How long a sustained skill effect lasts. Measured in seconds.',
+    'Shell size': 'Visual scale of ejected casings; does not change projectile damage.',
+    'Shells per shot / volley': 'Number of visual casings ejected per shot or volley; can be linked to projectile count.',
+    'Effect': 'The primary gameplay effect. Changing it can change damage, healing, protection or movement behavior.',
+    'Secondary effect': 'Optional additional gameplay effect applied alongside the primary effect.',
+    'Handedness': 'Controls which hand holds or displays the weapon, where supported.',
+    'Artwork tint': 'Tint applied to supported skill artwork. It does not change collision or damage.',
+    'Hand effect color': 'Color of the effect shown around the equipped weapon or hand.',
+    'Projectile / item visual': 'Selects sprite or vector rendering for the projectile or item without changing its collision shape.',
+    'Effect visuals': 'Selects how supported effects are rendered. The effect behavior remains configured separately.',
+    'Follow active move': 'When enabled, the visual follows the current active move where supported.',
+    'Yell': 'The short text displayed as a skill activation callout.',
+    'Callout style': 'Controls the presentation style of the activation message.',
+    'Bubble shape': 'Controls the callout bubble appearance. It does not affect gameplay.',
+    'Sound cue': 'Audio played for the selected skill event, where supported.',
+  };
+
+  void _showFieldHelp(String label, String description) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(label),
+        content: Text(description),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _fixedRow(String label, Widget control) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
@@ -2326,9 +2748,25 @@ class _SkillEditorState extends State<_SkillEditor>
           flex: 5,
           child: Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (_fieldHelp.containsKey(label))
+                  IconButton(
+                    key: ValueKey('skill-field-help-${label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}'),
+                    tooltip: 'About $label',
+                    icon: const Icon(Icons.help_outline, size: 18),
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                    onPressed: () => _showFieldHelp(label, _fieldHelp[label]!),
+                  ),
+              ],
             ),
           ),
         ),
@@ -2609,6 +3047,34 @@ class _SkillEditorState extends State<_SkillEditor>
     ),
   );
 
+  String? _numericHelp(String key, String label) {
+    final name = label.toLowerCase();
+    if (name.contains('damage')) {
+      return 'Damage controls the amount applied by this skill. Exact scaling depends on the selected mode and effect.';
+    }
+    if (name.contains('radius') || name.contains('range') || name.contains('reach')) {
+      return 'This setting controls a gameplay distance or affected area. Check the displayed unit and limits.';
+    }
+    if (name.contains('speed')) {
+      return 'Controls the speed of the selected movement or projectile behavior. Check the displayed unit.';
+    }
+    if (name.contains('duration') || name.contains('interval') ||
+        name.contains('cooldown') || name.contains('delay')) {
+      return 'Controls timing for this behavior. Check the displayed unit; a cooldown limits repeated activation.';
+    }
+    if (name.contains('count') || name.contains('shots') || name.contains('repeat')) {
+      return 'Controls the number of occurrences for this behavior. Check any linked options before changing it.';
+    }
+    if (name.contains('size') || name.contains('scale') || name.contains('offset') ||
+        name.contains('rotation') || name.contains('opacity')) {
+      return 'Controls the visual presentation or alignment of this element. It does not necessarily change the gameplay hitbox.';
+    }
+    if (name.contains('angle') || name.contains('spread')) {
+      return 'Controls the direction or angular spread of this behavior.';
+    }
+    return 'Configure $label for this skill. Check the displayed unit, valid range and any related options.';
+  }
+
   Widget _number(
     String key,
     String label, {
@@ -2626,6 +3092,16 @@ class _SkillEditorState extends State<_SkillEditor>
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
         child: Column(
           children: [
+            if (_numericHelp(key, label) case final description?)
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  key: ValueKey('skill-number-help-$key'),
+                  tooltip: 'About $label',
+                  icon: const Icon(Icons.help_outline, size: 18),
+                  onPressed: () => _showFieldHelp(label, description),
+                ),
+              ),
             _fixedRow(
               suffix != null ? '$label ($suffix)' : label,
               ValueListenableBuilder<TextEditingValue>(
@@ -2713,18 +3189,20 @@ class _SkillEditorState extends State<_SkillEditor>
         child: ScaffoldMessenger(
           key: _saveMessages,
           child: DefaultTabController(
-            length: 4,
+            length: 6,
             child: Scaffold(
               appBar: AppBar(
                 title: Text('Edit ${widget.skill.name}'),
-                bottom: const TabBar(
+                bottom: TabBar(
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
-                  tabs: [
-                    Tab(text: 'Identity'),
-                    Tab(text: 'Damage & Timing'),
-                    Tab(text: 'Appearance'),
-                    Tab(text: 'Callouts & Sounds'),
+                  tabs: const [
+                    Tab(key: ValueKey('skill-editor-tab-identity'), text: 'Identity'),
+                    Tab(key: ValueKey('skill-editor-tab-mechanics'), text: 'Mechanics'),
+                    Tab(key: ValueKey('skill-editor-tab-timing'), text: 'Timing & Delivery'),
+                    Tab(key: ValueKey('skill-editor-tab-visuals'), text: 'Visuals & Sprites'),
+                    Tab(key: ValueKey('skill-editor-tab-audio'), text: 'Audio & Callouts'),
+                    Tab(key: ValueKey('skill-editor-tab-preview'), text: 'Test & Preview'),
                   ],
                 ),
                 leading: IconButton(
@@ -2732,11 +3210,16 @@ class _SkillEditorState extends State<_SkillEditor>
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
-                  IconButton(
-                    key: const ValueKey('skill-settings-info'),
-                    tooltip: 'Skill settings guide',
-                    onPressed: _showInfo,
-                    icon: const Icon(Icons.info_outline),
+                  Builder(
+                    builder: (editorContext) => IconButton(
+                      key: const ValueKey('skill-settings-info'),
+                      tooltip: 'Skill settings guide',
+                      onPressed: () => _showInfoForSection(
+                        DefaultTabController.of(editorContext).index,
+                        DefaultTabController.of(editorContext),
+                      ),
+                      icon: const Icon(Icons.info_outline),
+                    ),
                   ),
                   TextButton(
                     key: const ValueKey('save-skill'),
@@ -2780,7 +3263,8 @@ class _SkillEditorState extends State<_SkillEditor>
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
+                      Builder(
+                        builder: (editorContext) => Expanded(
                         child: OutlinedButton(
                           key: const ValueKey('demo-skill'),
                           style: OutlinedButton.styleFrom(
@@ -2791,7 +3275,7 @@ class _SkillEditorState extends State<_SkillEditor>
                                   compatibilityIssues.isNotEmpty ||
                                   _payloadProblem(result) != null
                               ? null
-                              : _demoSkill,
+                              : () => _demoSkill(DefaultTabController.of(editorContext)),
                           child: const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Column(
@@ -2806,6 +3290,7 @@ class _SkillEditorState extends State<_SkillEditor>
                               ],
                             ),
                           ),
+                        ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -2871,6 +3356,9 @@ class _SkillEditorState extends State<_SkillEditor>
                     padding: const EdgeInsets.all(16),
                     children: [
                       _section('Identity', 'Name, category and availability.'),
+                      // Keep invalid fired-skill references discoverable even
+                      // when the rest of the Identity form is very long.
+                      ..._combineSection(result),
                       if (_numbers.keys.any((key) => _numberError(key) != null))
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -3003,7 +3491,6 @@ class _SkillEditorState extends State<_SkillEditor>
                           onChanged: (value) =>
                               setState(() => _enabled = value),
                         ),
-                      ..._combineSection(result),
                       _section(
                         'Behavior',
                         'Choose when the skill activates and what it does.',
@@ -3314,29 +3801,9 @@ class _SkillEditorState extends State<_SkillEditor>
                     padding: const EdgeInsets.all(16),
                     children: [
                       _section(
-                        'Damage & timing',
-                        'Values use the units shown beside each control.',
+                        'Mechanics',
+                        'Damage, projectiles, targeting and collision behavior.',
                       ),
-                      if (widget.skill.isComposed) ...[
-                        _section(
-                          'Activation timing',
-                          'Delay, repeats and cooldown for the whole move.',
-                        ),
-                        _number('startDelay', 'Start delay', suffix: 's'),
-                        _number('repeatCount', 'Repeat count', suffix: 'times'),
-                        _number(
-                          'repeatInterval',
-                          'Repeat interval',
-                          suffix: 's',
-                        ),
-                        _number('cooldown', 'Cooldown', suffix: 's'),
-                        if (_usesEffect(SkillEffectType.damageOverTime))
-                          _number(
-                            'tickInterval',
-                            'DoT tick interval',
-                            suffix: 's',
-                          ),
-                      ],
                       _section(
                         'Hit damage',
                         'Damage on contact and damage over time.',
@@ -3367,8 +3834,6 @@ class _SkillEditorState extends State<_SkillEditor>
                         'Duration & projectiles',
                         'Lifetime, shot count and projectile flight.',
                       ),
-                      if (_numbers.containsKey('duration'))
-                        _number('duration', 'Duration', suffix: 's'),
                       if (_numbers.containsKey('count') &&
                           (!widget.skill.isComposed || _usesProjectileDelivery))
                         _number('count', 'Projectile / hit count'),
@@ -3447,6 +3912,55 @@ class _SkillEditorState extends State<_SkillEditor>
                               setState(() => _returnsToOrigin = value),
                           title: const Text('Return to launch point'),
                         ),
+                      if (_category == SkillCategory.weapon) ...[
+                        const SizedBox(height: 12),
+                        _fixedRow(
+                          'Weapon class',
+                          DropdownButtonFormField<SkillWeaponClass>(
+                            key: const ValueKey('skill-weapon-class'),
+                            isExpanded: true,
+                            initialValue: _weaponClass ?? widget.skill.effectiveWeaponClass,
+                            decoration: const InputDecoration(),
+                            items: [
+                              for (final value in SkillWeaponClass.values)
+                                DropdownMenuItem(value: value, child: Text(value.name)),
+                            ],
+                            onChanged: (value) => setState(() => _weaponClass = value),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _fixedRow(
+                          'Attack delivery',
+                          DropdownButtonFormField<SkillAttackDelivery>(
+                            key: const ValueKey('skill-attack-delivery'),
+                            isExpanded: true,
+                            initialValue: _attackDelivery ?? widget.skill.effectiveAttackDelivery,
+                            decoration: const InputDecoration(),
+                            items: [
+                              for (final value in SkillAttackDelivery.values)
+                                DropdownMenuItem(value: value, child: Text(value.name)),
+                            ],
+                            onChanged: (value) => setState(() => _attackDelivery = value),
+                          ),
+                        ),
+                        const Text('Weapon class and attack delivery describe presentation. '
+                            'Mechanical delivery above still controls actual attacks.'),
+                      ],
+                      if (_category == SkillCategory.weapon &&
+                          _usesProjectileDelivery)
+                        SwitchListTile.adaptive(
+                          key: const ValueKey('skill-hide-held-while-thrown'),
+                          title: const Text('Hide held artwork while thrown'),
+                          subtitle: const Text(
+                            'Hide the equipped sprite while its projectile is in flight. '
+                            'It reappears when the projectile is collected or spent. '
+                            'Boomerang uses this behavior by default. Other weapons stay visible unless enabled.',
+                          ),
+                          value: _hideHeldWhileThrown ??
+                              widget.skill.baseKind == PowerUpKind.boomerang,
+                          onChanged: (value) =>
+                              setState(() => _hideHeldWhileThrown = value),
+                        ),
                       if (_usesProjectileDelivery)
                         SwitchListTile.adaptive(
                           key: const ValueKey('skill-explosion'),
@@ -3483,6 +3997,36 @@ class _SkillEditorState extends State<_SkillEditor>
                               : null,
                         ),
                       const SizedBox(height: 12),
+                    ],
+                  ),
+                  ListView(
+                    key: PageStorageKey('skill-editor-timing-$_resetGeneration'),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _section('Timing & Delivery',
+                          'Activation, duration, repeat behavior and cooldown. Projectile speed and spread remain in Mechanics.'),
+                      if (widget.skill.isComposed) ...[
+                        _section(
+                          'Activation timing',
+                          'Delay, repeats and cooldown for the whole move.',
+                        ),
+                        _number('startDelay', 'Start delay', suffix: 's'),
+                        _number('repeatCount', 'Repeat count', suffix: 'times'),
+                        _number(
+                          'repeatInterval',
+                          'Repeat interval',
+                          suffix: 's',
+                        ),
+                        _number('cooldown', 'Cooldown', suffix: 's'),
+                        if (_usesEffect(SkillEffectType.damageOverTime))
+                          _number(
+                            'tickInterval',
+                            'DoT tick interval',
+                            suffix: 's',
+                          ),
+                      ],
+                      if (_numbers.containsKey('duration'))
+                        _number('duration', 'Duration', suffix: 's'),
                     ],
                   ),
                   Column(
@@ -3658,6 +4202,59 @@ class _SkillEditorState extends State<_SkillEditor>
                                   'Held & pickup',
                                   'Equipped size, hand grip and pickup size.',
                                 ),
+                                const Text(
+                                  'Choose independent artwork for the library icon, arena pickup, and equipped weapon. '
+                                  'Unassigned Pickup and Held slots use Icon artwork.',
+                                ),
+                                const SizedBox(height: 8),
+                                for (final slot in [
+                                  (
+                                    'Icon artwork',
+                                    _iconSpriteId,
+                                    (String? v) => _iconSpriteId = v,
+                                  ),
+                                  (
+                                    'Pickup artwork (defaults to Icon)',
+                                    _pickupSpriteId,
+                                    (String? v) => _pickupSpriteId = v,
+                                  ),
+                                  (
+                                    'Held artwork (defaults to Icon)',
+                                    _heldSpriteId,
+                                    (String? v) => _heldSpriteId = v,
+                                  ),
+                                ])
+                                  ListTile(
+                                    key: ValueKey('skill-artwork-slot-${slot.$1}'),
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: SpriteThumbnail(
+                                      id: slot.$2 ?? _iconSpriteId,
+                                    ),
+                                    title: Text(slot.$1),
+                                    subtitle: Text(
+                                      slot.$2 == null
+                                          ? slot.$1 == 'Icon artwork'
+                                              ? 'Built-in art'
+                                              : 'Using Icon artwork'
+                                          : SpriteRegistry.has(slot.$2!)
+                                              ? SpriteRegistry.displayLabel(slot.$2!)
+                                              : 'Missing sprite - using built-in art',
+                                    ),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () async {
+                                      final picked = await selectSkillSprite(
+                                        context,
+                                        title: slot.$1,
+                                        current: slot.$2,
+                                      );
+                                      if (picked != null && mounted) {
+                                        setState(() => slot.$3(
+                                          picked.isEmpty ? null : picked,
+                                        ));
+                                      }
+                                    },
+                                  ),
+                                const Divider(height: 32),
                                 if (widget.skill.baseKind ==
                                         PowerUpKind.fireWall ||
                                     widget.skill.baseKind ==
@@ -3725,7 +4322,16 @@ class _SkillEditorState extends State<_SkillEditor>
                                   ),
                                   _fixedRow(
                                     'Artwork facing',
-                                    DropdownButton<SkillHeldFacing>(
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        TextButton.icon(
+                                          key: const ValueKey('skill-held-facing-help'),
+                                          onPressed: _showArtworkFacingHelp,
+                                          icon: const Icon(Icons.help_outline, size: 18),
+                                          label: const Text('What does Artwork facing mean?'),
+                                        ),
+                                        DropdownButton<SkillHeldFacing>(
                                       key: const ValueKey('skill-held-facing'),
                                       isExpanded: true,
                                       value: _heldFacing,
@@ -3739,6 +4345,8 @@ class _SkillEditorState extends State<_SkillEditor>
                                       ],
                                       onChanged: (mode) =>
                                           setState(() => _heldFacing = mode!),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   if (widget.skill.baseKind.isWeapon)
@@ -3960,51 +4568,37 @@ class _SkillEditorState extends State<_SkillEditor>
                               children: [
                                 _section(
                                   'Legacy',
-                                  'Fallback artwork used when no shared effect is assigned.',
+                                  'Compatibility artwork for older skills. Use Held & pickup for Icon, Pickup, and Held slots.',
                                 ),
                                 const Divider(height: 32),
-                                const Text('Legacy artwork fallbacks'),
+                                if (_castingSpriteId != null || _impactSpriteId != null) ...[
+                                  const Text(
+                                    'Convert legacy Casting and Impact artwork into reusable Visual Events. '
+                                    'Existing Visual Event bindings are preserved. '
+                                    'Conversion is only saved when you save the skill.',
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    key: const ValueKey('migrate-legacy-vfx'),
+                                    onPressed: _migrateLegacyVfx,
+                                    icon: const Icon(Icons.auto_fix_high),
+                                    label: const Text('Convert legacy VFX'),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                const Text('Projectile artwork'),
                                 const SizedBox(height: 8),
                                 for (final slot in [
-                                  (
-                                    'Casting artwork',
-                                    _castingSpriteId,
-                                    (String? v) => _castingSpriteId = v,
-                                  ),
-                                  (
-                                    'Icon / held artwork',
-                                    _iconSpriteId,
-                                    (String? v) => _iconSpriteId = v,
-                                  ),
                                   (
                                     'Projectile artwork',
                                     _projectileSpriteId,
                                     (String? v) => _projectileSpriteId = v,
                                   ),
-                                  (
-                                    'Impact / effect artwork',
-                                    _impactSpriteId,
-                                    (String? v) => _impactSpriteId = v,
-                                  ),
                                 ])
                                   ListTile(
                                     contentPadding: EdgeInsets.zero,
                                     leading: SpriteThumbnail(id: slot.$2),
-                                    title: Wrap(
-                                      spacing: 8,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      children: [
-                                        Text(slot.$1),
-                                        if (slot.$1 == 'Casting artwork' ||
-                                            slot.$1 ==
-                                                'Impact / effect artwork')
-                                          const LegacyTag(
-                                            explanation:
-                                                'Legacy fallback artwork. A shared effect binding for this role takes priority; existing skills keep using this artwork until a binding is assigned.',
-                                          ),
-                                      ],
-                                    ),
+                                    title: Text(slot.$1),
                                     subtitle: Text(
                                       slot.$2 == null
                                           ? 'Built-in art'
@@ -4076,7 +4670,7 @@ class _SkillEditorState extends State<_SkillEditor>
                     padding: const EdgeInsets.all(16),
                     children: [
                       _section(
-                        'Callouts & sound',
+                        'Audio & Callouts',
                         'What players see and hear when this skill activates.',
                       ),
                       _fixedRow(
@@ -4201,6 +4795,61 @@ class _SkillEditorState extends State<_SkillEditor>
                           ),
                         ],
                       ),
+                    ],
+                  ),
+                  ListView(
+                    key: PageStorageKey('skill-editor-preview-$_resetGeneration'),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _section('Test & Preview',
+                          'Inspect the current editor values before saving.'),
+                      Builder(
+                        builder: (previewContext) => Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            for (final target in const [
+                              (0, 'Identity'),
+                              (1, 'Mechanics'),
+                              (2, 'Timing & Delivery'),
+                              (3, 'Visuals & Sprites'),
+                              (4, 'Audio & Callouts'),
+                            ])
+                              ActionChip(
+                                key: ValueKey('skill-preview-edit-${target.$1}'),
+                                tooltip: 'Edit ${target.$2} without leaving the skill editor',
+                                label: Text('Edit ${target.$2}'),
+                                onPressed: () => DefaultTabController.of(
+                                  previewContext,
+                                ).animateTo(target.$1),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        leading: const Icon(Icons.play_circle_outline),
+                        title: const Text('Skill Demo'),
+                        subtitle: const Text('Preview casting, equipped, projectile, impact and pickup visuals.'),
+                        onTap: result == null ? null : _previewSkill,
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.sports_esports_outlined),
+                        title: const Text('Live Arena'),
+                        subtitle: const Text('Test the skill in the arena.'),
+                        onTap: result == null ? null : _testInLiveArena,
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.movie_filter_outlined),
+                        title: const Text('Finisher'),
+                        subtitle: const Text('Available for skills that can deal damage.'),
+                        onTap: result?.canDamage == true ? _previewFinisher : null,
+                      ),
+                      if (compatibilityIssues.isNotEmpty)
+                        ...compatibilityIssues.map((issue) => ListTile(
+                          leading: const Icon(Icons.warning_amber_outlined),
+                          title: Text(issue),
+                        )),
                     ],
                   ),
                 ],

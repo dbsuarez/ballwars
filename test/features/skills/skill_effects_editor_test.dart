@@ -53,8 +53,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ListTile, name));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(Tab, 'Appearance'));
-    await tester.tap(find.widgetWithText(Tab, 'Appearance'));
+    await tester.ensureVisible(find.widgetWithText(Tab, 'Visuals & Sprites'));
+    await tester.tap(find.widgetWithText(Tab, 'Visuals & Sprites'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.widgetWithText(Tab, 'Effects'));
     await tester.tap(find.widgetWithText(Tab, 'Effects'));

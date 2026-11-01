@@ -21,8 +21,9 @@ class AnimatedEmptyState extends StatelessWidget {
         scale: scale,
         child: Opacity(opacity: scale.clamp(0, 1), child: child),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -30,6 +31,7 @@ class AnimatedEmptyState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
           ],
+        ),
         ),
       ),
     ),

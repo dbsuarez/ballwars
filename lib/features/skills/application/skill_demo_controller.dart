@@ -21,6 +21,8 @@ class SkillDemoController {
   final PowerUpConfig tuning;
   late MatchSimulationController match;
   bool facingRight = true;
+  ArenaShape arenaShape = ArenaShape.circle;
+  CenterObstacle centerObstacle = CenterObstacle.none;
   bool playing = false;
   bool started = false;
   double elapsed = 0;
@@ -59,6 +61,8 @@ class SkillDemoController {
         ),
       ],
       arenaRadius: 180,
+      arenaShape: arenaShape,
+      centerObstacle: centerObstacle,
       ballScale: 1.7,
       seed: 42,
       mode: MatchMode.arsenal,
@@ -132,6 +136,37 @@ class SkillDemoController {
       );
     }
   }
+
+  /// Places a collectible in the isolated demo using the real arena pickup
+  /// collection and painter. Kept away from the center obstacle and balls.
+  /// This does not change a live match or persist a skill setting.
+  void spawnPreviewPickup() {
+    final field = match.powerUps!.field;
+    field.removeWhere((item) => item.skillId == skill.id);
+    final radius = match.arenaRadius;
+    final y = -radius * .68;
+    field.add(FieldPowerUp(
+      kind: skill.baseKind,
+      skillId: skill.id,
+      position: Offset(0, y),
+      spawnStep: match.stepCount,
+    ));
+  }
+
+  /// Stop replay without discarding the current arena objects. This is used
+  /// when inspecting or clearing a pickup after a replay has started.
+  void stopPlayback() {
+    playing = false;
+    started = false;
+    elapsed = 0;
+  }
+
+  void clearPreviewPickup() {
+    match.powerUps!.field.removeWhere((item) => item.skillId == skill.id);
+  }
+
+  bool get hasPreviewPickup =>
+      match.powerUps!.field.any((item) => item.skillId == skill.id);
 
   void activate() {
     reset();

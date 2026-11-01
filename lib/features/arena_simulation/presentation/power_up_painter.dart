@@ -1599,7 +1599,7 @@ class PowerUpPainter {
             useSprite: p.usesSprite(item.kind, skillId: item.skillId),
             spriteId: p
                 .visualSkill(item.kind, skillId: item.skillId)
-                .iconSpriteId,
+                .effectivePickupSpriteId,
           );
         } else {
           _paintToken(
@@ -1618,7 +1618,7 @@ class PowerUpPainter {
             whiteBackground: whitePickupBackgrounds,
             spriteId: p
                 .visualSkill(item.kind, skillId: item.skillId)
-                .iconSpriteId,
+                .effectivePickupSpriteId,
             step: state.step,
           );
         }
@@ -3280,6 +3280,7 @@ class PowerUpPainter {
     Color Function(PowerUpKind kind)? handEffectColor,
     PowerUpKind Function(PowerUpKind kind, int slot)? artworkKind,
     String? Function(PowerUpKind kind, int slot)? iconSpriteId,
+    bool Function(PowerUpKind kind, int slot)? hideHeldWeapon,
   }) {
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       final flailSlot = ball.held == PowerUpKind.orbitingFlail ? 0 : 1;
@@ -3897,7 +3898,7 @@ class PowerUpPainter {
     }
     for (var slot = 0; slot < 2; slot++) {
       final weapon = slot == 0 ? ball.held : ball.heldSecondary;
-      if (weapon == null) continue;
+      if (weapon == null || (hideHeldWeapon?.call(weapon, slot) ?? false)) continue;
       SkillArtworkTint.begin(
         canvas,
         artworkTint?.call(weapon, slot) ?? 0xFFFFFFFF,

@@ -48,7 +48,21 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   bool _distanceChosen = false, _facingChosen = false;
   late final Future<void> _preferences;
   bool _inspect = false;
+  String _focusedArtwork = 'Pickup';
+  // Event-focused replays stop at the first matching gameplay event. These
+  // are real arena events, not a separate fabricated animation timeline.
+  String? _awaitedPreviewEvent;
+  int _eventStartShots = 0;
+  int _eventStartHits = 0;
+  int _eventStartBlasts = 0;
+  int _eventStartSlashes = 0;
+  int _eventStartBlocks = 0;
+  int _eventStartImpacts = 0;
+  String? _previewEventMessage;
   bool _preparing = false;
+  // Invalidates asynchronous artwork preparation when a preview is reset,
+  // switched, or the dialog is closed.
+  int _previewGeneration = 0;
   String? _error;
   final _heard = <String, int>{};
   int _hits = 0,
@@ -68,6 +82,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   }
 
   Future<void> _restorePreferences() async {
+    final initialGeneration = _previewGeneration;
     final speed = double.tryParse(
       await DevicePrefs.read('skill-demo-speed') ?? '',
     );
@@ -75,7 +90,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     final inspect = await DevicePrefs.read('skill-demo-inspect');
     final distance = await DevicePrefs.read('skill-demo-distance');
     final facing = await DevicePrefs.read('skill-demo-facing');
-    if (mounted) {
+    if (mounted && initialGeneration == _previewGeneration) {
       setState(() {
         if (!_soundChosen && sound != null) _sound = sound == 'true';
         if (!_inspectChosen && inspect != null) _inspect = inspect == 'true';
@@ -90,10 +105,13 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
             ratio <= 1) {
           _demo.distanceRatio = ratio;
         }
-        _demo.reset();
+        // Restoring preferences must not erase a pickup or an already
+        // activated preview while asynchronous device storage is loading.
+        if (!_demo.started && !_demo.hasPreviewPickup) _demo.reset();
       });
     }
-    if (mounted && !_speedChosen && {.25, .5, 1.0}.contains(speed)) {
+    if (mounted && initialGeneration == _previewGeneration &&
+        !_speedChosen && {.25, .5, 1.0}.contains(speed)) {
       setState(() => _demo.speed = speed!);
     }
   }
@@ -130,6 +148,36 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     _pickups = p.pickups;
   }
 
+  // Shared by synchronous activation and frame updates. A single event
+  // should stop playback regardless of which side of the first tick it occurs.
+  void _checkPreviewEvent() {
+    final event = _awaitedPreviewEvent;
+    if (event == null) return;
+    final powerUps = _demo.match.powerUps!;
+    final reached = switch (event) {
+      'Casting' => powerUps.castingArtwork.isNotEmpty ||
+          powerUps.muzzleArtwork.isNotEmpty,
+      'Projectile' => powerUps.shots > _eventStartShots ||
+          powerUps.projectiles.isNotEmpty,
+      'Impact' => powerUps.hits > _eventStartHits ||
+          powerUps.blasts > _eventStartBlasts ||
+          powerUps.slashes > _eventStartSlashes ||
+          powerUps.blocks > _eventStartBlocks ||
+          powerUps.weaponImpacts.length > _eventStartImpacts,
+      _ => false,
+    };
+    if (reached) {
+      _awaitedPreviewEvent = null;
+      _previewEventMessage =
+          '$event event reached. Playback paused for inspection.';
+      _demo.playing = false;
+      _previous = null;
+    } else if (!_demo.playing) {
+      _awaitedPreviewEvent = null;
+      _previewEventMessage = 'No observable $event event occurred during this replay.';
+    }
+  }
+
   void _tick(Duration time) {
     final old = _previous;
     _previous = time;
@@ -137,14 +185,18 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     try {
       _demo.step((time - old).inMicroseconds / 1000000);
       _audio();
+      _checkPreviewEvent();
       if (!_demo.playing) _ticker.stop();
       if (mounted) setState(() {});
     } catch (error) {
       _ticker.stop();
-      setState(() {
-        _demo.playing = false;
-        _error = 'Demo could not continue: $error';
-      });
+      _previous = null;
+      _awaitedPreviewEvent = null;
+      _previewEventMessage = null;
+      _demo.stopPlayback();
+      if (mounted) {
+        setState(() => _error = 'Demo could not continue: $error');
+      }
     }
   }
 
@@ -164,8 +216,12 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   }
 
   Future<void> _start() async {
+    final generation = ++_previewGeneration;
     _ticker.stop();
+    _demo.stopPlayback();
     _previous = null;
+    _awaitedPreviewEvent = null;
+    _previewEventMessage = null;
     _heard.clear();
     _hits = _shots = _slashes = _blocks = _blasts = _pickups = 0;
     setState(() {
@@ -175,16 +231,62 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     try {
       await _preferences;
       await _ensureArtwork();
-      if (!mounted) return;
+      if (!mounted || generation != _previewGeneration) return;
+      // Activation resets the isolated match. Capture counters from the
+      // fresh match before activating, so a previous replay cannot shift
+      // the event baseline.
+      _demo.reset();
+      final powerUps = _demo.match.powerUps!;
+      _eventStartShots = powerUps.shots;
+      _eventStartHits = powerUps.hits;
+      _eventStartBlasts = powerUps.blasts;
+      _eventStartSlashes = powerUps.slashes;
+      _eventStartBlocks = powerUps.blocks;
+      _eventStartImpacts = powerUps.weaponImpacts.length;
+      _awaitedPreviewEvent =
+          _focusedArtwork == 'Casting' ||
+          _focusedArtwork == 'Projectile' ||
+          _focusedArtwork == 'Impact'
+              ? _focusedArtwork
+              : null;
       _demo.activate();
       _audio();
+      _checkPreviewEvent();
       setState(() => _error = null);
-      _ticker.start();
+      if (_demo.playing) _ticker.start();
     } catch (error) {
-      if (mounted) setState(() => _error = 'Demo could not start: $error');
+      if (mounted && generation == _previewGeneration) {
+        // A failed replay must never leave the prior arena playing or a
+        // stale event target waiting to pause a later replay.
+        _ticker.stop();
+        _previous = null;
+        _awaitedPreviewEvent = null;
+        _previewEventMessage = null;
+        _demo.stopPlayback();
+        setState(() => _error = 'Demo could not start: $error');
+      }
     } finally {
-      if (mounted) setState(() => _preparing = false);
+      if (mounted && generation == _previewGeneration) {
+        setState(() => _preparing = false);
+      }
     }
+  }
+
+  // Every arena-control mutation invalidates an in-flight asynchronous
+  // artwork load. Otherwise a previously requested replay can activate after
+  // the user has changed the arena or placed/cleared a pickup.
+  void _mutatePreviewArena(VoidCallback mutation) {
+    _awaitedPreviewEvent = null;
+    _previewEventMessage = null;
+    ++_previewGeneration;
+    _preparing = false;
+    _ticker.stop();
+    _previous = null;
+    setState(() {
+      _demo.stopPlayback();
+      mutation();
+      _error = null;
+    });
   }
 
   void _changeDistance(double? value) {
@@ -195,6 +297,10 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   }
 
   void _reset() {
+    _awaitedPreviewEvent = null;
+    _previewEventMessage = null;
+    ++_previewGeneration;
+    _preparing = false;
     _ticker.stop();
     _previous = null;
     setState(() {
@@ -203,7 +309,66 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     });
   }
 
+  // Switching artwork focus must not leave a pickup or an earlier skill
+  // replay visible under the newly selected mode. Reset only the isolated
+  // demo; the editor draft and persistent preferences are untouched.
+  void _selectArtworkFocus(String mode) {
+    if (_focusedArtwork == mode) return;
+    _awaitedPreviewEvent = null;
+    _previewEventMessage = null;
+    ++_previewGeneration;
+    _preparing = false;
+    _ticker.stop();
+    _previous = null;
+    setState(() {
+      _focusedArtwork = mode;
+      _demo.reset();
+      _error = null;
+    });
+  }
+
+  // Focus actions use the same isolated arena as the normal skill demo.
+  // Pickup is an arena object; Equipped inspects the actual held state.
+  // Other modes replay the real skill to the first observable event.
+  Future<void> _previewFocusedArtwork() async {
+    if (_focusedArtwork == 'Pickup') {
+      _awaitedPreviewEvent = null;
+      _previewEventMessage = null;
+      ++_previewGeneration;
+      _preparing = false;
+      _ticker.stop();
+      _previous = null;
+      setState(() {
+        _demo.reset();
+        _demo.spawnPreviewPickup();
+        _error = null;
+      });
+      return;
+    }
+    if (_focusedArtwork == 'Equipped') {
+      _awaitedPreviewEvent = null;
+      _previewEventMessage = null;
+      ++_previewGeneration;
+      _preparing = false;
+      _ticker.stop();
+      _previous = null;
+      setState(() {
+        // reset() equips weapons through the same simulation path used by
+        // arena matches, without firing a projectile or advancing time.
+        _demo.reset();
+        _error = null;
+      });
+      return;
+    }
+    await _start();
+  }
+
   void _pause() {
+    // A finished replay cannot be resumed: the simulation has already
+    // reached its bounded end. Use Replay to start a fresh isolated match.
+    if (!_demo.started || (!_demo.playing && _demo.elapsed >= _demo.duration)) {
+      return;
+    }
     setState(() => _demo.playing = !_demo.playing);
     _previous = null;
     _demo.playing ? _ticker.start() : _ticker.stop();
@@ -211,6 +376,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
 
   @override
   void dispose() {
+    ++_previewGeneration;
     _ticker.dispose();
     super.dispose();
   }
@@ -314,6 +480,75 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           ),
                         ),
                       ),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        children: [
+                          DropdownButton<ArenaShape>(
+                            key: const ValueKey('skill-demo-arena-shape'),
+                            value: _demo.arenaShape,
+                            items: [
+                              for (final shape in ArenaShape.values)
+                                DropdownMenuItem(
+                                  value: shape,
+                                  child: Text('Arena: ${shape.label}'),
+                                ),
+                            ],
+                            onChanged: (shape) {
+                              if (shape == null) return;
+                              _mutatePreviewArena(() {
+                                _demo.arenaShape = shape;
+                                _demo.reset();
+                              });
+                            },
+                          ),
+                          DropdownButton<CenterObstacle>(
+                            key: const ValueKey('skill-demo-center-obstacle'),
+                            value: _demo.centerObstacle,
+                            items: [
+                              for (final obstacle in CenterObstacle.values)
+                                DropdownMenuItem(
+                                  value: obstacle,
+                                  child: Text('Obstacle: ${obstacle.label}'),
+                                ),
+                            ],
+                            onChanged: (obstacle) {
+                              if (obstacle == null) return;
+                              _mutatePreviewArena(() {
+                                _demo.centerObstacle = obstacle;
+                                _demo.reset();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            key: const ValueKey('skill-demo-spawn-pickup'),
+                            onPressed: () => _mutatePreviewArena(_demo.spawnPreviewPickup),
+                            icon: const Icon(Icons.add_location_alt_outlined),
+                            label: const Text('Spawn pickup'),
+                          ),
+                          OutlinedButton.icon(
+                            key: const ValueKey('skill-demo-clear-pickup'),
+                            onPressed: _demo.hasPreviewPickup
+                                ? () => _mutatePreviewArena(_demo.clearPreviewPickup)
+                                : null,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Clear pickup'),
+                          ),
+                        ],
+                      ),
+                      const Text(
+                        'Pickup uses the real arena artwork and scaling near the upper edge. '
+                        'Reset clears the preview pickup.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12),
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -395,6 +630,65 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                         style: TextStyle(fontSize: 12),
                       ),
                       const SizedBox(height: 10),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Artwork focus', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        key: const ValueKey('skill-demo-artwork-modes'),
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          for (final mode in const [
+                            'Casting', 'Equipped', 'Projectile', 'Impact', 'Pickup',
+                          ])
+                            ChoiceChip(
+                              key: ValueKey('skill-demo-mode-${mode.toLowerCase()}'),
+                              label: Text(mode),
+                              selected: _focusedArtwork == mode,
+                              onSelected: (_) => _selectArtworkFocus(mode),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          OutlinedButton.icon(
+                            key: const ValueKey('skill-demo-preview-focused-artwork'),
+                            onPressed: _preparing ? null : _previewFocusedArtwork,
+                            icon: const Icon(Icons.play_circle_outline),
+                            label: Text(switch (_focusedArtwork) {
+                              'Pickup' => 'Show pickup in arena',
+                              'Equipped' => 'Inspect equipped in arena',
+                               'Casting' => 'Replay to first casting event',
+                               'Projectile' => 'Replay to first projectile',
+                               'Impact' => 'Replay to first impact',
+                               _ => 'Replay skill in arena',
+                            }),
+                          ),
+                          TextButton.icon(
+                            key: const ValueKey('skill-demo-edit-focused-artwork'),
+                            onPressed: () => Navigator.pop(context, _focusedArtwork),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: Text('Edit $_focusedArtwork artwork'),
+                          ),
+                        ],
+                      ),
+                      Text(
+                         'Selected: $_focusedArtwork. Pickup places artwork in the arena; Equipped inspects the held state without firing. Casting, Projectile and Impact pause at the first corresponding observable arena event (when one occurs). These are not isolated animation tracks.',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                       if (_previewEventMessage != null)
+                         Text(
+                           _previewEventMessage!,
+                           key: const ValueKey('skill-demo-event-status'),
+                           style: const TextStyle(fontSize: 12),
+                         ),
+                      const SizedBox(height: 8),
                       ValueListenableBuilder<int>(
                         valueListenable: SpriteRegistry.revision,
                         builder: (_, _, _) => Row(
@@ -407,8 +701,14 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                               'Not assigned',
                             ),
                             _art(
+                              'Pickup',
+                              skill.effectivePickupSpriteId ??
+                                  PowerUpSprites.iconId(skill.displayKind),
+                              'Built-in',
+                            ),
+                            _art(
                               'Equipped',
-                              skill.iconSpriteId ??
+                              skill.effectiveHeldSpriteId ??
                                   PowerUpSprites.iconId(skill.displayKind),
                               'Built-in',
                             ),
@@ -618,7 +918,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           key: const ValueKey('pause-demo-skill'),
                           tooltip: _demo.playing ? 'Pause demo' : 'Resume demo',
                           onPressed:
-                              _demo.started && _demo.elapsed < _demo.duration
+                              !_preparing && _demo.started && _demo.elapsed < _demo.duration
                               ? _pause
                               : null,
                           icon: Icon(
@@ -639,31 +939,47 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                       onPressed: _preparing
                           ? null
                           : () async {
-                              setState(() => _preparing = true);
+                                                             final generation = ++_previewGeneration;
+                              // Incoming-hit inspection is a new preview action.
+                              // Discard any prior event target and playback clock.
+                              _ticker.stop();
+                              _previous = null;
+                              _awaitedPreviewEvent = null;
+                              _previewEventMessage = null;
+                              setState(() {
+                                _preparing = true;
+                                _error = null;
+                              });
                               try {
+                                await _preferences;
                                 await _ensureArtwork();
-                                if (!mounted) return;
+                                if (!mounted || generation != _previewGeneration) return;
                                 if (!_demo.started ||
                                     _demo.elapsed >= _demo.duration) {
                                   _heard.clear();
                                   _hits = _shots = _slashes = _blocks =
                                       _blasts = _pickups = 0;
                                 }
-                                _demo.incomingHit();
+                                                                 _demo.incomingHit();
                                 _audio();
-                                _previous = null;
-                                if (!_ticker.isActive) _ticker.start();
+                                // A completed or paused preview must not
+                                // leave an idle ticker running indefinitely.
+                                if (_demo.playing) _ticker.start();
                                 setState(() => _error = null);
                               } catch (error) {
-                                _ticker.stop();
-                                if (mounted) {
+                                if (mounted && generation == _previewGeneration) {
+                                                                     _ticker.stop();
+                                  _previous = null;
+                                  _demo.stopPlayback();
                                   setState(
                                     () => _error =
                                         'Incoming-hit test could not start: $error',
                                   );
                                 }
                               } finally {
-                                if (mounted) setState(() => _preparing = false);
+                                if (mounted && generation == _previewGeneration) {
+                                  setState(() => _preparing = false);
+                                }
                               }
                             },
                       icon: const Icon(Icons.shield_outlined),
@@ -696,6 +1012,9 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
+                  border: _focusedArtwork == label
+                      ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                      : null,
                 ),
                 child: image == null
                     ? Text(

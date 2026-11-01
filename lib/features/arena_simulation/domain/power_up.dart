@@ -270,7 +270,7 @@ class Projectile {
   Offset velocity;
   int wallBounces = 0;
   bool returning;
-  final Offset? returnTo;
+  Offset? returnTo;
   final double renderScale;
   final double spinDegreesPerSecond;
   final Set<SimulationBall> hitTargets = {};
@@ -278,6 +278,21 @@ class Projectile {
   /// Shots fired as one attack (a shotgun blast, a gatling burst) share a non-zero id, so a shield
   /// that breaks on the first of them softens the rest too. 0: a single shot.
   final int volley;
+
+  /// Transfer a reflected shot to the defender. A returning projectile
+  /// must follow its new owner instead of its original fixed launch point.
+  void transferOwnership(SimulationBall reflector, {required bool returnsToOrigin}) {
+    final previousOwner = owner;
+    owner = reflector;
+    target = previousOwner;
+    hitTargets
+      ..clear()
+      ..add(reflector);
+    if (returnsToOrigin) {
+      returnTo = null;
+      returning = false;
+    }
+  }
 
   /// Set once it has hit something or left the arena.
   bool spent = false;

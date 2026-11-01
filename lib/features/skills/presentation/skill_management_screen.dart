@@ -23,6 +23,10 @@ import '../../settings/presentation/power_up_test_screen.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/skill_library.dart';
+import '../domain/skill_behavior_advisor.dart';
+import '../domain/skill_trap_presets.dart';
+import '../domain/skill_behavior_presets.dart';
+import '../domain/skill_advanced_compatibility.dart';
 import 'grip_preview_dialog.dart';
 import 'skill_demo_dialog.dart';
 import 'skill_effects_editor.dart';
@@ -242,12 +246,49 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     return (SkillLibrary.withOwnRarity(edited.skill, rarity, _tuning), _tuning);
   }
 
-  Future<void> _edit(SkillDefinition skill) async {
-    final edited = await showModalBottomSheet<_SkillEditResult>(
+  Future<void> _restoreBuiltIn(SkillDefinition skill) async {
+    if (!_library.hasBuiltInOverride(skill.id)) return;
+    final confirmed = await showDialog<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _SkillEditor(
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Restore built-in skill?'),
+        content: Text(
+          'Restore ${skill.name} to its original skill settings? '
+          'Custom skills, other built-ins, and shared artwork will be kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm-restore-built-in'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    final restored = _library.restoreBuiltIn(skill.id);
+    if (widget.onSave != null) {
+      await widget.onSave!(SkillManagementResult(
+        library: restored,
+        tuning: _tuning,
+        effectVisuals: _effectVisuals,
+      ));
+    }
+    if (!mounted) return;
+    setState(() => _library = restored);
+  }
+
+  Future<void> _edit(SkillDefinition skill) async {
+    // The six-section editor is a full-screen workflow. Keeping it in a
+    // modal bottom sheet leaves a second route overlay above the library,
+    // which can intercept taps on Save Library after editing.
+    final edited = await Navigator.of(context).push<_SkillEditResult>(
+      MaterialPageRoute(
+        builder: (_) => _SkillEditor(
         skill: skill,
         library: _library,
         tuning: _tuning,
@@ -273,6 +314,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   });
                 }
               },
+        ),
       ),
     );
     if (edited == null || !mounted) return;
@@ -559,6 +601,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
               onSelected: (value) {
                 if (value == 'edit') _edit(skill);
                 if (value == 'duplicate') _duplicate(skill);
+                if (value == 'restore') _restoreBuiltIn(skill);
                 if (value == 'delete') {
                   setState(() => _library = _library.removeCustom(skill.id));
                 }
@@ -569,6 +612,11 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   value: 'duplicate',
                   child: Text('Duplicate'),
                 ),
+                if (_library.hasBuiltInOverride(skill.id))
+                  const PopupMenuItem(
+                    value: 'restore',
+                    child: Text('Restore original settings'),
+                  ),
                 if (skill.custom)
                   const PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
@@ -1499,6 +1547,9 @@ class _SkillEditorState extends State<_SkillEditor>
     setState(() => _saving = true);
     try {
       await widget.onSave!(edited);
+      // Direct-save editors remain open for successive edits and feedback.
+      // The library's explicit Save Library action belongs to the route-only
+      // workflow (widget.onSave == null), which pops above.
       if (mounted) {
         _saveMessages.currentState!
           ..hideCurrentSnackBar()
@@ -3180,7 +3231,10 @@ class _SkillEditorState extends State<_SkillEditor>
   @override
   Widget build(BuildContext context) {
     final result = _result;
-    final compatibilityIssues = result?.compatibilityIssues ?? const <String>[];
+    final compatibilityIssues = <String>[
+      ...?result?.compatibilityIssues,
+      if (result != null) ...SkillAdvancedCompatibility.issues(result),
+    ];
     final performanceIssues = result?.performanceIssues ?? const <String>[];
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -3369,6 +3423,28 @@ class _SkillEditorState extends State<_SkillEditor>
                             ),
                           ),
                         ),
+                      if (result != null &&
+                          SkillBehaviorAdvisor.review(result).isNotEmpty)
+                        Card(
+                          key: const ValueKey('skill-behavior-advice'),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Skill configuration guidance',
+                                    style: TextStyle(fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 6),
+                                const Text('Advisory only. Existing and experimental skills can still be saved.'),
+                                for (final advice in SkillBehaviorAdvisor.review(result))
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text('• ${advice.message} ${advice.suggestion}'),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
                       _fixedRow(
                         'Skill name',
                         TextField(
@@ -3431,6 +3507,50 @@ class _SkillEditorState extends State<_SkillEditor>
                               setState(() => _category = value!),
                         ),
                       ),
+                      if (_category == SkillCategory.trap ||
+                          _category == SkillCategory.arenaTrap)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('skill-trap-preset'),
+                            icon: const Icon(Icons.tune),
+                            label: const Text('Apply trap behavior preset'),
+                            onPressed: () async {
+                              final preset = await showDialog<SkillTrapPreset>(
+                                context: context,
+                                builder: (dialogContext) => SimpleDialog(
+                                  title: const Text('Choose trap behavior'),
+                                  children: [
+                                    for (final option in SkillTrapPreset.values)
+                                      SimpleDialogOption(
+                                        onPressed: () => Navigator.pop(dialogContext, option),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(option.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                            Text(option.description),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                              if (!mounted || preset == null) return;
+                              final values = SkillTrapPresets.values(preset);
+                              setState(() {
+                                _trigger = values.trigger;
+                                _targeting = values.targeting;
+                                _delivery = values.delivery;
+                                _numbers['triggerInterval']!.text = '${values.triggerIntervalSeconds}';
+                                _numbers['tickInterval']!.text = '${values.tickIntervalSeconds}';
+                                _numbers['areaRadius']!.text = '${values.areaRadiusPercent}';
+                                _numbers['cooldown']!.text = '${values.cooldownSeconds}';
+                                // Rebuild dropdown fields with the newly selected values.
+                                _resetGeneration++;
+                              });
+                            },
+                          ),
+                        ),
                       if (_rarity != null) ...[
                         const SizedBox(height: 8),
                         _fixedRow(
@@ -3496,10 +3616,68 @@ class _SkillEditorState extends State<_SkillEditor>
                         'Choose when the skill activates and what it does.',
                       ),
                       if (widget.skill.isComposed) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('skill-behavior-preset'),
+                            icon: const Icon(Icons.auto_fix_high),
+                            label: const Text('Apply behavior starting point'),
+                            onPressed: () async {
+                              final preset = await showDialog<SkillBehaviorPreset>(
+                                context: context,
+                                builder: (dialogContext) => SimpleDialog(
+                                  title: const Text('Choose behavior starting point'),
+                                  children: [
+                                    for (final option in SkillBehaviorPreset.values)
+                                      SimpleDialogOption(
+                                        onPressed: () => Navigator.pop(dialogContext, option),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(option.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                            Text(option.description),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                              if (!mounted || preset == null) return;
+                              final values = SkillBehaviorPresets.values(preset);
+                              setState(() {
+                                _trigger = values.trigger;
+                                _targeting = values.targeting;
+                                _delivery = values.delivery;
+                                _attackDelivery = values.attackDelivery;
+                                if (preset == SkillBehaviorPreset.hybridBladeShot ||
+                                    preset == SkillBehaviorPreset.hybridReturningBlade) {
+                                  _weaponClass = SkillWeaponClass.hybrid;
+                                  final reach = double.tryParse(_numbers['meleeReach']?.text ?? '') ?? 0;
+                                  if (reach <= 0) _numbers['meleeReach']?.text = '1.2';
+                                }
+                                _homing = values.homing;
+                                _returnsToOrigin = values.returnsToOrigin;
+                                if (values.triggerIntervalSeconds != null) {
+                                  _numbers['triggerInterval']?.text = '${values.triggerIntervalSeconds}';
+                                }
+                                if (values.cooldownSeconds != null) {
+                                  _numbers['cooldown']?.text = '${values.cooldownSeconds}';
+                                }
+                                _numbers['count']?.text = '${values.projectileCount}';
+                                _areaRadiusEnabled = values.areaRadiusPercent != null;
+                                if (values.areaRadiusPercent != null) {
+                                  _numbers['areaRadius']!.text = '${values.areaRadiusPercent}';
+                                }
+                                _resetGeneration++;
+                              });
+                            },
+                          ),
+                        ),
                         _fixedRow(
                           'Trigger',
                           DropdownButtonFormField<SkillTrigger>(
                             isExpanded: true,
+                            // Stable finder key across editor resets and preset changes.
                             key: const ValueKey('skill-trigger'),
                             initialValue: _trigger,
                             decoration: const InputDecoration(),

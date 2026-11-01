@@ -1842,6 +1842,20 @@ class SkillLibrary {
     return _withSkills(overrides: Map.unmodifiable(next));
   }
 
+  /// True when this built-in has a stored per-skill edit. Custom skills are
+  /// independent records and are never treated as built-in overrides.
+  bool hasBuiltInOverride(String id) =>
+      id.startsWith('builtin.') && overrides.containsKey(id);
+
+  /// Restore only this built-in's factory definition. Keep unrelated skills,
+  /// custom skills, visual effects, and global configuration untouched.
+  /// This changes the library draft; callers decide when to persist it.
+  SkillLibrary restoreBuiltIn(String id) {
+    if (!hasBuiltInOverride(id)) return this;
+    final next = Map<String, SkillDefinition>.of(overrides)..remove(id);
+    return _withSkills(overrides: Map.unmodifiable(next));
+  }
+
   /// Built-in weapons that fire separate projectiles, so another skill can fire them. Beams, sprays and
   /// walls are left out: their built-in effect isn't a projectile.
   static bool isProjectileKind(PowerUpKind kind) =>

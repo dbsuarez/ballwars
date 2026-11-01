@@ -1,3 +1,5 @@
+import '../../skills/domain/native_advanced_skill_config.dart';
+import '../../skills/domain/skill_projectile_budget.dart';
 import '../../../core/sprites/facing_offset.dart';
 import 'power_up_spawn_selector.dart';
 import 'dart:math' as math;
@@ -7,6 +9,9 @@ import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../../skills/domain/skill_library.dart';
+import '../../skills/domain/skill_hybrid_contact_policy.dart';
+import '../../skills/domain/skill_trigger_scheduler.dart';
+import '../../skills/domain/skill_activation_gate.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/fan_line.dart';
 import '../domain/arena_boundary_geometry.dart';
@@ -93,6 +98,39 @@ class PowerUpSystem {
   int compositionLimitHits = 0;
   final Map<(SimulationBall, String), int> _composedCooldownUntil = {};
   final Map<SimulationBall, double> _lastVital = {};
+  // Per-owner passive trigger state. The effect executor remains responsible
+  // for start delays, repeats and effect-step scheduling.
+  final Map<(SimulationBall, String), SkillTriggerScheduler>
+      _passiveSchedulers = {};
+
+  SkillTriggerScheduler _passiveScheduler(
+    SimulationBall owner,
+    SkillDefinition skill,
+  ) => _passiveSchedulers.putIfAbsent(
+    (owner, skill.id),
+    () => SkillTriggerScheduler(skill.copyWith(
+      startDelaySeconds: 0,
+      repeatCount: 1,
+      cooldownSeconds: 0,
+    )),
+  );
+
+  bool _passiveTriggered(
+    SimulationBall owner,
+    SkillDefinition skill,
+    SkillTrigger event,
+    double time,
+  ) {
+    final scheduler = _passiveScheduler(owner, skill);
+    // A rejected activation already owns a retry slot. Do not enqueue
+    // another damage event every frame while draining that retry.
+    if (event != SkillTrigger.timer && scheduler.pendingCount == 0 &&
+        !scheduler.signal(event, time)) {
+      return false;
+    }
+    return scheduler.advance(time).isNotEmpty;
+  }
+
 
   int get activeCustomEffectCount =>
       _composedProjectiles.length +
@@ -378,6 +416,19 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    // Respawn is a new life. Old traps and custom projectiles must not
+    // outlive their owner and damage players after the reset.
+    mines.removeWhere((mine) => identical(mine.owner, ball));
+    projectiles.removeWhere((shot) =>
+        identical(shot.owner, ball) && _composedProjectiles.containsKey(shot));
+    final liveShotsAfterReset = projectiles.toSet();
+    _composedProjectiles.removeWhere(
+        (shot, _) => !liveShotsAfterReset.contains(shot));
+    _composedIssuers.removeWhere(
+        (shot, _) => !liveShotsAfterReset.contains(shot));
+    // End native multi-target cinematic effects that involve this life.
+    omegaTendrils.removeWhere((effect) =>
+        identical(effect.owner, ball) || identical(effect.target, ball));
     persistentEffects.reset(ball);
     castingArtwork.removeWhere((effect) => identical(effect.owner, ball));
     muzzleArtwork.removeWhere((effect) => identical(effect.owner, ball));
@@ -387,9 +438,6 @@ class PowerUpSystem {
         (a) => identical(a.owner, ball) || identical(a.target, ball),
       );
       omnislashAttacks.removeWhere(
-        (a) => identical(a.owner, ball) || identical(a.target, ball),
-      );
-      shadowCloneAttacks.removeWhere(
         (a) => identical(a.owner, ball) || identical(a.target, ball),
       );
     }
@@ -429,6 +477,7 @@ class PowerUpSystem {
     _stunnedVelocity.remove(ball);
     _gooVelocity.remove(ball);
     _burstVolley.remove(ball);
+    _burstShellSkill.remove(ball);
     _firedWeaponHold.remove(ball);
     _shieldedVolley.remove(ball);
     _volleyLabel.remove(ball);
@@ -445,6 +494,8 @@ class PowerUpSystem {
           identical(effect.owner, ball) || identical(effect.target, ball),
     );
     _composedCooldownUntil.removeWhere((key, _) => identical(key.$1, ball));
+    _passiveSchedulers.removeWhere((key, _) => identical(key.$1, ball));
+    _lastVital.remove(ball);
     pulls.removeWhere(
       (pull) => identical(pull.owner, ball) || identical(pull.target, ball),
     );
@@ -457,10 +508,17 @@ class PowerUpSystem {
         _releaseEnergyWave(attack, launchAway: false);
       }
     }
-    shadowCloneAttacks.removeWhere((attack) => identical(attack.owner, ball));
-    for (final attack in shadowCloneAttacks) {
-      // The next clone picks a new victim.
-      if (identical(attack.target, ball)) attack.target = null;
+    // Remove attacks from this life. Surviving owners retarget on their
+    // next update instead of striking the newly respawned player.
+    shadowCloneAttacks.removeWhere((attack) =>
+        identical(attack.owner, ball) ||
+        (match.simulationRevision >= 2 && identical(attack.target, ball)));
+    if (match.simulationRevision < 2) {
+      for (final attack in shadowCloneAttacks) {
+        if (identical(attack.target, ball)) {
+          attack.target = null;
+        }
+      }
     }
   }
 
@@ -542,12 +600,10 @@ class PowerUpSystem {
   ) {
     if (skill.isComposed) {
       final payload = match.skillLibrary.resolvePayload(skill, _t);
-      if (skill.delivery == SkillDelivery.projectile || payload != null) {
-        _launchComposed(owner, target, skill, payload: payload);
-      } else {
-        _executeComposed(owner, skill, primary: target);
-      }
-      if (skill.resolvedCategory == SkillCategory.weapon) {
+      final activated = skill.delivery == SkillDelivery.projectile || payload != null
+          ? _launchComposed(owner, target, skill, payload: payload)
+          : _executeComposed(owner, skill, primary: target);
+      if (activated && skill.resolvedCategory == SkillCategory.weapon) {
         _holdFiredWeapon(owner, skill.baseKind, skillId: skill.id);
       }
       return;
@@ -805,25 +861,55 @@ class PowerUpSystem {
     }
   }
 
+  void _dispatchPassive(
+    SimulationBall owner,
+    SkillDefinition skill,
+    SkillTrigger event,
+    double time, {
+    SimulationBall? primary,
+  }) {
+    if (!_passiveTriggered(owner, skill, event, time)) return;
+    if (!_executeComposed(owner, skill, primary: primary) &&
+        event != SkillTrigger.elimination) {
+      _passiveScheduler(owner, skill).retryRejected(time);
+    }
+  }
+
   void _processPassiveTriggers() {
-    if (!automaticPassiveTriggers) return;
-    final number = match.stepCount + 1;
+    if (!automaticPassiveTriggers) {
+      _passiveSchedulers.clear();
+      _lastVital.clear();
+      return;
+    }
+    final time = (match.stepCount + 1) / 60.0;
     final timerSkills = _activeComposedSkills(SkillTrigger.timer).toList();
-    final damageSkills = _activeComposedSkills(
-      SkillTrigger.damageTaken,
-    ).toList();
+    final damageSkills =
+        _activeComposedSkills(SkillTrigger.damageTaken).toList();
+    // Remove passive state for actors or skills no longer participating.
+    // Otherwise a removed custom skill may retain an old timer if recreated
+    // with the same ID, and eliminated actors may retain pending events.
+    final liveBalls = match.state.balls.where(_alive).toSet();
+    final activePassiveIds = <String>{
+      for (final skill in timerSkills) skill.id,
+      for (final skill in damageSkills) skill.id,
+      for (final skill in _activeComposedSkills(SkillTrigger.elimination)) skill.id,
+    };
+    _passiveSchedulers.removeWhere((key, _) =>
+        !liveBalls.contains(key.$1) || !activePassiveIds.contains(key.$2));
+    _lastVital.removeWhere((ball, _) => !liveBalls.contains(ball));
     for (final ball in match.state.balls) {
       final current = _vital(ball);
       final tookDamage = current < (_lastVital[ball] ?? current);
       _lastVital[ball] = current;
       if (!_alive(ball)) continue;
       for (final skill in timerSkills) {
-        final interval = (skill.triggerIntervalSeconds * 60).round();
-        if (number % interval == 0) _executeComposed(ball, skill);
+        _dispatchPassive(ball, skill, SkillTrigger.timer, time);
       }
-      if (tookDamage) {
-        for (final skill in damageSkills) {
-          _executeComposed(ball, skill);
+
+      for (final skill in damageSkills) {
+        // Also drain rejected activations on frames without fresh damage.
+        if (tookDamage || _passiveScheduler(ball, skill).pendingCount > 0) {
+          _dispatchPassive(ball, skill, SkillTrigger.damageTaken, time);
         }
       }
     }
@@ -833,14 +919,32 @@ class PowerUpSystem {
     Iterable<SimulationBall> eliminated,
     Map<SimulationBall, SimulationBall> attackers,
   ) {
+    final victims = eliminated.toSet();
+    if (victims.isEmpty) return;
+    mines.removeWhere((mine) => victims.contains(mine.owner));
+    // A composed projectile belongs to a specific life. Remove it when its
+    // owner is eliminated, before another actor can inherit its impact job.
+    projectiles.removeWhere((shot) =>
+        victims.contains(shot.owner) && _composedProjectiles.containsKey(shot));
+    final survivingShots = projectiles.toSet();
+    _composedProjectiles.removeWhere((shot, _) => !survivingShots.contains(shot));
+    _composedIssuers.removeWhere((shot, _) => !survivingShots.contains(shot));
+    _passiveSchedulers.removeWhere((key, _) => victims.contains(key.$1));
+    _lastVital.removeWhere((ball, _) => victims.contains(ball));
+    _scheduledComposedEffects.removeWhere((effect) => victims.contains(effect.owner));
+    _effectStepQueue.removeWhere((effect) => victims.contains(effect.owner));
+    _customDamageOverTime.removeWhere((effect) => victims.contains(effect.owner));
+    _composedCooldownUntil.removeWhere((key, _) => victims.contains(key.$1));
     if (!automaticPassiveTriggers) return;
     final skills = _activeComposedSkills(SkillTrigger.elimination).toList();
     if (skills.isEmpty) return;
-    for (final victim in eliminated) {
+    final time = (match.stepCount + 1) / 60.0;
+    for (final victim in victims) {
       final owner = attackers[victim];
       if (owner == null || !_alive(owner)) continue;
       for (final skill in skills) {
-        _executeComposed(owner, skill, primary: victim);
+        _dispatchPassive(owner, skill, SkillTrigger.elimination, time,
+            primary: victim);
       }
     }
   }
@@ -919,8 +1023,6 @@ class PowerUpSystem {
   /// Gives [ball] the pickup [p] and takes [p] off the field. Power-ups apply
   /// without replacing equipment; a weapon replaces the one equipped weapon.
   void pickUp(SimulationBall ball, FieldPowerUp p) {
-    persistentEffects.rememberEquipment(ball);
-    field.remove(p);
     final matchingCustom = match.skillLibrary.custom
         .where((skill) => skill.enabled && skill.baseKind == p.kind)
         .toList();
@@ -930,13 +1032,22 @@ class PowerUpSystem {
         : match.simulationRevision < 3 && matchingCustom.length == 1
         ? matchingCustom.single
         : match.skillLibrary.builtIn(p.kind, _t);
+    // Do not consume a pickup while its composed activation is unavailable.
+    // The executor also checks target availability and scheduling capacity.
+    if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
+      if (!_executeComposed(ball, activeSkill)) return;
+      persistentEffects.rememberEquipment(ball);
+      field.remove(p);
+      if (activeSkill.resolvedCategory != SkillCategory.weapon) {
+        ball.activeEffectSkillIds[p.kind] = activeSkill.id;
+      }
+      pickups++;
+      return;
+    }
+    persistentEffects.rememberEquipment(ball);
+    field.remove(p);
     if (activeSkill.resolvedCategory != SkillCategory.weapon) {
       ball.activeEffectSkillIds[p.kind] = activeSkill.id;
-    }
-    if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
-      pickups++;
-      _executeComposed(ball, activeSkill);
-      return;
     }
     if (!p.kind.isWeapon) _skillSound(p.kind);
     if (p.kind == PowerUpKind.mine || p.kind == PowerUpKind.phaseMine) {
@@ -1190,7 +1301,13 @@ class PowerUpSystem {
   void _startShadowClone(SimulationBall owner) {
     final target = _nearestTarget(owner);
     if (target == null) return;
-    final clones = _t.shadowCloneCount;
+    // Native cinematic strikes honor the configured count without replacing
+    // their original animation or turning the strikes into projectiles.
+    final configured = match.skillLibrary
+        .activeFor(PowerUpKind.shadowClone, _t).projectileCount;
+    final clones = NativeAdvancedSkillConfig.cloneCount(
+      configured, _t.shadowCloneCount,
+    );
     final attack = ShadowCloneAttack(
       owner: owner,
       target: target,
@@ -1326,8 +1443,16 @@ class PowerUpSystem {
   };
 
   void _launchOmegaTendrils(SimulationBall owner) {
-    for (final target in match.state.balls) {
-      if (identical(target, owner) || !_alive(target)) continue;
+    final configured = match.skillLibrary
+        .activeFor(PowerUpKind.omegaTendrils, _t).projectileCount;
+    final limit = NativeAdvancedSkillConfig.targetLimit(configured);
+    final targets = NativeAdvancedTargetSelection.select<SimulationBall>(
+      owner: owner,
+      candidates: match.state.balls,
+      isActive: _alive,
+      limit: limit,
+    );
+    for (final target in targets) {
       omegaTendrils.add(
         OmegaTendril(
           owner: owner,
@@ -1747,8 +1872,15 @@ class PowerUpSystem {
     String? skillId,
   }) {
     final composed = _skillForId(weapon, skillId);
-    if (composed.isComposed && composed.trigger == SkillTrigger.collision) {
-      _executeComposed(attacker, composed, primary: target);
+    // Physical blades, shields and flails retain their contact-hit semantics
+    // even when their custom skill also defines a projectile/aimed behavior.
+    // Only composed non-contact carriers use the effect activation path.
+    if (SkillHybridContactPolicy.usesComposedContact(composed) &&
+        !(weapon.isBlade || weapon == PowerUpKind.shield ||
+          weapon == PowerUpKind.orbitingFlail)) {
+      // A hybrid aimed-fire weapon can strike on contact as well as shoot.
+      // A rejected activation must not destroy an equipped weapon.
+      if (!_executeComposed(attacker, composed, primary: target)) return;
       attacker.removeWeapon(
         weapon,
         skillId: match.simulationRevision >= 3 ? skillId : null,
@@ -1801,7 +1933,7 @@ class PowerUpSystem {
       kind,
       at: at,
       from: attacker,
-      skillId: match.simulationRevision >= 3 ? composed.id : null,
+      skillId: match.simulationRevision >= 2 ? composed.id : null,
     );
   }
 
@@ -2504,7 +2636,7 @@ class PowerUpSystem {
   /// Fires [skill]. With a [payload] (the skill it fires, from [SkillLibrary.resolvePayload]) every shot
   /// is that skill's projectile: its damage, flight, return, explosion, knockback, size, tint and sound
   /// travel with the shot ([_composedProjectiles]), while [skill] decides how many shots and their spread.
-  void _launchComposed(
+  bool _launchComposed(
     SimulationBall owner,
     SimulationBall target,
     SkillDefinition skill, {
@@ -2517,15 +2649,23 @@ class PowerUpSystem {
           ? const Offset(1, 0)
           : delta / delta.distance;
       final count = (skill.projectileCount ?? 1).clamp(1, 100);
+      final admitted = SkillProjectileBudget.admitted(
+        active: _composedProjectiles.length,
+        requested: count,
+        limit: maxComposedProjectiles,
+      );
+      if (admitted == 0) return false;
       final spread = skill.spreadDegrees ?? 0;
-      for (var index = 0; index < count; index++) {
-        if (_composedProjectiles.length >= maxComposedProjectiles) break;
+      var launched = 0;
+      for (var index = 0; index < admitted; index++) {
         // One casing per volley (with its first shot, so a capped volley drops none), and only when
         // the firing skill switches shells on (as before: none).
         if (index == 0 && skill.dropsShells) {
           _ejectShellCasing(owner, baseDirection, skill);
         }
-        final offset = count == 1 ? 0.0 : (index / (count - 1) - 0.5) * spread;
+        final offset = SkillProjectileBudget.spreadOffset(
+          index: index, admitted: admitted, spreadDegrees: spread,
+        );
         final radians =
             math.atan2(baseDirection.dy, baseDirection.dx) +
             offset * math.pi / 180;
@@ -2566,21 +2706,31 @@ class PowerUpSystem {
         _composedProjectiles[shot] = shotSkill;
         if (payload != null) _composedIssuers[shot] = skill;
         shots++;
+        launched++;
       }
+      if (launched == 0) return false;
       _announceSkill(owner, skill);
-      return;
+      return true;
     }
-    _executeComposed(owner, skill, primary: target);
+    return _executeComposed(owner, skill, primary: target);
   }
 
-  void _executeComposed(
+  /// Returns true only when an activation was accepted (applied or queued).
+  /// Callers that consume a pickup or weapon must honor this result.
+  bool _executeComposed(
     SimulationBall owner,
     SkillDefinition skill, {
     SimulationBall? primary,
     List<SimulationBall>? affectedTargets,
+    bool projectileImpact = false,
   }) {
     final cooldownKey = (owner, skill.id);
-    if ((_composedCooldownUntil[cooldownKey] ?? 0) > match.stepCount) return;
+    if (!projectileImpact && !SkillActivationGate.isReady(
+      match.stepCount,
+      _composedCooldownUntil[cooldownKey],
+    )) {
+      return false;
+    }
     var targets = switch (skill.targeting) {
       SkillTargeting.self => [owner],
       SkillTargeting.nearestOpponent => [
@@ -2599,16 +2749,10 @@ class PowerUpSystem {
       null => const <SimulationBall>[],
     };
     targets = affectedTargets ?? _filterDeliveryTargets(owner, targets, skill);
-    if (targets.isEmpty &&
-        !skill.effectSteps.any(
+    final hasTargetsOrIndependentEffects = targets.isNotEmpty ||
+        skill.effectSteps.any(
           (step) => step.target != EffectStepTarget.affected,
-        )) {
-      return;
-    }
-    if (skill.cooldownSeconds > 0) {
-      _composedCooldownUntil[cooldownKey] =
-          match.stepCount + (skill.cooldownSeconds * 60).round();
-    }
+        );
     final repeatCount =
         match.mayhem &&
             (skill.targeting == SkillTargeting.allOpponents ||
@@ -2617,16 +2761,30 @@ class PowerUpSystem {
                 ))
         ? math.min(skill.repeatCount, maxMayhemAllOpponentRepeats)
         : skill.repeatCount;
-    if (skill.effectSteps.isNotEmpty &&
-        (skill.startDelaySeconds > 0 || repeatCount > 1) &&
-        _scheduledComposedEffects.length >= maxScheduledCustomEffects) {
-      _compositionLimit(owner);
-      return;
+    // Reserve repeat capacity before applying the first hit. Otherwise a
+    // full queue silently turns a repeating skill into a single-hit skill.
+    final needsSchedule = skill.startDelaySeconds > 0 || repeatCount > 1;
+    final hasScheduleCapacity = !needsSchedule ||
+        _scheduledComposedEffects.length < maxScheduledCustomEffects;
+    final admitted = projectileImpact
+        ? SkillActivationGate.canResolveProjectileImpact(
+            hasTargetsOrIndependentEffects: hasTargetsOrIndependentEffects,
+            hasScheduleCapacity: hasScheduleCapacity,
+          )
+        : SkillActivationGate.canActivate(
+            currentStep: match.stepCount,
+            readyStep: _composedCooldownUntil[cooldownKey],
+            hasTargetsOrIndependentEffects: hasTargetsOrIndependentEffects,
+            hasScheduleCapacity: hasScheduleCapacity,
+          );
+    if (!admitted) {
+      if (!hasScheduleCapacity) _compositionLimit(owner);
+      return false;
     }
     if (skill.startDelaySeconds > 0) {
-      if (_scheduledComposedEffects.length >= maxScheduledCustomEffects) {
-        if (skill.effectSteps.isNotEmpty) _compositionLimit(owner);
-        return;
+      if (!projectileImpact && skill.cooldownSeconds > 0) {
+        _composedCooldownUntil[cooldownKey] = SkillActivationGate.nextReadyStep(
+          match.stepCount, skill.cooldownSeconds);
       }
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
@@ -2639,11 +2797,14 @@ class PowerUpSystem {
           creditMove: _creditMove,
         ),
       );
-      return;
+      return true;
+    }
+    if (!projectileImpact && skill.cooldownSeconds > 0) {
+      _composedCooldownUntil[cooldownKey] = SkillActivationGate.nextReadyStep(
+        match.stepCount, skill.cooldownSeconds);
     }
     _applyComposedEffects(owner, targets, skill);
-    if (repeatCount > 1 &&
-        _scheduledComposedEffects.length < maxScheduledCustomEffects) {
+    if (repeatCount > 1) {
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
           owner: owner,
@@ -2656,8 +2817,8 @@ class PowerUpSystem {
       );
     }
     _announceSkill(owner, skill);
+    return true;
   }
-
   void _applyComposedEffects(
     SimulationBall owner,
     Iterable<SimulationBall> targets,
@@ -3050,7 +3211,7 @@ class PowerUpSystem {
   /// Whether [weapon] (resolved as [skill]) strikes on contact: a collision skill, a blade, the
   /// orbiting flail or a shield bash.
   static bool _strikesOnContact(PowerUpKind weapon, SkillDefinition skill) =>
-      (skill.isComposed && skill.trigger == SkillTrigger.collision) ||
+      SkillHybridContactPolicy.usesComposedContact(skill) ||
       weapon.isBlade ||
       weapon == PowerUpKind.orbitingFlail ||
       weapon == PowerUpKind.shield;
@@ -3139,6 +3300,15 @@ class PowerUpSystem {
       final guns = equipped.where((entry) {
         final weapon = entry.kind;
         final skill = _skillForId(weapon, entry.skillId);
+        // Composed aimed shots must honor the same per-owner cooldown as
+        // composed instant effects. Check before starting the aiming cycle.
+        if (skill.isComposed && skill.trigger == SkillTrigger.aimedFire &&
+            !SkillActivationGate.isReady(
+              match.stepCount,
+              _composedCooldownUntil[(ball, skill.id)],
+            )) {
+          return false;
+        }
         final canAim = skill.isComposed
             ? skill.trigger == SkillTrigger.aimedFire
             : weapon.isGun;
@@ -3173,16 +3343,28 @@ class PowerUpSystem {
       } else {
         for (final entry in guns) {
           final kind = entry.kind;
-          _holdFiredWeapon(ball, kind, skillId: entry.skillId);
           final composed = _skillForId(kind, entry.skillId);
           // A skill that fires another skill (any combination) or a composed aimed skill.
           final payload = match.skillLibrary.resolvePayload(composed, _t);
           if (payload != null ||
               (composed.isComposed &&
                   composed.trigger == SkillTrigger.aimedFire)) {
-            _launchComposed(ball, target, composed, payload: payload);
+            // Only commit cooldown and weapon hold after a successful launch.
+            // Instant/beam composed skills manage their own cooldown in
+            // _executeComposed; pre-setting it would suppress the effect.
+            if (_launchComposed(ball, target, composed, payload: payload)) {
+              if (composed.isComposed &&
+                  composed.trigger == SkillTrigger.aimedFire &&
+                  (payload != null || composed.delivery == SkillDelivery.projectile)) {
+                _composedCooldownUntil[(ball, composed.id)] =
+                    SkillActivationGate.nextReadyStep(
+                      match.stepCount, composed.cooldownSeconds);
+              }
+              _holdFiredWeapon(ball, kind, skillId: entry.skillId);
+            }
             continue;
           }
+          _holdFiredWeapon(ball, kind, skillId: entry.skillId);
           switch (kind) {
             case PowerUpKind.shotgun:
               _fireShotgun(ball, target, shellSkill: composed);
@@ -3898,7 +4080,13 @@ class PowerUpSystem {
   /// ghost) its path enters and is spent, or is spent at the rim. In All-Out it also cuts the opponent
   /// threads its path crosses on the way.
   void _moveProjectiles() {
-    if (projectiles.isEmpty) return;
+    if (projectiles.isEmpty) {
+      // Other systems may clear the collection without marking each projectile
+      // spent. Do not retain dangling composed-skill metadata.
+      _composedProjectiles.clear();
+      _composedIssuers.clear();
+      return;
+    }
     final balls = match.state.balls;
     final allOut = match.mode == MatchMode.allOut;
     final spawned = <Projectile>[];
@@ -4025,6 +4213,7 @@ class PowerUpSystem {
         if (identical(ball, p.owner) ||
             ball.isEliminated ||
             ball.isGhost ||
+            (composedSkill != null && p.hitTargets.contains(ball)) ||
             (returnsToOrigin && p.hitTargets.contains(ball))) {
           continue;
         }
@@ -4108,8 +4297,10 @@ class PowerUpSystem {
             persistentEffects.defense(struck, PowerUpKind.magneticField);
             struck.magneticReflectedOwners.add(p.owner);
           }
-          p.target = p.owner;
-          p.owner = struck;
+          p.transferOwnership(struck, returnsToOrigin: returnsToOrigin);
+          // The reflector is now the attacker. The original firing skill
+          // must not receive credit for damage inflicted by the reflector.
+          _composedIssuers.remove(p);
           _yell(struck, 'RETURN TO SENDER!');
           continue;
         }
@@ -4121,50 +4312,52 @@ class PowerUpSystem {
           _catch(p.owner, struck);
         } else {
           if (composed != null) {
+            // Resolve the skill before spending the projectile or creating
+            // cosmetic explosions. A rejected activation must not consume a
+            // composed weapon or produce a misleading impact effect.
+            final blastRadius = match.arenaRadius *
+                (composed.areaRadiusRatio ?? composed.range);
+            final blastTargets = composed.explodesOnImpact
+                ? balls.where((ball) =>
+                    !identical(ball, p.owner) &&
+                    _alive(ball) &&
+                    (ball.position - end).distance <=
+                        blastRadius + ball.radius).toList()
+                : null;
+            final accepted = composed.explodesOnImpact
+                ? _executeComposed(p.owner, composed,
+                    affectedTargets: blastTargets, projectileImpact: true)
+                : _executeComposed(p.owner, composed,
+                    primary: struck, projectileImpact: true);
+            if (!accepted) {
+              p.spent = false;
+              // Keep the projectile alive but ignore this target on future
+              // steps; otherwise a stationary projectile can retry every frame.
+              p.hitTargets.add(struck);
+              p.position += p.velocity.distance == 0
+                  ? Offset.zero
+                  : p.velocity / p.velocity.distance * 2;
+              _creditMove = null;
+              continue;
+            }
             if (composed.explodesOnImpact) {
-              final radius =
-                  match.arenaRadius *
-                  (composed.areaRadiusRatio ?? composed.range);
               blasts++;
-              _sound(
-                composed.soundCue == 'default' ? 'bomb' : composed.soundCue,
-              );
-              explosions.add(
-                Explosion(
+              _sound(composed.soundCue == 'default'
+                  ? 'bomb' : composed.soundCue);
+              explosions.add(Explosion(
+                position: end,
+                direction: p.velocity,
+                radius: blastRadius,
+                kind: composed.baseKind,
+                skillId: composed.id,
+              ));
+              final shake = match.skillLibrary.screenShakeFor(composed);
+              if (shake > 0) {
+                weaponImpacts.add(WeaponImpact(
                   position: end,
-                  direction: p.velocity,
-                  radius: radius,
-                  kind: composed.baseKind,
-                  skillId: composed.id,
-                ),
-              );
-              final blastTargets = balls
-                  .where(
-                    (ball) =>
-                        !identical(ball, p.owner) &&
-                        _alive(ball) &&
-                        (ball.position - end).distance <= radius + ball.radius,
-                  )
-                  .toList();
-              if (composed.effectSteps.isNotEmpty) {
-                _executeComposed(
-                  p.owner,
-                  composed,
-                  affectedTargets: blastTargets,
-                );
-              } else {
-                _applyComposedEffects(p.owner, blastTargets, composed);
+                  strength: shake,
+                ));
               }
-              if (match.skillLibrary.screenShakeFor(composed) > 0) {
-                weaponImpacts.add(
-                  WeaponImpact(
-                    position: end,
-                    strength: match.skillLibrary.screenShakeFor(composed),
-                  ),
-                );
-              }
-            } else {
-              _executeComposed(p.owner, composed, primary: struck);
             }
             p.hitTargets.add(struck);
             if (composed.returnsToOrigin) {
@@ -4249,9 +4442,16 @@ class PowerUpSystem {
       }
     }
     projectiles.addAll(spawned);
-    _composedProjectiles.removeWhere((projectile, _) => projectile.spent);
-    _composedIssuers.removeWhere((projectile, _) => projectile.spent);
+    // A projectile can be removed by other systems without being marked spent.
+    // Prune both maps against the actual live projectile collection.
     projectiles.removeWhere((p) => p.spent);
+    final liveProjectiles = projectiles.toSet();
+    _composedProjectiles.removeWhere(
+      (projectile, _) => !liveProjectiles.contains(projectile),
+    );
+    _composedIssuers.removeWhere(
+      (projectile, _) => !liveProjectiles.contains(projectile),
+    );
   }
 
   bool _consumeGremlin(SimulationBall ball) {
@@ -4290,6 +4490,13 @@ class PowerUpSystem {
     final impact = at ?? target.position;
     final (_, impactAccent) = _impactColors(kind);
     final impactSkill = visualSkill(kind, ball: from, skillId: skillId);
+    // Physical melee reach is the carrier blade's contact attack, not the
+    // separately configured aimed-fire projectile effect.
+    final nativeReachStrike = kind.isBlade &&
+        impactSkill.isComposed &&
+        impactSkill.meleeReach > 0 &&
+        impactSkill.trigger == SkillTrigger.aimedFire &&
+        impactSkill.delivery == SkillDelivery.projectile;
     match.state.particles.spawnImpact(
       origin: impact,
       rng: rng,
@@ -4362,7 +4569,11 @@ class PowerUpSystem {
           : 1.0;
       final lost = match.damage(
         target,
-        (bash ? _t.arenaShieldBash : _t.arenaDamage(kind)) * share * power,
+        (bash
+                ? _t.arenaShieldBash
+                : skillId != null && !nativeReachStrike
+                    ? (impactSkill.arsenalDamage ?? _t.arenaDamage(kind))
+                    : _t.arenaDamage(kind)) * share * power,
         attacker: from,
         move: skillName(kind),
         scaleForCrowd: scaleForCrowd,

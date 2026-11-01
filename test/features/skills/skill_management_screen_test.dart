@@ -980,8 +980,43 @@ void main() {
           .text,
       '20',
     );
-    await tester.tap(find.byKey(const ValueKey('save-skill')));
+    // Temporary diagnostic: reveal the validation messages before tapping Save.
+    final saveButton = find.byKey(const ValueKey('save-skill'));
+    expect(saveButton, findsOneWidget);
+    if (tester.widget<TextButton>(saveButton).onPressed == null) {
+      await tester.tap(find.byKey(const ValueKey('skill-editor-tab-identity')));
+      await tester.pumpAndSettle();
+      final numericErrors = find.textContaining('Check these values:');
+      for (final element in numericErrors.evaluate()) {
+        final widget = element.widget;
+        if (widget is Text) {
+          debugPrint('INVALID NUMERIC FIELDS: ${widget.data}');
+        }
+      }
+      final compatibilityErrors = find.byKey(
+        const ValueKey('skill-compatibility-errors'),
+      );
+      debugPrint('COMPATIBILITY ERRORS VISIBLE: ${compatibilityErrors.evaluate().isNotEmpty}');
+      final identityText = find.byType(Text);
+      for (final element in identityText.evaluate()) {
+        final widget = element.widget;
+        final value = widget is Text ? widget.data : null;
+        if (value != null &&
+            (value.contains('no longer exists') ||
+             value.contains('Fix this combination') ||
+             value.contains('Check these values'))) {
+          debugPrint('VALIDATION MESSAGE: $value');
+        }
+      }
+      fail('Editor Save is disabled. See INVALID NUMERIC FIELDS and VALIDATION MESSAGE above.');
+    }
+    await tester.tap(saveButton);
     await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(FilledButton, 'Save Library'),
+      findsOneWidget,
+      reason: 'Editor Save was enabled, but the library screen did not reappear',
+    );
     await tester.tap(find.widgetWithText(FilledButton, 'Save Library'));
     await tester.pumpAndSettle();
 

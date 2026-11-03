@@ -167,6 +167,12 @@ class SkillDefinition {
     this.bubbleType = SkillBubbleType.shout,
     this.bubbleDurationSeconds = 1.2,
     this.explodesOnImpact = false,
+    this.heldAttachment = 'right',
+    this.effectAttachment = 'both',
+    this.heldOffsetX = 0,
+    this.heldOffsetY = 0,
+    this.effectOffsetX = 0,
+    this.effectOffsetY = 0,
     this.handEffectScale = 1,
     this.handEffectColor = 0xFFFFFFFF,
     this.handEffectDurationSeconds = 0.5,
@@ -319,6 +325,14 @@ class SkillDefinition {
   final SkillBubbleType bubbleType;
   final double bubbleDurationSeconds;
   final bool explodesOnImpact;
+  /// Which hands show held artwork and animated effects independently.
+  final String heldAttachment;
+  final String effectAttachment;
+  /// Offsets are expressed in ball-radius units.
+  final double heldOffsetX;
+  final double heldOffsetY;
+  final double effectOffsetX;
+  final double effectOffsetY;
   final double handEffectScale;
   final int handEffectColor;
   final double handEffectDurationSeconds;
@@ -562,6 +576,12 @@ class SkillDefinition {
     SkillBubbleType? bubbleType,
     double? bubbleDurationSeconds,
     bool? explodesOnImpact,
+    String? heldAttachment,
+    String? effectAttachment,
+    double? heldOffsetX,
+    double? heldOffsetY,
+    double? effectOffsetX,
+    double? effectOffsetY,
     double? handEffectScale,
     int? handEffectColor,
     double? handEffectDurationSeconds,
@@ -672,6 +692,12 @@ class SkillDefinition {
     bubbleType: bubbleType ?? this.bubbleType,
     bubbleDurationSeconds: bubbleDurationSeconds ?? this.bubbleDurationSeconds,
     explodesOnImpact: explodesOnImpact ?? this.explodesOnImpact,
+    heldAttachment: heldAttachment ?? this.heldAttachment,
+    effectAttachment: effectAttachment ?? this.effectAttachment,
+    heldOffsetX: heldOffsetX ?? this.heldOffsetX,
+    heldOffsetY: heldOffsetY ?? this.heldOffsetY,
+    effectOffsetX: effectOffsetX ?? this.effectOffsetX,
+    effectOffsetY: effectOffsetY ?? this.effectOffsetY,
     handEffectScale: handEffectScale ?? this.handEffectScale,
     handEffectColor: handEffectColor ?? this.handEffectColor,
     handEffectDurationSeconds:
@@ -797,6 +823,14 @@ class SkillDefinition {
     'bubble_type': bubbleType.name,
     'bubble_duration_seconds': bubbleDurationSeconds,
     'explodes_on_impact': explodesOnImpact,
+    // Keep default placement fields out of saved/replay snapshots so legacy
+    // links remain byte-for-byte compatible when artwork placement is unchanged.
+    if (heldAttachment != 'right') 'held_attachment': heldAttachment,
+    if (effectAttachment != 'both') 'effect_attachment': effectAttachment,
+    if (heldOffsetX != 0) 'held_offset_x': heldOffsetX,
+    if (heldOffsetY != 0) 'held_offset_y': heldOffsetY,
+    if (effectOffsetX != 0) 'effect_offset_x': effectOffsetX,
+    if (effectOffsetY != 0) 'effect_offset_y': effectOffsetY,
     'hand_effect_scale': handEffectScale,
     'hand_effect_color': handEffectColor,
     'hand_effect_duration_seconds': handEffectDurationSeconds,
@@ -965,6 +999,12 @@ class SkillDefinition {
       ),
       bubbleDurationSeconds: decimal('bubble_duration_seconds') ?? 1.2,
       explodesOnImpact: value['explodes_on_impact'] as bool? ?? false,
+      heldAttachment: value['held_attachment'] is String ? value['held_attachment'] as String : 'right',
+      effectAttachment: value['effect_attachment'] is String ? value['effect_attachment'] as String : 'both',
+      heldOffsetX: decimal('held_offset_x') ?? 0,
+      heldOffsetY: decimal('held_offset_y') ?? 0,
+      effectOffsetX: decimal('effect_offset_x') ?? 0,
+      effectOffsetY: decimal('effect_offset_y') ?? 0,
       handEffectScale: decimal('hand_effect_scale') ?? 1,
       handEffectColor: integer('hand_effect_color') ?? 0xFFFFFFFF,
       handEffectDurationSeconds: decimal('hand_effect_duration_seconds') ?? 0.5,
@@ -1068,6 +1108,12 @@ class SkillDefinition {
     effectColor: effectColor.clamp(0, 0xFFFFFFFF),
     spriteTint: spriteTint.clamp(0, 0xFFFFFFFF),
     screenShake: screenShake.clamp(0, 1),
+    heldAttachment: const ['left', 'right', 'both'].contains(heldAttachment) ? heldAttachment : 'right',
+    effectAttachment: const ['left', 'right', 'both'].contains(effectAttachment) ? effectAttachment : 'both',
+    heldOffsetX: heldOffsetX.clamp(-2, 2),
+    heldOffsetY: heldOffsetY.clamp(-2, 2),
+    effectOffsetX: effectOffsetX.clamp(-2, 2),
+    effectOffsetY: effectOffsetY.clamp(-2, 2),
     handEffectScale: handEffectScale.clamp(0.1, 4),
     handEffectColor: handEffectColor.clamp(0, 0xFFFFFFFF),
     handEffectDurationSeconds: handEffectDurationSeconds.clamp(0.1, 10),

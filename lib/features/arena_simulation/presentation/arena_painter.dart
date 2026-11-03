@@ -829,6 +829,8 @@ class ArenaPainter extends CustomPainter {
               .heldFacing ??
           SkillHeldFacing.automatic,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
+      handArtworkSettings: (kind) =>
+          state.powerUps?.handArtworkSettings(kind, ball: ball),
       handEffectScale: (kind) =>
           state.powerUps?.handEffectScale(kind, ball: ball) ?? 1,
       handEffectColor: (kind) =>

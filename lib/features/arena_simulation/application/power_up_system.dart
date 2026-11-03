@@ -443,6 +443,8 @@ class PowerUpSystem {
   }) => effectDisplayScaleOf(visualSkill(kind, ball: ball, skillId: skillId));
   double effectDisplayScaleOf(SkillDefinition skill) =>
       match.skillLibrary.effectDisplayScaleFor(skill);
+  SkillDefinition handArtworkSettings(PowerUpKind kind, {SimulationBall? ball}) =>
+      visualSkill(kind, ball: ball);
   double handEffectScale(PowerUpKind kind, {SimulationBall? ball}) =>
       visualSkill(kind, ball: ball).handEffectScale;
   Color handEffectColor(PowerUpKind kind, {SimulationBall? ball}) =>

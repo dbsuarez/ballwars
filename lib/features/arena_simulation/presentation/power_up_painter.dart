@@ -3282,6 +3282,7 @@ class PowerUpPainter {
     double Function(PowerUpKind kind, int slot)? weaponGripRotation,
     SkillHeldFacing Function(PowerUpKind kind, int slot)? heldFacing,
     double Function(PowerUpKind kind)? skillRange,
+    SkillDefinition? Function(PowerUpKind kind)? handArtworkSettings,
     double Function(PowerUpKind kind)? handEffectScale,
     Color Function(PowerUpKind kind)? handEffectColor,
     PowerUpKind Function(PowerUpKind kind, int slot)? artworkKind,
@@ -3924,6 +3925,7 @@ class PowerUpPainter {
             gripRotation: weaponGripRotation?.call(weapon, slot) ?? 0,
             heldFacing:
                 heldFacing?.call(weapon, slot) ?? SkillHeldFacing.automatic,
+            artworkSettings: handArtworkSettings?.call(weapon),
             handEffectScale: handEffectScale?.call(weapon) ?? 1,
             handEffectColor: handEffectColor?.call(weapon),
             artwork: artworkKind?.call(weapon, slot) ?? weapon,
@@ -3989,6 +3991,7 @@ class PowerUpPainter {
     double gripSide = 0,
     double gripRotation = 0,
     SkillHeldFacing heldFacing = SkillHeldFacing.automatic,
+    SkillDefinition? artworkSettings,
     double handEffectScale = 1,
     Color? handEffectColor,
     PowerUpKind? artwork,
@@ -4021,7 +4024,12 @@ class PowerUpPainter {
       };
       final effectId = PowerUpSprites.animId(effect);
       for (final side in const [-1.0, 1.0]) {
-        final hand = ball.position + Offset(side * ball.radius * 0.82, 0);
+        final attach = artworkSettings?.effectAttachment ?? 'both';
+        if (attach != 'both' && attach != (side < 0 ? 'left' : 'right')) continue;
+        final hand = ball.position + Offset(
+          (side * 0.82 + (artworkSettings?.effectOffsetX ?? 0)) * ball.radius,
+          (artworkSettings?.effectOffsetY ?? 0) * ball.radius,
+        );
         final frame = SpriteRegistry.frameAt(effectId, step,
             offset: side > 0 ? 2 : 0);
         if (frame != null) {
@@ -4046,7 +4054,12 @@ class PowerUpPainter {
     if (held == PowerUpKind.fireWall &&
         (spriteId == null || !SpriteRegistry.has(spriteId))) {
       for (final side in const [-1.0, 1.0]) {
-        final hand = ball.position + Offset(side * ball.radius * 0.82, 0);
+        final attach = artworkSettings?.effectAttachment ?? 'both';
+        if (attach != 'both' && attach != (side < 0 ? 'left' : 'right')) continue;
+        final hand = ball.position + Offset(
+          (side * 0.82 + (artworkSettings?.effectOffsetX ?? 0)) * ball.radius,
+          (artworkSettings?.effectOffsetY ?? 0) * ball.radius,
+        );
         final flame = SpriteRegistry.frameAt(
           PowerUpSprites.animId(AnimatedEffect.flame),
           firedHoldLeft,
@@ -4168,17 +4181,27 @@ class PowerUpPainter {
           math.sin(drop * math.pi) * ball.radius * 0.25,
           drop * drop * ball.radius * 2.2,
         );
-    _drawSprite(
-      canvas,
-      sprite,
-      center,
-      ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
-      transform.angle,
-      iconAngle: _iconAngle[art] ?? 0,
-      flip: transform.flip,
-      opacity: 1 - drop * drop,
-      anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
-    );
+    final heldAttach = artworkSettings?.heldAttachment ?? 'right';
+    final dx = (artworkSettings?.heldOffsetX ?? 0) * ball.radius;
+    final dy = (artworkSettings?.heldOffsetY ?? 0) * ball.radius;
+    // The original slot position is the right-hand anchor. Mirror it for left.
+    final rightCenter = center + Offset(dx, dy);
+    final leftCenter = Offset(2 * ball.position.dx - center.dx + dx, center.dy + dy);
+    for (final side in (heldAttach == 'both'
+        ? const ['left', 'right']
+        : [heldAttach])) {
+      _drawSprite(
+        canvas,
+        sprite,
+        side == 'left' ? leftCenter : rightCenter,
+        ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
+        transform.angle,
+        iconAngle: _iconAngle[art] ?? 0,
+        flip: side == 'left' ? !transform.flip : transform.flip,
+        opacity: 1 - drop * drop,
+        anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
+      );
+    }
   }
 
   /// A simple flat glyph for [kind], about [s] in half-size, centered at [c] (also used for the

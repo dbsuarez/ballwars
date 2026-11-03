@@ -1831,6 +1831,10 @@ class _SkillEditorState extends State<_SkillEditor>
     'bubbleDuration': TextEditingController(
       text: '${widget.skill.bubbleDurationSeconds}',
     ),
+    'heldOffsetX': TextEditingController(text: '${widget.skill.heldOffsetX}'),
+    'heldOffsetY': TextEditingController(text: '${widget.skill.heldOffsetY}'),
+    'effectOffsetX': TextEditingController(text: '${widget.skill.effectOffsetX}'),
+    'effectOffsetY': TextEditingController(text: '${widget.skill.effectOffsetY}'),
     'handEffectScale': TextEditingController(
       text: '${widget.skill.handEffectScale}',
     ),
@@ -1904,6 +1908,8 @@ class _SkillEditorState extends State<_SkillEditor>
         : widget.skill.description,
   );
   late final _sound = TextEditingController(text: widget.skill.soundCue);
+  late String _heldAttachment = widget.skill.heldAttachment;
+  late String _effectAttachment = widget.skill.effectAttachment;
   late int _handColor = widget.skill.handEffectColor;
   late int _spriteTint = widget.skill.spriteTint;
   int _resetGeneration = 0;
@@ -2193,6 +2199,12 @@ class _SkillEditorState extends State<_SkillEditor>
       number('screenShake', defaults.screenShake);
       number('triggerInterval', defaults.triggerIntervalSeconds);
       number('bubbleDuration', defaults.bubbleDurationSeconds);
+      number('heldOffsetX', defaults.heldOffsetX);
+      number('heldOffsetY', defaults.heldOffsetY);
+      number('effectOffsetX', defaults.effectOffsetX);
+      number('effectOffsetY', defaults.effectOffsetY);
+      _heldAttachment = defaults.heldAttachment;
+      _effectAttachment = defaults.effectAttachment;
       number('handEffectScale', defaults.handEffectScale);
       number('handEffectDuration', defaults.handEffectDurationSeconds);
       number('shellSize', defaults.shellSize);
@@ -2576,6 +2588,12 @@ class _SkillEditorState extends State<_SkillEditor>
       calloutStyle: _calloutStyle,
       bubbleType: _bubbleType,
       bubbleDurationSeconds: _double('bubbleDuration'),
+      heldAttachment: _heldAttachment,
+      effectAttachment: _effectAttachment,
+      heldOffsetX: _double('heldOffsetX'),
+      heldOffsetY: _double('heldOffsetY'),
+      effectOffsetX: _double('effectOffsetX'),
+      effectOffsetY: _double('effectOffsetY'),
       handEffectScale: _double('handEffectScale'),
       handEffectColor: _handColor,
       handEffectDurationSeconds: _double('handEffectDuration'),
@@ -2647,6 +2665,10 @@ class _SkillEditorState extends State<_SkillEditor>
     'tickInterval': (0.1, 10),
     'cooldown': (0, 60),
     'triggerInterval': (0.5, 120),
+    'heldOffsetX': (-2, 2),
+    'heldOffsetY': (-2, 2),
+    'effectOffsetX': (-2, 2),
+    'effectOffsetY': (-2, 2),
     'handEffectScale': (0.1, 4),
     'handEffectDuration': (0.1, 10),
     'castingDuration': (0.1, 10),
@@ -2663,6 +2685,10 @@ class _SkillEditorState extends State<_SkillEditor>
     'weaponGripInset',
     'weaponGripSide',
     'weaponGripRotation',
+    'heldOffsetX',
+    'heldOffsetY',
+    'effectOffsetX',
+    'effectOffsetY',
   };
 
   static const _wholeNumberKeys = {
@@ -4697,6 +4723,32 @@ class _SkillEditorState extends State<_SkillEditor>
                                   ),
                                 const Divider(height: 32),
                                 if (true) ...[
+                                  DropdownButtonFormField<String>(
+                                    key: const ValueKey('held-attachment'),
+                                    initialValue: _heldAttachment,
+                                    decoration: const InputDecoration(labelText: 'Held sprite attachment'),
+                                    items: const [
+                                      DropdownMenuItem(value: 'left', child: Text('Left hand')),
+                                      DropdownMenuItem(value: 'right', child: Text('Right hand')),
+                                      DropdownMenuItem(value: 'both', child: Text('Both hands')),
+                                    ],
+                                    onChanged: (v) { if (v != null) setState(() => _heldAttachment = v); },
+                                  ),
+                                  DropdownButtonFormField<String>(
+                                    key: const ValueKey('effect-attachment'),
+                                    initialValue: _effectAttachment,
+                                    decoration: const InputDecoration(labelText: 'Hand effect attachment'),
+                                    items: const [
+                                      DropdownMenuItem(value: 'left', child: Text('Left hand')),
+                                      DropdownMenuItem(value: 'right', child: Text('Right hand')),
+                                      DropdownMenuItem(value: 'both', child: Text('Both hands')),
+                                    ],
+                                    onChanged: (v) { if (v != null) setState(() => _effectAttachment = v); },
+                                  ),
+                                  _number('heldOffsetX', 'Held horizontal offset', suffix: 'radius'),
+                                  _number('heldOffsetY', 'Held vertical offset', suffix: 'radius'),
+                                  _number('effectOffsetX', 'Effect horizontal offset', suffix: 'radius'),
+                                  _number('effectOffsetY', 'Effect vertical offset', suffix: 'radius'),
                                   _number(
                                     'handEffectScale',
                                     'Hand effect scale',

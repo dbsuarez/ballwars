@@ -87,6 +87,16 @@ void main() {
     }
   });
 
+  test('no warning when the next rotation equals the match end', () {
+    const rotation = ArenaRotation(rotateThemes: true, intervalSeconds: 60);
+    expect(rotation.secondsUntilNext(59, matchDurationSeconds: 60), isNull);
+    expect(rotation.secondsUntilNext(0, matchDurationSeconds: 120), 60);
+    expect(rotation.secondsUntilNext(60, matchDurationSeconds: 120), isNull);
+    expect(rotation.secondsUntilNext(59, matchDurationSeconds: 120), 1);
+    expect(rotation.secondsUntilNext(119, matchDurationSeconds: 120), isNull);
+    expect(rotation.secondsUntilNext(119), 1); // Endless keeps rotating.
+  });
+
   test('timed interval and warning share the same schedule', () {
     const rotation = ArenaRotation(rotateThemes: true, rotateShapes: true,
         intervalSeconds: 300);

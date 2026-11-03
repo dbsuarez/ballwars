@@ -488,9 +488,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _rotationInterval = rotationInterval;
       _centerObstacle = centerObstacle;
       _centerObstacleScale = centerObstacleScale;
-      _matchDisableAllTraps = matchDisableAllTraps == null ? null : matchDisableAllTraps == '1';
-      _matchArenaTraps = matchArenaTraps == null ? null : matchArenaTraps == '1';
-      _matchSkillTraps = matchSkillTraps == null ? null : matchSkillTraps == '1';
+      _matchDisableAllTraps = matchDisableAllTraps == null || matchDisableAllTraps == 'inherit' ? null : matchDisableAllTraps == '1';
+      _matchArenaTraps = matchArenaTraps == null || matchArenaTraps == 'inherit' ? null : matchArenaTraps == '1';
+      _matchSkillTraps = matchSkillTraps == null || matchSkillTraps == 'inherit' ? null : matchSkillTraps == '1';
       _shrinkingArena = shrinkingArena == '1';
       _arenaDecoration = ArenaDecoration.values
           .where((value) => value.name == arenaDecoration)
@@ -1690,6 +1690,27 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 ),
               ),
             ),
+          ),
+          ListTile(
+            key: const ValueKey('match-traps-reset-to-admin'),
+            title: const Text('Use administrator trap defaults'),
+            subtitle: const Text('Clear all three match overrides for this game mode.'),
+            trailing: const Icon(Icons.settings_backup_restore),
+            enabled: _matchDisableAllTraps != null ||
+                _matchArenaTraps != null || _matchSkillTraps != null,
+            onTap: _matchDisableAllTraps == null &&
+                    _matchArenaTraps == null && _matchSkillTraps == null
+                ? null
+                : () {
+                    _update(() {
+                      _matchDisableAllTraps = null;
+                      _matchArenaTraps = null;
+                      _matchSkillTraps = null;
+                    });
+                    _writeProfile('match-disable-all-traps', 'inherit');
+                    _writeProfile('match-arena-traps', 'inherit');
+                    _writeProfile('match-skill-traps', 'inherit');
+                  },
           ),
           SwitchListTile(
             key: const ValueKey('match-disable-all-traps'),

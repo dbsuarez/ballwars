@@ -1,0 +1,9 @@
+{
+  "baseline": "v1.14.41 + v1.14.42",
+  "status": "unverified",
+  "files": {
+    "lib/features/match_setup/presentation/match_setup_screen.dart": "bd350e8210dbd32a75487aefd29c05ed0bc3158f00b52e160d36c2d54566352a",
+    "test/features/match_setup/domain/arena_rotation_test.dart": "7d7a496232c4541c791d1ebc2375c71f672188d307a9078a9bf2eee7e6edf1ac",
+    "V11443_PROGRESS_ROADMAP.md": "f1810c8e59ba25b53c58169e5b56d2281ad36047df0cff4cfefacd4dd1c39805"
+  }
+}

@@ -45,7 +45,8 @@ class ArenaRotation {
       return null;
     }
     final next = (elapsedSeconds ~/ interval + 1) * interval;
-    if (matchDurationSeconds != null && next > matchDurationSeconds) return null;
+    // A transition at the exact match end cannot be seen; hide its timer.
+    if (matchDurationSeconds != null && next >= matchDurationSeconds) return null;
     return next - elapsedSeconds;
   }
 

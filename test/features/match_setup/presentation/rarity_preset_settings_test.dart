@@ -189,6 +189,9 @@ void main() {
         await tester.enterText(field, '0');
         await tester.pumpAndSettle();
       }
+      // Regression: trap controls must remain buildable when custom rarity
+      // weights are invalid, without hiding validation or enabling Start.
+      expect(tester.takeException(), isNull);
       expect(find.byKey(const ValueKey('rarity-error')), findsOneWidget);
       await close(tester);
       expect(

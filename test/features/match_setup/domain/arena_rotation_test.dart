@@ -96,6 +96,8 @@ void main() {
         matchDurationSeconds: 180), ArenaDecoration.neonGrid);
     expect(rotation.shapeAt(ArenaShape.circle, 90,
         matchDurationSeconds: 180), ArenaShape.square);
+    expect(rotation.secondsUntilNext(90, matchDurationSeconds: 180), isNull);
+    expect(rotation.secondsUntilNext(89, matchDurationSeconds: 180), 1);
     expect(rotation.secondsUntilNext(180, matchDurationSeconds: 180), isNull);
   });
 

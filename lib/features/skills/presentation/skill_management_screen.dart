@@ -1085,9 +1085,13 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   title: Text(setting.$2),
                   subtitle: Text(setting.$3),
                   value: _tuning.value(setting.$1) != 0,
-                  onChanged: (enabled) => setState(() {
-                    _tuning = _tuning.withValue(setting.$1, enabled ? 1 : 0);
-                  }),
+                  onChanged: setting.$1 != 'allTrapsDisabled' &&
+                          _tuning.allTrapsDisabled
+                      ? null
+                      : (enabled) => setState(() {
+                          _tuning = _tuning.withValue(
+                            setting.$1, enabled ? 1 : 0);
+                        }),
                 ),
             ],
           ),

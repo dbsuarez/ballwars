@@ -125,8 +125,28 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     return _rarityPreset.resolve(custom ?? RarityWeights([40, 30, 20, 10]));
   }
 
-  PowerUpConfig get _matchTuning =>
-      _rarityWeights!.applyTo(AppSettingsScope.of(context).powerUps);
+  // Per-match trap switches inherit the administrator defaults until changed.
+  bool? _matchDisableAllTraps;
+  bool? _matchArenaTraps;
+  bool? _matchSkillTraps;
+
+  PowerUpConfig get _matchTuning {
+    // Invalid custom rarity input must not crash the settings editor.
+    // Keep the last admin tuning for rendering controls; _rarityError still
+    // prevents starting the match until the draft is repaired.
+    final adminTuning = AppSettingsScope.of(context).powerUps;
+    var tuning = _rarityWeights?.applyTo(adminTuning) ?? adminTuning;
+    if (_matchDisableAllTraps != null) {
+      tuning = tuning.withValue('allTrapsDisabled', _matchDisableAllTraps! ? 1 : 0);
+    }
+    if (_matchArenaTraps != null) {
+      tuning = tuning.withValue('arenaTrapsEnabled', _matchArenaTraps! ? 1 : 0);
+    }
+    if (_matchSkillTraps != null) {
+      tuning = tuning.withValue('skillTrapsEnabled', _matchSkillTraps! ? 1 : 0);
+    }
+    return tuning;
+  }
 
   RaritySpawnOdds? get _rarityOdds => _rarityWeights == null
       ? null
@@ -283,15 +303,6 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   /// Rounds, speed and effects start the way this device last left them.
   Future<void> _loadPrefs({bool? mayhemOverride}) async {
     final rememberedMode = MatchMode.byId(await DevicePrefs.read('mode'));
-    final rememberedShape = ArenaShape.byName(await DevicePrefs.read('arena-shape'));
-    _arenaShape = rememberedShape ?? ArenaShape.circle;
-    _rotateThemes = await DevicePrefs.read('arena-rotate-themes') == '1';
-    _rotateShapes = await DevicePrefs.read('arena-rotate-shapes') == '1';
-    _rotationInterval = int.tryParse(await DevicePrefs.read('arena-rotation-interval') ?? '') ?? 60;
-    _centerObstacle = CenterObstacle.byName(
-          await DevicePrefs.read('center-obstacle')) ?? CenterObstacle.none;
-    _centerObstacleScale = double.tryParse(
-          await DevicePrefs.read('center-obstacle-scale') ?? '') ?? 0.22;
     final profileMode =
         widget.initialMode ?? rememberedMode ?? MatchMode.threads;
     final profileMayhem =
@@ -300,6 +311,32 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             ? widget.initialMayhem && profileMode == MatchMode.arsenal
             : (profileMode == MatchMode.arsenal &&
                   await DevicePrefs.read('mayhem') == '1'));
+    // Read per-mode geometry, falling back to the former shared keys so an
+    // existing installation retains its arena choices on upgrade.
+    final rememberedShape = ArenaShape.byName(await _readProfile(
+      profileMode, 'arena-shape', mayhem: profileMayhem,
+      legacyKey: 'arena-shape'));
+    final rotateThemes = await _readProfile(profileMode,
+      'arena-rotate-themes', mayhem: profileMayhem,
+      legacyKey: 'arena-rotate-themes');
+    final rotateShapes = await _readProfile(profileMode,
+      'arena-rotate-shapes', mayhem: profileMayhem,
+      legacyKey: 'arena-rotate-shapes');
+    final rotationInterval = int.tryParse(await _readProfile(profileMode,
+      'arena-rotation-interval', mayhem: profileMayhem,
+      legacyKey: 'arena-rotation-interval') ?? '') ?? 60;
+    final centerObstacle = CenterObstacle.byName(await _readProfile(profileMode,
+      'center-obstacle', mayhem: profileMayhem,
+      legacyKey: 'center-obstacle')) ?? CenterObstacle.none;
+    final centerObstacleScale = double.tryParse(await _readProfile(profileMode,
+      'center-obstacle-scale', mayhem: profileMayhem,
+      legacyKey: 'center-obstacle-scale') ?? '') ?? 0.22;
+    final matchDisableAllTraps = await DevicePrefs.read(
+      _profileKey(profileMode, 'match-disable-all-traps', mayhem: profileMayhem));
+    final matchArenaTraps = await DevicePrefs.read(
+      _profileKey(profileMode, 'match-arena-traps', mayhem: profileMayhem));
+    final matchSkillTraps = await DevicePrefs.read(
+      _profileKey(profileMode, 'match-skill-traps', mayhem: profileMayhem));
     final rarityName = await _readProfile(
       profileMode,
       'rarity-preset',
@@ -445,6 +482,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _mayhemSeconds = const [30, 60, 120, 180, 300, 600].contains(duration)
           ? duration
           : 120;
+      _arenaShape = rememberedShape ?? ArenaShape.circle;
+      _rotateThemes = rotateThemes == '1';
+      _rotateShapes = rotateShapes == '1';
+      _rotationInterval = rotationInterval;
+      _centerObstacle = centerObstacle;
+      _centerObstacleScale = centerObstacleScale;
+      _matchDisableAllTraps = matchDisableAllTraps == null ? null : matchDisableAllTraps == '1';
+      _matchArenaTraps = matchArenaTraps == null ? null : matchArenaTraps == '1';
+      _matchSkillTraps = matchSkillTraps == null ? null : matchSkillTraps == '1';
       _shrinkingArena = shrinkingArena == '1';
       _arenaDecoration = ArenaDecoration.values
           .where((value) => value.name == arenaDecoration)
@@ -1607,82 +1653,14 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 _rotateShapes = selection.rotateShapes;
                 _rotationInterval = selection.intervalSeconds;
               });
-              DevicePrefs.write('arena-shape', selection.shape.name);
-              DevicePrefs.write('center-obstacle', selection.obstacle.name);
-              DevicePrefs.write('center-obstacle-scale', selection.scale.toString());
-              DevicePrefs.write('arena-rotate-themes', selection.rotateThemes ? '1' : '0');
-              DevicePrefs.write('arena-rotate-shapes', selection.rotateShapes ? '1' : '0');
-              DevicePrefs.write('arena-rotation-interval', selection.intervalSeconds);
+              _writeProfile('arena-shape', selection.shape.name);
+              _writeProfile('center-obstacle', selection.obstacle.name);
+              _writeProfile('center-obstacle-scale', selection.scale.toString());
+              _writeProfile('arena-rotate-themes', selection.rotateThemes ? '1' : '0');
+              _writeProfile('arena-rotate-shapes', selection.rotateShapes ? '1' : '0');
+              _writeProfile('arena-rotation-interval', selection.intervalSeconds);
             },
           ),
-          _choice(
-            Icons.crop_square,
-            'Arena shape',
-            ArenaShape.values,
-            _arenaShape,
-            (shape) => shape.label,
-            (shape) {
-              _update(() => _arenaShape = shape);
-              DevicePrefs.write('arena-shape', shape.name);
-            },
-          ),
-          _choice(
-            Icons.palette,
-            'Rotate arena themes',
-            const [false, true],
-            _rotateThemes,
-            (v) => v ? 'On' : 'Off',
-            (v) {
-              _update(() => _rotateThemes = v);
-              DevicePrefs.write('arena-rotate-themes', v ? '1' : '0');
-            },
-          ),
-          _choice(
-            Icons.sync,
-            'Rotate circle / square',
-            const [false, true],
-            _rotateShapes,
-            (v) => v ? 'On' : 'Off',
-            (v) {
-              _update(() => _rotateShapes = v);
-              DevicePrefs.write('arena-rotate-shapes', v ? '1' : '0');
-            },
-          ),
-          if (_rotateThemes || _rotateShapes)
-            _choice(
-              Icons.timer_outlined,
-              'Arena rotation interval',
-              const [30, 60, 90, 120, 180, 300],
-              _rotationInterval,
-              (v) => '${v}s',
-              (v) {
-                _update(() => _rotationInterval = v);
-                DevicePrefs.write('arena-rotation-interval', v);
-              },
-            ),
-          _choice(
-            Icons.adjust,
-            'Center obstacle',
-            CenterObstacle.values,
-            _centerObstacle,
-            (obstacle) => obstacle.label,
-            (obstacle) {
-              _update(() => _centerObstacle = obstacle);
-              DevicePrefs.write('center-obstacle', obstacle.name);
-            },
-          ),
-          if (_centerObstacle != CenterObstacle.none)
-            _choice(
-              Icons.aspect_ratio,
-              'Obstacle size',
-              const [0.12, 0.18, 0.22, 0.28, 0.34],
-              _centerObstacleScale,
-              (size) => '${(size * 100).round()}%',
-              (size) {
-                _update(() => _centerObstacleScale = size);
-                DevicePrefs.write('center-obstacle-scale', size.toString());
-              },
-            ),
           _choice(
             Icons.zoom_in_map,
             'Shrinking arena',
@@ -1692,6 +1670,54 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             (v) {
               _update(() => _shrinkingArena = v);
               _writeProfile('shrinking-arena', v ? '1' : '0');
+            },
+          ),
+        ]),
+      if (tab == 0 && !_mode.isThreadOnly)
+        _settingsGroup('Traps for this match', [
+          ListTile(
+            title: const Text('Match-specific trap controls'),
+            subtitle: const Text('Initially follows admin defaults. Changes here affect only this game mode, not the global defaults.'),
+            trailing: IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: 'Trap override help',
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Trap overrides'),
+                  content: const Text('Disable All Traps takes precedence. The other switches retain their selections and become available again when the master override is off.'),
+                  actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+                ),
+              ),
+            ),
+          ),
+          SwitchListTile(
+            key: const ValueKey('match-disable-all-traps'),
+            title: const Text('Disable All Traps'),
+            value: _matchTuning.allTrapsDisabled,
+            onChanged: (v) {
+              _update(() => _matchDisableAllTraps = v);
+              _writeProfile('match-disable-all-traps', v ? '1' : '0');
+            },
+          ),
+          SwitchListTile(
+            key: const ValueKey('match-arena-traps'),
+            title: const Text('Arena Traps'),
+            subtitle: _matchTuning.allTrapsDisabled ? const Text('Disabled by master override; selection preserved') : null,
+            value: _matchArenaTraps ?? (AppSettingsScope.of(context).powerUps.value('arenaTrapsEnabled') != 0),
+            onChanged: _matchTuning.allTrapsDisabled ? null : (v) {
+              _update(() => _matchArenaTraps = v);
+              _writeProfile('match-arena-traps', v ? '1' : '0');
+            },
+          ),
+          SwitchListTile(
+            key: const ValueKey('match-skill-traps'),
+            title: const Text('Skill-Generated Traps'),
+            subtitle: _matchTuning.allTrapsDisabled ? const Text('Disabled by master override; selection preserved') : null,
+            value: _matchSkillTraps ?? (AppSettingsScope.of(context).powerUps.value('skillTrapsEnabled') != 0),
+            onChanged: _matchTuning.allTrapsDisabled ? null : (v) {
+              _update(() => _matchSkillTraps = v);
+              _writeProfile('match-skill-traps', v ? '1' : '0');
             },
           ),
         ]),

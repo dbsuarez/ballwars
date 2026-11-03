@@ -2669,6 +2669,19 @@ class PowerUpSystem {
             (swamp) => (swamp.position - spot).distance >= 2 * radius,
           );
       if (!clear) continue;
+      // The center obstacle is solid for pickups as well as projectiles.
+      // Reserve the entire pickup footprint, not just its center point.
+      final centerExtent = match.arenaRadius * match.centerObstacleScale;
+      final centerClearance = centerExtent + radius;
+      if (match.centerObstacle == CenterObstacle.circle &&
+          spot.distance < centerClearance) {
+        continue;
+      }
+      if (match.centerObstacle == CenterObstacle.square &&
+          spot.dx.abs() < centerClearance &&
+          spot.dy.abs() < centerClearance) {
+        continue;
+      }
       if (kind == PowerUpKind.portal) {
         portals.add(ArenaPortal(position: spot, spawnStep: number));
         if (portals.length > PowerUpTuning.maxOnField(_ballCount)) {

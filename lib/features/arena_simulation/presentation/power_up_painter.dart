@@ -3998,6 +3998,48 @@ class PowerUpPainter {
     // [artwork]: the weapon picture to show (a skill can look like another weapon); [held] keeps the
     // behavior-specific drawing.
     final art = artwork ?? held;
+    if (spriteId == SkillDefinition.noHeldArtwork) return;
+    // Hand effects are independent of the equipped weapon artwork. The
+    // overlay value stores the selected held sprite after the first `|`.
+    final effectOnly = spriteId == SkillDefinition.flameHandArtwork ||
+        (spriteId?.startsWith(SkillDefinition.handEffectPrefix) ?? false);
+    final overlay = spriteId?.startsWith(SkillDefinition.handOverlayPrefix) ?? false;
+    final effectName = spriteId == SkillDefinition.flameHandArtwork
+        ? 'flame'
+        : effectOnly
+            ? spriteId!.substring(SkillDefinition.handEffectPrefix.length)
+            : overlay
+                ? spriteId!.substring(SkillDefinition.handOverlayPrefix.length).split('|').first
+                : null;
+    if (effectName != null) {
+      final effect = switch (effectName) {
+        'portal' => AnimatedEffect.portal,
+        'lightning' => AnimatedEffect.lightning,
+        'iceImpact' => AnimatedEffect.iceImpact,
+        'tornado' => AnimatedEffect.tornado,
+        _ => AnimatedEffect.flame,
+      };
+      final effectId = PowerUpSprites.animId(effect);
+      for (final side in const [-1.0, 1.0]) {
+        final hand = ball.position + Offset(side * ball.radius * 0.82, 0);
+        final frame = SpriteRegistry.frameAt(effectId, step,
+            offset: side > 0 ? 2 : 0);
+        if (frame != null) {
+          _drawEffect(canvas, frame, hand - Offset(0, ball.radius * 0.2),
+              ball.radius * 0.62 * handEffectScale * displayScale, 0,
+              anchor: SpriteRegistry.anchor(effectId));
+        } else {
+          canvas.drawCircle(hand, ball.radius * 0.2 * displayScale,
+              Paint()..color = handEffectColor ?? const Color(0xFFFF6422));
+        }
+      }
+      if (effectOnly) return;
+      if (overlay) {
+        final separator = spriteId!.indexOf('|');
+        spriteId = separator < 0 ? null : spriteId.substring(separator + 1);
+        if (spriteId?.isEmpty ?? true) spriteId = null;
+      }
+    }
     // The active cast has its own charge orb and beam. Keeping the generated
     // weapon badge here covered the caster's face and looked like it vanished.
     if (held == PowerUpKind.energyWave && firedHoldLeft > 0) return;

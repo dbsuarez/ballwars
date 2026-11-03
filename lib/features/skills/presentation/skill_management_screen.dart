@@ -1053,6 +1053,45 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
           style: AppText.ui(12, FontWeight.w500, color: c.muted, height: 1.35),
         ),
         const SizedBox(height: 12),
+        Card(
+          key: const ValueKey('global-trap-controls'),
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            children: [
+              ListTile(
+                title: const Text('Trap controls'),
+                subtitle: const Text('Global arena and skill trap settings. The master override preserves individual choices.'),
+                trailing: IconButton(
+                  key: const ValueKey('trap-help-allTrapsDisabled'),
+                  tooltip: 'Disable all traps: master override',
+                  icon: const Icon(Icons.help_outline),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: const Text('Disable all traps'),
+                      content: const Text('Master override. Disables automatic arena and skill-generated traps without changing either independent setting.'),
+                      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+                    ),
+                  ),
+                ),
+              ),
+              for (final setting in const [
+                ('allTrapsDisabled', 'Disable all traps', 'Overrides both automatic arena and skill-generated traps.'),
+                ('arenaTrapsEnabled', 'Enable automatic arena traps', 'Controls arena hazards independently.'),
+                ('skillTrapsEnabled', 'Enable skill-generated traps', 'Controls skill traps and trap pickups independently.'),
+              ])
+                SwitchListTile(
+                  key: ValueKey('global-${setting.$1}'),
+                  title: Text(setting.$2),
+                  subtitle: Text(setting.$3),
+                  value: _tuning.value(setting.$1) != 0,
+                  onChanged: (enabled) => setState(() {
+                    _tuning = _tuning.withValue(setting.$1, enabled ? 1 : 0);
+                  }),
+                ),
+            ],
+          ),
+        ),
         _globalCard(
           label: 'Callout duration',
           fieldKey: const ValueKey('global-callout-seconds'),
@@ -4573,7 +4612,15 @@ class _SkillEditorState extends State<_SkillEditor>
                                     ),
                                     title: Text(slot.$1),
                                     subtitle: Text(
-                                      slot.$2 == null
+                                      (slot.$2?.startsWith(SkillDefinition.handOverlayPrefix) ?? false)
+                                          ? 'Held sprite + animated hand effect'
+                                          : (slot.$2?.startsWith(SkillDefinition.handEffectPrefix) ?? false)
+                                          ? 'Animated hand effect'
+                                          : slot.$2 == SkillDefinition.noHeldArtwork
+                                          ? 'None (empty hands)'
+                                          : slot.$2 == SkillDefinition.flameHandArtwork
+                                          ? 'Animated flame on hands'
+                                          : slot.$2 == null
                                           ? slot.$1 == 'Icon artwork'
                                               ? 'Built-in art'
                                               : 'Using Icon artwork'
@@ -4583,8 +4630,57 @@ class _SkillEditorState extends State<_SkillEditor>
                                     ),
                                     trailing: const Icon(Icons.chevron_right),
                                     onTap: () async {
+                                      if (slot.$1.startsWith('Held artwork')) {
+                                        final mode = await showDialog<String>(
+                                          context: context,
+                                          builder: (dialogContext) => SimpleDialog(
+                                            title: const Text('Held artwork mode'),
+                                            children: [
+                                              SimpleDialogOption(
+                                                onPressed: () => Navigator.pop(dialogContext, 'sprite'),
+                                                child: const Text('Held sprite (choose artwork)'),
+                                              ),
+                                              SimpleDialogOption(
+                                                onPressed: () => Navigator.pop(dialogContext, SkillDefinition.noHeldArtwork),
+                                                child: const Text('None (empty hands)'),
+                                              ),
+                                              SimpleDialogOption(
+                                                onPressed: () => Navigator.pop(dialogContext, SkillDefinition.flameHandArtwork),
+                                                child: const Text('Animated flame on hands'),
+                                              ),
+                                              for (final effect in const ['flame', 'portal', 'lightning', 'iceImpact', 'tornado']) ...[
+                                                SimpleDialogOption(
+                                                  onPressed: () => Navigator.pop(dialogContext, '${SkillDefinition.handEffectPrefix}$effect'),
+                                                  child: Text('Hand effect: $effect'),
+                                                ),
+                                                SimpleDialogOption(
+                                                  onPressed: () => Navigator.pop(dialogContext, '${SkillDefinition.handOverlayPrefix}$effect'),
+                                                  child: Text('Held sprite + $effect effect'),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                        if (!mounted || mode == null) return;
+                                        if (mode.startsWith(SkillDefinition.handOverlayPrefix)) {
+                                          final selected = await selectSkillSprite(
+                                            this.context,
+                                            title: 'Held sprite for overlay',
+                                            current: _heldSpriteId,
+                                          );
+                                          if (!mounted) return;
+                                          final base = selected == null || selected.isEmpty
+                                              ? (_iconSpriteId ?? '') : selected;
+                                          setState(() => slot.$3('$mode|$base'));
+                                          return;
+                                        }
+                                        if (mode != 'sprite') {
+                                          setState(() => slot.$3(mode));
+                                          return;
+                                        }
+                                      }
                                       final picked = await selectSkillSprite(
-                                        context,
+                                        this.context,
                                         title: slot.$1,
                                         current: slot.$2,
                                       );
@@ -4596,10 +4692,7 @@ class _SkillEditorState extends State<_SkillEditor>
                                     },
                                   ),
                                 const Divider(height: 32),
-                                if (widget.skill.baseKind ==
-                                        PowerUpKind.fireWall ||
-                                    widget.skill.baseKind ==
-                                        PowerUpKind.tornado) ...[
+                                if (true) ...[
                                   _number(
                                     'handEffectScale',
                                     'Hand effect scale',
@@ -4952,7 +5045,7 @@ class _SkillEditorState extends State<_SkillEditor>
                                     trailing: const Icon(Icons.chevron_right),
                                     onTap: () async {
                                       final picked = await selectSkillSprite(
-                                        context,
+                                        this.context,
                                         title: slot.$1,
                                         current: slot.$2,
                                       );

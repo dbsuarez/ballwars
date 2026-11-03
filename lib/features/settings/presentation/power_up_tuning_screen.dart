@@ -21,7 +21,8 @@ class PowerUpTuningScreen extends StatefulWidget {
 class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
   static Iterable<TuningField> get _legacyFields => PowerUpConfig.fields.where(
     (field) => !field.id.startsWith('tier.') &&
-        (!field.id.startsWith('skill') || field.id == 'skillTrapsEnabled'),
+        !field.id.startsWith('skill') &&
+        !const {'allTrapsDisabled', 'arenaTrapsEnabled'}.contains(field.id),
   );
 
   late final Map<String, TextEditingController> _text = {

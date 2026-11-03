@@ -118,7 +118,95 @@ class _LineRecorder implements Canvas {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
+Future<void> _openTrapSettings(WidgetTester tester, void Function(SkillManagementResult) onResult) async {
+  await tester.pumpWidget(MaterialApp(
+    theme: AppTheme.build(AppPalettes.midnight),
+    home: Builder(builder: (context) => TextButton(
+      onPressed: () async {
+        final result = await Navigator.of(context).push<SkillManagementResult>(
+          MaterialPageRoute(builder: (_) => SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+          )),
+        );
+        if (result != null) onResult(result);
+      },
+      child: const Text('Open Skill Management'),
+    )),
+  ));
+  await tester.tap(find.text('Open Skill Management'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  testWidgets('unified trap master override provides accessible tap help', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.build(AppPalettes.midnight),
+      home: SkillManagementScreen(initial: SkillLibrary.defaults, tuning: PowerUpConfig.defaults),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
+    await tester.pumpAndSettle();
+    final help = find.byKey(const ValueKey('trap-help-allTrapsDisabled'));
+    await _revealGlobal(tester, help);
+    expect(tester.widget<IconButton>(help).tooltip, contains('Disable all traps'));
+    await tester.tap(help);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Master override.'), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Master override.'), findsNothing);
+  });
+
+  testWidgets('unified trap switches persist independent choices under master override', (tester) async {
+    SkillManagementResult? saved;
+    await _openTrapSettings(tester, (result) => saved = result);
+    await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
+    await tester.pumpAndSettle();
+    Future<void> toggle(String id, bool value) async {
+      final control = find.byKey(ValueKey('global-$id'));
+      await _revealGlobal(tester, control);
+      expect(tester.widget<SwitchListTile>(control).value, isNot(value));
+      await tester.tap(control);
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(control).value, value);
+    }
+    await toggle('arenaTrapsEnabled', false);
+    await toggle('skillTrapsEnabled', false);
+    await toggle('allTrapsDisabled', true);
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(saved, isNotNull);
+    final result = saved!.tuning;
+    expect(result.allTrapsDisabled, isTrue);
+    expect(result.arenaTrapsEnabled, isFalse);
+    expect(result.skillTrapsEnabled, isFalse);
+    final restored = PowerUpConfig.fromJson(result.toJson()).withValue('allTrapsDisabled', 0);
+    expect(restored.arenaTrapsEnabled, isFalse);
+    expect(restored.skillTrapsEnabled, isFalse);
+  });
+
+  testWidgets('unified master override preserves independently enabled skill traps', (tester) async {
+    SkillManagementResult? saved;
+    await _openTrapSettings(tester, (result) => saved = result);
+    await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
+    await tester.pumpAndSettle();
+    for (final id in ['arenaTrapsEnabled', 'allTrapsDisabled']) {
+      final control = find.byKey(ValueKey('global-$id'));
+      await _revealGlobal(tester, control);
+      await tester.tap(control);
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(saved, isNotNull);
+    final result = saved!.tuning;
+    expect(result.allTrapsDisabled, isTrue);
+    final lifted = result.withValue('allTrapsDisabled', 0);
+    expect(lifted.arenaTrapsEnabled, isFalse);
+    expect(lifted.skillTrapsEnabled, isTrue);
+  });
+
   testWidgets(
     'legacy artwork has pill tags and editing preserves shared bindings',
     (tester) async {
@@ -322,6 +410,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
       await tester.pumpAndSettle();
+      await _revealGlobal(tester, find.byKey(const ValueKey('global-callout-seconds')));
       await tester.enterText(
         find.byKey(const ValueKey('global-callout-seconds')),
         '2.5',

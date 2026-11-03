@@ -356,7 +356,18 @@ class SkillDefinition {
   /// A future animation binding can use this slot without changing its meaning.
   final String? heldSpriteId;
   String? get effectivePickupSpriteId => pickupSpriteId ?? iconSpriteId;
-  String? get effectiveHeldSpriteId => heldSpriteId ?? iconSpriteId;
+  /// Special held-artwork values are persisted in the existing sprite slot.
+  /// They deliberately do not affect the library icon or arena pickup.
+  static const noHeldArtwork = 'ballwars:held:none';
+  static const flameHandArtwork = 'ballwars:held:flame';
+  static const handEffectPrefix = 'ballwars:held:effect:';
+  static const handOverlayPrefix = 'ballwars:held:overlay:';
+  String? get effectiveHeldSpriteId => heldSpriteId == noHeldArtwork ||
+          heldSpriteId == flameHandArtwork ||
+          (heldSpriteId?.startsWith(handEffectPrefix) ?? false) ||
+          (heldSpriteId?.startsWith(handOverlayPrefix) ?? false)
+      ? heldSpriteId
+      : heldSpriteId ?? iconSpriteId;
   final String? projectileSpriteId;
   final String? impactSpriteId;
   final String? castingSpriteId;

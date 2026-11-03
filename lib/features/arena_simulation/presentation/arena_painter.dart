@@ -700,11 +700,16 @@ class ArenaPainter extends CustomPainter {
 
     _paintBody(canvas, ball);
     BallHairPainter.paint(canvas, ball);
+    // Visual-only melee snapshots keep the consumed skill's own artwork
+    // settings even when another weapon occupies that hand afterward.
+    String? renderedSkillId(int slot) => slot >= 2
+        ? ball.meleeAttackVisual?.skillId
+        : slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId;
     double gripSide(PowerUpKind kind, int slot) =>
         state.powerUps
             ?.visualSkill(
               kind,
-              skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+              skillId: renderedSkillId(slot),
             )
             .weaponGripSide ??
         0;
@@ -712,7 +717,7 @@ class ArenaPainter extends CustomPainter {
         state.powerUps
             ?.visualSkill(
               kind,
-              skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+              skillId: renderedSkillId(slot),
             )
             .weaponGripRotation ??
         0;
@@ -743,9 +748,7 @@ class ArenaPainter extends CustomPainter {
           skill: powerUps.visualSkill(
             kind,
             ball: ball,
-            skillId: slot < 0
-                ? null
-                : slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            skillId: slot < 0 ? null : renderedSkillId(slot),
           ),
           owner: ball,
           kind: kind,
@@ -756,52 +759,40 @@ class ArenaPainter extends CustomPainter {
           ?.visualSkill(
             kind,
             ball: ball,
-            skillId: slot < 0
-                ? null
-                : slot == 0
-                ? ball.heldSkillId
-                : ball.heldSecondarySkillId,
+            skillId: slot < 0 ? null : renderedSkillId(slot),
           )
           .effectiveHeldSpriteId,
       artworkTint: (kind, slot) =>
           state.powerUps?.artworkTint(
             kind,
             ball: ball,
-            skillId: slot < 0
-                ? null
-                : slot == 0
-                ? ball.heldSkillId
-                : ball.heldSecondarySkillId,
+            skillId: slot < 0 ? null : renderedSkillId(slot),
           ) ??
           0xFFFFFFFF,
       artworkKind: (kind, slot) =>
           state.powerUps
               ?.visualSkill(
                 kind,
-                skillId: slot == 0
-                    ? ball.heldSkillId
-                    : ball.heldSecondarySkillId,
+                skillId: renderedSkillId(slot),
               )
               .displayKind ??
           kind,
       useWeaponSprite: (kind, slot) =>
           state.powerUps?.usesSprite(
             kind,
-            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            skillId: renderedSkillId(slot),
           ) ??
           true,
       incomingAttackAngle: PowerUpPainter.incomingAttackAngle(state, ball),
-      firedWeaponHoldLeft: (kind, slot) =>
-          state.powerUps?.firedWeaponHoldLeft(
-            ball,
-            kind,
-            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
-          ) ??
-          0,
+      firedWeaponHoldLeft: (kind, slot) => slot >= 2
+          ? ball.meleeAttackVisual?.stepsLeft ?? 0
+          : state.powerUps?.firedWeaponHoldLeft(
+                ball, kind, skillId: renderedSkillId(slot),
+              ) ?? 0,
       weaponDisplayScale: (kind, slot) =>
           state.powerUps?.weaponDisplayScale(
             kind,
-            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            skillId: renderedSkillId(slot),
           ) ??
           1,
       effectDisplayScale: (kind) =>
@@ -810,26 +801,26 @@ class ArenaPainter extends CustomPainter {
           state.powerUps
               ?.visualSkill(
                 kind,
-                skillId: slot == 0
-                    ? ball.heldSkillId
-                    : ball.heldSecondarySkillId,
+                skillId: renderedSkillId(slot),
               )
               .weaponGripInset ??
           kind.defaultGripInset,
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
+      heldAttackRepeatCount: (kind, slot) =>
+          state.powerUps?.visualSkill(
+            kind, ball: ball, skillId: renderedSkillId(slot),
+          ).heldAttackRepeatCount ?? 1,
       heldAttackAnimation: (kind, slot) =>
           state.powerUps?.visualSkill(
             kind, ball: ball,
-            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+            skillId: renderedSkillId(slot),
           ).heldAttackAnimation,
       heldFacing: (kind, slot) =>
           state.powerUps
               ?.visualSkill(
                 kind,
-                skillId: slot == 0
-                    ? ball.heldSkillId
-                    : ball.heldSecondarySkillId,
+                skillId: renderedSkillId(slot),
               )
               .heldFacing ??
           SkillHeldFacing.automatic,

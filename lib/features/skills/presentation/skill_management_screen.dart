@@ -1877,6 +1877,7 @@ class _SkillEditorState extends State<_SkillEditor>
   late SkillWeaponClass? _weaponClass = widget.skill.weaponClass;
   late SkillAttackDelivery? _attackDelivery = widget.skill.attackDelivery;
   late HeldAttackAnimation? _heldAttackAnimation = widget.skill.heldAttackAnimation;
+  late int _heldAttackRepeatCount = widget.skill.heldAttackRepeatCount.clamp(1, 5);
   late bool _trackNearestOpponent = widget.skill.trackNearestOpponent;
   late SkillTrigger? _trigger = widget.skill.trigger;
   late SkillTargeting? _targeting = widget.skill.targeting;
@@ -2132,6 +2133,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _weaponClass = defaults.weaponClass;
       _attackDelivery = defaults.attackDelivery;
       _heldAttackAnimation = defaults.heldAttackAnimation;
+      _heldAttackRepeatCount = defaults.heldAttackRepeatCount;
       _trackNearestOpponent = defaults.trackNearestOpponent;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
@@ -2556,6 +2558,7 @@ class _SkillEditorState extends State<_SkillEditor>
       weaponClass: _weaponClass,
       attackDelivery: _attackDelivery,
       heldAttackAnimation: _heldAttackAnimation,
+      heldAttackRepeatCount: _heldAttackRepeatCount,
       trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
       pickupDisplayScale: _double('pickupDisplayScale'),
@@ -2723,6 +2726,7 @@ class _SkillEditorState extends State<_SkillEditor>
       displayScale: _double('weaponDisplayScale') ?? 1,
       grip: GripValues(
         attackAnimation: _heldAttackAnimation,
+        attackRepeatCount: _heldAttackRepeatCount,
         inset: _double('weaponGripInset') ?? 0,
         side: _double('weaponGripSide') ?? 0,
         rotation: _double('weaponGripRotation') ?? 0,
@@ -2750,6 +2754,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _numbers['weaponGripRotation']!.text = '${result.rotation.round()}';
       _heldFacing = result.facing;
       _heldAttackAnimation = result.attackAnimation;
+      _heldAttackRepeatCount = result.attackRepeatCount;
       _heldAttachment = result.heldAttachment;
       _effectAttachment = result.effectAttachment;
       _numbers['heldOffsetX']!.text = text(result.heldOffsetX);
@@ -4409,6 +4414,17 @@ class _SkillEditorState extends State<_SkillEditor>
                               ),
                             ],
                             onChanged: (value) => setState(() => _heldAttackAnimation = value),
+                          ),
+                        ),
+                        _fixedRow(
+                          'Attack repeats (visual only)',
+                          DropdownButtonFormField<int>(
+                            key: const ValueKey('skill-held-attack-repeats'),
+                            initialValue: _heldAttackRepeatCount,
+                            items: [for (var count = 1; count <= 5; count++)
+                              DropdownMenuItem(value: count, child: Text('$count')),
+                            ],
+                            onChanged: (value) => setState(() => _heldAttackRepeatCount = value ?? 1),
                           ),
                         ),
                         const Text('Weapon class and attack delivery describe presentation. '

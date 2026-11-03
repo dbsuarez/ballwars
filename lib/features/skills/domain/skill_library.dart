@@ -131,6 +131,7 @@ class SkillDefinition {
     this.weaponClass,
     this.attackDelivery,
     this.heldAttackAnimation,
+    this.heldAttackRepeatCount = 1,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
     this.pickupDisplayScale = 1,
@@ -251,6 +252,8 @@ class SkillDefinition {
   final SkillAttackDelivery? attackDelivery;
   /// Null keeps legacy animation for existing saved skills.
   final HeldAttackAnimation? heldAttackAnimation;
+  /// Cosmetic repetitions per attack (1–5); does not change hits or damage.
+  final int heldAttackRepeatCount;
 
   SkillWeaponClass get effectiveWeaponClass => weaponClass ??
       (meleeReach > 0 && (delivery == SkillDelivery.projectile ||
@@ -543,6 +546,7 @@ class SkillDefinition {
     Object? weaponClass = _unset,
     Object? attackDelivery = _unset,
     Object? heldAttackAnimation = _unset,
+    int? heldAttackRepeatCount,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
     double? pickupDisplayScale,
@@ -655,6 +659,7 @@ class SkillDefinition {
         ? this.attackDelivery : attackDelivery as SkillAttackDelivery?,
     heldAttackAnimation: identical(heldAttackAnimation, _unset)
         ? this.heldAttackAnimation : heldAttackAnimation as HeldAttackAnimation?,
+    heldAttackRepeatCount: (heldAttackRepeatCount ?? this.heldAttackRepeatCount).clamp(1, 5),
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
@@ -791,6 +796,7 @@ class SkillDefinition {
     if (weaponClass != null) 'weapon_class': weaponClass!.name,
     if (attackDelivery != null) 'attack_delivery': attackDelivery!.name,
     if (heldAttackAnimation != null) 'held_attack_animation': heldAttackAnimation!.name,
+    if (heldAttackRepeatCount != 1) 'held_attack_repeat_count': heldAttackRepeatCount.clamp(1, 5),
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
     'pickup_display_scale': pickupDisplayScale,
@@ -946,6 +952,7 @@ class SkillDefinition {
       weaponClass: nullableEnum('weapon_class', SkillWeaponClass.values),
       attackDelivery: nullableEnum('attack_delivery', SkillAttackDelivery.values),
       heldAttackAnimation: nullableEnum('held_attack_animation', HeldAttackAnimation.values),
+      heldAttackRepeatCount: ((value['held_attack_repeat_count'] as num?)?.toInt() ?? 1).clamp(1, 5),
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,

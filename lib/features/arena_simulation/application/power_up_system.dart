@@ -521,6 +521,7 @@ class PowerUpSystem {
       ..heldSecondary = null
       ..heldSkillId = null
       ..heldSecondarySkillId = null
+      ..meleeAttackVisual = null
       ..heldTwoHanded = false
       ..heldSecondaryTwoHanded = false
       ..speedLeft = 0
@@ -747,6 +748,15 @@ class PowerUpSystem {
     _clearDisabledSkillTraps();
     _processPassiveTriggers();
     _updateArenaThemeHazards();
+    // Visual-only: a consumed sword must remain gone for combat, but its
+    // strike artwork needs a few frames to complete the swing.
+    for (final ball in match.state.balls) {
+      final visual = ball.meleeAttackVisual;
+      if (visual != null) {
+        visual.stepsLeft -= 1;
+        if (visual.stepsLeft <= 0) ball.meleeAttackVisual = null;
+      }
+    }
     _updateFiredWeaponHold();
     _updateScheduledComposedEffects();
     _updateEffectSteps();
@@ -2184,6 +2194,23 @@ class PowerUpSystem {
       _skillYell(attacker, weapon, 'SHIELD BASH!');
     } else {
       return;
+    }
+    // Save appearance only. The weapon is still consumed immediately, so it
+    // cannot hit twice or interfere with a new pickup during the swing.
+    final animation = visualSkill(weapon, ball: attacker, skillId: skillId)
+        .heldAttackAnimation;
+    if (weapon.isBlade &&
+        (animation == HeldAttackAnimation.slash ||
+            animation == HeldAttackAnimation.thrust)) {
+      attacker.meleeAttackVisual = MeleeAttackVisual(
+        kind: weapon,
+        skillId: skillId,
+        slot: attacker.held == weapon &&
+                (skillId == null || attacker.heldSkillId == skillId)
+            ? 0
+            : 1,
+        stepsLeft: firedWeaponHoldSteps,
+      );
     }
     attacker.removeWeapon(
       weapon,

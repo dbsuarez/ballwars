@@ -4,6 +4,22 @@ import '../../ball_management/domain/custom_ball.dart';
 import 'fan_line.dart';
 import 'power_up.dart';
 
+/// Short-lived artwork of a consumed melee strike, independent of equipment.
+/// It must never be used for collision, damage or pickup logic.
+class MeleeAttackVisual {
+  MeleeAttackVisual({
+    required this.kind,
+    required this.skillId,
+    required this.slot,
+    required this.stepsLeft,
+  });
+
+  final PowerUpKind kind;
+  final String? skillId;
+  final int slot;
+  int stepsLeft;
+}
+
 class SimulationBall {
   final CustomBall config;
   Offset position;
@@ -31,6 +47,9 @@ class SimulationBall {
   String? heldSecondarySkillId;
   bool heldTwoHanded = false;
   bool heldSecondaryTwoHanded = false;
+
+  /// A visual snapshot of the last consumed melee attack. Not equipped.
+  MeleeAttackVisual? meleeAttackVisual;
 
   List<PowerUpKind> get equippedWeapons => [?held, ?heldSecondary];
 

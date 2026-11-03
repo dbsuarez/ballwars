@@ -1,19 +1,23 @@
 {
-  "release": "v1.14.44 RC repair04",
-  "status": "User log: 1,564 passed, 1 skipped, 1 failed; Facing dropdown test visibility repaired; Flutter retest pending",
+  "release": "v1.14.46 RC1 cumulative patch",
+  "status": "Not Flutter-verified; 1,570 passing tests belong to previous v1.14.45",
   "files_sha256": {
-    "lib/features/skills/domain/skill_library.dart": "27e5bf5d60edb0a6f51d1725042768ad83dd3bcf4b61a46b9c2cfa844309958e",
-    "lib/features/skills/presentation/grip_preview_dialog.dart": "a8149d13f15a38c3e156da4761b53a636b0f24f1302d36b321f28497e5ab9aa7",
-    "lib/features/skills/presentation/skill_management_screen.dart": "67c5f2c6d70c59605375e0ff8d13153d43f6aaf9752d00af9ae24cdd247970d8",
+    "lib/features/skills/domain/skill_library.dart": "55e859ee67d57e292bd0b6af6036907c4348b029edaf9026edfba3938ea7e7d7",
+    "lib/features/skills/presentation/grip_preview_dialog.dart": "d1b242ffe376eeddb4940569aaa7e8875a72cee2c1f3e2e94ddc6aba3f985448",
+    "lib/features/skills/presentation/skill_management_screen.dart": "048719075ee3a2f4496e71ecf87b429196700003f738e26c8d65e7758bb0c2e4",
     "lib/features/skills/presentation/area_effect_preview.dart": "a81d0537c8f988433050d33d7e4b5d1c125aba60ad9e548e73f1d7a796c54335",
     "lib/features/skills/presentation/effect_placement_preview.dart": "708e13875a04867670ea35829a67629b76ad9e4313dee146130524d65e2c29a0",
-    "lib/features/arena_simulation/presentation/arena_painter.dart": "985dd3501b4dc864b7ec1807b90a038435bb98c68dc3dd6c43d644ed5841cd37",
-    "lib/features/arena_simulation/presentation/power_up_painter.dart": "e34c9681d720bcf18b2afb8bd21ea983c7bfbbab6c8fe8d1674fd563991d27ff",
-    "test/features/skills/grip_live_preview_values_test.dart": "61a69ff8423e8e9807f604c8bde312b35b127982961d3c36aceff5e018934adb",
+    "lib/features/arena_simulation/presentation/arena_painter.dart": "06ecf56b29b8771785560cc492b0d43a78d5bad5ab8cda0313872019e7d8021e",
+    "lib/features/arena_simulation/presentation/power_up_painter.dart": "83a4c231dbabc32f1a694d9f7146c845dc8d8b41907187f784e30ea24c3980cc",
+    "test/features/skills/grip_live_preview_values_test.dart": "f4db771911c690c5fb72a42c8dbd9231faa8a1a5a06e26d849c4759ced54301c",
     "test/features/skills/animated_effect_placement_preview_test.dart": "5e560f8188f760001af36b0fb739b12503b6e2fadcb33881c42a007a84880ca2",
     "test/features/skills/area_live_preview_test.dart": "6f27ac5c1716da1524bb4f5511048c3a65d4911ee7702e774a72b35fb64bfa72",
-    "test/features/skills/held_attack_animation_test.dart": "de5aff5f635ef1b439c648e574fa6ad4f947b5e18e0375e31c6063a44b727fca",
-    "V11444_LIVE_PREVIEW_PROGRESS.md": "6442ccb57125405dbaa1cdd2b89105b6f461443751341160991e02f1fdedbb92",
-    "test/features/skills/skill_management_screen_test.dart": "f56469fcb7f56a6d270bfee8a0706696e73e94e55462d27cd911cdbf6dd29f3f"
+    "test/features/skills/held_attack_animation_test.dart": "ee957bdffa39bc4a45e8fb1cad50ff60b209141ad24b6bc710e91146110aab45",
+    "test/features/skills/skill_management_screen_test.dart": "f56469fcb7f56a6d270bfee8a0706696e73e94e55462d27cd911cdbf6dd29f3f",
+    "lib/features/arena_simulation/domain/simulation_ball.dart": "678e02298fdf22ab9ebe795425a6915c995d7fa1a36d26f69ec827c0dbe01cd2",
+    "lib/features/arena_simulation/application/power_up_system.dart": "373421aee4f6450c90d68f81f81e628b39cd2f75d13b601266827f61fc983e2c",
+    "test/features/arena_simulation/application/melee_attack_visual_test.dart": "d5b9a8118dd9c610d6d95f7b9bcb3e64d782d7b4dbeef0b29be4e4875729389d",
+    "test/features/skills/held_attack_motion_test.dart": "308224ffe0d4d81ba894122f6073ff9d2e7ca9b7bd138adf18af813988bff072",
+    "V11444_LIVE_PREVIEW_PROGRESS.md": "dda6c58dc6403cb4d155fc957f7768b268f01e5686631f153fc881fb011a5c15"
   }
 }

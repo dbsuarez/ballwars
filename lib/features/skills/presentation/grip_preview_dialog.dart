@@ -28,6 +28,7 @@ class GripValues {
     this.effectOffsetY = 0,
     this.pickupScale = 1,
     this.attackAnimation,
+    this.attackRepeatCount = 1,
   });
 
   final double inset;
@@ -39,6 +40,7 @@ class GripValues {
   final double heldOffsetX, heldOffsetY, effectOffsetX, effectOffsetY;
   final double pickupScale;
   final HeldAttackAnimation? attackAnimation;
+  final int attackRepeatCount;
 
   /// Moves the selected layer by a screen-space drag expressed in ball radii.
   /// Both layers retain independent offsets; values stay within editor limits.
@@ -57,6 +59,7 @@ class GripValues {
 
   GripValues copyWith({
     Object? attackAnimation = _unchanged,
+    int? attackRepeatCount,
     double? inset,
     double? side,
     double? rotation,
@@ -66,6 +69,7 @@ class GripValues {
   }) => GripValues(
     attackAnimation: identical(attackAnimation, _unchanged)
         ? this.attackAnimation : attackAnimation as HeldAttackAnimation?,
+    attackRepeatCount: (attackRepeatCount ?? this.attackRepeatCount).clamp(1, 5),
     inset: inset ?? this.inset,
     side: side ?? this.side,
     rotation: rotation ?? this.rotation,
@@ -176,6 +180,7 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
     effectOffsetY: widget.grip.effectOffsetY.clamp(-1.5, 1.5),
     pickupScale: widget.pickupScale.clamp(0.25, 3),
     attackAnimation: widget.grip.attackAnimation,
+    attackRepeatCount: widget.grip.attackRepeatCount.clamp(1, 5),
   );
 
   Widget _slider(
@@ -255,17 +260,56 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
     return Dialog(
       child: ConstrainedBox(
         key: const ValueKey('grip-preview-dialog'),
-        constraints: const BoxConstraints(maxWidth: 440),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Grip preview',
-                style: Theme.of(context).textTheme.titleLarge,
+        constraints: BoxConstraints(
+          maxWidth: 440,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text('Grip preview',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            // Both orientations remain visible while editing settings below.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                height: (MediaQuery.sizeOf(context).height * 0.24)
+                    .clamp(96.0, 180.0),
+                child: Column(
+                  children: [
+              // Rebuilds once the sprites have loaded; until then the
+              // painter draws the glyph fallback.
+              Expanded(child: FutureBuilder<void>(
+                future: PowerUpSprites.load(),
+                builder: (_, snapshot) {
+                  final loaded =
+                      snapshot.connectionState == ConnectionState.done;
+                  return Row(
+                    children: [
+                      view('right', true, loaded),
+                      const SizedBox(width: 12),
+                      view('left', false, loaded),
+                    ],
+                  );
+                },
+              )),
+                  ],
+                ),
               ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                key: const ValueKey('grip-preview-settings-scroll'),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               if (widget.kind.isWeapon) ...[
                 DropdownButtonFormField<HeldAttackAnimation?>(
                   key: const ValueKey('grip-preview-attack-animation'),
@@ -279,26 +323,19 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                   ],
                   onChanged: (value) => setState(() => _grip = _grip.copyWith(attackAnimation: value)),
                 ),
+                DropdownButtonFormField<int>(
+                  key: const ValueKey('grip-preview-attack-repeats'),
+                  initialValue: _grip.attackRepeatCount,
+                  decoration: const InputDecoration(labelText: 'Attack repeats (visual only)'),
+                  items: [for (var count = 1; count <= 5; count++)
+                    DropdownMenuItem(value: count, child: Text('$count'))],
+                  onChanged: (value) => setState(() =>
+                      _grip = _grip.copyWith(attackRepeatCount: value ?? 1)),
+                ),
                 _slider('attack-frame', 'Attack frame', _attackFrame, 0, 1, '',
                     (v) => _attackFrame = v),
               ],
               const SizedBox(height: 12),
-              // Rebuilds once the sprites have loaded; until then the
-              // painter draws the glyph fallback.
-              FutureBuilder<void>(
-                future: PowerUpSprites.load(),
-                builder: (_, snapshot) {
-                  final loaded =
-                      snapshot.connectionState == ConnectionState.done;
-                  return Row(
-                    children: [
-                      view('right', true, loaded),
-                      const SizedBox(width: 12),
-                      view('left', false, loaded),
-                    ],
-                  );
-                },
-              ),
               if (widget.skill != null) ...[
                 const SizedBox(height: 8),
                 const Text('Drag the preview to adjust offsets. Select which artwork to move.'),
@@ -476,8 +513,11 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                   ),
                 ],
               ),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -559,6 +599,7 @@ class _GripPreviewPainter extends CustomPainter {
       firedWeaponHoldLeft: (_, _) => attackFrame == 0 ? 0 :
           (30 * (1 - attackFrame)).round().clamp(1, 30),
       heldAttackAnimation: (_, _) => grip.attackAnimation,
+      heldAttackRepeatCount: (_, _) => grip.attackRepeatCount,
       heldFacing: (_, _) => grip.facing,
       handArtworkSettings: (_) => skill?.copyWith(
         heldAttachment: grip.heldAttachment,

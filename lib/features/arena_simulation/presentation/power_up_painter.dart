@@ -3282,6 +3282,7 @@ class PowerUpPainter {
     double Function(PowerUpKind kind, int slot)? weaponGripRotation,
     SkillHeldFacing Function(PowerUpKind kind, int slot)? heldFacing,
     HeldAttackAnimation? Function(PowerUpKind kind, int slot)? heldAttackAnimation,
+    int Function(PowerUpKind kind, int slot)? heldAttackRepeatCount,
     double Function(PowerUpKind kind)? skillRange,
     SkillDefinition? Function(PowerUpKind kind)? handArtworkSettings,
     double Function(PowerUpKind kind)? handEffectScale,
@@ -3920,6 +3921,7 @@ class PowerUpPainter {
             slot,
             firedHoldLeft: firedWeaponHoldLeft?.call(weapon, slot) ?? 0,
             attackAnimation: heldAttackAnimation?.call(weapon, slot),
+            attackRepeatCount: heldAttackRepeatCount?.call(weapon, slot) ?? 1,
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),
@@ -3935,6 +3937,43 @@ class PowerUpPainter {
             step: step,
           );
         }
+      } finally {
+        SkillArtworkTint.end(canvas);
+      }
+    }
+    final melee = ball.meleeAttackVisual;
+    if (melee != null && melee.stepsLeft > 0) {
+      final weapon = melee.kind;
+      // Slot 2/3 identifies transient artwork to the configuration callbacks;
+      // the actual pose still uses the original primary/secondary hand slot.
+      final visualSlot = melee.slot + 2;
+      SkillArtworkTint.begin(
+        canvas,
+        artworkTint?.call(weapon, visualSlot) ?? 0xFFFFFFFF,
+      );
+      try {
+        _paintHeldWeapon(
+          canvas,
+          ball,
+          weapon,
+          melee.slot,
+          firedHoldLeft: melee.stepsLeft,
+          attackAnimation: heldAttackAnimation?.call(weapon, visualSlot),
+          attackRepeatCount: heldAttackRepeatCount?.call(weapon, visualSlot) ?? 1,
+          useSprite: useWeaponSprite?.call(weapon, visualSlot) ?? true,
+          displayScale: weaponDisplayScale?.call(weapon, visualSlot) ?? 1,
+          gripInset: weaponGripInset?.call(weapon, visualSlot),
+          gripSide: weaponGripSide?.call(weapon, visualSlot) ?? 0,
+          gripRotation: weaponGripRotation?.call(weapon, visualSlot) ?? 0,
+          heldFacing: heldFacing?.call(weapon, visualSlot) ??
+              SkillHeldFacing.automatic,
+          artworkSettings: handArtworkSettings?.call(weapon),
+          handEffectScale: handEffectScale?.call(weapon) ?? 1,
+          handEffectColor: handEffectColor?.call(weapon),
+          artwork: artworkKind?.call(weapon, visualSlot) ?? weapon,
+          spriteId: iconSpriteId?.call(weapon, visualSlot),
+          step: step,
+        );
       } finally {
         SkillArtworkTint.end(canvas);
       }
@@ -3981,6 +4020,16 @@ class PowerUpPainter {
         Offset(math.cos(angle), math.sin(angle)) * ballRadius * 2.25;
   }
 
+  /// One forward slash/thrust per cycle. A single repeat never returns
+  /// through the attack arc, which previously looked like a second strike.
+  @visibleForTesting
+  static double heldAttackCyclePhase(double progress, int repeats) {
+    final count = repeats.clamp(1, 5);
+    final scaled = progress.clamp(0.0, 1.0) * count;
+    if (scaled >= count) return 1;
+    return scaled - scaled.floor();
+  }
+
   static void _paintHeldWeapon(
     Canvas canvas,
     SimulationBall ball,
@@ -3988,6 +4037,7 @@ class PowerUpPainter {
     int slot, {
     int firedHoldLeft = 0,
     HeldAttackAnimation? attackAnimation,
+    int attackRepeatCount = 1,
     bool useSprite = true,
     double displayScale = 1,
     double? gripInset,
@@ -4158,21 +4208,40 @@ class PowerUpPainter {
         6.0,
         ball.radius * (held.isBlade ? 0.72 : 0.36) * displayScale,
       );
-      canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
-      drawGlyph(canvas, art, badge, r * 0.62);
+      if ((attackAnimation == HeldAttackAnimation.slash ||
+              attackAnimation == HeldAttackAnimation.thrust) && firedHoldLeft > 0) {
+        final phase = heldAttackCyclePhase(1 - firedHoldLeft / 30.0, attackRepeatCount);
+        final baseAngle = heldAngle(ball, weapon: held, slot: slot);
+        final angle = attackAnimation == HeldAttackAnimation.slash
+            ? baseAngle + (-0.65 + 2.05 * phase) * (slot.isEven ? 1 : -1)
+            : baseAngle;
+        final reach = ball.radius * (attackAnimation == HeldAttackAnimation.thrust
+            ? 0.9 + 0.7 * phase : 0.9);
+        final tip = ball.position + Offset(math.cos(angle), math.sin(angle)) * reach;
+        canvas.drawLine(
+          ball.position,
+          tip,
+          Paint()
+            ..color = colorOf(art)
+            ..strokeWidth = math.max(2, ball.radius * 0.18)
+            ..strokeCap = StrokeCap.round,
+        );
+        drawGlyph(canvas, art, tip, r * 0.62);
+      } else {
+        canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
+        drawGlyph(canvas, art, badge, r * 0.62);
+      }
       return;
     }
     final baseAngle = heldAngle(ball, weapon: held, slot: slot);
     final firedProgress = firedHoldLeft <= 0 ? 0.0 : 1 - firedHoldLeft / 30.0;
     final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
-    // A slash sweeps around the grip pivot; thrust extends forward and returns.
-    // Null preserves the legacy drop/fade for all existing saved skills.
-    final slashPhase = firedProgress.clamp(0.0, 1.0);
-    final swing = slashPhase < 0.22
-        ? -0.65 * (slashPhase / 0.22)
-        : slashPhase < 0.72
-            ? -0.65 + 2.05 * ((slashPhase - 0.22) / 0.50)
-            : 1.40 * (1 - (slashPhase - 0.72) / 0.28);
+    // Cosmetic-only single-direction slash or thrust. In particular, do not
+    // swing back through the opponent or retract into a second-looking hit.
+    // Null preserves the original legacy drop/fade behavior.
+    final slashPhase = firedHoldLeft <= 0 ? 0.0 :
+        heldAttackCyclePhase(firedProgress, attackRepeatCount);
+    final swing = firedHoldLeft <= 0 ? 0.0 : -0.65 + 2.05 * slashPhase;
     final angle = attackAnimation == HeldAttackAnimation.slash
         ? baseAngle + swing * (slot.isEven ? 1 : -1)
         : attackAnimation == HeldAttackAnimation.thrust ||
@@ -4189,7 +4258,7 @@ class PowerUpPainter {
       ball, weapon: held, slot: slot,
       gripInset: gripInset, gripSide: gripSide,
     );
-    final thrust = math.sin(slashPhase * math.pi).clamp(0.0, 1.0);
+    final thrust = slashPhase;
     final center = attackAnimation == HeldAttackAnimation.slash
         ? ball.position + Offset(math.cos(angle), math.sin(angle)) *
             (baseCenter - ball.position).distance

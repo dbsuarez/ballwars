@@ -91,3 +91,58 @@ Do not release until `flutter analyze`, `flutter test`, and phone checks pass. T
 - User's `1.14.44RC(3).log` reports 1,564 passed, 1 skipped, 1 failed. The sole failure remains the grip preview integration test, now at the Facing dropdown: test tap coordinates (650, 1525) were outside the 1200x1000 viewport, so the popup never opened and the subsequent `Stay upright` finder had no element.
 - In `skill_management_screen_test.dart`, call `tester.ensureVisible` on `grip-preview-facing` and `pumpAndSettle` before opening the dropdown, then assert the popup item exists before selecting it. Previous Cancel/Done visibility fixes remain intact.
 - No production runtime code changed in repair 04. Flutter SDK unavailable in this environment, so this fix is **not yet Flutter-verified**. Await targeted test, full suite and device acceptance before marking release-ready.
+
+## Post-release v1.14.45 candidate: Sword Slash and pinned grip preview (2026-11-04)
+
+### Implemented in this candidate
+- **Sword melee Slash/Thrust now animates:** On physical blade contact, preserve a visual-only snapshot of the consumed weapon's kind, original slot, skill identity and 30-step lifetime if its animation is Slash or Thrust. The weapon itself is still removed immediately; the visual cannot attack, collide, be equipped or trigger damage. The snapshot expires after 30 `PowerUpSystem.step()` calls and is cleared on respawn. Legacy/null and None animations retain their previous behavior.
+- **Existing Sprite fallback:** A configured slash without usable held sprite draws a moving slash/glyph fallback rather than a static badge during the attack.
+- **Rendering identity:** The arena renderer uses snapshot skill ID for the temporary attack, preventing a newly equipped weapon from taking over the original sprite selection and grip parameters. Primary/secondary pose is preserved.
+- **Pinned Grip Preview:** The dual-orientation weapon preview remains in the fixed top region; only sliders, dropdowns and other settings scroll below it, in a height-constrained dialog. Live state updates are still shared.
+- **Regression tests added:** New `melee_attack_visual_test.dart` exercises consumption, single-hit semantics, countdown expiration, Slash/Thrust, legacy behavior and secondary slot. `grip_live_preview_values_test.dart` gains a widget test for preview position staying fixed after scrolling to Facing.
+
+### Verification status
+- **Implemented:** source edits plus regression tests authored.
+- **Static packaging:** cumulative ZIP file list, SHA-256 content verification and ZIP CRC checks passed.
+- **Flutter analysis/tests:** **NOT RUN** in this environment: no Flutter/Dart SDK is installed. The 1,565 passing tests are from the previous, unmodified v1.14.44 build; do not attribute them to this patch.
+- **Release:** NOT release-ready until user reruns analyzer, focused tests, full suite and phone checks.
+
+### Apply on Windows
+1. Back up or commit the existing v1.14.44 working tree. Extract this ZIP at your project root (`D:\Development\ballwars`), preserving relative paths. The ZIP is a cumulative **changes-only** patch, not a complete Flutter project.
+2. Run `flutter analyze`.
+3. Run `flutter test test/features/arena_simulation/application/melee_attack_visual_test.dart test/features/skills/grip_live_preview_values_test.dart test/features/skills/skill_management_screen_test.dart --reporter expanded`.
+4. Run `flutter test --reporter expanded`.
+5. On phone: set built-in Sword held attack to Slash/Swing; save; hit target in Arsenal/All-Out; confirm sword vanishes from inventory immediately yet visibly swings after contact; check dual wield and a replacement pickup; adjust bottom grip sliders while preview stays visible.
+6. Only after green gates, create a unique commit and tag `v1.14.45` on the existing **master** branch, and use existing release workflows.
+
+### Out of scope
+- No new weapon mechanics, timing customization or persistent configuration migrations.
+- No new rendered image asset required.
+
+
+## v1.14.46 RC: Configurable Held Attack Repeat Count (2026-11-04)
+
+### Implemented
+- New **Attack repeats (visual only)** dropdown (1–5, default 1) beside Held attack animation in Skill Editor and inside Grip Preview; the pinned preview shows the same configured repeat motion.
+- `heldAttackRepeatCount` persisted as `held_attack_repeat_count` in skill JSON, with omitted defaults for backwards-compatible saves and clamping to 1–5 on parsing/copying. Existing skill configs default to exactly 1; no save migration needed.
+- For a **single Slash**, the sprite now advances through one continuous forward arc and disappears at the end of the 30-step visual, rather than returning across the target. For a **single Thrust**, the sprite extends once and disappears instead of retracting and looking like a second strike. Counts 2–5 split the fixed cosmetic 30-step window into that many cycles.
+- Non-sprite fallback now animates both Slash and Thrust. The legacy/null and None paths are unaffected.
+- Repeat count is read by the real arena painter using skill identity and by Grip Preview. It does not change collisions, weapon consumption, damage, hit count, skill activation, attack rate, or the 30-step lifetime.
+- Regression tests added for JSON persistence/clamping, legacy default, grip value persistence and repeat-cycle monotonicity/count.
+
+### Gates and status
+- Implemented: YES.
+- ZIP integrity and SHA-256 contents: VERIFIED.
+- Flutter analyze / tests: **NOT RUN HERE** (Flutter/Dart SDK unavailable). Previous user pass of 1,570 tests covers v1.14.45, NOT these new changes.
+- Release status: NOT READY until user validates analysis, focused suite and full tests plus phone observation.
+
+### Apply on Windows
+1. Commit or back up your existing v1.14.45 code; extract this **cumulative changes-only** ZIP at `D:\Development\ballwars` preserving paths. No need to apply earlier RC44/45 ZIPs as well.
+2. `flutter analyze`
+3. `flutter test test/features/skills/held_attack_animation_test.dart test/features/skills/held_attack_motion_test.dart test/features/skills/skill_management_screen_test.dart test/features/skills/grip_live_preview_values_test.dart --reporter expanded`
+4. `flutter test --reporter expanded`
+5. On the phone, edit Sword → Held attack animation: Slash/Swing → Attack repeats: **1**, save and confirm one visual swing per Sword contact; also verify Thrust, repeat count 2/3, persistence after reopening the editor, and a settings slider while pinned Grip Preview stays visible.
+6. Release **v1.14.46** only after green checks. The repository release branch is **master**, not main.
+
+### Known behavior
+- Total animation visual lifetime remains 30 simulation steps. Higher repeat counts use faster cycles within the same duration; this setting is cosmetic and not a multi-hit attack setting.

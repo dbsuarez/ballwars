@@ -1,10 +1,10 @@
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../skills/domain/skill_library.dart';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/auth/device_session_guard.dart';
+import '../../../core/auth/admin_session_persistence.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/offline/device_prefs.dart';
 import '../../../core/offline/offline_store.dart';
@@ -326,7 +326,7 @@ class SupabaseAdminAuth implements AdminAuth {
     // Supabase client can emit an initial-session event immediately; the old
     // ordering handled that while `_rememberSession` was still false and
     // replaced a valid saved session with an empty value on hard refresh.
-    _rememberSession = !kIsWeb && await DevicePrefs.read(_rememberKey) == '1';
+    _rememberSession = await DevicePrefs.read(_rememberKey) == '1';
     final saved = _rememberSession ? await DevicePrefs.read(_sessionKey) : null;
 
     if (!_rememberSession) {
@@ -334,6 +334,12 @@ class SupabaseAdminAuth implements AdminAuth {
     } else if (saved != null && saved.isNotEmpty) {
       try {
         await client.auth.recoverSession(saved);
+        // Never restore a remembered anonymous/device session as admin.
+        if (client.auth.currentUser?.isAnonymous != false) {
+          await DevicePrefs.write(_sessionKey, '');
+          await DevicePrefs.write(_rememberKey, '');
+          _rememberSession = false;
+        }
       } on AuthException catch (error) {
         // Retryable network/server failures must not erase a remembered
         // session. Only a definitively rejected token should clear it.
@@ -343,20 +349,22 @@ class SupabaseAdminAuth implements AdminAuth {
           '403',
         }.contains(error.statusCode?.toString())) {
           await DevicePrefs.write(_sessionKey, '');
+          await DevicePrefs.write(_rememberKey, '');
+          _rememberSession = false;
         }
       } catch (_) {
         // Offline: keep it for next time.
       }
     }
 
-    // Subscribe only after recovery. Otherwise the client's initial signed-out
-    // event can clear the stored token before recoverSession gets to read it.
+    // Subscribe only after recovery: an initial signed-out event would erase
+    // a valid saved token. The device client's cross-client broadcasts must
+    // not overwrite or clear the separate admin's saved session.
     client.auth.onAuthStateChange.listen((state) {
-      final session = state.session;
-      if (state.event == AuthChangeEvent.signedOut) {
+      if (AdminSessionPersistence.shouldClear(state)) {
         DevicePrefs.write(_sessionKey, '');
-      } else if (session != null && _rememberSession) {
-        DevicePrefs.write(_sessionKey, jsonEncode(session.toJson()));
+      } else if (AdminSessionPersistence.shouldSave(state, _rememberSession)) {
+        DevicePrefs.write(_sessionKey, jsonEncode(state.session!.toJson()));
       }
     }, onError: (Object _) {});
   }
@@ -410,7 +418,7 @@ class SupabaseAdminAuth implements AdminAuth {
     // Finish startup restoration before beginning a new login. Otherwise the
     // lazy restore can recover an old token over the newly authenticated one.
     await _restore();
-    _rememberSession = rememberMe && !kIsWeb;
+    _rememberSession = rememberMe;
     await DevicePrefs.write(_rememberKey, _rememberSession ? '1' : '');
     try {
       await client.auth.signInWithPassword(
@@ -422,7 +430,7 @@ class SupabaseAdminAuth implements AdminAuth {
         throw StateError('That account is not an admin.');
       }
       final session = client.auth.currentSession;
-      if (_rememberSession && session != null) {
+      if (_rememberSession && session != null && !session.user.isAnonymous) {
         final encoded = jsonEncode(session.toJson());
         await DevicePrefs.write(_sessionKey, encoded);
         if (await DevicePrefs.read(_sessionKey) != encoded) {

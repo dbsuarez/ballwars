@@ -146,3 +146,36 @@ Do not release until `flutter analyze`, `flutter test`, and phone checks pass. T
 
 ### Known behavior
 - Total animation visual lifetime remains 30 simulation steps. Higher repeat counts use faster cycles within the same duration; this setting is cosmetic and not a multi-hit attack setting.
+
+
+## v1.14.47 — Browser Admin Remember Me (2026-11-04)
+
+**Baseline:** v1.14.46 confirmed installed and device-tested by the user; latest reported full test result for baseline: 1,573 passed, 1 skipped, 0 failed. This patch contains all v1.14.46 cumulative changes plus the v1.14.47 authentication changes. It is NOT yet Flutter-verified or released.
+
+### Implemented
+- The Admin sign-in dialog now offers an enabled Remember me checkbox in browsers, with opt-in default off and a trusted-device warning.
+- SupabaseAdminAuth reads and writes the same `admin-remember-me` and `admin-session` DevicePrefs keys on browser and native platforms; the browser's existing PersistentPreferencesStore stores `pref:` keys in localStorage.
+- On page load, a remembered admin session is recovered before the auth-state listener is subscribed, preventing an initial signed-out event from erasing it.
+- Only local, nonanonymous admin-client auth events persist the admin session; device-client broadcast events cannot overwrite or clear saved admin credentials. The existing DeviceSessionGuard remains in place to protect the device's anonymous identity.
+- Signing out or opting out clears remembered credentials. A definitely rejected saved session (HTTP 400/401/403) clears the remembered selection and token; transient network failures do not erase the saved token.
+- Added session persistence policy tests and a widget assertion that the checkbox is enabled and unchecked by default.
+
+### Security / functional limits
+- Remember me stores an admin refresh token in browser-origin localStorage, accessible to scripts running on the same origin. Use only on a trusted browser/device, with strong XSS defenses and HTTPS. Browser private mode, blocked localStorage, or cleared site data may prevent persistence.
+- Admin permission is still verified through `is_admin` on startup; an existing session is not automatically granted admin rights without server verification.
+- GoTrue may broadcast authentication events across same-project clients/tabs. The policy protects durable tokens against cross-client broadcast events, but actual browser multi-tab interaction must be verified manually. Explicit sign-out in one tab does not necessarily synchronously sign out other open tabs.
+- No schema migrations, credential changes, or Supabase project configuration changes are included.
+
+### Regression / release checklist
+- [x] Source changes implemented.
+- [x] Cumulative ZIP integrity and member hash verification (packaging only).
+- [ ] `flutter analyze` and `flutter test --reporter expanded` on the user's Flutter environment.
+- [ ] Web: Remember me checked -> sign in -> reload -> close/reopen -> admin status retained.
+- [ ] Web: Remember me unchecked -> sign in -> reload -> admin not retained.
+- [ ] Web: Sign out -> reload -> admin still signed out.
+- [ ] Web: Device groups/identity preserved after admin sign-in, refresh, sign-out.
+- [ ] Web: session expiration/offline/reconnect and two-tab behavior.
+- [ ] Android regression and GitHub release.
+
+### Deployment
+Extract the ZIP into the root of the Ball Wars repo, preserving paths and overwriting included files only. The ZIP is cumulative from the RC44 patch series through v1.14.47, not a full project archive. Run `dart format` on the modified Dart files, `flutter analyze` and the full test suite before committing or tagging. Treat v1.14.47 as an unreleased RC until browser behavior and tests are verified. Animation polish remains planned for v1.14.48.

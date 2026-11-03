@@ -127,6 +127,9 @@ void main() {
     await tester.tap(find.text('Admin sign-in'));
     await tester.pumpAndSettle();
     expect(find.text('Remember me'), findsOneWidget);
+    final checkbox = tester.widget<CheckboxListTile>(find.byType(CheckboxListTile));
+    expect(checkbox.value, isFalse);
+    expect(checkbox.onChanged, isNotNull);
     await tester.enterText(
       find.widgetWithText(TextField, 'Email'),
       'admin@example.com',

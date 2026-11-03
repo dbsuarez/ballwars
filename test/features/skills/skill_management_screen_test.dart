@@ -1207,7 +1207,10 @@ void main() {
     expect(find.byKey(const ValueKey('grip-preview-right')), findsOneWidget);
     expect(find.byKey(const ValueKey('grip-preview-left')), findsOneWidget);
     await slide('side', 0.5);
-    await tester.tap(find.byKey(const ValueKey('grip-preview-cancel')));
+    final cancel = find.byKey(const ValueKey('grip-preview-cancel'));
+    await tester.ensureVisible(cancel);
+    await tester.pumpAndSettle();
+    await tester.tap(cancel);
     await tester.pumpAndSettle();
     expect(dialog, findsNothing);
     expect(double.parse(field('weaponGripSide')), 0);
@@ -1261,11 +1264,21 @@ void main() {
     // Forward/back can go negative (push the weapon out).
     await slide('inset', -0.5);
     await slide('inset', 0.4);
-    await tester.tap(find.byKey(const ValueKey('grip-preview-facing')));
+    // The expanded grip dialog is taller than the test viewport. Scroll the
+    // Facing control into the visible area before opening its popup menu.
+    final facing = find.byKey(const ValueKey('grip-preview-facing'));
+    await tester.ensureVisible(facing);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Stay upright').last);
+    await tester.tap(facing);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('grip-preview-done')));
+    final upright = find.text('Stay upright').last;
+    expect(upright, findsOneWidget);
+    await tester.tap(upright);
+    await tester.pumpAndSettle();
+    final done = find.byKey(const ValueKey('grip-preview-done'));
+    await tester.ensureVisible(done);
+    await tester.pumpAndSettle();
+    await tester.tap(done);
     await tester.pumpAndSettle();
     final savedGripFields = <String, String>{};
     for (final key in ['weaponGripInset', 'weaponGripSide', 'weaponGripRotation']) {

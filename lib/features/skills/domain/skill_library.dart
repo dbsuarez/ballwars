@@ -53,6 +53,9 @@ enum SkillWeaponClass { melee, ranged, hybrid }
 
 enum SkillAttackDelivery { swing, thrust, fireProjectile, throwWeapon, beam, summon }
 
+/// Cosmetic held-weapon motion; independent of projectile/melee mechanics.
+enum HeldAttackAnimation { slash, thrust, none }
+
 enum SkillEffectType {
   damage,
   damageOverTime,
@@ -127,6 +130,7 @@ class SkillDefinition {
     this.hideHeldWhileThrown,
     this.weaponClass,
     this.attackDelivery,
+    this.heldAttackAnimation,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
     this.pickupDisplayScale = 1,
@@ -245,6 +249,8 @@ class SkillDefinition {
   /// Optional authoring metadata, not a replacement for mechanical delivery.
   final SkillWeaponClass? weaponClass;
   final SkillAttackDelivery? attackDelivery;
+  /// Null keeps legacy animation for existing saved skills.
+  final HeldAttackAnimation? heldAttackAnimation;
 
   SkillWeaponClass get effectiveWeaponClass => weaponClass ??
       (meleeReach > 0 && (delivery == SkillDelivery.projectile ||
@@ -536,6 +542,7 @@ class SkillDefinition {
     Object? hideHeldWhileThrown = _unset,
     Object? weaponClass = _unset,
     Object? attackDelivery = _unset,
+    Object? heldAttackAnimation = _unset,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
     double? pickupDisplayScale,
@@ -646,6 +653,8 @@ class SkillDefinition {
         ? this.weaponClass : weaponClass as SkillWeaponClass?,
     attackDelivery: identical(attackDelivery, _unset)
         ? this.attackDelivery : attackDelivery as SkillAttackDelivery?,
+    heldAttackAnimation: identical(heldAttackAnimation, _unset)
+        ? this.heldAttackAnimation : heldAttackAnimation as HeldAttackAnimation?,
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
@@ -781,6 +790,7 @@ class SkillDefinition {
     if (hideHeldWhileThrown != null) 'hide_held_while_thrown': hideHeldWhileThrown,
     if (weaponClass != null) 'weapon_class': weaponClass!.name,
     if (attackDelivery != null) 'attack_delivery': attackDelivery!.name,
+    if (heldAttackAnimation != null) 'held_attack_animation': heldAttackAnimation!.name,
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
     'pickup_display_scale': pickupDisplayScale,
@@ -935,6 +945,7 @@ class SkillDefinition {
           ? value['hide_held_while_thrown'] as bool : null,
       weaponClass: nullableEnum('weapon_class', SkillWeaponClass.values),
       attackDelivery: nullableEnum('attack_delivery', SkillAttackDelivery.values),
+      heldAttackAnimation: nullableEnum('held_attack_animation', HeldAttackAnimation.values),
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,

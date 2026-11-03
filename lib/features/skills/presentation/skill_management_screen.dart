@@ -1876,6 +1876,7 @@ class _SkillEditorState extends State<_SkillEditor>
   late bool? _hideHeldWhileThrown = widget.skill.hideHeldWhileThrown;
   late SkillWeaponClass? _weaponClass = widget.skill.weaponClass;
   late SkillAttackDelivery? _attackDelivery = widget.skill.attackDelivery;
+  late HeldAttackAnimation? _heldAttackAnimation = widget.skill.heldAttackAnimation;
   late bool _trackNearestOpponent = widget.skill.trackNearestOpponent;
   late SkillTrigger? _trigger = widget.skill.trigger;
   late SkillTargeting? _targeting = widget.skill.targeting;
@@ -2130,6 +2131,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _hideHeldWhileThrown = defaults.hideHeldWhileThrown;
       _weaponClass = defaults.weaponClass;
       _attackDelivery = defaults.attackDelivery;
+      _heldAttackAnimation = defaults.heldAttackAnimation;
       _trackNearestOpponent = defaults.trackNearestOpponent;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
@@ -2553,6 +2555,7 @@ class _SkillEditorState extends State<_SkillEditor>
       hideHeldWhileThrown: _hideHeldWhileThrown,
       weaponClass: _weaponClass,
       attackDelivery: _attackDelivery,
+      heldAttackAnimation: _heldAttackAnimation,
       trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
       pickupDisplayScale: _double('pickupDisplayScale'),
@@ -2709,15 +2712,27 @@ class _SkillEditorState extends State<_SkillEditor>
       context,
       kind: widget.skill.baseKind,
       artwork: _artwork ?? widget.skill.baseKind,
-      spriteId: _iconSpriteId,
+      spriteId: _heldSpriteId ?? _iconSpriteId,
+      skill: _result,
+      pickupSpriteId: _pickupSpriteId,
+      projectileSpriteId: _projectileSpriteId,
+      impactSpriteId: _impactSpriteId,
+      pickupScale: _double('pickupDisplayScale') ?? 1,
       tint: _spriteTint,
       useSprite: _sprite == SkillVisualMode.sprite,
       displayScale: _double('weaponDisplayScale') ?? 1,
       grip: GripValues(
+        attackAnimation: _heldAttackAnimation,
         inset: _double('weaponGripInset') ?? 0,
         side: _double('weaponGripSide') ?? 0,
         rotation: _double('weaponGripRotation') ?? 0,
         facing: _heldFacing,
+        heldAttachment: _heldAttachment,
+        effectAttachment: _effectAttachment,
+        heldOffsetX: _double('heldOffsetX') ?? 0,
+        heldOffsetY: _double('heldOffsetY') ?? 0,
+        effectOffsetX: _double('effectOffsetX') ?? 0,
+        effectOffsetY: _double('effectOffsetY') ?? 0,
       ),
     );
     if (result == null || !mounted) return;
@@ -2734,6 +2749,14 @@ class _SkillEditorState extends State<_SkillEditor>
       _numbers['weaponGripSide']!.text = text(result.side);
       _numbers['weaponGripRotation']!.text = '${result.rotation.round()}';
       _heldFacing = result.facing;
+      _heldAttackAnimation = result.attackAnimation;
+      _heldAttachment = result.heldAttachment;
+      _effectAttachment = result.effectAttachment;
+      _numbers['heldOffsetX']!.text = text(result.heldOffsetX);
+      _numbers['heldOffsetY']!.text = text(result.heldOffsetY);
+      _numbers['effectOffsetX']!.text = text(result.effectOffsetX);
+      _numbers['effectOffsetY']!.text = text(result.effectOffsetY);
+      _numbers['pickupDisplayScale']!.text = text(result.pickupScale);
     });
   }
 
@@ -3089,7 +3112,7 @@ class _SkillEditorState extends State<_SkillEditor>
               }
             }),
           ),
-          EffectPlacementPreview(
+          AnimatedEffectPlacementPreview(
             role: SkillVisualRole.trail,
             effect: ResolvedSkillEffect(
               spriteId:
@@ -3107,6 +3130,27 @@ class _SkillEditorState extends State<_SkillEditor>
               offsetY: _originEnabled ? (_double('originSide') ?? 0) : 0,
             ),
           ),
+          if (_result case final SkillDefinition previewSkill?) ...[
+            if (_effectLibrary.resolveVisual(
+                  previewSkill,
+                  SkillVisualRole.muzzle,
+                ) case final muzzle?) ...[
+            const SizedBox(height: 8),
+            const Text('Muzzle flash alignment',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            AnimatedEffectPlacementPreview(
+              key: const ValueKey('skill-muzzle-live-preview'),
+              role: SkillVisualRole.muzzle,
+              effect: muzzle,
+              height: 120,
+            ),
+            const Text(
+              'Edit the muzzle artwork and its offsets in Visual Events. '
+              'This preview follows those settings.',
+              style: TextStyle(fontSize: 12),
+            ),
+            ],
+          ],
           const Text(
             'Orange cross = launch point. Automatic keeps the existing weapon behavior.',
             style: TextStyle(fontSize: 12),
@@ -3203,16 +3247,23 @@ class _SkillEditorState extends State<_SkillEditor>
           ),
           AreaEffectPreview(
             key: const ValueKey('skill-area-preview'),
-            skill: result,
+            skill: result.copyWith(
+              areaGuideStyle: _areaGuideStyle,
+              areaGuideOpacity: _areaGuideOpacity,
+            ),
             library: _effectLibrary,
-            radiusRatio:
-                result.areaRadiusRatio ??
-                ((result.isComposed || result.explodesOnImpact)
+            radiusRatio: _areaRadiusEnabled
+                ? ((_double('areaRadius') ?? 20) / 100).clamp(.05, 1.0)
+                : ((result.isComposed || result.explodesOnImpact)
                     ? result.range
                     : widget.tuning.blastRadiusRatio),
+            onRadiusChanged: _areaRadiusEnabled
+                ? (ratio) => setState(() => _numbers['areaRadius']!.text =
+                    (ratio * 100).toStringAsFixed(1))
+                : null,
           ),
           const Text(
-            'Boundary = affected area. Artwork size can be adjusted separately.',
+            'Boundary = affected area. Enable Custom area radius to drag horizontally in the preview. Artwork size stays independent.',
             style: TextStyle(fontSize: 12),
           ),
           _fixedRow(
@@ -4335,6 +4386,31 @@ class _SkillEditorState extends State<_SkillEditor>
                             onChanged: (value) => setState(() => _attackDelivery = value),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        _fixedRow(
+                          'Held attack animation',
+                          DropdownButtonFormField<HeldAttackAnimation?>(
+                            key: const ValueKey('skill-held-attack-animation'),
+                            isExpanded: true,
+                            initialValue: _heldAttackAnimation,
+                            decoration: const InputDecoration(),
+                            items: const [
+                              DropdownMenuItem<HeldAttackAnimation?>(
+                                value: null, child: Text('Legacy (unchanged)'),
+                              ),
+                              DropdownMenuItem<HeldAttackAnimation?>(
+                                value: HeldAttackAnimation.slash, child: Text('Slash / Swing'),
+                              ),
+                              DropdownMenuItem<HeldAttackAnimation?>(
+                                value: HeldAttackAnimation.thrust, child: Text('Thrust'),
+                              ),
+                              DropdownMenuItem<HeldAttackAnimation?>(
+                                value: HeldAttackAnimation.none, child: Text('None'),
+                              ),
+                            ],
+                            onChanged: (value) => setState(() => _heldAttackAnimation = value),
+                          ),
+                        ),
                         const Text('Weapon class and attack delivery describe presentation. '
                             'Mechanical delivery above still controls actual attacks.'),
                       ],
@@ -4721,6 +4797,29 @@ class _SkillEditorState extends State<_SkillEditor>
                                       }
                                     },
                                   ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  key: const ValueKey('skill-inline-artwork-preview'),
+                                  children: [
+                                    Expanded(child: _VisualModePreview(
+                                      label: 'Held artwork',
+                                      spriteId: _heldSpriteId ?? _iconSpriteId,
+                                      tint: _spriteTint,
+                                      kind: widget.skill.baseKind,
+                                      mode: _sprite,
+                                      scale: _double('weaponDisplayScale') ?? 1,
+                                    )),
+                                    const SizedBox(width: 12),
+                                    Expanded(child: _VisualModePreview(
+                                      label: 'Pickup artwork',
+                                      spriteId: _pickupSpriteId ?? _iconSpriteId,
+                                      tint: _spriteTint,
+                                      kind: widget.skill.baseKind,
+                                      mode: _sprite,
+                                      scale: _double('pickupDisplayScale') ?? 1,
+                                    )),
+                                  ],
+                                ),
                                 const Divider(height: 32),
                                 if (true) ...[
                                   DropdownButtonFormField<String>(
@@ -4854,7 +4953,7 @@ class _SkillEditorState extends State<_SkillEditor>
                                           icon: const Icon(
                                             Icons.pan_tool_alt_outlined,
                                           ),
-                                          label: const Text('Preview grip'),
+                                          label: const Text('Live held & pickup preview'),
                                         ),
                                       ),
                                     ),

@@ -1,0 +1,19 @@
+{
+  "release": "v1.14.44 RC repair04",
+  "status": "User log: 1,564 passed, 1 skipped, 1 failed; Facing dropdown test visibility repaired; Flutter retest pending",
+  "files_sha256": {
+    "lib/features/skills/domain/skill_library.dart": "27e5bf5d60edb0a6f51d1725042768ad83dd3bcf4b61a46b9c2cfa844309958e",
+    "lib/features/skills/presentation/grip_preview_dialog.dart": "a8149d13f15a38c3e156da4761b53a636b0f24f1302d36b321f28497e5ab9aa7",
+    "lib/features/skills/presentation/skill_management_screen.dart": "67c5f2c6d70c59605375e0ff8d13153d43f6aaf9752d00af9ae24cdd247970d8",
+    "lib/features/skills/presentation/area_effect_preview.dart": "a81d0537c8f988433050d33d7e4b5d1c125aba60ad9e548e73f1d7a796c54335",
+    "lib/features/skills/presentation/effect_placement_preview.dart": "708e13875a04867670ea35829a67629b76ad9e4313dee146130524d65e2c29a0",
+    "lib/features/arena_simulation/presentation/arena_painter.dart": "985dd3501b4dc864b7ec1807b90a038435bb98c68dc3dd6c43d644ed5841cd37",
+    "lib/features/arena_simulation/presentation/power_up_painter.dart": "e34c9681d720bcf18b2afb8bd21ea983c7bfbbab6c8fe8d1674fd563991d27ff",
+    "test/features/skills/grip_live_preview_values_test.dart": "61a69ff8423e8e9807f604c8bde312b35b127982961d3c36aceff5e018934adb",
+    "test/features/skills/animated_effect_placement_preview_test.dart": "5e560f8188f760001af36b0fb739b12503b6e2fadcb33881c42a007a84880ca2",
+    "test/features/skills/area_live_preview_test.dart": "6f27ac5c1716da1524bb4f5511048c3a65d4911ee7702e774a72b35fb64bfa72",
+    "test/features/skills/held_attack_animation_test.dart": "de5aff5f635ef1b439c648e574fa6ad4f947b5e18e0375e31c6063a44b727fca",
+    "V11444_LIVE_PREVIEW_PROGRESS.md": "6442ccb57125405dbaa1cdd2b89105b6f461443751341160991e02f1fdedbb92",
+    "test/features/skills/skill_management_screen_test.dart": "f56469fcb7f56a6d270bfee8a0706696e73e94e55462d27cd911cdbf6dd29f3f"
+  }
+}

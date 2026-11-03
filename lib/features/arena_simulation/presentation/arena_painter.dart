@@ -818,6 +818,11 @@ class ArenaPainter extends CustomPainter {
           kind.defaultGripInset,
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
+      heldAttackAnimation: (kind, slot) =>
+          state.powerUps?.visualSkill(
+            kind, ball: ball,
+            skillId: slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId,
+          ).heldAttackAnimation,
       heldFacing: (kind, slot) =>
           state.powerUps
               ?.visualSkill(

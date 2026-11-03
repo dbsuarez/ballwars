@@ -54,6 +54,112 @@ class EffectPlacementPreview extends StatelessWidget {
   );
 }
 
+/// Plays the existing placement painter without changing the skill or
+/// persisting any edits. Pause and frame stepping work for all visual roles.
+class AnimatedEffectPlacementPreview extends StatefulWidget {
+  const AnimatedEffectPlacementPreview({
+    super.key,
+    required this.effect,
+    required this.role,
+    this.height = 150,
+  });
+
+  final ResolvedSkillEffect? effect;
+  final SkillVisualRole role;
+  final double height;
+
+  @override
+  State<AnimatedEffectPlacementPreview> createState() =>
+      _AnimatedEffectPlacementPreviewState();
+}
+
+class _AnimatedEffectPlacementPreviewState
+    extends State<AnimatedEffectPlacementPreview>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+  // Start paused: an always-running ticker prevents editor pumpAndSettle.
+  bool _playing = false;
+
+  @override
+  void didUpdateWidget(covariant AnimatedEffectPlacementPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A different artwork binding should start at its first frame. Keep the
+    // user's paused/playing choice rather than silently resuming playback.
+    if (oldWidget.effect != widget.effect || oldWidget.role != widget.role) {
+      _controller.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _togglePlayback() {
+    setState(() {
+      _playing = !_playing;
+      if (_playing) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+      }
+    });
+  }
+
+  void _step() {
+    _controller.stop();
+    setState(() {
+      _playing = false;
+      _controller.value = (_controller.value + .125) % 1;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) => EffectPlacementPreview(
+          effect: widget.effect,
+          role: widget.role,
+          progress: _controller.value,
+          height: widget.height,
+        ),
+      ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) => Text(
+              'Frame ${(_controller.value * 8).floor() % 8 + 1}/8',
+              key: ValueKey('visual-preview-frame-${widget.role.name}'),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+          IconButton(
+            key: ValueKey('visual-preview-play-${widget.role.name}'),
+            tooltip: _playing ? 'Pause animation' : 'Play animation',
+            onPressed: _togglePlayback,
+            icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
+          ),
+          IconButton(
+            key: ValueKey('visual-preview-step-${widget.role.name}'),
+            tooltip: 'Step animation',
+            onPressed: _step,
+            icon: const Icon(Icons.skip_next),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 class _PlacementPainter extends CustomPainter {
   _PlacementPainter(this.effect, this.role, this.right, this.progress);
   final ResolvedSkillEffect? effect;

@@ -7,34 +7,76 @@ import '../../arena_simulation/presentation/power_up_painter.dart';
 import '../../arena_simulation/presentation/power_up_sprites.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../domain/skill_library.dart';
+import '../../sprites/presentation/sprites_screen.dart';
 
 /// A held weapon's grip: [inset] pulls it in along the aim, [side] moves it
 /// across the aim (both in ball radii) and [rotation] turns the sprite
 /// (degrees).
 @immutable
 class GripValues {
+  static const Object _unchanged = Object();
   const GripValues({
     this.inset = 0,
     this.side = 0,
     this.rotation = 0,
     this.facing = SkillHeldFacing.automatic,
+    this.heldAttachment = 'right',
+    this.effectAttachment = 'both',
+    this.heldOffsetX = 0,
+    this.heldOffsetY = 0,
+    this.effectOffsetX = 0,
+    this.effectOffsetY = 0,
+    this.pickupScale = 1,
+    this.attackAnimation,
   });
 
   final double inset;
   final double side;
   final double rotation;
   final SkillHeldFacing facing;
+  final String heldAttachment;
+  final String effectAttachment;
+  final double heldOffsetX, heldOffsetY, effectOffsetX, effectOffsetY;
+  final double pickupScale;
+  final HeldAttackAnimation? attackAnimation;
+
+  /// Moves the selected layer by a screen-space drag expressed in ball radii.
+  /// Both layers retain independent offsets; values stay within editor limits.
+  GripValues movedBy(double dx, double dy, {required bool effect}) {
+    if (!dx.isFinite || !dy.isFinite) return this;
+    return effect
+        ? copyWith(
+            effectOffsetX: (effectOffsetX + dx).clamp(-1.5, 1.5),
+            effectOffsetY: (effectOffsetY + dy).clamp(-1.5, 1.5),
+          )
+        : copyWith(
+            heldOffsetX: (heldOffsetX + dx).clamp(-1.5, 1.5),
+            heldOffsetY: (heldOffsetY + dy).clamp(-1.5, 1.5),
+          );
+  }
 
   GripValues copyWith({
+    Object? attackAnimation = _unchanged,
     double? inset,
     double? side,
     double? rotation,
     SkillHeldFacing? facing,
+    String? heldAttachment, effectAttachment,
+    double? heldOffsetX, heldOffsetY, effectOffsetX, effectOffsetY, pickupScale,
   }) => GripValues(
+    attackAnimation: identical(attackAnimation, _unchanged)
+        ? this.attackAnimation : attackAnimation as HeldAttackAnimation?,
     inset: inset ?? this.inset,
     side: side ?? this.side,
     rotation: rotation ?? this.rotation,
     facing: facing ?? this.facing,
+    heldAttachment: heldAttachment ?? this.heldAttachment,
+    effectAttachment: effectAttachment ?? this.effectAttachment,
+    heldOffsetX: heldOffsetX ?? this.heldOffsetX,
+    heldOffsetY: heldOffsetY ?? this.heldOffsetY,
+    effectOffsetX: effectOffsetX ?? this.effectOffsetX,
+    effectOffsetY: effectOffsetY ?? this.effectOffsetY,
+    pickupScale: pickupScale ?? this.pickupScale,
   );
 }
 
@@ -51,6 +93,11 @@ class GripPreviewDialog extends StatefulWidget {
     this.useSprite = true,
     this.displayScale = 1,
     this.spriteId,
+    this.skill,
+    this.pickupSpriteId,
+    this.pickupScale = 1,
+    this.projectileSpriteId,
+    this.impactSpriteId,
   });
 
   final PowerUpKind kind;
@@ -60,6 +107,11 @@ class GripPreviewDialog extends StatefulWidget {
   final double displayScale;
   final GripValues grip;
   final String? spriteId;
+  final SkillDefinition? skill;
+  final String? pickupSpriteId;
+  final double pickupScale;
+  final String? projectileSpriteId;
+  final String? impactSpriteId;
 
   static Future<GripValues?> show(
     BuildContext context, {
@@ -70,6 +122,11 @@ class GripPreviewDialog extends StatefulWidget {
     bool useSprite = true,
     double displayScale = 1,
     String? spriteId,
+    SkillDefinition? skill,
+    String? pickupSpriteId,
+    double pickupScale = 1,
+    String? projectileSpriteId,
+    String? impactSpriteId,
   }) => showDialog<GripValues>(
     context: context,
     builder: (_) => GripPreviewDialog(
@@ -80,6 +137,11 @@ class GripPreviewDialog extends StatefulWidget {
       useSprite: useSprite,
       displayScale: displayScale,
       spriteId: spriteId,
+      skill: skill,
+      pickupSpriteId: pickupSpriteId,
+      pickupScale: pickupScale,
+      projectileSpriteId: projectileSpriteId,
+      impactSpriteId: impactSpriteId,
     ),
   );
 
@@ -88,11 +150,32 @@ class GripPreviewDialog extends StatefulWidget {
 }
 
 class _GripPreviewDialogState extends State<GripPreviewDialog> {
+  // Dragging changes the same unsaved offset values as the sliders. A drag is
+  // measured in ball radii, not screen pixels, so it behaves at any viewport size.
+  bool _dragEffect = false;
+  double _attackFrame = 0;
+
+  void _dragArtwork(DragUpdateDetails details, Size previewSize) {
+    final radius = previewSize.shortestSide * 0.16;
+    if (radius <= 0) return;
+    final dx = details.delta.dx / radius;
+    final dy = details.delta.dy / radius;
+    setState(() => _grip = _grip.movedBy(dx, dy, effect: _dragEffect));
+  }
+
   late GripValues _grip = GripValues(
     inset: widget.grip.inset.clamp(-1.5, 1.5),
     side: widget.grip.side.clamp(-1.5, 1.5),
     rotation: widget.grip.rotation.clamp(-180.0, 180.0),
     facing: widget.grip.facing,
+    heldAttachment: widget.grip.heldAttachment,
+    effectAttachment: widget.grip.effectAttachment,
+    heldOffsetX: widget.grip.heldOffsetX.clamp(-1.5, 1.5),
+    heldOffsetY: widget.grip.heldOffsetY.clamp(-1.5, 1.5),
+    effectOffsetX: widget.grip.effectOffsetX.clamp(-1.5, 1.5),
+    effectOffsetY: widget.grip.effectOffsetY.clamp(-1.5, 1.5),
+    pickupScale: widget.pickupScale.clamp(0.25, 3),
+    attackAnimation: widget.grip.attackAnimation,
   );
 
   Widget _slider(
@@ -139,7 +222,15 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
             border: Border.all(color: colors.outlineVariant),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: CustomPaint(
+          child: LayoutBuilder(
+            builder: (context, constraints) => GestureDetector(
+              key: ValueKey('grip-preview-drag-$key'),
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate: (details) => _dragArtwork(
+                details,
+                Size(constraints.maxWidth, constraints.maxHeight),
+              ),
+              child: CustomPaint(
             key: ValueKey('grip-preview-$key'),
             painter: _GripPreviewPainter(
               kind: widget.kind,
@@ -148,10 +239,14 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
               useSprite: widget.useSprite,
               displayScale: widget.displayScale,
               grip: _grip,
+              attackFrame: _attackFrame,
               facingRight: facingRight,
               ballColor: colors.primary,
               spritesLoaded: loaded,
               spriteId: widget.spriteId,
+              skill: widget.skill,
+            ),
+              ),
             ),
           ),
         ),
@@ -171,6 +266,22 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                 'Grip preview',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
+              if (widget.kind.isWeapon) ...[
+                DropdownButtonFormField<HeldAttackAnimation?>(
+                  key: const ValueKey('grip-preview-attack-animation'),
+                  initialValue: _grip.attackAnimation,
+                  decoration: const InputDecoration(labelText: 'Held attack animation'),
+                  items: const [
+                    DropdownMenuItem<HeldAttackAnimation?>(value: null, child: Text('Legacy')),
+                    DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.slash, child: Text('Slash / Swing')),
+                    DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.thrust, child: Text('Thrust')),
+                    DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.none, child: Text('None')),
+                  ],
+                  onChanged: (value) => setState(() => _grip = _grip.copyWith(attackAnimation: value)),
+                ),
+                _slider('attack-frame', 'Attack frame', _attackFrame, 0, 1, '',
+                    (v) => _attackFrame = v),
+              ],
               const SizedBox(height: 12),
               // Rebuilds once the sprites have loaded; until then the
               // painter draws the glyph fallback.
@@ -188,6 +299,117 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                   );
                 },
               ),
+              if (widget.skill != null) ...[
+                const SizedBox(height: 8),
+                const Text('Drag the preview to adjust offsets. Select which artwork to move.'),
+                SegmentedButton<bool>(
+                  key: const ValueKey('grip-preview-drag-target'),
+                  segments: const [
+                    ButtonSegment(value: false, label: Text('Held sprite')),
+                    ButtonSegment(value: true, label: Text('Hand effect')),
+                  ],
+                  selected: {_dragEffect},
+                  onSelectionChanged: (selected) =>
+                      setState(() => _dragEffect = selected.first),
+                ),
+                const SizedBox(height: 8),
+                const Text('Pickup artwork', style: TextStyle(fontWeight: FontWeight.bold)),
+                Center(child: GestureDetector(
+                  key: const ValueKey('grip-preview-pickup-drag-scale'),
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (details) => setState(() => _grip =
+                      _grip.copyWith(pickupScale:
+                        (_grip.pickupScale + details.delta.dx / 80)
+                            .clamp(.25, 3.0))),
+                  child: SizedBox(
+                    width: 150,
+                    height: 150,
+                    child: Center(child: SizedBox(
+                      width: (48 * _grip.pickupScale).clamp(12.0, 144.0),
+                      height: (48 * _grip.pickupScale).clamp(12.0, 144.0),
+                      child: FittedBox(child: SpriteThumbnail(
+                        id: widget.pickupSpriteId ?? widget.spriteId,
+                      )),
+                    )),
+                  ),
+                )),
+                const Text('Drag pickup horizontally to resize, or use the slider.',
+                    textAlign: TextAlign.center),
+                _slider('pickup-scale', 'Pickup size', _grip.pickupScale, 0.25, 3, 'x',
+                    (v) => _grip = _grip.copyWith(pickupScale: v)),
+                const SizedBox(height: 8),
+                const Text('Other artwork (animated when frames are available)',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (final item in [
+                      ('Projectile', widget.projectileSpriteId ??
+                          PowerUpSprites.projectileArtworkId(widget.kind)),
+                      ('Impact', widget.impactSpriteId),
+                    ])
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(item.$1, textAlign: TextAlign.center),
+                            SpriteThumbnail(id: item.$2, size: 72),
+                            Text(
+                              item.$2 == null ? 'Built-in / no sprite' : 'Sprite animation',
+                              textAlign: TextAlign.center,
+                              softWrap: true,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const Text('Changes remain unsaved until Done and editor Save.'),
+                for (final entry in [
+                  ('Held sprite', _grip.heldAttachment, true),
+                  ('Hand effect', _grip.effectAttachment, false),
+                ])
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(entry.$3 ? 'grip-preview-held-attachment' : 'grip-preview-effect-attachment'),
+                    initialValue: entry.$2,
+                    decoration: InputDecoration(labelText: entry.$1),
+                    items: const [
+                      DropdownMenuItem(value: 'left', child: Text('Left hand')),
+                      DropdownMenuItem(value: 'right', child: Text('Right hand')),
+                      DropdownMenuItem(value: 'both', child: Text('Both hands')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _grip = entry.$3
+                              ? _grip.copyWith(heldAttachment: value)
+                              : _grip.copyWith(effectAttachment: value);
+                        });
+                      }
+                    },
+                  ),
+                _slider('held-x', 'Held X', _grip.heldOffsetX, -1.5, 1.5, 'r',
+                    (v) => _grip = _grip.copyWith(heldOffsetX: v)),
+                _slider('held-y', 'Held Y', _grip.heldOffsetY, -1.5, 1.5, 'r',
+                    (v) => _grip = _grip.copyWith(heldOffsetY: v)),
+                _slider('effect-x', 'Effect X', _grip.effectOffsetX, -1.5, 1.5, 'r',
+                    (v) => _grip = _grip.copyWith(effectOffsetX: v)),
+                _slider('effect-y', 'Effect Y', _grip.effectOffsetY, -1.5, 1.5, 'r',
+                    (v) => _grip = _grip.copyWith(effectOffsetY: v)),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    key: const ValueKey('grip-preview-reset-offsets'),
+                    onPressed: () => setState(() => _grip = _grip.copyWith(
+                      heldOffsetX: 0, heldOffsetY: 0,
+                      effectOffsetX: 0, effectOffsetY: 0,
+                    )),
+                    icon: const Icon(Icons.restore),
+                    label: const Text('Reset offsets'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               _slider(
                 'inset',
@@ -270,10 +492,12 @@ class _GripPreviewPainter extends CustomPainter {
     required this.useSprite,
     required this.displayScale,
     required this.grip,
+    required this.attackFrame,
     required this.facingRight,
     required this.ballColor,
     required this.spritesLoaded,
     this.spriteId,
+    this.skill,
   });
 
   final PowerUpKind kind;
@@ -282,12 +506,14 @@ class _GripPreviewPainter extends CustomPainter {
   final bool useSprite;
   final double displayScale;
   final GripValues grip;
+  final double attackFrame;
   final bool facingRight;
   final Color ballColor;
 
   /// Only repaints the views once the sprites arrive.
   final bool spritesLoaded;
   final String? spriteId;
+  final SkillDefinition? skill;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -330,7 +556,18 @@ class _GripPreviewPainter extends CustomPainter {
       weaponGripInset: (_, _) => grip.inset,
       weaponGripSide: (_, _) => grip.side,
       weaponGripRotation: (_, _) => grip.rotation,
+      firedWeaponHoldLeft: (_, _) => attackFrame == 0 ? 0 :
+          (30 * (1 - attackFrame)).round().clamp(1, 30),
+      heldAttackAnimation: (_, _) => grip.attackAnimation,
       heldFacing: (_, _) => grip.facing,
+      handArtworkSettings: (_) => skill?.copyWith(
+        heldAttachment: grip.heldAttachment,
+        effectAttachment: grip.effectAttachment,
+        heldOffsetX: grip.heldOffsetX,
+        heldOffsetY: grip.heldOffsetY,
+        effectOffsetX: grip.effectOffsetX,
+        effectOffsetY: grip.effectOffsetY,
+      ),
     );
     paintHands(canvas, ball);
     if (kind.isWeapon) {
@@ -369,5 +606,12 @@ class _GripPreviewPainter extends CustomPainter {
       old.facingRight != facingRight ||
       old.ballColor != ballColor ||
       old.spritesLoaded != spritesLoaded ||
-      old.spriteId != spriteId;
+      old.spriteId != spriteId ||
+      old.skill != skill ||
+      old.grip.heldAttachment != grip.heldAttachment ||
+      old.grip.effectAttachment != grip.effectAttachment ||
+      old.grip.heldOffsetX != grip.heldOffsetX ||
+      old.grip.heldOffsetY != grip.heldOffsetY ||
+      old.grip.effectOffsetX != grip.effectOffsetX ||
+      old.grip.effectOffsetY != grip.effectOffsetY;
 }

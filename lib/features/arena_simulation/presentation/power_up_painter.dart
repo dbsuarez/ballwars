@@ -3281,6 +3281,7 @@ class PowerUpPainter {
     double Function(PowerUpKind kind, int slot)? weaponGripSide,
     double Function(PowerUpKind kind, int slot)? weaponGripRotation,
     SkillHeldFacing Function(PowerUpKind kind, int slot)? heldFacing,
+    HeldAttackAnimation? Function(PowerUpKind kind, int slot)? heldAttackAnimation,
     double Function(PowerUpKind kind)? skillRange,
     SkillDefinition? Function(PowerUpKind kind)? handArtworkSettings,
     double Function(PowerUpKind kind)? handEffectScale,
@@ -3918,6 +3919,7 @@ class PowerUpPainter {
             weapon,
             slot,
             firedHoldLeft: firedWeaponHoldLeft?.call(weapon, slot) ?? 0,
+            attackAnimation: heldAttackAnimation?.call(weapon, slot),
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),
@@ -3985,6 +3987,7 @@ class PowerUpPainter {
     PowerUpKind held,
     int slot, {
     int firedHoldLeft = 0,
+    HeldAttackAnimation? attackAnimation,
     bool useSprite = true,
     double displayScale = 1,
     double? gripInset,
@@ -4162,25 +4165,43 @@ class PowerUpPainter {
     final baseAngle = heldAngle(ball, weapon: held, slot: slot);
     final firedProgress = firedHoldLeft <= 0 ? 0.0 : 1 - firedHoldLeft / 30.0;
     final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
-    final angle = baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
+    // A slash sweeps around the grip pivot; thrust extends forward and returns.
+    // Null preserves the legacy drop/fade for all existing saved skills.
+    final slashPhase = firedProgress.clamp(0.0, 1.0);
+    final swing = slashPhase < 0.22
+        ? -0.65 * (slashPhase / 0.22)
+        : slashPhase < 0.72
+            ? -0.65 + 2.05 * ((slashPhase - 0.22) / 0.50)
+            : 1.40 * (1 - (slashPhase - 0.72) / 0.28);
+    final angle = attackAnimation == HeldAttackAnimation.slash
+        ? baseAngle + swing * (slot.isEven ? 1 : -1)
+        : attackAnimation == HeldAttackAnimation.thrust ||
+                attackAnimation == HeldAttackAnimation.none
+            ? baseAngle
+            : baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
     final transform = heldFacingTransform(
       angle,
       gripRotation,
       heldFacing,
       facingAngle: baseAngle,
     );
-    final center =
-        heldCenter(
-          ball,
-          weapon: held,
-          slot: slot,
-          gripInset: gripInset,
-          gripSide: gripSide,
-        ) +
-        Offset(
-          math.sin(drop * math.pi) * ball.radius * 0.25,
-          drop * drop * ball.radius * 2.2,
-        );
+    final baseCenter = heldCenter(
+      ball, weapon: held, slot: slot,
+      gripInset: gripInset, gripSide: gripSide,
+    );
+    final thrust = math.sin(slashPhase * math.pi).clamp(0.0, 1.0);
+    final center = attackAnimation == HeldAttackAnimation.slash
+        ? ball.position + Offset(math.cos(angle), math.sin(angle)) *
+            (baseCenter - ball.position).distance
+        : attackAnimation == HeldAttackAnimation.thrust
+            ? baseCenter + Offset(math.cos(baseAngle), math.sin(baseAngle)) *
+                (ball.radius * 0.7 * thrust)
+            : attackAnimation == HeldAttackAnimation.none
+                ? baseCenter
+                : baseCenter + Offset(
+                    math.sin(drop * math.pi) * ball.radius * 0.25,
+                    drop * drop * ball.radius * 2.2,
+                  );
     final heldAttach = artworkSettings?.heldAttachment ?? 'right';
     final dx = (artworkSettings?.heldOffsetX ?? 0) * ball.radius;
     final dy = (artworkSettings?.heldOffsetY ?? 0) * ball.radius;
@@ -4198,7 +4219,7 @@ class PowerUpPainter {
         transform.angle,
         iconAngle: _iconAngle[art] ?? 0,
         flip: side == 'left' ? !transform.flip : transform.flip,
-        opacity: 1 - drop * drop,
+        opacity: attackAnimation == null ? 1 - drop * drop : 1,
         anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
       );
     }

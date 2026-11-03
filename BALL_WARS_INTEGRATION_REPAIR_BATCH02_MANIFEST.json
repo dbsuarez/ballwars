@@ -1,0 +1,338 @@
+{
+  "baseline": "ballwars_batch18_center_wall_contact_cumulative.zip",
+  "supersedes": "ballwars_integration_repair_batch01_cumulative.zip",
+  "cumulative": true,
+  "repair_batch": 2,
+  "files": [
+    {
+      "path": "BALL_WARS_BATCH30_FINAL_IMPLEMENTATION_AUDIT.md",
+      "sha256": "994d7aaa863aeb1b13adf1cf22c310dd38a49d089565bf4958e9e0cd053b68a0",
+      "size": 849
+    },
+    {
+      "path": "BALL_WARS_INTEGRATION_REPAIR_BATCH02_REPORT.md",
+      "sha256": "c5dcab9d6e530a3b9dc760aebf11b0a12584e048b76aa621d3f390207c24b6e0",
+      "size": 2210
+    },
+    {
+      "path": "BALL_WARS_PROJECTILE_RELIABILITY_PROGRESS.md",
+      "sha256": "dd002bce68df659ab93cf9c02e72f2b4d0b8ad3dab48ccbc44edbb7f07dbc558",
+      "size": 664
+    },
+    {
+      "path": "BATCH18_CUMULATIVE_PATCH_README.md",
+      "sha256": "acab0fa395e0d295fc875921e62d9d4b484e5d4ca209b048b02e6e9226786349",
+      "size": 1120
+    },
+    {
+      "path": "lib/features/arena_simulation/application/match_simulation_controller.dart",
+      "sha256": "4e77c5037ee3ffc5bd2d9618567789c88501f38c7abf5182752e58ceb76ed05c",
+      "size": 55760
+    },
+    {
+      "path": "lib/features/arena_simulation/application/persistent_skill_effects.dart",
+      "sha256": "a5da1e9dd0ab7b0a60f89c04ac2818cc5339ab5b0052996a885a411a383e80cb",
+      "size": 17427
+    },
+    {
+      "path": "lib/features/arena_simulation/application/power_up_system.dart",
+      "sha256": "a660c1e125586c3ef2788dc19e3542986a3ef332c60addd874d3915629e2fd20",
+      "size": 210713
+    },
+    {
+      "path": "lib/features/arena_simulation/domain/arena_boundary_geometry.dart",
+      "sha256": "7145cf78199543901dba4539a1a4ea331c14b7dfe61f63d480688646f9e5b2ac",
+      "size": 4345
+    },
+    {
+      "path": "lib/features/arena_simulation/domain/power_up.dart",
+      "sha256": "55f80116907985136ad3276c38bad70ca484afa2faf1ff242747b5d08a2d2685",
+      "size": 36551
+    },
+    {
+      "path": "lib/features/arena_simulation/domain/power_up_config.dart",
+      "sha256": "951ef7c30d2d9b0b7d31b80c5d06da14841d94dbd0f43a8ae2dace5ec8409672",
+      "size": 22320
+    },
+    {
+      "path": "lib/features/arena_simulation/presentation/power_up_painter.dart",
+      "sha256": "a3d8d154697cb9e49855a247ad888233284f966fcbced08e20a992f64bc56655",
+      "size": 149036
+    },
+    {
+      "path": "lib/features/settings/presentation/power_up_tuning_screen.dart",
+      "sha256": "538de82f0f9d089ddb6bb17a73be861d7d0b8c0e5725eaf21bdd889a8cabb56e",
+      "size": 13588
+    },
+    {
+      "path": "lib/features/skills/domain/native_advanced_skill_config.dart",
+      "sha256": "d0c376ebc65d1b842b77fe45b9ac11b7a298cf85ed5722ab9dd78d176c8c3c93",
+      "size": 9837
+    },
+    {
+      "path": "lib/features/skills/domain/skill_library.dart",
+      "sha256": "18e9e8c8aac5dbb5ba51793d829be389359f455ae4d1745d9e690b768c3c1e6d",
+      "size": 112149
+    },
+    {
+      "path": "lib/features/skills/presentation/skill_effect_renderer.dart",
+      "sha256": "beeb76075005c9a8d3bd2a19d15e9b470fb7f34b532dc5acb16d0923dde649ae",
+      "size": 8627
+    },
+    {
+      "path": "lib/features/skills/presentation/skill_management_screen.dart",
+      "sha256": "c1bb8043d2c93e37489cf7faa09e3cd6111176b4804d44be031b4dad2595e5fb",
+      "size": 242376
+    },
+    {
+      "path": "test/features/arena_simulation/application/arena_trap_cleanup_test.dart",
+      "sha256": "43592c7619c6c04a69e88125debc57af9086878528e561e82cb9f9bcf9b62877",
+      "size": 7121
+    },
+    {
+      "path": "test/features/arena_simulation/application/phase8_content_test.dart",
+      "sha256": "f6c71089f3103a789f67116ff18555abe8b8f2b694e966a78701b93766e73772",
+      "size": 5554
+    },
+    {
+      "path": "test/features/arena_simulation/application/power_up_effects_test.dart",
+      "sha256": "40ca661385797c2c126a820e66bfc455c658f2f2070dd6015b4a7bd050101f80",
+      "size": 59492
+    },
+    {
+      "path": "test/features/arena_simulation/application/projectile_center_wall_diagonal_regression_test.dart",
+      "sha256": "73647dc654f4fd1c814cda8d55769d8479c95750931bbf148e286a26019f5006",
+      "size": 1948
+    },
+    {
+      "path": "test/features/arena_simulation/application/projectile_homing_tie_break_regression_test.dart",
+      "sha256": "7840b7e5b458d296ac58803f651e8e7ca92e4829ec64f8c61ccfa92a2cbcca00",
+      "size": 2023
+    },
+    {
+      "path": "test/features/arena_simulation/application/projectile_nonpiercing_policy_regression_test.dart",
+      "sha256": "d7379be59409897bf6dd90d427391e0ff336c2911108c77e35565d728723c28a",
+      "size": 1871
+    },
+    {
+      "path": "test/features/arena_simulation/application/projectile_persistent_multitarget_regression_test.dart",
+      "sha256": "f1e33c52618135f78462c75a07b02954c420acac2e53b0d7f3545b7fd2c14ace",
+      "size": 14474
+    },
+    {
+      "path": "test/features/arena_simulation/application/projectile_reflection_contact_normal_regression_test.dart",
+      "sha256": "ffc9568e7f16d2b6776c5d1680f09a3c50b60d92e47b05bf32d370821ee421ff",
+      "size": 1886
+    },
+    {
+      "path": "test/features/arena_simulation/application/projectile_thread_crossing_numeric_regression_test.dart",
+      "sha256": "fb29988d8fe3ea75b56cc3bf8cdb5a5508ce103203961ffe7cff49fb2ef898a9",
+      "size": 1266
+    },
+    {
+      "path": "test/features/arena_simulation/application/shadow_clone_test.dart",
+      "sha256": "15c96bf2fdcd6373c3b73a5ad7c5200c5375ec43e0a51ebb4d6467441e75ab3d",
+      "size": 13520
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_composed_activation_test.dart",
+      "sha256": "1ffcb45224fcf870428bc60a7ea183eeaff6bc34cdd7ef91f6acb0c92d712c0a",
+      "size": 4672
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_direct_activation_test.dart",
+      "sha256": "43cd2117e8f10683a2eb446526ab60819184c04e92b503361230494bb54f4f62",
+      "size": 3721
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_existing_hazard_cleanup_test.dart",
+      "sha256": "088b75999aca47e5bae328226bfc370239404ecef78274eaafd7dea54c43a0bd",
+      "size": 2709
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_independent_runtime_test.dart",
+      "sha256": "9b174ae65caa99a85adf9b343cf293336988926399d51e63879a6dfa8c1b36e1",
+      "size": 2263
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_laser_overlap_test.dart",
+      "sha256": "de9ddd66512e4315aa90eb93b19e4362da7527065155fa4d1c5fd5f4436bfc89",
+      "size": 3139
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_master_cleanup_matrix_test.dart",
+      "sha256": "8a64de3d695dea8fd5be56b6988cf90b1349eb41c4656a72fbe4518e21d8c8cb",
+      "size": 2412
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_overlap_duration_test.dart",
+      "sha256": "eb7c55ec673ebdc8519c9ff04a0b55a52f7ea28213fcc6d71d48c64160bcbcb3",
+      "size": 1672
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_quicksand_capacity_eviction_test.dart",
+      "sha256": "686ab9a133c1ef6f9b460e32c54ae6471760a6f04360430f194ce6e55caf138c",
+      "size": 3225
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_quicksand_lifecycle_test.dart",
+      "sha256": "7faafb77a20ad320547e7392e89f4fd2d1a12249508d64594044825e72ff36cb",
+      "size": 1974
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_quicksand_overlap_test.dart",
+      "sha256": "779387453c5e8a53055a108d126314d70abab7875b8b0f4933eea3daabd297f4",
+      "size": 3002
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_quicksand_stack_test.dart",
+      "sha256": "bf5b6c14d2490ce9a468fcc11793cbca3899a28844d3c330dc5bea048f9a0eb6",
+      "size": 2176
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_quicksand_staggered_damage_test.dart",
+      "sha256": "5eb45eec74918e4a4ba7e9d2a4de19f08b59f713b54a1d04fae8d31508837917",
+      "size": 2632
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_spike_source_isolation_test.dart",
+      "sha256": "89b2874dd236c08906af140a45d296ac011d7986dbc0de9446e8a28241b17b3f",
+      "size": 2310
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_spike_source_quota_test.dart",
+      "sha256": "e89268ccb372f716ecea18c90b2c37bbd663798da4c477fef5c69e03e80673f7",
+      "size": 2368
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_theme_transition_cleanup_test.dart",
+      "sha256": "67216b0b2adbd1cf4e53f14b26540b74ba71c751ac2f47fb60805685d0257d38",
+      "size": 3195
+    },
+    {
+      "path": "test/features/arena_simulation/application/trap_vine_membership_test.dart",
+      "sha256": "483359432a67ecdc0df970cf14e877c6d996ed3247f1609582ad8980e904200a",
+      "size": 2599
+    },
+    {
+      "path": "test/features/arena_simulation/domain/trap_control_config_test.dart",
+      "sha256": "89c2d59f88928efcdf062ea38841dece822130cde908a51dd6d5bb14e497e727",
+      "size": 5645
+    },
+    {
+      "path": "test/features/settings/power_up_tuning_screen_test.dart",
+      "sha256": "0ee9e23ab2c96f9b15fb4152b2e0c805c315676b7d87614bf237f49d52e3770c",
+      "size": 7902
+    },
+    {
+      "path": "test/features/skills/casting_artwork_test.dart",
+      "sha256": "a98c16636a9b7fa0b54ec84b41693a0b0c5e8066448567a1f796f458a1d48965",
+      "size": 13138
+    },
+    {
+      "path": "test/features/skills/legacy_impact_lifetime_snapshot_test.dart",
+      "sha256": "931e3aefbdd7120647248851ff1a69924cd74f1d92892c633b8c174dceec6dbf",
+      "size": 2948
+    },
+    {
+      "path": "test/features/skills/legacy_vfx_casting_runtime_parity_test.dart",
+      "sha256": "13e0e0e28862c3b164120cd84405e1a72acba5e901f8c972f13ee872a694279a",
+      "size": 15198
+    },
+    {
+      "path": "test/features/skills/native_advanced_skill_config_test.dart",
+      "sha256": "99bf418e302c7703a602bda9fa3ffeef0634e08ba7e1d624bf4727bf0ebb6d41",
+      "size": 34395
+    },
+    {
+      "path": "test/features/skills/native_skill_editor_roundtrip_test.dart",
+      "sha256": "c7b59b847e5aaf46accdf3208de9077088d90f9d8e680a63d888a24eaf77323c",
+      "size": 5250
+    },
+    {
+      "path": "test/features/skills/native_skill_phase2_completion_matrix_test.dart",
+      "sha256": "a490c292d1012f5c9b8489fbe0e1cb131f894d0e64720a09da0bd966c0c2d585",
+      "size": 5377
+    },
+    {
+      "path": "test/features/skills/native_skill_phase2_contract_test.dart",
+      "sha256": "e224343daac76e77eeb1814c08d3cdc7747e4f6aa70066a34400b5b313b0574c",
+      "size": 5576
+    },
+    {
+      "path": "test/features/skills/persistent_skill_effects_test.dart",
+      "sha256": "16869c49271c82bfba9c98456bb7de0e3b3bbb40c432c6f26346520be5d138f4",
+      "size": 21230
+    },
+    {
+      "path": "test/features/skills/phase4_effect_attachment_parity_test.dart",
+      "sha256": "8b119c2924b8745ec1ad67f343545117e3532f1f6689af590f5985bbc2adbdf2",
+      "size": 2923
+    },
+    {
+      "path": "test/features/skills/phase4_fallback_transform_parity_test.dart",
+      "sha256": "bb61939fcd0fabf3a638af5a524b6e191363ce629391ac228ab5ebd48df1408e",
+      "size": 1750
+    },
+    {
+      "path": "test/features/skills/phase4_invalid_direction_parity_test.dart",
+      "sha256": "23f02b538f122924a8b152a7979237b0816f892a1d2f50aafa8b7f29a0a965c6",
+      "size": 2536
+    },
+    {
+      "path": "test/features/skills/phase4_migration_boundary_regression_test.dart",
+      "sha256": "07f03e2551bc177128ee6d6568e8507e74451086decb0d27df6167a115b0fc2d",
+      "size": 3263
+    },
+    {
+      "path": "test/features/skills/phase4_migration_collision_capacity_test.dart",
+      "sha256": "2a9bd4ab965ee3348f169c76f79fd5337a0ec05f421d2528bc15be1620be5fe2",
+      "size": 3334
+    },
+    {
+      "path": "test/features/skills/phase4_migration_matrix_test.dart",
+      "sha256": "43ada368786a59b3ffe106aacedf5e65a916a1d627c86348f87f7522f288141d",
+      "size": 5284
+    },
+    {
+      "path": "test/features/skills/phase4_migration_preview_source_identity_test.dart",
+      "sha256": "289a8c126dc30867d785cc23cce931e339273156e2fff6123ad6bd1574af91ae",
+      "size": 2115
+    },
+    {
+      "path": "test/features/skills/phase4_muzzle_activation_snapshot_test.dart",
+      "sha256": "b9571dd4614065f3c28a99f40c41b2998bd395161182b067ba4abd0c3c4961e2",
+      "size": 1788
+    },
+    {
+      "path": "test/features/skills/phase4_playback_lifecycle_regression_test.dart",
+      "sha256": "d507ca6ed4d2a96693915362d11a033c152675ab7bf8561eafb2cd361781bd36",
+      "size": 2223
+    },
+    {
+      "path": "test/features/skills/phase4_renderer_fallback_budget_test.dart",
+      "sha256": "524050a18ba58105b79f68f1784584bdade141823cca6b8a22c60b743e9e5d34",
+      "size": 1524
+    },
+    {
+      "path": "test/features/skills/phase4_single_migration_parity_test.dart",
+      "sha256": "9960b30ee099254bcb8d2723fef0f06317b1f56411e85427937cb1ae46beea36",
+      "size": 2683
+    },
+    {
+      "path": "test/features/skills/phase4_single_migration_preflight_test.dart",
+      "sha256": "626a639bb98d29fc08b3c9609689f467a17a362090ec992c38ceec5541eee4c4",
+      "size": 3148
+    },
+    {
+      "path": "test/features/skills/phase4_visual_activation_snapshot_test.dart",
+      "sha256": "c8477a44b4596f4849a18057bb5666b759b24d1c61bb8c3a951f535df07164a1",
+      "size": 2113
+    },
+    {
+      "path": "tool/phase1/verify_phase1.ps1",
+      "sha256": "84db16c2d3319f92eb869ce3f9c855284cf4ee95dfa91c36c5a446175f7b12e3",
+      "size": 4209
+    }
+  ]
+}

@@ -105,6 +105,11 @@ class SkillDefinition {
     this.dotAllOutDamage,
     this.durationSeconds,
     this.projectileCount,
+    this.shadowAppearSteps,
+    this.shadowStrikeSteps,
+    this.shadowVanishSteps,
+    this.omegaSlamOffsetRatio,
+    this.omegaSlamVelocityMultiplier,
     this.projectileSpeed,
     this.spreadDegrees,
     this.maxBounces,
@@ -209,6 +214,10 @@ class SkillDefinition {
   final int? dotAllOutDamage;
   final double? durationSeconds;
   final int? projectileCount;
+  /// Optional native Shadow Clone timings; null retains the original cinematic.
+  final int? shadowAppearSteps, shadowStrikeSteps, shadowVanishSteps;
+  /// Native Omega Tendrils slam modifiers; null preserves original tuning.
+  final double? omegaSlamOffsetRatio, omegaSlamVelocityMultiplier;
   final double? projectileSpeed;
   final double? spreadDegrees;
   final int? maxBounces;
@@ -478,8 +487,13 @@ class SkillDefinition {
     int? allOutDamage,
     double? dotArsenalDamage,
     int? dotAllOutDamage,
-    double? durationSeconds,
-    int? projectileCount,
+    Object? durationSeconds = _unset,
+    Object? projectileCount = _unset,
+    Object? shadowAppearSteps = _unset,
+    Object? shadowStrikeSteps = _unset,
+    Object? shadowVanishSteps = _unset,
+    Object? omegaSlamOffsetRatio = _unset,
+    Object? omegaSlamVelocityMultiplier = _unset,
     double? projectileSpeed,
     double? spreadDegrees,
     int? maxBounces,
@@ -570,8 +584,13 @@ class SkillDefinition {
     allOutDamage: allOutDamage ?? this.allOutDamage,
     dotArsenalDamage: dotArsenalDamage ?? this.dotArsenalDamage,
     dotAllOutDamage: dotAllOutDamage ?? this.dotAllOutDamage,
-    durationSeconds: durationSeconds ?? this.durationSeconds,
-    projectileCount: projectileCount ?? this.projectileCount,
+    durationSeconds: identical(durationSeconds, _unset) ? this.durationSeconds : (durationSeconds as num?)?.toDouble(),
+    projectileCount: identical(projectileCount, _unset) ? this.projectileCount : projectileCount as int?,
+    shadowAppearSteps: identical(shadowAppearSteps, _unset) ? this.shadowAppearSteps : shadowAppearSteps as int?,
+    shadowStrikeSteps: identical(shadowStrikeSteps, _unset) ? this.shadowStrikeSteps : shadowStrikeSteps as int?,
+    shadowVanishSteps: identical(shadowVanishSteps, _unset) ? this.shadowVanishSteps : shadowVanishSteps as int?,
+    omegaSlamOffsetRatio: identical(omegaSlamOffsetRatio, _unset) ? this.omegaSlamOffsetRatio : (omegaSlamOffsetRatio as num?)?.toDouble(),
+    omegaSlamVelocityMultiplier: identical(omegaSlamVelocityMultiplier, _unset) ? this.omegaSlamVelocityMultiplier : (omegaSlamVelocityMultiplier as num?)?.toDouble(),
     projectileSpeed: projectileSpeed ?? this.projectileSpeed,
     spreadDegrees: spreadDegrees ?? this.spreadDegrees,
     maxBounces: maxBounces ?? this.maxBounces,
@@ -699,6 +718,11 @@ class SkillDefinition {
     if (dotAllOutDamage != null) 'dot_all_out_damage': dotAllOutDamage,
     if (durationSeconds != null) 'duration_seconds': durationSeconds,
     if (projectileCount != null) 'projectile_count': projectileCount,
+    if (baseKind == PowerUpKind.shadowClone && shadowAppearSteps != null) 'shadow_appear_steps': shadowAppearSteps,
+    if (baseKind == PowerUpKind.shadowClone && shadowStrikeSteps != null) 'shadow_strike_steps': shadowStrikeSteps,
+    if (baseKind == PowerUpKind.shadowClone && shadowVanishSteps != null) 'shadow_vanish_steps': shadowVanishSteps,
+    if (baseKind == PowerUpKind.omegaTendrils && omegaSlamOffsetRatio != null) 'omega_slam_offset_ratio': omegaSlamOffsetRatio,
+    if (baseKind == PowerUpKind.omegaTendrils && omegaSlamVelocityMultiplier != null) 'omega_slam_velocity_multiplier': omegaSlamVelocityMultiplier,
     if (projectileSpeed != null) 'projectile_speed': projectileSpeed,
     if (spreadDegrees != null) 'spread_degrees': spreadDegrees,
     if (maxBounces != null) 'max_bounces': maxBounces,
@@ -814,8 +838,18 @@ class SkillDefinition {
       return values.where((item) => item.name == raw).firstOrNull;
     }
 
-    double? decimal(String key) => (value[key] as num?)?.toDouble();
-    int? integer(String key) => (value[key] as num?)?.toInt();
+    // Native skill overrides may arrive from hand-edited or older JSON.
+    // Reject malformed/non-finite numbers instead of throwing during import.
+    double? decimal(String key) {
+      final raw = value[key];
+      return raw is num && raw.isFinite ? raw.toDouble() : null;
+    }
+    int? integer(String key) {
+      final raw = value[key];
+      return raw is num && raw.isFinite && raw % 1 == 0
+          ? raw.toInt()
+          : null;
+    }
     return SkillDefinition(
       id: id,
       name: name.trim(),
@@ -829,6 +863,11 @@ class SkillDefinition {
       dotAllOutDamage: integer('dot_all_out_damage'),
       durationSeconds: decimal('duration_seconds'),
       projectileCount: integer('projectile_count'),
+      shadowAppearSteps: kinds.first == PowerUpKind.shadowClone ? integer('shadow_appear_steps') : null,
+      shadowStrikeSteps: kinds.first == PowerUpKind.shadowClone ? integer('shadow_strike_steps') : null,
+      shadowVanishSteps: kinds.first == PowerUpKind.shadowClone ? integer('shadow_vanish_steps') : null,
+      omegaSlamOffsetRatio: kinds.first == PowerUpKind.omegaTendrils ? decimal('omega_slam_offset_ratio') : null,
+      omegaSlamVelocityMultiplier: kinds.first == PowerUpKind.omegaTendrils ? decimal('omega_slam_velocity_multiplier') : null,
       projectileSpeed: decimal('projectile_speed'),
       spreadDegrees: decimal('spread_degrees'),
       maxBounces: integer('max_bounces'),
@@ -975,8 +1014,15 @@ class SkillDefinition {
     allOutDamage: allOutDamage?.clamp(0, 360),
     dotArsenalDamage: dotArsenalDamage?.clamp(0, 500),
     dotAllOutDamage: dotAllOutDamage?.clamp(0, 360),
-    durationSeconds: durationSeconds?.clamp(0.1, 60),
+    durationSeconds: durationSeconds != null && durationSeconds!.isFinite
+        ? durationSeconds!.clamp(0.1, 60).toDouble()
+        : null,
     projectileCount: projectileCount?.clamp(1, 100),
+    shadowAppearSteps: shadowAppearSteps?.clamp(1, 600),
+    shadowStrikeSteps: shadowStrikeSteps?.clamp(1, 600),
+    shadowVanishSteps: shadowVanishSteps?.clamp(1, 600),
+    omegaSlamOffsetRatio: omegaSlamOffsetRatio != null && omegaSlamOffsetRatio!.isFinite ? omegaSlamOffsetRatio!.clamp(0, 3).toDouble() : null,
+    omegaSlamVelocityMultiplier: omegaSlamVelocityMultiplier != null && omegaSlamVelocityMultiplier!.isFinite ? omegaSlamVelocityMultiplier!.clamp(0, 5).toDouble() : null,
     projectileSpeed: projectileSpeed?.clamp(0.1, 10),
     spreadDegrees: spreadDegrees?.clamp(0, 360),
     maxBounces: maxBounces?.clamp(0, 20),
@@ -1516,6 +1562,11 @@ class SkillLibrary {
         impactSpriteId: role == SkillVisualRole.impact ? null : updated.impactSpriteId,
       );
     }
+    // Single-skill editor conversions must receive the same fail-closed
+    // parity protection as the bulk migration. Validate before exposing the
+    // converted draft to the editor; the original immutable library remains
+    // unchanged if any resolved visual or native casting tuning differs.
+    _verifyMigratedArtwork(skill, updated, this, library);
     return (library: library, skill: updated);
   }
 
@@ -1630,6 +1681,20 @@ class SkillLibrary {
     );
   }
 
+  /// Preview the conversion of one unsaved editor draft against the actual
+  /// effect library. Other saved skills are excluded from the counts, but all
+  /// existing effect IDs and the global 256-effect capacity are preserved.
+  /// This is safe to call before displaying a confirmation dialog.
+  LegacyVfxMigrationPlan planLegacyArtworkMigrationForSkill(
+    SkillDefinition skill,
+  ) {
+    final preview = _withSkills(
+      overrides: const <String, SkillDefinition>{},
+      custom: <SkillDefinition>[skill],
+    );
+    return preview.planLegacyArtworkMigration();
+  }
+
   /// Convert legacy artwork for every persisted skill in one transaction.
   ///
   /// The factory definitions are intentionally excluded: only user-authored
@@ -1646,6 +1711,17 @@ class SkillLibrary {
     SkillLibrary original,
     SkillLibrary migrated,
   ) {
+    // Artwork conversion must never silently change native casting behavior.
+    // These fields remain active even after the legacy sprite slot is cleared.
+    if (before.id != after.id ||
+        before.castingScale != after.castingScale ||
+        before.castingDurationSeconds != after.castingDurationSeconds ||
+        before.castingFollowsActive != after.castingFollowsActive) {
+      throw FormatException(
+        'Legacy VFX conversion would change ${before.id} casting behavior. '
+        'No changes were applied.',
+      );
+    }
     for (final role in [
       SkillVisualRole.casting,
       SkillVisualRole.impact,
@@ -1673,6 +1749,18 @@ class SkillLibrary {
   }
 
   SkillLibrary migrateAllLegacyArtwork() {
+    // Reject a known capacity failure before starting the conversion. The
+    // library is immutable, but a preflight also keeps bulk editor operations
+    // predictable: the same capacity warning shown in the preview applies
+    // to the actual conversion, including generated-ID collisions and reuse.
+    final plan = planLegacyArtworkMigration();
+    if (!plan.fitsCapacity) {
+      throw FormatException(
+        'Legacy VFX conversion needs ${plan.newEffects} new Visual Events, '
+        'but only ${plan.availableEffectSlots} slots remain. '
+        'No changes were applied.',
+      );
+    }
     var working = this;
     final migratedOverrides = <String, SkillDefinition>{};
     final migratedCustom = <SkillDefinition>[];

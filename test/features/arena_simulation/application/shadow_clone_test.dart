@@ -35,6 +35,7 @@ MatchSimulationController _match({
   int seed = 88,
   MatchMode mode = MatchMode.arsenal,
   PowerUpConfig tuning = PowerUpConfig.defaults,
+  SkillLibrary skillLibrary = SkillLibrary.defaults,
   int simulationRevision = 2,
 }) {
   final match = MatchSimulationController(
@@ -46,6 +47,7 @@ MatchSimulationController _match({
     lookAhead: false,
     dualWield: true,
     tuning: tuning,
+    skillLibrary: skillLibrary,
     simulationRevision:simulationRevision,
   );
   for (final ball in match.state.balls) {
@@ -90,6 +92,32 @@ const _strike = ShadowCloneAttack.strikeSteps;
 const _vanish = ShadowCloneAttack.vanishSteps;
 
 void main() {
+  test('Shadow Clone custom timeline controls strike schedule and freeze duration', () {
+    final match = _match();
+    final owner = match.state.balls.first;
+    final target = match.state.balls.last;
+    final attack = ShadowCloneAttack(owner: owner, target: target, clones: 3,
+      appearanceSteps: 24, strikeIntervalSteps: 9, disappearanceSteps: 18);
+    expect(attack.strikeAt(0), 33);
+    expect(attack.strikeAt(2), 51);
+    expect(attack.totalDuration, 69);
+    attack.age = 12;
+    expect(attack.appearProgress, closeTo(0.5, 0.0001));
+    attack.vanishAt = 51;
+    attack.age = 68;
+    expect(attack.finished, isFalse);
+    attack.age = 69;
+    expect(attack.finished, isTrue);
+  });
+
+  test('Shadow Clone unchanged timeline matches historical constants', () {
+    final match = _match();
+    final attack = ShadowCloneAttack(owner: match.state.balls.first,
+      target: match.state.balls.last, clones: 4);
+    expect(attack.strikeAt(0), ShadowCloneAttack.strikeAge(0));
+    expect(attack.totalDuration, ShadowCloneAttack.durationFor(4));
+  });
+
   test(
     'Shadow Clone is a Special-tier instant power-up with its own tuning',
     () {
@@ -155,6 +183,87 @@ void main() {
       expect(match.powerUps!.shadowCloneAttacks, isEmpty);
     },
   );
+
+  test('native clone count override survives save/load and controls strike sequence', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.shadowClone, PowerUpConfig.defaults)
+        .copyWith(projectileCount: 2);
+    final stored = SkillLibrary(overrides: {definition.id: definition});
+    final restored = SkillLibrary.fromJson(stored.toJson());
+    expect(restored.activeFor(PowerUpKind.shadowClone, PowerUpConfig.defaults)
+        .projectileCount, 2);
+    final match = _match(skillLibrary: restored);
+    final (owner, near, _) = _place(match);
+    _give(match, owner, PowerUpKind.shadowClone);
+    final attack = match.powerUps!.shadowCloneAttacks.single;
+    expect(attack.clones, 2);
+    expect(owner.stunnedLeft,
+        greaterThanOrEqualTo(ShadowCloneAttack.durationFor(2) - 1));
+    _run(match, _appear + 2 * _strike);
+    expect(near.life, 90);
+    expect(attack.clonesDone, 2);
+  });
+
+  test('saved native clone count overrides tuning and sets cinematic freeze', () {
+    final tuning = PowerUpConfig.defaults.withValue('shadowCloneCount', 5);
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.shadowClone, tuning)
+        .copyWith(projectileCount: 1);
+    final restored = SkillLibrary.fromJson(
+      SkillLibrary(overrides: {definition.id: definition}).toJson(),
+    );
+    final match = _match(tuning: tuning, skillLibrary: restored);
+    final (owner, _, _) = _place(match);
+    _give(match, owner, PowerUpKind.shadowClone);
+    final attack = match.powerUps!.shadowCloneAttacks.single;
+    expect(attack.clones, 1);
+    expect(owner.stunnedLeft,
+        greaterThanOrEqualTo(ShadowCloneAttack.durationFor(1) - 1));
+    expect(owner.stunnedLeft,
+        lessThan(ShadowCloneAttack.durationFor(5)));
+  });
+
+  test('one saved clone completes its native strike and vanish lifecycle', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.shadowClone, PowerUpConfig.defaults)
+        .copyWith(projectileCount: 1);
+    final restored = SkillLibrary.fromJson(
+      SkillLibrary(overrides: {definition.id: definition}).toJson(),
+    );
+    final match = _match(skillLibrary: restored);
+    final (owner, near, _) = _place(match);
+    _give(match, owner, PowerUpKind.shadowClone);
+    final attack = match.powerUps!.shadowCloneAttacks.single;
+    expect(attack.clones, 1);
+    expect(ShadowCloneAttack.durationFor(1), _appear + _strike + _vanish);
+    _run(match, _appear + _strike - 1);
+    expect(attack.clonesDone, 0);
+    expect(near.life, 100);
+    _run(match, 1);
+    expect(attack.clonesDone, 1);
+    expect(near.life, 95);
+    expect(attack.isVanishing, isTrue);
+    _run(match, _vanish);
+    expect(match.powerUps!.shadowCloneAttacks, isEmpty);
+  });
+
+  test('unset clone override retains custom native tuning after save and reload', () {
+    final tuning = PowerUpConfig.defaults.withValue('shadowCloneCount', 4);
+    final original = SkillLibrary.defaults
+        .builtIn(PowerUpKind.shadowClone, tuning);
+    final restored = SkillLibrary.fromJson(
+      SkillLibrary(overrides: {original.id: original}).toJson(),
+    );
+    expect(restored.activeFor(PowerUpKind.shadowClone, tuning).projectileCount,
+        isNull);
+    final match = _match(tuning: tuning, skillLibrary: restored);
+    final (owner, _, _) = _place(match);
+    _give(match, owner, PowerUpKind.shadowClone);
+    final attack = match.powerUps!.shadowCloneAttacks.single;
+    expect(attack.clones, 4);
+    expect(owner.stunnedLeft,
+        greaterThanOrEqualTo(ShadowCloneAttack.durationFor(4) - 1));
+  });
 
   test('damage and clone count follow the admin tuning', () {
     final tuning = PowerUpConfig.defaults

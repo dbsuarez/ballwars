@@ -148,6 +148,24 @@ class PowerUpConfig {
       unit: TuningUnit.seconds,
     ),
     TuningField(
+      'allTrapsDisabled',
+      'Disable all traps (1 on, 0 off)',
+      _arenaTraps,
+      0,
+      min: 0,
+      max: 1,
+      integer: true,
+    ),
+    TuningField(
+      'skillTrapsEnabled',
+      'Skill-generated traps (1 on, 0 off)',
+      _arenaTraps,
+      1,
+      min: 0,
+      max: 1,
+      integer: true,
+    ),
+    TuningField(
       'arenaTrapsEnabled',
       'Arena traps (1 on, 0 off)',
       _arenaTraps,
@@ -605,7 +623,12 @@ class PowerUpConfig {
 
   int get firstSpawnSteps => _steps('firstSpawn');
   int get trapStartSteps => _steps('trapStart');
-  bool get arenaTrapsEnabled => value('arenaTrapsEnabled') != 0;
+  /// Master override applies to both automatic arena hazards and skill traps.
+  bool get allTrapsDisabled => value('allTrapsDisabled') != 0;
+  bool get skillTrapsEnabled =>
+      !allTrapsDisabled && value('skillTrapsEnabled') != 0;
+  bool get arenaTrapsEnabled =>
+      !allTrapsDisabled && value('arenaTrapsEnabled') != 0;
   int get arenaTrapIntervalSteps => _steps('arenaTrapInterval');
   int get arenaTrapDurationSteps => _steps('arenaTrapDuration');
   double get gravityWellForce => value('gravityWellForce').toDouble();

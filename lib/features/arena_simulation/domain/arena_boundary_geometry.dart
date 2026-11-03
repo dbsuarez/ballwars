@@ -90,3 +90,37 @@ Offset _squareRimPoint(double distance, double r) {
   if (t < 6 * r) return Offset(r - (t - 4 * r), r);
   return Offset(-r, r - (t - 6 * r));
 }
+
+
+/// True only for an interior crossing of two finite segments.
+///
+/// Normalizing the coordinate differences before multiplying prevents the
+/// determinant and the product of two orientation tests from overflowing for
+/// very fast projectile paths. End-point touches remain non-crossings, as in
+/// the original All-Out thread-cutting rules.
+bool segmentsProperlyCross(Offset p1, Offset p2, Offset q1, Offset q2) {
+  if (![p1.dx, p1.dy, p2.dx, p2.dy, q1.dx, q1.dy, q2.dx, q2.dy]
+      .every((value) => value.isFinite)) {
+        return false;
+      }
+
+  int orientation(Offset a, Offset b, Offset c) {
+    final ax = b.dx - a.dx;
+    final ay = b.dy - a.dy;
+    final bx = c.dx - a.dx;
+    final by = c.dy - a.dy;
+    final scale = math.max(math.max(ax.abs(), ay.abs()),
+        math.max(bx.abs(), by.abs()));
+    if (scale == 0 || !scale.isFinite) return 0;
+    final cross = (ax / scale) * (by / scale) -
+        (ay / scale) * (bx / scale);
+    return cross > 0 ? 1 : (cross < 0 ? -1 : 0);
+  }
+
+  final a = orientation(q1, q2, p1);
+  final b = orientation(q1, q2, p2);
+  if (a == 0 || b == 0 || a == b) return false;
+  final c = orientation(p1, p2, q1);
+  final d = orientation(p1, p2, q2);
+  return c != 0 && d != 0 && c != d;
+}

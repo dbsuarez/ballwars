@@ -369,6 +369,9 @@ class ShadowCloneAttack {
     required this.owner,
     required this.target,
     required this.clones,
+    this.appearanceSteps = appearSteps,
+    this.strikeIntervalSteps = strikeSteps,
+    this.disappearanceSteps = vanishSteps,
   });
 
   static const int appearSteps = 12;
@@ -378,6 +381,11 @@ class ShadowCloneAttack {
   /// The whole sequence for [clones] clones, in steps (time stays frozen for it).
   static int durationFor(int clones) =>
       appearSteps + clones * strikeSteps + vanishSteps;
+
+  final int appearanceSteps, strikeIntervalSteps, disappearanceSteps;
+
+  int get totalDuration => appearanceSteps + clones * strikeIntervalSteps + disappearanceSteps;
+  int strikeAt(int index) => appearanceSteps + (index + 1) * strikeIntervalSteps;
 
   final SimulationBall owner;
 
@@ -396,14 +404,14 @@ class ShadowCloneAttack {
   final List<Offset> struckAt = [];
 
   bool get isVanishing => vanishAt != null;
-  bool get finished => vanishAt != null && age >= vanishAt! + vanishSteps;
+  bool get finished => vanishAt != null && age >= vanishAt! + disappearanceSteps;
 
   /// 0..1 while the clones appear.
-  double get appearProgress => (age / appearSteps).clamp(0.0, 1.0);
+  double get appearProgress => (age / appearanceSteps).clamp(0.0, 1.0);
 
   /// 0..1 while the clones smoke out (0 before).
   double get vanishProgress =>
-      vanishAt == null ? 0 : ((age - vanishAt!) / vanishSteps).clamp(0.0, 1.0);
+      vanishAt == null ? 0 : ((age - vanishAt!) / disappearanceSteps).clamp(0.0, 1.0);
 
   /// Age at which clone [index] strikes.
   static int strikeAge(int index) => appearSteps + (index + 1) * strikeSteps;
@@ -431,8 +439,8 @@ class ShadowCloneAttack {
     final home = homeOf(index);
     final victim = target;
     if (index != clonesDone || victim == null || vanishAt != null) return home;
-    final start = appearSteps + index * strikeSteps;
-    final t = ((age - start) / strikeSteps).clamp(0.0, 1.0);
+    final start = appearanceSteps + index * strikeIntervalSteps;
+    final t = ((age - start) / strikeIntervalSteps).clamp(0.0, 1.0);
     // Ease in: a short wind-up, then the dash.
     return Offset.lerp(home, strikePoint(index, victim), t * t)!;
   }
@@ -519,12 +527,15 @@ class SpikeWall {
     required this.angle,
     required this.spawnStep,
     this.spikeCount = 6,
+    this.arenaGenerated = false,
   });
 
   final Offset position;
   final double angle;
   final int spawnStep;
   final int spikeCount;
+  /// True only for automatic default-arena spikes, not skill-created walls.
+  final bool arenaGenerated;
 
   /// Positions each spike along the arena arc instead of a straight chord.
   List<Offset> spikePositions(double spacing) {
@@ -1093,7 +1104,14 @@ class OmegaTendril {
     required this.target,
     required this.savedVelocity,
     this.stepsLeft = 36,
+    this.slamOffsetRatio = 0.55,
+    this.slamVelocityMultiplier = 1.0,
   });
+
+  /// Capture native release behavior when the grab begins. Later library edits
+  /// must not retroactively change an already-active tendril.
+  final double slamOffsetRatio;
+  final double slamVelocityMultiplier;
 
   final SimulationBall owner;
   final SimulationBall target;

@@ -245,10 +245,12 @@ class PowerUpPainter {
         !e.skill.usesSpriteEffects(
           globalSprite: mode == EffectRenderMode.sprite,
         ) ||
-        !e.skill.visualBindings.containsKey(e.role)) {
+        !e.visualCaptured) {
       return false;
     }
-    final visual = p.match.skillLibrary.resolveVisual(e.skill, e.role);
+    // The captured binding is authoritative for this activation. Rechecking
+    // live bindings would hide existing artwork when the editor changes it.
+    final visual = e.visual;
     if (visual == null) return false;
     final steps = visual.durationSeconds == null
         ? e.steps
@@ -300,9 +302,12 @@ class PowerUpPainter {
     );
     if (entries.isEmpty) return false;
     final e = entries.first;
+    if (!e.active()) return false;
     if (e.role == SkillVisualRole.boundary) {
       var painted = false;
-      for (final point in e.samples!()) {
+      final samples = e.samples;
+      if (samples == null) return false;
+      for (final point in samples()) {
         final radial = point.distance == 0
             ? const Offset(0, 1)
             : point / point.distance;
@@ -383,10 +388,10 @@ class PowerUpPainter {
       if (!e.skill.usesSpriteEffects(
             globalSprite: mode == EffectRenderMode.sprite,
           ) ||
-          !e.skill.visualBindings.containsKey(e.role)) {
+          !e.visualCaptured) {
         return false;
       }
-      final v = p.match.skillLibrary.resolveVisual(e.skill, e.role);
+      final v = e.visual;
       return v != null && SpriteRegistry.has(v.spriteId);
     });
   }
@@ -413,10 +418,7 @@ class PowerUpPainter {
       )) {
         continue;
       }
-      final effect = p.match.skillLibrary.resolveVisual(
-        event.skill,
-        event.role,
-      );
+      final effect = event.visual;
       if (effect == null) continue;
       final radius =
           event.owner?.radius ??
@@ -441,7 +443,7 @@ class PowerUpPainter {
         event.steps,
         direction: event.direction,
         unitRadius: radius,
-        fade: 1 - event.age / event.steps,
+        fade: SkillEffectRenderer.remaining(event.age, event.steps),
       );
       SkillArtworkTint.end(canvas);
     }
@@ -463,10 +465,9 @@ class PowerUpPainter {
       )) {
         continue;
       }
-      final resolved = system.match.skillLibrary.resolveVisual(
-        flash.skill,
-        SkillVisualRole.muzzle,
-      );
+      // A muzzle flash belongs to the shot that emitted it. Resolving from
+      // the current library here would mutate active artwork mid-playback.
+      final resolved = flash.resolvedVisual;
       if (resolved == null) continue;
       final center =
           resolved.attachment == EffectAttachment.automatic &&
@@ -490,7 +491,7 @@ class PowerUpPainter {
         flash.steps,
         direction: flash.direction,
         unitRadius: flash.owner.radius,
-        fade: 1 - flash.age / flash.steps,
+        fade: SkillEffectRenderer.remaining(flash.age, flash.steps),
       );
       SkillArtworkTint.end(canvas);
     }
@@ -502,12 +503,8 @@ class PowerUpPainter {
       )) {
         continue;
       }
-      final resolved = state.powerUps!.match.skillLibrary.resolveVisual(
-        skill,
-        SkillVisualRole.casting,
-      );
-      if (skill.visualBindings.containsKey(SkillVisualRole.casting) &&
-          resolved != null) {
+      final resolved = effect.resolvedVisual;
+      if (resolved != null) {
         final direction =
             (effect.owner.aimTarget?.position ??
                 effect.owner.position + effect.owner.velocity) -
@@ -537,23 +534,33 @@ class PowerUpPainter {
         SkillArtworkTint.end(canvas);
         if (painted) continue;
       }
-      final id = skill.castingSpriteId;
-      final image = id == null
-          ? null
-          : effect.active != null
+      // The fallback is only for a captured sprite whose registry frame is
+      // unavailable to the generic renderer. Do not resurrect a live-edited
+      // legacy sprite or lose the captured attachment/facing configuration.
+      final id = resolved?.spriteId;
+      if (id == null) continue;
+      final image = effect.active != null
           ? SpriteRegistry.frameAt(id, effect.age)
-          : SpriteRegistry.frameAtProgress(id, effect.age / effect.steps);
-      if (image == null) continue;
-      SkillArtworkTint.begin(canvas, skill.spriteTint);
+          : SpriteRegistry.frameAtProgress(id, SkillEffectRenderer.progress(effect.age, effect.steps));
+      if (image == null || !SkillEffectRenderer.takeVisual()) continue;
+      final direction =
+          (effect.owner.aimTarget?.position ??
+              effect.owner.position + effect.owner.velocity) -
+          effect.owner.position;
+      final center = SkillEffectRenderer.attachment(
+        resolved!,
+        SkillVisualRole.casting,
+        effect.owner.position,
+        owner: effect.owner.position,
+        direction: direction,
+        radius: effect.owner.radius,
+      );
+      SkillArtworkTint.begin(canvas, resolved.tint);
       try {
-        _drawEffect(
-          canvas,
-          image,
-          effect.owner.position,
-          effect.owner.radius * 1.4 * skill.castingScale,
-          0,
-          anchor: SpriteRegistry.anchor(id!),
-          opacity: effect.active != null
+        SkillEffectRenderer.paintImage(
+          canvas, resolved, image, center, effect.owner.radius * 1.4,
+          direction: direction, unitRadius: effect.owner.radius,
+          fade: effect.active != null
               ? 1
               : ((effect.steps - effect.age) / 6).clamp(0.0, 1.0),
         );
@@ -585,14 +592,9 @@ class PowerUpPainter {
             )) {
           continue;
         }
-        final skill = p.visualSkill(kind, skillId: impact.skillId);
         final steps = p.impactVisualSteps(impact);
-        final resolved = p.match.skillLibrary.resolveVisual(
-          skill,
-          SkillVisualRole.impact,
-        );
-        if (skill.visualBindings.containsKey(SkillVisualRole.impact) &&
-            resolved != null) {
+        final resolved = p.impactVisual(impact);
+        if (resolved != null) {
           final center = SkillEffectRenderer.attachment(
             resolved,
             SkillVisualRole.impact,
@@ -612,26 +614,32 @@ class PowerUpPainter {
             direction: impact.direction,
             unitRadius:
                 impact.target?.radius ?? p.match.state.balls.first.radius,
-            fade: 1 - impact.age / steps,
+            fade: SkillEffectRenderer.remaining(impact.age, steps),
           );
           SkillArtworkTint.end(canvas);
           if (painted) continue;
         }
-        final id = skill.impactSpriteId;
+        // Prefer the artwork captured at hit creation even when the resolved
+        // renderer cannot paint (e.g. sprite not yet registered). Never
+        // substitute a newly edited legacy sprite for an existing hit.
+        final id = resolved?.spriteId;
         final image = id == null
             ? null
-            : SpriteRegistry.frameAtProgress(id, impact.age / steps);
+            : SpriteRegistry.frameAtProgress(id, SkillEffectRenderer.progress(impact.age, steps));
         if (image == null || !SkillEffectRenderer.takeVisual()) continue;
-        SkillArtworkTint.begin(canvas, skill.spriteTint);
+        SkillArtworkTint.begin(canvas, resolved!.tint);
         try {
-          _drawEffect(
-            canvas,
-            image,
-            impact.position,
-            r * 1.4 * p.effectDisplayScale(kind, skillId: impact.skillId),
-            0,
-            anchor: SpriteRegistry.anchor(id!),
-            opacity: 1 - impact.age / steps,
+          SkillEffectRenderer.paintImage(
+            canvas, resolved, image,
+            SkillEffectRenderer.attachment(
+              resolved, SkillVisualRole.impact, impact.position,
+              target: impact.target?.position, direction: impact.direction,
+              radius: impact.target?.radius ?? p.match.state.balls.first.radius,
+            ),
+            r * 1.4,
+            direction: impact.direction,
+            unitRadius: impact.target?.radius ?? p.match.state.balls.first.radius,
+            fade: SkillEffectRenderer.remaining(impact.age, steps),
           );
         } finally {
           SkillArtworkTint.end(canvas);
@@ -1343,17 +1351,10 @@ class PowerUpPainter {
       final blastSkill = e.kind == null
           ? null
           : p.visualSkill(e.kind!, skillId: e.skillId);
-      final boundBlast =
-          blastSkill == null ||
-              !blastSkill.visualBindings.containsKey(SkillVisualRole.explosion)
-          ? null
-          : p.match.skillLibrary.resolveVisual(
-              blastSkill,
-              SkillVisualRole.explosion,
-            );
+      final boundBlast = blastSkill == null ? null : p.explosionVisual(e);
       SkillArtworkTint.begin(
         canvas,
-        boundBlast != null && SpriteRegistry.has(boundBlast.spriteId)
+        boundBlast != null
             ? boundBlast.tint
             : e.kind == null
             ? 0xFFFFFFFF
@@ -1362,11 +1363,12 @@ class PowerUpPainter {
       try {
         final visualRadius =
             e.radius *
-            (e.kind == null
-                ? 1
-                : p.effectDisplayScale(e.kind!, skillId: e.skillId));
+            (boundBlast?.scale ??
+                (e.kind == null
+                    ? 1
+                    : p.effectDisplayScale(e.kind!, skillId: e.skillId)));
         final steps = p.explosionVisualSteps(e);
-        final t = e.age / steps;
+        final t = SkillEffectRenderer.progress(e.age, steps);
         final fade = (1 - t).clamp(0.0, 1.0);
         if (e.kind != null &&
             showEffects &&
@@ -1375,17 +1377,18 @@ class PowerUpPainter {
               skillId: e.skillId,
               globalSprite: explosionRenderMode == EffectRenderMode.sprite,
             )) {
-          final skill = p.visualSkill(e.kind!, skillId: e.skillId);
-          final resolved = p.match.skillLibrary.resolveVisual(
-            skill,
-            SkillVisualRole.explosion,
-          );
-          if (skill.visualBindings.containsKey(SkillVisualRole.explosion) &&
-              resolved != null &&
+          final resolved = p.explosionVisual(e);
+          if (resolved != null &&
               SkillEffectRenderer.paint(
                 canvas,
                 resolved,
-                e.position,
+                SkillEffectRenderer.attachment(
+                  resolved,
+                  SkillVisualRole.explosion,
+                  e.position,
+                  direction: e.direction,
+                  radius: p.match.state.balls.first.radius,
+                ),
                 e.radius,
                 e.age,
                 steps,
@@ -1396,9 +1399,9 @@ class PowerUpPainter {
             continue;
           }
         }
-        final customId = e.kind == null
-            ? null
-            : p.visualSkill(e.kind!, skillId: e.skillId).impactSpriteId;
+        // The fallback must use the same creation-time artwork as the main
+        // renderer. Live library edits apply only to subsequent explosions.
+        final customId = boundBlast?.spriteId;
         final custom =
             customId == null ||
                 !showEffects ||
@@ -1410,14 +1413,17 @@ class PowerUpPainter {
             ? null
             : SpriteRegistry.frameAtProgress(customId, t);
         if (custom != null) {
-          _drawEffect(
-            canvas,
-            custom,
-            e.position,
-            visualRadius,
-            0,
-            opacity: fade,
-            anchor: SpriteRegistry.anchor(customId!),
+          SkillEffectRenderer.paintImage(
+            canvas, boundBlast!, custom,
+            SkillEffectRenderer.attachment(
+              boundBlast, SkillVisualRole.explosion, e.position,
+              direction: e.direction,
+              radius: p.match.state.balls.first.radius,
+            ),
+            e.radius,
+            direction: e.direction,
+            unitRadius: p.match.state.balls.first.radius,
+            fade: fade,
           );
           continue;
         }

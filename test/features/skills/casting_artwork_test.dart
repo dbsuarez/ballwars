@@ -28,7 +28,7 @@ const balls = [
     glowColor: ui.Color(0xff0000ff),
   ),
 ];
-MatchSimulationController setup(PowerUpKind kind, {bool follows = true}) {
+MatchSimulationController setup(PowerUpKind kind, {bool follows = true, bool migrated = false, double? eventDuration}) {
   final skill = SkillLibrary.defaults
       .builtIn(kind, PowerUpConfig.defaults)
       .copyWith(
@@ -38,16 +38,28 @@ MatchSimulationController setup(PowerUpKind kind, {bool follows = true}) {
         castingScale: 1.5,
         castingFollowsActive: follows,
       );
+  var library = SkillLibrary.defaults.withDefinition(skill, PowerUpConfig.defaults);
+  if (migrated) {
+    library = library.migrateAllLegacyArtwork();
+    if (eventDuration != null) {
+      final migratedSkill = library.builtIn(kind, PowerUpConfig.defaults);
+      final effectId = migratedSkill.visualBindings[SkillVisualRole.casting]!.effectId;
+      final effect = library.effects[effectId]!;
+      library = library.withEffect(EffectDefinition(
+        id: effect.id,
+        name: effect.name,
+        spriteId: effect.spriteId,
+        durationSeconds: eventDuration,
+      ));
+    }
+  }
   final m = MatchSimulationController(
     balls,
     arenaRadius: 260,
     mode: MatchMode.arsenal,
     seed: 3,
     lookAhead: false,
-    skillLibrary: SkillLibrary.defaults.withDefinition(
-      skill,
-      PowerUpConfig.defaults,
-    ),
+    skillLibrary: library,
   );
   m.powerUps!.automaticSpawning = false;
   m.state.balls[0].position = const ui.Offset(-80, 0);
@@ -241,11 +253,55 @@ void main() {
       expect(next.powerUps!.castingArtwork, isEmpty);
     },
   );
+  test('migrated Casting event keeps timed effect lifetime', () {
+    final m = setup(PowerUpKind.speed, migrated: true), p = m.powerUps!;
+    expect(p.castingArtwork, hasLength(1));
+    for (var i = 0; i < 6; i++) { p.step(); }
+    expect(p.castingArtwork, isEmpty);
+  });
+
+  test('explicit Casting duration caps a follow-active Energy Wave', () {
+    final m = setup(PowerUpKind.energyWave,
+        follows: true, migrated: true, eventDuration: .05);
+    final p = m.powerUps!;
+    for (var i = 0; i < 180 && p.energyWaveAttacks.isEmpty; i++) {
+      p.step();
+    }
+    expect(p.energyWaveAttacks, hasLength(1));
+    expect(p.castingArtwork.single.hasExplicitDuration, isTrue);
+    for (var i = 0; i < 4; i++) { p.step(); }
+    expect(p.energyWaveAttacks, isNotEmpty);
+    expect(p.castingArtwork, isEmpty);
+  });
+
+  test('legacy duration does not cap a follow-active Energy Wave', () {
+    final m = setup(PowerUpKind.energyWave, follows: true, migrated: true);
+    final p = m.powerUps!;
+    for (var i = 0; i < 180 && p.energyWaveAttacks.isEmpty; i++) {
+      p.step();
+    }
+    expect(p.castingArtwork.single.hasExplicitDuration, isFalse);
+    for (var i = 0; i < 10; i++) { p.step(); }
+    expect(p.energyWaveAttacks, isNotEmpty);
+    expect(p.castingArtwork, hasLength(1));
+  });
+
+  test('explicit Casting Visual Event duration overrides legacy duration', () {
+    final m = setup(PowerUpKind.speed, migrated: true, eventDuration: .3);
+    final p = m.powerUps!;
+    expect(p.castingArtwork.single.steps, 18);
+    for (var i = 0; i < 6; i++) { p.step(); }
+    expect(p.castingArtwork, hasLength(1));
+    for (var i = 0; i < 12; i++) { p.step(); }
+    expect(p.castingArtwork, isEmpty);
+  });
+
   for (final follows in [true, false]) {
+    for (final migrated in [false, true]) {
     test(
-      'Energy Wave cast follows charge and beam only when selected ($follows)',
+      'Energy Wave cast follows charge and beam ($follows, migrated: $migrated)',
       () {
-        final m = setup(PowerUpKind.energyWave, follows: follows),
+        final m = setup(PowerUpKind.energyWave, follows: follows, migrated: migrated),
             p = m.powerUps!;
         expect(p.castingArtwork, isEmpty); // Equipping is not casting.
         for (var i = 0; i < 180 && p.energyWaveAttacks.isEmpty; i++) {
@@ -266,6 +322,7 @@ void main() {
         expect(p.castingArtwork, isEmpty);
       },
     );
+    }
   }
   test(
     'cast art follows the caster, impact is separate, and hidden effects stay hidden',

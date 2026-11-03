@@ -30,6 +30,10 @@ class PersistentSkillEffect {
   final int steps;
   bool get isWorld =>
       role == SkillVisualRole.ground || role == SkillVisualRole.boundary;
+  // Resolved once when this activation is registered, not on each paint.
+  // A null snapshot also stays null if artwork is added mid-activation.
+  ResolvedSkillEffect? visual;
+  bool visualCaptured = false;
   int age = 0;
 }
 
@@ -43,12 +47,14 @@ class SkillVisualEvent {
     this.target,
     this.direction = const Offset(1, 0),
     this.steps = 18,
+    this.visual,
   });
   final SkillDefinition skill;
   final SkillVisualRole role;
   final Offset position, direction;
   final SimulationBall? owner, target;
   final int step, steps;
+  final ResolvedSkillEffect? visual;
   int age = 0;
 }
 
@@ -83,6 +89,9 @@ class PersistentSkillEffects {
       steps: steps,
       active: () => effect.age < steps,
     );
+    // Area artwork belongs to this activation, even before the first sync.
+    effect.visual = system.match.skillLibrary.resolveVisual(skill, effect.role);
+    effect.visualCaptured = true;
     _areas.add(effect);
   }
 
@@ -145,6 +154,7 @@ class PersistentSkillEffects {
         target: target,
         direction: direction,
         steps: ((visual.durationSeconds ?? .3) * 60).round().clamp(1, 600),
+        visual: visual,
       ),
     );
     if (events.length > 256) events.removeAt(0);
@@ -178,6 +188,9 @@ class PersistentSkillEffects {
       active: active,
       steps: ((skill.durationSeconds ?? 3) * 60).round(),
     );
+    final watched = _watched[key]!;
+    watched.visual = system.match.skillLibrary.resolveVisual(skill, role);
+    watched.visualCaptured = true;
     _handles.remove(key);
   }
 
@@ -267,6 +280,18 @@ class PersistentSkillEffects {
     final candidates = <Object, PersistentSkillEffect>{};
     void add(PersistentSkillEffect e) {
       if (e.active() && (e.isWorld || (_alive(e.owner) && _alive(e.target)))) {
+        // Reuse the registered activation before resolving artwork. Candidate
+        // objects for zones and statuses are rebuilt on every sync, but their
+        // appearance must not be recaptured from edited library settings.
+        final registered = _handles[e.key];
+        if (registered != null) {
+          candidates[e.key] = registered;
+          return;
+        }
+        if (!e.visualCaptured) {
+          e.visual = system.match.skillLibrary.resolveVisual(e.skill, e.role);
+          e.visualCaptured = true;
+        }
         candidates[e.key] = e;
       }
     }

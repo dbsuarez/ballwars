@@ -20,7 +20,8 @@ class PowerUpTuningScreen extends StatefulWidget {
 
 class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
   static Iterable<TuningField> get _legacyFields => PowerUpConfig.fields.where(
-    (field) => !field.id.startsWith('tier.') && !field.id.startsWith('skill'),
+    (field) => !field.id.startsWith('tier.') &&
+        (!field.id.startsWith('skill') || field.id == 'skillTrapsEnabled'),
   );
 
   late final Map<String, TextEditingController> _text = {
@@ -70,6 +71,38 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
       'blast' => PowerUpKind.mine,
       _ => null,
     };
+  }
+
+  // Explanations are available by tap and keyboard, not hover alone.
+  static const Set<String> _trapSwitches = {
+    'allTrapsDisabled', 'arenaTrapsEnabled', 'skillTrapsEnabled',
+  };
+
+  static const Map<String, String> _trapHelp = {
+    'allTrapsDisabled':
+        'Master override. Turning this on disables both automatic arena hazards and skill-generated traps, regardless of their individual settings. Turning it off restores the two independent selections.',
+    'arenaTrapsEnabled':
+        'Allows automatic arena hazards, including arena-theme hazards and periodic spike walls. Turning it off also clears existing automatic hazards. This does not disable traps created by skills.',
+    'skillTrapsEnabled':
+        'Allows trap skills and trap pickups. Turning it off prevents trap activations and cancels existing skill mines and composed trap effects. This does not disable automatic arena hazards.',
+  };
+
+  static void _showTrapHelp(BuildContext context, TuningField field) {
+    final explanation = _trapHelp[field.id];
+    if (explanation == null) return;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(field.label),
+        content: Text(explanation),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   static IconData _genericIcon(TuningField f) => switch (f.id) {
@@ -124,7 +157,13 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final entry in groups.entries)
+          // Place the master and independent trap switches together near the
+          // top of Common, so all three remain accessible during edits.
+          for (final entry in [
+            if (visibleGroups.contains('Arena traps'))
+              MapEntry('Arena traps', groups['Arena traps'] ?? <TuningField>[]),
+            ...groups.entries.where((entry) => entry.key != 'Arena traps'),
+          ])
             if (visibleGroups.contains(entry.key)) ...[
               Text(
                 entry.key.toUpperCase(),
@@ -158,10 +197,22 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
                                           c.text,
                               ),
                             ),
+                            if (_trapHelp.containsKey(f.id))
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: IconButton(
+                                  key: ValueKey('trap-help-${f.id}'),
+                                  tooltip: 'Explain ${f.label}',
+                                  icon: const Icon(Icons.help_outline_rounded),
+                                  onPressed: () => _showTrapHelp(context, f),
+                                ),
+                              ),
                             const SizedBox(height: 2),
                             Text(
-                              'Default ${_format(f, f.defaultValue)}${_unit(f)} - '
-                              '${_format(f, f.min)} to ${_format(f, f.max)}',
+                              _trapSwitches.contains(f.id)
+                                  ? 'Default: ${f.defaultValue == 0 ? 'Off' : 'On'}'
+                                  : 'Default ${_format(f, f.defaultValue)}${_unit(f)} - '
+                                      '${_format(f, f.min)} to ${_format(f, f.max)}',
                               style: AppText.ui(
                                 10,
                                 FontWeight.w500,
@@ -172,27 +223,39 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      SizedBox(
-                        width: 88,
-                        child: TextField(
+                      if (_trapSwitches.contains(f.id))
+                        Switch(
                           key: ValueKey('tuning-${f.id}'),
-                          controller: _text[f.id],
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.]'),
+                          value: _text[f.id]!.text == '1',
+                          // Keep the independent selections editable even
+                          // under the master override, so lifting it restores
+                          // exactly what the admin selected.
+                          onChanged: (enabled) => setState(() {
+                            _text[f.id]!.text = enabled ? '1' : '0';
+                          }),
+                        )
+                      else
+                        SizedBox(
+                          width: 88,
+                          child: TextField(
+                            key: ValueKey('tuning-${f.id}'),
+                            controller: _text[f.id],
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
                             ),
-                          ],
-                          textAlign: TextAlign.end,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            suffixText: _unit(f),
-                            isDense: true,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.]'),
+                              ),
+                            ],
+                            textAlign: TextAlign.end,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              suffixText: _unit(f),
+                              isDense: true,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -250,6 +313,7 @@ class _PowerUpTuningScreenState extends State<PowerUpTuningScreen> {
                         _fieldsForGroups(context, groups, const {
                           'Rarity spawn weights',
                           'Spawning',
+                          'Arena traps',
                           'Guns',
                           'Effects',
                         }, config),

@@ -4,6 +4,7 @@ import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/domain/simulation_ball.dart';
 import 'package:ballwars/features/ball_management/domain/custom_ball.dart';
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +32,7 @@ const _balls = [
 MatchSimulationController _match({
   int count = 2,
   PowerUpConfig tuning = PowerUpConfig.defaults,
+  SkillLibrary skillLibrary = SkillLibrary.defaults,
 }) {
   final match = MatchSimulationController(
     _balls.take(count).toList(),
@@ -41,6 +43,7 @@ MatchSimulationController _match({
     lookAhead: false,
     dualWield: true,
     tuning: tuning,
+    skillLibrary: skillLibrary,
   );
   for (final ball in match.state.balls) {
     ball.velocity = Offset.zero;
@@ -113,6 +116,32 @@ void main() {
     _run(match, 40);
     expect(far.life, 76);
     expect(near.life, 100);
+  });
+
+  test('Raging Demon saved native strike override drives runtime and freeze', () {
+    final tuning = PowerUpConfig.defaults.withValue('ragingDemonHits', 7);
+    final original = SkillLibrary.defaults.builtIn(PowerUpKind.ragingDemon, tuning);
+    final overridden = original.copyWith(projectileCount: 3);
+    final persisted = SkillLibrary.fromJson(SkillLibrary(
+      overrides: {overridden.id: overridden},
+    ).toJson());
+    final match = _match(tuning: tuning, skillLibrary: persisted);
+    final [owner, target] = match.state.balls;
+    owner.position = Offset.zero;
+    target.position = const Offset(90, 0);
+    _give(match, owner, PowerUpKind.ragingDemon);
+    final attack = match.powerUps!.ragingDemonAttacks.single;
+    expect(attack.totalHits, 3);
+    _run(match, 6);
+    expect(attack.hitsShown, 3);
+    expect(target.life, 97);
+    // A missing override must continue to use the live administrator tuning.
+    final defaultMatch = _match(tuning: tuning);
+    final [defaultOwner, defaultTarget] = defaultMatch.state.balls;
+    defaultOwner.position = Offset.zero;
+    defaultTarget.position = const Offset(90, 0);
+    _give(defaultMatch, defaultOwner, PowerUpKind.ragingDemon);
+    expect(defaultMatch.powerUps!.ragingDemonAttacks.single.totalHits, 7);
   });
 
   test(

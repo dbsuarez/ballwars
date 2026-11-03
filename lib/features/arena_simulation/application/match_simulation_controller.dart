@@ -841,21 +841,9 @@ class MatchSimulationController {
       _initialDecoration, _stepCount * fixedTimestep, matchDurationSeconds: duration);
     if (nextTheme != arenaDecoration) {
       arenaDecoration = nextTheme;
-      // Release balls held by outgoing quicksand before removing its hazard.
-      // Otherwise the old theme can leave an invisible movement restriction.
-      for (final hazard in _powerUps?.arenaThemeHazards ?? <ArenaThemeHazard>[]) {
-        if (hazard.kind != ArenaThemeHazardKind.quicksand) continue;
-        for (final ball in hazard.affected) {
-          if (ball.isEliminated) continue;
-          final away = ball.position - hazard.position;
-          final direction = away.distance == 0
-              ? const Offset(1, 0)
-              : away / away.distance;
-          ball.velocity = direction *
-              math.max(ball.velocity.distance, arenaRadius * 0.42);
-        }
-      }
-      _powerUps?.arenaThemeHazards.clear();
+      // Use the same source-aware cleanup as Disable Arena Traps. Rotation
+      // must not release skill goo or leave invisible vine immobilization.
+      _powerUps?.clearAutomaticArenaHazards();
     }
     final nextShape = arenaRotation.shapeAt(
       _initialShape, _stepCount * fixedTimestep, matchDurationSeconds: duration);

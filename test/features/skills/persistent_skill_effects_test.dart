@@ -108,6 +108,151 @@ class RecordedCanvas extends Fake implements Canvas {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('status visibility reads captured artwork, not live resolver', () {
+    final m = create(lib: library());
+    final p = m.powerUps!;
+    pickup(m, PowerUpKind.speed);
+    p.persistentEffects.sync();
+    final status = p.persistentEffects.handles.singleWhere(
+      (e) => e.role == SkillVisualRole.ownerStatus,
+    );
+    expect(status.visualCaptured, isTrue);
+    expect(status.visual?.spriteId, art.spriteId);
+    expect(
+      PowerUpPainter.hasPersistentStatus(
+        p, m.state.balls.first, PowerUpKind.speed,
+        EffectRenderMode.sprite,
+      ),
+      isTrue,
+    );
+    // Simulates an editor removing the binding while the activation remains.
+    // A null activation snapshot must not acquire new artwork either.
+    status.visual = null;
+    expect(
+      PowerUpPainter.hasPersistentStatus(
+        p, m.state.balls.first, PowerUpKind.speed,
+        EffectRenderMode.sprite,
+      ),
+      isFalse,
+    );
+  });
+
+  test('expired persistent ground effects are not drawn', () {
+    final m = create(lib: library());
+    final p = m.powerUps!;
+    final skill = m.skillLibrary.builtIn(PowerUpKind.molotov, tuning);
+    p.persistentEffects.area(
+      m.state.balls.first, skill, const Offset(10, 10), 20,
+    );
+    p.persistentEffects.sync();
+    final ground = p.persistentEffects.handles.singleWhere(
+      (e) => e.activation && e.role == SkillVisualRole.ground,
+    );
+    expect(ground.visualCaptured, isTrue);
+    final canvas = RecordedCanvas();
+    ground.age = ground.steps;
+    expect(
+      PowerUpPainter.paintPersistentZone(
+        canvas, p, ground.key, EffectRenderMode.sprite,
+      ),
+      isFalse,
+    );
+    expect(canvas.sizes, isEmpty);
+  });
+
+  test('area artwork is captured before the first synchronization', () {
+    final m = create(lib: library(scale: 1.4));
+    final p = m.powerUps!;
+    final skill = m.skillLibrary.builtIn(PowerUpKind.molotov, tuning);
+    p.persistentEffects.area(
+      m.state.balls.first,
+      skill,
+      const Offset(12, 18),
+      35,
+    );
+    // The first sync registers the same activation, not a newly resolved
+    // effect. This also checks that a missing binding remains a null snapshot.
+    p.persistentEffects.sync();
+    final area = p.persistentEffects.handles.singleWhere(
+      (e) => e.activation && e.role == SkillVisualRole.ground,
+    );
+    expect(area.visualCaptured, isTrue);
+    expect(area.visual, isNotNull);
+    final captured = area.visual;
+    p.persistentEffects.sync();
+    final again = p.persistentEffects.handles.singleWhere(
+      (e) => e.activation && e.role == SkillVisualRole.ground,
+    );
+    expect(identical(area, again), isTrue);
+    expect(identical(again.visual, captured), isTrue);
+  });
+
+  test('watched effect captures artwork on watch and refresh replaces activation', () {
+    final m = create(lib: library(scale: 1.3));
+    final p = m.powerUps!;
+    final ball = m.state.balls.first;
+    final skill = m.skillLibrary.builtIn(PowerUpKind.speed, tuning);
+    p.persistentEffects.watch(
+      ball, skill, SkillVisualRole.ownerStatus, () => true,
+    );
+    p.persistentEffects.sync();
+    final first = p.persistentEffects.handles.singleWhere(
+      (e) => e.role == SkillVisualRole.ownerStatus,
+    );
+    expect(first.visualCaptured, isTrue);
+    final snapshot = first.visual;
+    p.persistentEffects.sync();
+    expect(identical(first.visual, snapshot), isTrue);
+    p.persistentEffects.watch(
+      ball, skill, SkillVisualRole.ownerStatus, () => true,
+    );
+    p.persistentEffects.sync();
+    final refreshed = p.persistentEffects.handles.singleWhere(
+      (e) => e.role == SkillVisualRole.ownerStatus,
+    );
+    expect(identical(first, refreshed), isFalse);
+    expect(refreshed.visualCaptured, isTrue);
+  });
+
+  test('persistent status keeps resolved visual and duration for its activation', () {
+    final m = create(lib: library(scale: 1.7, duration: .8));
+    final p = m.powerUps!;
+    pickup(m, PowerUpKind.speed);
+    p.persistentEffects.sync();
+    final first = p.persistentEffects.handles.singleWhere(
+      (e) => e.role == SkillVisualRole.ownerStatus,
+    );
+    expect(first.visualCaptured, isTrue);
+    expect(first.visual, isNotNull);
+    final snapshot = first.visual;
+    final duration = snapshot!.durationSeconds;
+    p.persistentEffects.sync();
+    final next = p.persistentEffects.handles.singleWhere(
+      (e) => e.role == SkillVisualRole.ownerStatus,
+    );
+    expect(identical(next, first), isTrue);
+    expect(identical(next.visual, snapshot), isTrue);
+    expect(next.visual!.durationSeconds, duration);
+  });
+
+  test('one-shot visual events retain resolved artwork after emission', () {
+    final m = create(lib: library(scale: 2, duration: .5));
+    final p = m.powerUps!;
+    final skill = m.skillLibrary.builtIn(PowerUpKind.speed, tuning);
+    p.persistentEffects.emit(
+      skill,
+      SkillVisualRole.block,
+      const Offset(13, 27),
+    );
+    final event = p.persistentEffects.events.single;
+    expect(event.visual, isNotNull);
+    expect(event.visual!.spriteId, art.spriteId);
+    expect(event.steps, 30);
+    final snapshot = event.visual;
+    p.persistentEffects.sync();
+    expect(identical(p.persistentEffects.events.single.visual, snapshot), isTrue);
+  });
+
   setUpAll(
     () => Future<void>.sync(() async {
       final recorder = ui.PictureRecorder();

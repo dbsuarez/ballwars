@@ -27,6 +27,7 @@ import '../domain/skill_behavior_advisor.dart';
 import '../domain/skill_trap_presets.dart';
 import '../domain/skill_behavior_presets.dart';
 import '../domain/skill_advanced_compatibility.dart';
+import '../domain/native_advanced_skill_config.dart';
 import 'grip_preview_dialog.dart';
 import 'skill_demo_dialog.dart';
 import 'skill_effects_editor.dart';
@@ -179,6 +180,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
 
   Future<void> _convertAllLegacyVfx() async {
     final plan = _library.planLegacyArtworkMigration();
+    final sourceSnapshot = jsonEncode(_library.toJson());
     if (!plan.hasChanges) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(plan.blockedSlots == 0
@@ -217,7 +219,16 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     );
     if (!mounted || confirmed != true) return;
     try {
+      final currentPlan = _library.planLegacyArtworkMigration();
+      if (jsonEncode(_library.toJson()) != sourceSnapshot ||
+          !currentPlan.fitsCapacity || currentPlan.blockedSlots != plan.blockedSlots ||
+          currentPlan.newEffects != plan.newEffects ||
+          currentPlan.affectedSkills != plan.affectedSkills) {
+        throw const FormatException(
+          'The migration preview changed. Review the conversion again.');
+      }
       final converted = _library.migrateAllLegacyArtwork();
+      if (!mounted) return;
       setState(() => _library = converted);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Converted VFX for ${plan.affectedSkills} skills. Save to publish.'),
@@ -1502,11 +1513,65 @@ class _SkillEditorState extends State<_SkillEditor>
 
   // Conversion is user initiated. The draft library and artwork fields change
   // together, so cancelling the editor does not persist a partial migration.
-  void _migrateLegacyVfx() {
+  Future<void> _migrateLegacyVfx() async {
     final draft = _result;
     if (draft == null) return;
+    final plan = _effectLibrary.planLegacyArtworkMigrationForSkill(draft);
+    final librarySnapshot = jsonEncode(_effectLibrary.toJson());
+    final draftSnapshot = jsonEncode(draft.toJson());
+    if (!plan.hasChanges) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(plan.blockedSlots > 0
+            ? 'Conversion blocked: ${plan.blockedSlots} legacy slots reference missing Visual Events. Repair those bindings first.'
+            : 'No legacy artwork needs conversion.'),
+      ));
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Review this skill’s legacy VFX conversion'),
+        content: Text(
+          'New Visual Events: ${plan.newEffects}\n'
+          'Existing events reused: ${plan.reusedEffects}\n'
+          'Legacy slots superseded: ${plan.supersededSlots}\n'
+          'Blocked slots retained: ${plan.blockedSlots}\n'
+          'Available effect slots: ${plan.availableEffectSlots}\n\n'
+          '${plan.fitsCapacity ? 'The converted artwork will remain a draft until you save the skill.' : 'Not enough Visual Event slots. Remove unused events first.'}'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm-migrate-legacy-vfx'),
+            onPressed: plan.fitsCapacity
+                ? () => Navigator.pop(dialogContext, true)
+                : null,
+            child: const Text('Convert draft'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
     try {
-      final converted = _effectLibrary.migrateLegacyArtwork(draft);
+      // Reject edits made while confirmation was open. Identical aggregate
+      // migration counts do not imply identical artwork or event bindings.
+      final current = _result;
+      if (current == null) return;
+      final currentPlan = _effectLibrary.planLegacyArtworkMigrationForSkill(current);
+      if (jsonEncode(_effectLibrary.toJson()) != librarySnapshot ||
+          jsonEncode(current.toJson()) != draftSnapshot ||
+          !currentPlan.fitsCapacity ||
+          currentPlan.newEffects != plan.newEffects ||
+          currentPlan.reusedEffects != plan.reusedEffects ||
+          currentPlan.supersededSlots != plan.supersededSlots ||
+          currentPlan.blockedSlots != plan.blockedSlots) {
+        throw const FormatException('Visual Event migration preview changed. Review conversion again.');
+      }
+      final converted = _effectLibrary.migrateLegacyArtwork(current);
+      if (!mounted) return;
       setState(() {
         _effectLibrary = converted.library;
         _visualBindings = converted.skill.visualBindings;
@@ -1516,9 +1581,10 @@ class _SkillEditorState extends State<_SkillEditor>
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Legacy VFX converted to Visual Events. Save the skill to keep changes.'),
       ));
-    } catch (error) {
+    } on FormatException catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Could not convert legacy VFX: $error'),
+        content: Text('Conversion cancelled without changes: ${error.message}'),
       ));
     }
   }
@@ -1597,14 +1663,35 @@ class _SkillEditorState extends State<_SkillEditor>
         text:
             '${widget.skill.dotAllOutDamage ?? widget.skill.allOutDamage ?? 0}',
       ),
-    if (widget.skill.isComposed || widget.skill.durationSeconds != null)
+    if (widget.skill.isComposed || widget.skill.durationSeconds != null ||
+        (!widget.skill.isComposed &&
+            widget.skill.baseKind == PowerUpKind.omegaTendrils))
       'duration': TextEditingController(
-        text: '${widget.skill.durationSeconds ?? 2}',
+        text: '${widget.skill.durationSeconds ??
+            (widget.skill.baseKind == PowerUpKind.omegaTendrils ? 0.6 : 2)}',
       ),
+    if (!widget.skill.isComposed && widget.skill.baseKind == PowerUpKind.omegaTendrils) ...{
+      'omegaSlamOffset': TextEditingController(text: '${widget.skill.omegaSlamOffsetRatio ?? 0.55}'),
+      'omegaSlamVelocity': TextEditingController(text: '${widget.skill.omegaSlamVelocityMultiplier ?? 1.0}'),
+    },
+    if (!widget.skill.isComposed && widget.skill.baseKind == PowerUpKind.shadowClone) ...{
+      'shadowAppear': TextEditingController(text: '${widget.skill.shadowAppearSteps ?? 12}'),
+      'shadowStrike': TextEditingController(text: '${widget.skill.shadowStrikeSteps ?? 14}'),
+      'shadowVanish': TextEditingController(text: '${widget.skill.shadowVanishSteps ?? 12}'),
+    },
     if (widget.skill.isComposed ||
-        widget.skill.projectileCount != null)
+        widget.skill.projectileCount != null ||
+        (!widget.skill.isComposed &&
+            NativeAdvancedSkillConfig.countLabel(widget.skill.baseKind) != null))
       'count': TextEditingController(
-        text: '${widget.skill.projectileCount ?? 1}',
+        text: '${widget.skill.projectileCount ??
+            (widget.skill.baseKind == PowerUpKind.shadowClone
+                ? widget.tuning.shadowCloneCount.clamp(1, 100)
+                : widget.skill.baseKind == PowerUpKind.ragingDemon
+                    ? widget.tuning.ragingDemonHits.clamp(1, 100)
+                : widget.skill.baseKind == PowerUpKind.omegaTendrils
+                    ? 100
+                    : 1)}',
       ),
     if (widget.skill.isComposed || widget.skill.projectileSpeed != null)
       'speed': TextEditingController(
@@ -1777,6 +1864,7 @@ class _SkillEditorState extends State<_SkillEditor>
   late int _handColor = widget.skill.handEffectColor;
   late int _spriteTint = widget.skill.spriteTint;
   int _resetGeneration = 0;
+  bool _nativeDefaultsReset = false;
 
   bool _linkingCounts = false;
 
@@ -1784,7 +1872,8 @@ class _SkillEditorState extends State<_SkillEditor>
   void initState() {
     super.initState();
     _appearanceTabs = TabController(length: 7, vsync: this);
-    if (_numbers.containsKey('count')) {
+    if (_numbers.containsKey('count') &&
+        NativeAdvancedSkillConfig.linksCountToShells(widget.skill.baseKind)) {
       _numbers['count']!.addListener(() => _linkCounts('count', 'shellCount'));
       _numbers['shellCount']!.addListener(
         () => _linkCounts('shellCount', 'count'),
@@ -1943,6 +2032,7 @@ class _SkillEditorState extends State<_SkillEditor>
   }
 
   void _restoreDefaults() {
+    _nativeDefaultsReset = true;
     final defaults = widget.skill.custom
         ? (widget.skill.isComposed
               ? SkillLibrary.defaults.create(
@@ -2016,8 +2106,22 @@ class _SkillEditorState extends State<_SkillEditor>
       number('allOut', defaults.allOutDamage);
       number('dotArsenal', defaults.dotArsenalDamage);
       number('dotAllOut', defaults.dotAllOutDamage);
-      number('duration', defaults.durationSeconds);
-      number('count', defaults.projectileCount);
+      number('duration', defaults.durationSeconds ??
+          (widget.skill.baseKind == PowerUpKind.omegaTendrils &&
+                  !widget.skill.isComposed ? 0.6 : null));
+      number('count', defaults.projectileCount ??
+          (widget.skill.baseKind == PowerUpKind.shadowClone
+              ? widget.tuning.shadowCloneCount.clamp(1, 100)
+              : widget.skill.baseKind == PowerUpKind.ragingDemon
+                  ? widget.tuning.ragingDemonHits.clamp(1, 100)
+              : widget.skill.baseKind == PowerUpKind.omegaTendrils
+                  ? 100
+                  : null));
+      number('shadowAppear', defaults.shadowAppearSteps ?? 12);
+      number('shadowStrike', defaults.shadowStrikeSteps ?? 14);
+      number('shadowVanish', defaults.shadowVanishSteps ?? 12);
+      number('omegaSlamOffset', defaults.omegaSlamOffsetRatio ?? 0.55);
+      number('omegaSlamVelocity', defaults.omegaSlamVelocityMultiplier ?? 1.0);
       number('speed', defaults.projectileSpeed);
       number('spread', defaults.spreadDegrees);
       number('bounces', defaults.maxBounces);
@@ -2351,8 +2455,30 @@ class _SkillEditorState extends State<_SkillEditor>
       allOutDamage: _int('allOut'),
       dotArsenalDamage: _double('dotArsenal'),
       dotAllOutDamage: _int('dotAllOut'),
-      durationSeconds: _double('duration'),
-      projectileCount: _int('count'),
+      durationSeconds: widget.skill.baseKind == PowerUpKind.omegaTendrils &&
+              !widget.skill.isComposed
+          ? NativeAdvancedSkillConfig.omegaEditorDuration(
+              original: widget.skill.durationSeconds,
+              edited: _double('duration'),
+              resetToDefaults: _nativeDefaultsReset,
+            )
+          : _double('duration'),
+      projectileCount: !widget.skill.isComposed &&
+              NativeAdvancedSkillConfig.countLabel(widget.skill.baseKind) != null
+          ? NativeAdvancedSkillConfig.nativeEditorCount(
+              kind: widget.skill.baseKind,
+              original: widget.skill.projectileCount,
+              edited: _int('count'),
+              cloneFallback: widget.tuning.shadowCloneCount,
+              ragingFallback: widget.tuning.ragingDemonHits,
+              resetToDefaults: _nativeDefaultsReset,
+            )
+          : _int('count'),
+      shadowAppearSteps: NativeAdvancedSkillConfig.shadowEditorSteps(widget.skill.shadowAppearSteps, _int('shadowAppear'), 12, resetToDefaults: _nativeDefaultsReset),
+      shadowStrikeSteps: NativeAdvancedSkillConfig.shadowEditorSteps(widget.skill.shadowStrikeSteps, _int('shadowStrike'), 14, resetToDefaults: _nativeDefaultsReset),
+      shadowVanishSteps: NativeAdvancedSkillConfig.shadowEditorSteps(widget.skill.shadowVanishSteps, _int('shadowVanish'), 12, resetToDefaults: _nativeDefaultsReset),
+      omegaSlamOffsetRatio: NativeAdvancedSkillConfig.omegaEditorSlamValue(original: widget.skill.omegaSlamOffsetRatio, edited: _double('omegaSlamOffset'), nativeDefault: 0.55, maximum: 3, resetToDefaults: _nativeDefaultsReset),
+      omegaSlamVelocityMultiplier: NativeAdvancedSkillConfig.omegaEditorSlamValue(original: widget.skill.omegaSlamVelocityMultiplier, edited: _double('omegaSlamVelocity'), nativeDefault: 1, maximum: 5, resetToDefaults: _nativeDefaultsReset),
       projectileSpeed: _double('speed'),
       spreadDegrees: _double('spread'),
       maxBounces: _int('bounces'),
@@ -2436,6 +2562,11 @@ class _SkillEditorState extends State<_SkillEditor>
   }
 
   static const _limits = <String, (double, double)>{
+    'shadowAppear': (1, 600),
+    'shadowStrike': (1, 600),
+    'shadowVanish': (1, 600),
+    'omegaSlamOffset': (0, 3),
+    'omegaSlamVelocity': (0, 5),
     'weaponDisplayScale': (0.25, 3),
     'pickupDisplayScale': (0.25, 3),
     'effectDisplayScale': (0.25, 3),
@@ -2492,6 +2623,9 @@ class _SkillEditorState extends State<_SkillEditor>
   };
 
   static const _wholeNumberKeys = {
+    'shadowAppear',
+    'shadowStrike',
+    'shadowVanish',
     'shellCount',
     'count',
     'allOut',
@@ -4014,7 +4148,18 @@ class _SkillEditorState extends State<_SkillEditor>
                       ),
                       if (_numbers.containsKey('count') &&
                           (!widget.skill.isComposed || _usesProjectileDelivery))
-                        _number('count', 'Projectile / hit count'),
+                        _number('count',
+                          NativeAdvancedSkillConfig.countLabel(widget.skill.baseKind)
+                              ?? 'Projectile / hit count'),
+                      if (!widget.skill.isComposed &&
+                          NativeAdvancedSkillConfig.countHelp(widget.skill.baseKind) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            NativeAdvancedSkillConfig.countHelp(widget.skill.baseKind)!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
                       if (_effectSteps.isNotEmpty && _usesProjectileDelivery)
                         _number(
                           'projectileHitRadius',
@@ -4203,8 +4348,26 @@ class _SkillEditorState extends State<_SkillEditor>
                             suffix: 's',
                           ),
                       ],
+                      if (_numbers.containsKey('shadowAppear')) ...[
+                        _section('Shadow Clone cinematic timing',
+                          'Simulation steps (60 per second). Defaults: appearance 12, strike interval 14, disappearance 12. The total time freeze follows these settings.'),
+                        _number('shadowAppear', 'Clone appearance', suffix: 'steps'),
+                        _number('shadowStrike', 'Interval per strike', suffix: 'steps'),
+                        _number('shadowVanish', 'Clone disappearance', suffix: 'steps'),
+                      ],
+                      if (_numbers.containsKey('omegaSlamOffset')) ...[
+                        _section('Omega Tendrils slam',
+                          'Native slam displacement is 0.55 target radii and velocity is 1x. Both settings affect the release slam only, not hold duration or damage.'),
+                        _number('omegaSlamOffset', 'Slam displacement', suffix: 'radii'),
+                        _number('omegaSlamVelocity', 'Slam velocity', suffix: 'x'),
+                      ],
                       if (_numbers.containsKey('duration'))
-                        _number('duration', 'Duration', suffix: 's'),
+                        _number('duration',
+                          widget.skill.baseKind == PowerUpKind.omegaTendrils &&
+                                  !widget.skill.isComposed
+                              ? 'Tendril hold duration'
+                              : 'Duration',
+                          suffix: 's'),
                     ],
                   ),
                   Column(
@@ -4802,11 +4965,12 @@ class _SkillEditorState extends State<_SkillEditor>
                                       }
                                     },
                                   ),
-                                if (_castingSpriteId != null) ...[
+                                if (_castingSpriteId != null ||
+                                    _visualBindings.containsKey(SkillVisualRole.casting)) ...[
                                   const SizedBox(height: 12),
                                   _section(
                                     'Casting effect',
-                                    'Plays on the caster when the move starts, independently of hit artwork. Uses Sprite effect visuals.',
+                                    'Controls the caster effect for both legacy artwork and Visual Events. Follow active move is gameplay behavior, not a redundant sprite setting.',
                                   ),
                                   _fixedRow(
                                     'Follow active move',
@@ -4821,8 +4985,12 @@ class _SkillEditorState extends State<_SkillEditor>
                                     ),
                                   ),
                                   const Text(
-                                    'Energy Wave, Shadow Clone, Raging Demon and Omnislash can follow the move until it ends. Other moves use the duration below.',
+                                    'Supported active moves can keep Casting visible until the move ends. An explicit Visual Event duration also limits that lifetime. Otherwise, the duration below applies.',
                                   ),
+                                  if (_visualBindings.containsKey(SkillVisualRole.casting))
+                                    const Text(
+                                      'Casting duration is the fallback when the Visual Event has no explicit duration. Casting scale also applies to Visual Events.',
+                                    ),
                                   _number(
                                     'castingDuration',
                                     'Casting duration',

@@ -694,6 +694,163 @@ void main() {
     );
   });
 
+  test('native Omega Tendrils target cap persists and limits grabs', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.omegaTendrils, PowerUpConfig.defaults)
+        .copyWith(projectileCount: 1);
+    final saved = SkillLibrary(overrides: {definition.id: definition});
+    final restored = SkillLibrary.fromJson(saved.toJson());
+    expect(restored.activeFor(PowerUpKind.omegaTendrils, PowerUpConfig.defaults)
+        .projectileCount, 1);
+    final c = _match(count: 3, skillLibrary: restored);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(1));
+    expect(c.powerUps!.omegaTendrils.single.owner, same(owner));
+  });
+
+  test('Omega Tendrils capped recast grabs next available opponent', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.omegaTendrils, PowerUpConfig.defaults)
+        .copyWith(projectileCount: 1);
+    final library = SkillLibrary(overrides: {definition.id: definition});
+    final c = _match(count: 3, skillLibrary: library);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(1));
+    final firstGrab = c.powerUps!.omegaTendrils.single;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    expect(c.powerUps!.omegaTendrils.first, same(firstGrab));
+    expect(c.powerUps!.omegaTendrils.last.target,
+        isNot(same(firstGrab.target)));
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+  });
+
+  test('Omega Tendrils captures native release settings per cast', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.omegaTendrils, PowerUpConfig.defaults)
+        .copyWith(
+          projectileCount: 1,
+          durationSeconds: 1.25,
+          omegaSlamOffsetRatio: 1.75,
+          omegaSlamVelocityMultiplier: 2.5,
+        );
+    final restored = SkillLibrary.fromJson(
+      SkillLibrary(overrides: {definition.id: definition}).toJson(),
+    );
+    final c = _match(count: 3, skillLibrary: restored);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    final first = c.powerUps!.omegaTendrils.single;
+    expect(first.stepsLeft, 75);
+    expect(first.slamOffsetRatio, 1.75);
+    expect(first.slamVelocityMultiplier, 2.5);
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    expect(c.powerUps!.omegaTendrils.first, same(first));
+    for (final grab in c.powerUps!.omegaTendrils) {
+      expect(grab.stepsLeft, identical(grab, first) ? 74 : 75);
+      expect(grab.slamOffsetRatio, 1.75);
+      expect(grab.slamVelocityMultiplier, 2.5);
+    }
+  });
+
+  test('Omega Tendrils capped recasts keep each victim original release timer', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.omegaTendrils, PowerUpConfig.defaults)
+        .copyWith(projectileCount: 1, durationSeconds: 1.0,
+          omegaSlamOffsetRatio: 1.25, omegaSlamVelocityMultiplier: 2.0);
+    final library = SkillLibrary.fromJson(
+      SkillLibrary(overrides: {definition.id: definition}).toJson(),
+    );
+    final c = _match(count: 3, skillLibrary: library);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    final first = c.powerUps!.omegaTendrils.single;
+    expect(first.stepsLeft, 60);
+    _run(c, 12);
+    final remaining = first.stepsLeft;
+    expect(remaining, lessThan(60));
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    expect(c.powerUps!.omegaTendrils.first, same(first));
+    expect(first.stepsLeft, lessThan(remaining));
+    final second = c.powerUps!.omegaTendrils.last;
+    expect(second.target, isNot(same(first.target)));
+    expect(second.stepsLeft, 60);
+    expect(first.slamOffsetRatio, 1.25);
+    expect(second.slamOffsetRatio, 1.25);
+    expect(first.slamVelocityMultiplier, 2.0);
+    expect(second.slamVelocityMultiplier, 2.0);
+  });
+
+  test('Omega Tendrils reset round-trip restores unlimited native targets and hold', () {
+    final definition = SkillLibrary.defaults
+        .builtIn(PowerUpKind.omegaTendrils, PowerUpConfig.defaults)
+        .copyWith(projectileCount: 1, durationSeconds: 1.5,
+          omegaSlamOffsetRatio: 2.0, omegaSlamVelocityMultiplier: 3.0);
+    final reset = definition.copyWith(projectileCount: null,
+      durationSeconds: null, omegaSlamOffsetRatio: null,
+      omegaSlamVelocityMultiplier: null);
+    final restored = SkillLibrary.fromJson(
+      SkillLibrary(overrides: {reset.id: reset}).toJson(),
+    );
+    final c = _match(count: 3, skillLibrary: restored);
+    _give(c, c.state.balls.first, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    for (final grab in c.powerUps!.omegaTendrils) {
+      expect(grab.stepsLeft, 36);
+      expect(grab.slamOffsetRatio, 0.55);
+      expect(grab.slamVelocityMultiplier, 1.0);
+    }
+  });
+
+  test('Omega Tendrils native release defaults are preserved at cast', () {
+    final c = _match(count: 3);
+    _give(c, c.state.balls.first, PowerUpKind.omegaTendrils);
+    for (final grab in c.powerUps!.omegaTendrils) {
+      expect(grab.stepsLeft, 36);
+      expect(grab.slamOffsetRatio, 0.55);
+      expect(grab.slamVelocityMultiplier, 1.0);
+    }
+  });
+
+  test('Omega Tendrils repeated casts do not stack duplicate target slams', () {
+    final c = _match(count: 3);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    final originalGrabs = List.of(c.powerUps!.omegaTendrils);
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    expect(c.powerUps!.omegaTendrils, hasLength(2));
+    for (var i = 0; i < 2; i++) {
+      expect(c.powerUps!.omegaTendrils[i], same(originalGrabs[i]));
+    }
+    _run(c, 36);
+    expect(c.powerUps!.blasts, 2);
+    expect(c.powerUps!.omegaTendrils, isEmpty);
+  });
+
+  test('Omega Tendrils respawn cancellation restores surviving victims', () {
+    final c = _match(count: 3);
+    final owner = c.state.balls.first;
+    _give(c, owner, PowerUpKind.omegaTendrils);
+    final grabs = List.of(c.powerUps!.omegaTendrils);
+    expect(grabs, hasLength(2));
+    for (final grab in grabs) {
+      grab.target.velocity = Offset.zero;
+    }
+    final blastsBefore = c.powerUps!.blasts;
+    c.powerUps!.resetForRespawn(owner);
+    expect(c.powerUps!.omegaTendrils, isEmpty);
+    expect(c.powerUps!.blasts, blastsBefore);
+    for (final grab in grabs) {
+      expect(grab.target.velocity, grab.savedVelocity);
+    }
+  });
+
   test('Omega Tendrils unavoidably grabs every opponent and slams lightly', () {
     final c = _match(count: 3);
     final [owner, shieldedGhost, armored] = c.state.balls;

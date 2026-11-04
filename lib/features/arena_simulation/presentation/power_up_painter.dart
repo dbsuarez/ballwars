@@ -3283,6 +3283,7 @@ class PowerUpPainter {
     SkillHeldFacing Function(PowerUpKind kind, int slot)? heldFacing,
     HeldAttackAnimation? Function(PowerUpKind kind, int slot)? heldAttackAnimation,
     int Function(PowerUpKind kind, int slot)? heldAttackRepeatCount,
+    int Function(PowerUpKind kind, int slot)? heldAttackDurationSteps,
     double Function(PowerUpKind kind)? skillRange,
     SkillDefinition? Function(PowerUpKind kind)? handArtworkSettings,
     double Function(PowerUpKind kind)? handEffectScale,
@@ -3922,6 +3923,7 @@ class PowerUpPainter {
             firedHoldLeft: firedWeaponHoldLeft?.call(weapon, slot) ?? 0,
             attackAnimation: heldAttackAnimation?.call(weapon, slot),
             attackRepeatCount: heldAttackRepeatCount?.call(weapon, slot) ?? 1,
+            attackDurationSteps: heldAttackDurationSteps?.call(weapon, slot) ?? 30,
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),
@@ -3960,6 +3962,7 @@ class PowerUpPainter {
           firedHoldLeft: melee.stepsLeft,
           attackAnimation: heldAttackAnimation?.call(weapon, visualSlot),
           attackRepeatCount: heldAttackRepeatCount?.call(weapon, visualSlot) ?? 1,
+          attackDurationSteps: heldAttackDurationSteps?.call(weapon, visualSlot) ?? 30,
           useSprite: useWeaponSprite?.call(weapon, visualSlot) ?? true,
           displayScale: weaponDisplayScale?.call(weapon, visualSlot) ?? 1,
           gripInset: weaponGripInset?.call(weapon, visualSlot),
@@ -4030,6 +4033,32 @@ class PowerUpPainter {
     return scaled - scaled.floor();
   }
 
+  /// Attack pose in the weapon's local coordinate system. A brief backward
+  /// anticipation leads into an eased forward strike, then settles near the
+  /// forward endpoint. Repetitions re-arm between cycles; no backward strike.
+  @visibleForTesting
+  static ({double rotation, double forward, double sideways}) heldAttackPose(
+    double progress, int repeats, HeldAttackAnimation mode,
+  ) {
+    final phase = heldAttackCyclePhase(progress, repeats);
+    double ease(double x) { final t = x.clamp(0.0, 1.0).toDouble(); return t * t * (3 - 2 * t); }
+    final windup = ease(phase / 0.18);
+    final strike = ease((phase - 0.18) / 0.58);
+    final settle = ease((phase - 0.76) / 0.24);
+    if (mode == HeldAttackAnimation.slash) {
+      return (
+        rotation: -0.55 - 0.25 * windup + 2.35 * strike - 0.08 * settle,
+        forward: 0.10 * strike + 0.06 * math.sin(math.pi * strike),
+        sideways: 0.22 * math.sin(math.pi * strike),
+      );
+    }
+    return (
+      rotation: -0.08 * windup + 0.08 * strike,
+      forward: -0.12 * windup + 0.96 * strike - 0.08 * settle,
+      sideways: 0.04 * math.sin(math.pi * strike),
+    );
+  }
+
   static void _paintHeldWeapon(
     Canvas canvas,
     SimulationBall ball,
@@ -4038,6 +4067,7 @@ class PowerUpPainter {
     int firedHoldLeft = 0,
     HeldAttackAnimation? attackAnimation,
     int attackRepeatCount = 1,
+    int attackDurationSteps = 30,
     bool useSprite = true,
     double displayScale = 1,
     double? gripInset,
@@ -4210,13 +4240,13 @@ class PowerUpPainter {
       );
       if ((attackAnimation == HeldAttackAnimation.slash ||
               attackAnimation == HeldAttackAnimation.thrust) && firedHoldLeft > 0) {
-        final phase = heldAttackCyclePhase(1 - firedHoldLeft / 30.0, attackRepeatCount);
+        final pose = heldAttackPose(
+          1 - firedHoldLeft / attackDurationSteps.clamp(1, 90),
+          attackRepeatCount, attackAnimation!,
+        );
         final baseAngle = heldAngle(ball, weapon: held, slot: slot);
-        final angle = attackAnimation == HeldAttackAnimation.slash
-            ? baseAngle + (-0.65 + 2.05 * phase) * (slot.isEven ? 1 : -1)
-            : baseAngle;
-        final reach = ball.radius * (attackAnimation == HeldAttackAnimation.thrust
-            ? 0.9 + 0.7 * phase : 0.9);
+        final angle = baseAngle + pose.rotation * (slot.isEven ? 1 : -1);
+        final reach = ball.radius * (0.9 + pose.forward);
         final tip = ball.position + Offset(math.cos(angle), math.sin(angle)) * reach;
         canvas.drawLine(
           ball.position,
@@ -4234,18 +4264,18 @@ class PowerUpPainter {
       return;
     }
     final baseAngle = heldAngle(ball, weapon: held, slot: slot);
-    final firedProgress = firedHoldLeft <= 0 ? 0.0 : 1 - firedHoldLeft / 30.0;
+    final firedProgress = firedHoldLeft <= 0 ? 0.0 :
+        1 - firedHoldLeft / attackDurationSteps.clamp(1, 90);
     final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
-    // Cosmetic-only single-direction slash or thrust. In particular, do not
-    // swing back through the opponent or retract into a second-looking hit.
-    // Null preserves the original legacy drop/fade behavior.
-    final slashPhase = firedHoldLeft <= 0 ? 0.0 :
-        heldAttackCyclePhase(firedProgress, attackRepeatCount);
-    final swing = firedHoldLeft <= 0 ? 0.0 : -0.65 + 2.05 * slashPhase;
-    final angle = attackAnimation == HeldAttackAnimation.slash
-        ? baseAngle + swing * (slot.isEven ? 1 : -1)
-        : attackAnimation == HeldAttackAnimation.thrust ||
-                attackAnimation == HeldAttackAnimation.none
+    final animated = firedHoldLeft > 0 &&
+        (attackAnimation == HeldAttackAnimation.slash ||
+         attackAnimation == HeldAttackAnimation.thrust);
+    final pose = animated
+        ? heldAttackPose(firedProgress, attackRepeatCount, attackAnimation!)
+        : (rotation: 0.0, forward: 0.0, sideways: 0.0);
+    final angle = animated
+        ? baseAngle + pose.rotation * (slot.isEven ? 1 : -1)
+        : attackAnimation == HeldAttackAnimation.none
             ? baseAngle
             : baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
     final transform = heldFacingTransform(
@@ -4258,19 +4288,18 @@ class PowerUpPainter {
       ball, weapon: held, slot: slot,
       gripInset: gripInset, gripSide: gripSide,
     );
-    final thrust = slashPhase;
-    final center = attackAnimation == HeldAttackAnimation.slash
-        ? ball.position + Offset(math.cos(angle), math.sin(angle)) *
-            (baseCenter - ball.position).distance
-        : attackAnimation == HeldAttackAnimation.thrust
-            ? baseCenter + Offset(math.cos(baseAngle), math.sin(baseAngle)) *
-                (ball.radius * 0.7 * thrust)
-            : attackAnimation == HeldAttackAnimation.none
-                ? baseCenter
-                : baseCenter + Offset(
-                    math.sin(drop * math.pi) * ball.radius * 0.25,
-                    drop * drop * ball.radius * 2.2,
-                  );
+    final center = animated
+        ? ball.position +
+            Offset(math.cos(angle), math.sin(angle)) *
+                ((baseCenter - ball.position).distance + ball.radius * pose.forward) +
+            Offset(-math.sin(baseAngle), math.cos(baseAngle)) *
+                (ball.radius * pose.sideways * (slot.isEven ? 1 : -1))
+        : attackAnimation == HeldAttackAnimation.none
+            ? baseCenter
+            : baseCenter + Offset(
+                math.sin(drop * math.pi) * ball.radius * 0.25,
+                drop * drop * ball.radius * 2.2,
+              );
     final heldAttach = artworkSettings?.heldAttachment ?? 'right';
     final dx = (artworkSettings?.heldOffsetX ?? 0) * ball.radius;
     final dy = (artworkSettings?.heldOffsetY ?? 0) * ball.radius;

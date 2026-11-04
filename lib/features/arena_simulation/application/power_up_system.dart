@@ -2197,8 +2197,8 @@ class PowerUpSystem {
     }
     // Save appearance only. The weapon is still consumed immediately, so it
     // cannot hit twice or interfere with a new pickup during the swing.
-    final animation = visualSkill(weapon, ball: attacker, skillId: skillId)
-        .heldAttackAnimation;
+    final struckSkill = visualSkill(weapon, ball: attacker, skillId: skillId);
+    final animation = struckSkill.heldAttackAnimation;
     if (weapon.isBlade &&
         (animation == HeldAttackAnimation.slash ||
             animation == HeldAttackAnimation.thrust)) {
@@ -2209,7 +2209,8 @@ class PowerUpSystem {
                 (skillId == null || attacker.heldSkillId == skillId)
             ? 0
             : 1,
-        stepsLeft: firedWeaponHoldSteps,
+        stepsLeft: struckSkill.heldAttackDurationSteps,
+        totalSteps: struckSkill.heldAttackDurationSteps,
       );
     }
     attacker.removeWeapon(

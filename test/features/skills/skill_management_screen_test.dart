@@ -1394,6 +1394,39 @@ void main() {
     expect(saved.shellSprite, isNull);
   });
 
+  testWidgets('attack duration dropdown fits a 360 px phone', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: SkillManagementScreen(
+          initial: SkillLibrary.defaults,
+          tuning: PowerUpConfig.defaults,
+          onSave: (_) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // Use the same reachable Shotgun row as the existing phone-layout
+    // regression below. On a 360 px phone the filtered Sword tile may be
+    // behind the bottom navigation bar, so tapping it never opens an editor.
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search skills'),
+      'Shotgun',
+    );
+    await tester.pumpAndSettle();
+    final skill = find.widgetWithText(ListTile, 'Shotgun');
+    expect(skill.hitTestable(), findsOneWidget);
+    await tester.tap(skill);
+    await tester.pumpAndSettle();
+    final duration = find.byKey(const ValueKey('skill-held-attack-duration'));
+    await _revealEditor(tester, duration);
+    expect(duration.hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'phone subtab drafts, decimal steppers and linked shell counts survive save and reopen',
     (tester) async {

@@ -807,6 +807,9 @@ class ArenaPainter extends CustomPainter {
           kind.defaultGripInset,
       weaponGripSide: gripSide,
       weaponGripRotation: gripRotation,
+      heldAttackDurationSteps: (kind, slot) => slot >= 2
+          ? ball.meleeAttackVisual?.totalSteps ?? 30
+          : 30, // Fired-weapon timing remains mechanically unchanged.
       heldAttackRepeatCount: (kind, slot) =>
           state.powerUps?.visualSkill(
             kind, ball: ball, skillId: renderedSkillId(slot),

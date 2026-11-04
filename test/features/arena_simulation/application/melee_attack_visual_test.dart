@@ -15,10 +15,12 @@ const _balls = [
 MatchSimulationController _match({
   HeldAttackAnimation? animation,
   bool dualWield = false,
+  int durationSteps = 30,
 }) {
   final sword = SkillLibrary.defaults
       .builtIn(PowerUpKind.sword, PowerUpConfig.defaults)
-      .copyWith(heldAttackAnimation: animation);
+      .copyWith(heldAttackAnimation: animation,
+          heldAttackDurationSteps: durationSteps);
   final library = SkillLibrary.defaults.withDefinition(
     sword, PowerUpConfig.defaults);
   final c = MatchSimulationController(
@@ -56,6 +58,23 @@ void main() {
     for (var i = 0; i < 29; i++) {
       c.powerUps!.step();
     }
+    expect(attacker.meleeAttackVisual?.stepsLeft, 1);
+    c.powerUps!.step();
+    expect(attacker.meleeAttackVisual, isNull);
+  });
+
+  test('configured cosmetic duration expires without additional hits', () {
+    final c = _match(animation: HeldAttackAnimation.slash, durationSteps: 60);
+    final [attacker, target] = c.state.balls;
+    c.powerUps!.onContact(attacker, target);
+    expect(attacker.held, isNull);
+    expect(attacker.meleeAttackVisual?.totalSteps, 60);
+    expect(attacker.meleeAttackVisual?.stepsLeft, 60);
+    final health = target.life;
+    for (var i = 0; i < 59; i++) {
+      c.powerUps!.step();
+    }
+    expect(target.life, health);
     expect(attacker.meleeAttackVisual?.stepsLeft, 1);
     c.powerUps!.step();
     expect(attacker.meleeAttackVisual, isNull);

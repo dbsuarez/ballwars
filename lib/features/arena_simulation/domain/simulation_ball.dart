@@ -12,12 +12,14 @@ class MeleeAttackVisual {
     required this.skillId,
     required this.slot,
     required this.stepsLeft,
+    this.totalSteps = 30,
   });
 
   final PowerUpKind kind;
   final String? skillId;
   final int slot;
   int stepsLeft;
+  final int totalSteps;
 }
 
 class SimulationBall {

@@ -39,6 +39,21 @@ void main() {
     expect(const GripValues().copyWith(attackRepeatCount: 4).attackRepeatCount, 4);
   });
 
+  test('melee visual duration is persisted without changing damage delivery', () {
+    final base = SkillLibrary.defaults.builtIn(
+      PowerUpKind.sword, PowerUpConfig.defaults);
+    expect(base.heldAttackDurationSteps, 30);
+    expect(base.toJson().containsKey('held_attack_duration_steps'), isFalse);
+    final edited = base.copyWith(heldAttackDurationSteps: 60);
+    expect(edited.toJson()['held_attack_duration_steps'], 60);
+    final loaded = SkillDefinition.fromJson(edited.toJson())!;
+    expect(loaded.heldAttackDurationSteps, 60);
+    expect(loaded.effectiveAttackDelivery, base.effectiveAttackDelivery);
+    expect(base.copyWith(heldAttackDurationSteps: 0).heldAttackDurationSteps, 12);
+    expect(base.copyWith(heldAttackDurationSteps: 900).heldAttackDurationSteps, 90);
+    expect(const GripValues().copyWith(attackDurationSteps: 45).attackDurationSteps, 45);
+  });
+
   test('grip preview can choose slash, thrust and restore legacy', () {
     const original = GripValues();
     final slash = original.copyWith(attackAnimation: HeldAttackAnimation.slash);

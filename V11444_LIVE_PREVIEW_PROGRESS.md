@@ -179,3 +179,48 @@ Do not release until `flutter analyze`, `flutter test`, and phone checks pass. T
 
 ### Deployment
 Extract the ZIP into the root of the Ball Wars repo, preserving paths and overwriting included files only. The ZIP is cumulative from the RC44 patch series through v1.14.47, not a full project archive. Run `dart format` on the modified Dart files, `flutter analyze` and the full test suite before committing or tagging. Treat v1.14.47 as an unreleased RC until browser behavior and tests are verified. Animation polish remains planned for v1.14.48.
+
+
+## v1.14.48 RC — Polished Slash/Thrust motion and editable visual duration (2026-11-04)
+
+**Input source:** v1.14.47 browser-admin cumulative ZIP. v1.14.47 test pass reported by user; its GitHub release/real-browser persistence confirmation was not supplied in this conversation. This ZIP includes all prior cumulative files plus v1.14.48 changes.
+
+### Implemented
+- One shared normalized visual-only pose for sprite and no-sprite fallback. Slash now has reverse anticipation, eased accelerating swing, lateral arc and subtle follow-through. Thrust has a wind-up and forward reach with easing and settle, rather than a rigid linear sprite slide.
+- Repeats 1–5 retained, with exactly one forward strike per cycle. Reset between cycles is visual only.
+- Configurable held melee animation lifetime **12–90 simulation steps**, default 30. Persisted as `held_attack_duration_steps`, omitted from JSON for legacy default. The persisted setting is available in both Skill Editor and Grip Preview; animation-frame preview uses the chosen duration.
+- The consumed melee weapon's transient artwork snapshots the configured lifetime. Equipped weapon / projectile firing lifetime remains 30 steps to avoid changing mechanical firing cadence.
+- Damage, projectile timing, equipment consumption, and contact logic are otherwise unchanged. No new assets required.
+- Regression tests added for anticipation, eased thrust and swing poses, duration persistence/clamping and visual expiry with no extra hit.
+
+### Release gate / roadmap
+- [x] v1.14.48 source patch implemented.
+- [x] ZIP structure, SHA-256 manifest and archive CRC verified.
+- [ ] Flutter SDK unavailable in this environment; run `dart format` on changed Dart files, `flutter analyze`, `flutter test --reporter expanded` locally.
+- [ ] Browser/phone: verify Sword slash/thrust 1/2/3 repeats and visual durations 12/30/60, preview matches arena, grip positioning and screenshot visuals.
+- [ ] Validate v1.14.47 browser Remember Me in the deployed app, if not already done.
+- [ ] Commit/push to repository `master`; create v1.14.48 tag and deploy only after checks.
+
+### Deployment
+Extract cumulative ZIP at the repository root, overwriting matching relative paths. Do **not** replace the whole project; the ZIP contains only cumulative changed files, tests, progress report and SHA-256 manifest. Run `dart format` on changed Dart files before the analyzer/tests, review the diff for unrelated files, then commit and tag only after both automated and device checks pass.
+
+
+## v1.14.48 RC Repair 01 — phone attack-duration dropdown
+
+- **Root cause:** The new `skill-held-attack-duration` `DropdownButtonFormField<int>` exceeded its fixed-row control's width at 360 px, producing an 8.3 px `RenderFlex` overflow in the Shotgun phone-layout regression. Subsequent widget-inspector ancestor errors are secondary to the layout exception.
+- **Fix:** Set `isExpanded: true` on the duration dropdown so its selected item is constrained to the available horizontal width while preserving its `12–90 steps` values and save behavior.
+- **Regression:** `attack duration dropdown fits a 360 px phone` tests the formerly overflowing control in the phone editor. The original `phone subtab drafts, decimal steppers and linked shell counts survive save and reopen` also remains intact.
+- **Verification:** Code change and ZIP SHA-256/integrity verified. **Flutter tests not run in the patch environment**; the user should run analyzer, focused widget test and full suite on their Flutter installation.
+- **Release gate:** Do not tag/release v1.14.48 until all Flutter tests and device visual checks pass.
+- **Apply:** Extract this changes-only cumulative ZIP into the v1.14.47 project root, replacing the included paths. Review `git diff`, run `flutter analyze`, then `flutter test test/features/skills/skill_management_screen_test.dart --reporter expanded` followed by `flutter test --reporter expanded`.
+
+
+## v1.14.48 RC Repair 02 — phone regression test navigation
+
+- **User test result after Repair 01:** 1,579 passed, 1 skipped, 1 failed. The existing Shotgun phone-layout save/reopen regression now passes. Only the newly added `attack duration dropdown fits a 360 px phone` test fails.
+- **Cause:** The new test searched for Sword and tapped a `ListTile` at y=732, but the hit test landed on the page overlay/bottom navigation. The Sword editor never opened, causing `_revealEditor` to report a missing duration control. This is not a new overflow.
+- **Fix:** The duration regression now opens the Shotgun editor through the same verified phone-width navigation used by the existing passing Shotgun test. An explicit hit-test assertion confirms the tile is tappable before tapping. It then reveals the Attack Duration dropdown and checks for layout exceptions. The `isExpanded: true` production UI fix from Repair 01 is unchanged.
+- **Implemented:** Regression navigation fix; cumulative ZIP and SHA-256 manifest rebuilt and checked.
+- **Tested:** User reported 1,579 passing tests from Repair 01; Repair 02 has not been run under Flutter in this environment.
+- **Release readiness:** Pending focused test, full suite, and visual/device confirmation. Do not tag/release yet.
+- **Apply:** Extract this cumulative ZIP into the project root. Run `flutter analyze`, `flutter test test/features/skills/skill_management_screen_test.dart --reporter expanded`, then `flutter test --reporter expanded`.

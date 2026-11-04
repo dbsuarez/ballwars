@@ -29,6 +29,7 @@ class GripValues {
     this.pickupScale = 1,
     this.attackAnimation,
     this.attackRepeatCount = 1,
+    this.attackDurationSteps = 30,
   });
 
   final double inset;
@@ -41,6 +42,7 @@ class GripValues {
   final double pickupScale;
   final HeldAttackAnimation? attackAnimation;
   final int attackRepeatCount;
+  final int attackDurationSteps;
 
   /// Moves the selected layer by a screen-space drag expressed in ball radii.
   /// Both layers retain independent offsets; values stay within editor limits.
@@ -60,6 +62,7 @@ class GripValues {
   GripValues copyWith({
     Object? attackAnimation = _unchanged,
     int? attackRepeatCount,
+    int? attackDurationSteps,
     double? inset,
     double? side,
     double? rotation,
@@ -70,6 +73,7 @@ class GripValues {
     attackAnimation: identical(attackAnimation, _unchanged)
         ? this.attackAnimation : attackAnimation as HeldAttackAnimation?,
     attackRepeatCount: (attackRepeatCount ?? this.attackRepeatCount).clamp(1, 5),
+    attackDurationSteps: (attackDurationSteps ?? this.attackDurationSteps).clamp(12, 90),
     inset: inset ?? this.inset,
     side: side ?? this.side,
     rotation: rotation ?? this.rotation,
@@ -181,6 +185,7 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
     pickupScale: widget.pickupScale.clamp(0.25, 3),
     attackAnimation: widget.grip.attackAnimation,
     attackRepeatCount: widget.grip.attackRepeatCount.clamp(1, 5),
+    attackDurationSteps: widget.grip.attackDurationSteps.clamp(12, 90),
   );
 
   Widget _slider(
@@ -331,6 +336,15 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                     DropdownMenuItem(value: count, child: Text('$count'))],
                   onChanged: (value) => setState(() =>
                       _grip = _grip.copyWith(attackRepeatCount: value ?? 1)),
+                ),
+                DropdownButtonFormField<int>(
+                  key: const ValueKey('grip-preview-attack-duration'),
+                  initialValue: _grip.attackDurationSteps,
+                  decoration: const InputDecoration(labelText: 'Attack duration (simulation steps)'),
+                  items: [for (var steps = 12; steps <= 90; steps++)
+                    DropdownMenuItem(value: steps, child: Text('$steps steps'))],
+                  onChanged: (value) => setState(() =>
+                      _grip = _grip.copyWith(attackDurationSteps: value ?? 30)),
                 ),
                 _slider('attack-frame', 'Attack frame', _attackFrame, 0, 1, '',
                     (v) => _attackFrame = v),
@@ -597,7 +611,9 @@ class _GripPreviewPainter extends CustomPainter {
       weaponGripSide: (_, _) => grip.side,
       weaponGripRotation: (_, _) => grip.rotation,
       firedWeaponHoldLeft: (_, _) => attackFrame == 0 ? 0 :
-          (30 * (1 - attackFrame)).round().clamp(1, 30),
+          (grip.attackDurationSteps * (1 - attackFrame)).round()
+              .clamp(1, grip.attackDurationSteps),
+      heldAttackDurationSteps: (_, _) => grip.attackDurationSteps,
       heldAttackAnimation: (_, _) => grip.attackAnimation,
       heldAttackRepeatCount: (_, _) => grip.attackRepeatCount,
       heldFacing: (_, _) => grip.facing,

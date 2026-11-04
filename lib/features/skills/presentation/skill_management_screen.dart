@@ -1855,6 +1855,8 @@ class _SkillEditorState extends State<_SkillEditor>
   late String? _pickupSpriteId = widget.skill.pickupSpriteId;
   late String? _heldSpriteId = widget.skill.heldSpriteId;
   late String? _heldAttackVfxSpriteId = widget.skill.heldAttackVfxSpriteId;
+  late double _heldAttackArcScale = widget.skill.heldAttackArcScale;
+  late double _heldAttackVfxScale = widget.skill.heldAttackVfxScale;
   late String? _projectileSpriteId = widget.skill.projectileSpriteId;
   late bool _originEnabled = widget.skill.projectileOriginForward != null;
   late bool _areaRadiusEnabled = widget.skill.areaRadiusRatio != null;
@@ -2221,6 +2223,8 @@ class _SkillEditorState extends State<_SkillEditor>
       _pickupSpriteId = defaults.pickupSpriteId;
       _heldSpriteId = defaults.heldSpriteId;
       _heldAttackVfxSpriteId = defaults.heldAttackVfxSpriteId;
+      _heldAttackArcScale = defaults.heldAttackArcScale;
+      _heldAttackVfxScale = defaults.heldAttackVfxScale;
       _projectileSpriteId = defaults.projectileSpriteId;
       _originEnabled = defaults.projectileOriginForward != null;
       _areaRadiusEnabled = defaults.areaRadiusRatio != null;
@@ -2565,6 +2569,8 @@ class _SkillEditorState extends State<_SkillEditor>
       heldAttackRepeatCount: _heldAttackRepeatCount,
       heldAttackDurationSteps: _heldAttackDurationSteps,
       heldAttackVfxSpriteId: _heldAttackVfxSpriteId,
+      heldAttackArcScale: _heldAttackArcScale,
+      heldAttackVfxScale: _heldAttackVfxScale,
       trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
       pickupDisplayScale: _double('pickupDisplayScale'),
@@ -2734,6 +2740,8 @@ class _SkillEditorState extends State<_SkillEditor>
         attackAnimation: _heldAttackAnimation,
         attackRepeatCount: _heldAttackRepeatCount,
         attackDurationSteps: _heldAttackDurationSteps,
+        attackArcScale: _heldAttackArcScale,
+        attackVfxScale: _heldAttackVfxScale,
         inset: _double('weaponGripInset') ?? 0,
         side: _double('weaponGripSide') ?? 0,
         rotation: _double('weaponGripRotation') ?? 0,
@@ -2763,6 +2771,8 @@ class _SkillEditorState extends State<_SkillEditor>
       _heldAttackAnimation = result.attackAnimation;
       _heldAttackRepeatCount = result.attackRepeatCount;
       _heldAttackDurationSteps = result.attackDurationSteps;
+      _heldAttackArcScale = result.attackArcScale;
+      _heldAttackVfxScale = result.attackVfxScale;
       _heldAttachment = result.heldAttachment;
       _effectAttachment = result.effectAttachment;
       _numbers['heldOffsetX']!.text = text(result.heldOffsetX);
@@ -4705,6 +4715,12 @@ class _SkillEditorState extends State<_SkillEditor>
                                           DropdownMenuItem<HeldAttackAnimation?>(
                                             value: HeldAttackAnimation.none, child: Text('None'),
                                           ),
+                                          DropdownMenuItem<HeldAttackAnimation?>(
+                                            value: HeldAttackAnimation.recoil, child: Text('Gun Recoil'),
+                                          ),
+                                          DropdownMenuItem<HeldAttackAnimation?>(
+                                            value: HeldAttackAnimation.throwArc, child: Text('Throw Arc'),
+                                          ),
                                         ],
                                         onChanged: (value) => setState(() => _heldAttackAnimation = value),
                                       ),
@@ -4735,6 +4751,24 @@ class _SkillEditorState extends State<_SkillEditor>
                                         onChanged: (value) => setState(() => _heldAttackDurationSteps = value ?? 30),
                                       ),
                                     ),
+                                  _fixedRow('Swing / reach strength',
+                                    Slider(
+                                      key: const ValueKey('skill-held-attack-arc-scale'),
+                                      value: _heldAttackArcScale.clamp(0.25, 2.0),
+                                      min: 0.25, max: 2, divisions: 7,
+                                      label: '${_heldAttackArcScale.toStringAsFixed(2)}x',
+                                      onChanged: (value) => setState(() => _heldAttackArcScale = value),
+                                    ),
+                                  ),
+                                  _fixedRow('Attack VFX size',
+                                    Slider(
+                                      key: const ValueKey('skill-held-attack-vfx-scale'),
+                                      value: _heldAttackVfxScale.clamp(0.25, 3.0),
+                                      min: 0.25, max: 3, divisions: 11,
+                                      label: '${_heldAttackVfxScale.toStringAsFixed(2)}x',
+                                      onChanged: (value) => setState(() => _heldAttackVfxScale = value),
+                                    ),
+                                  ),
                                   const SizedBox(height: 12),
                                   ListTile(
                                     key: const ValueKey('skill-held-attack-vfx'),

@@ -54,7 +54,7 @@ enum SkillWeaponClass { melee, ranged, hybrid }
 enum SkillAttackDelivery { swing, thrust, fireProjectile, throwWeapon, beam, summon }
 
 /// Cosmetic held-weapon motion; independent of projectile/melee mechanics.
-enum HeldAttackAnimation { slash, thrust, none }
+enum HeldAttackAnimation { slash, thrust, none, recoil, throwArc }
 
 enum SkillEffectType {
   damage,
@@ -134,6 +134,8 @@ class SkillDefinition {
     this.heldAttackRepeatCount = 1,
     this.heldAttackDurationSteps = 30,
     this.heldAttackVfxSpriteId,
+    this.heldAttackArcScale = 1,
+    this.heldAttackVfxScale = 1,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
     this.pickupDisplayScale = 1,
@@ -261,6 +263,10 @@ class SkillDefinition {
   /// Optional animation following the held weapon during a slash or thrust.
   /// Never replaces Direct Hit Effects or changes damage.
   final String? heldAttackVfxSpriteId;
+  /// Visual-only multiplier for weapon swing rotation and reach (0.25–2).
+  final double heldAttackArcScale;
+  /// Visual-only multiplier for the attached attack effect (0.25–3).
+  final double heldAttackVfxScale;
 
   SkillWeaponClass get effectiveWeaponClass => weaponClass ??
       (meleeReach > 0 && (delivery == SkillDelivery.projectile ||
@@ -556,6 +562,8 @@ class SkillDefinition {
     int? heldAttackRepeatCount,
     int? heldAttackDurationSteps,
     Object? heldAttackVfxSpriteId = _unset,
+    double? heldAttackArcScale,
+    double? heldAttackVfxScale,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
     double? pickupDisplayScale,
@@ -672,6 +680,8 @@ class SkillDefinition {
     heldAttackDurationSteps: (heldAttackDurationSteps ?? this.heldAttackDurationSteps).clamp(12, 90),
     heldAttackVfxSpriteId: identical(heldAttackVfxSpriteId, _unset)
         ? this.heldAttackVfxSpriteId : heldAttackVfxSpriteId as String?,
+    heldAttackArcScale: (heldAttackArcScale ?? this.heldAttackArcScale).clamp(0.25, 2.0),
+    heldAttackVfxScale: (heldAttackVfxScale ?? this.heldAttackVfxScale).clamp(0.25, 3.0),
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
@@ -811,6 +821,8 @@ class SkillDefinition {
     if (heldAttackRepeatCount != 1) 'held_attack_repeat_count': heldAttackRepeatCount.clamp(1, 5),
     if (heldAttackDurationSteps != 30) 'held_attack_duration_steps': heldAttackDurationSteps.clamp(12, 90),
     if (heldAttackVfxSpriteId != null) 'held_attack_vfx_sprite': heldAttackVfxSpriteId,
+    if (heldAttackArcScale != 1) 'held_attack_arc_scale': heldAttackArcScale.clamp(0.25, 2.0),
+    if (heldAttackVfxScale != 1) 'held_attack_vfx_scale': heldAttackVfxScale.clamp(0.25, 3.0),
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
     'pickup_display_scale': pickupDisplayScale,
@@ -970,6 +982,8 @@ class SkillDefinition {
       heldAttackDurationSteps: ((value['held_attack_duration_steps'] as num?)?.toInt() ?? 30).clamp(12, 90),
       heldAttackVfxSpriteId: value['held_attack_vfx_sprite'] is String
           ? value['held_attack_vfx_sprite'] as String : null,
+      heldAttackArcScale: (decimal('held_attack_arc_scale') ?? 1).clamp(0.25, 2.0),
+      heldAttackVfxScale: (decimal('held_attack_vfx_scale') ?? 1).clamp(0.25, 3.0),
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,

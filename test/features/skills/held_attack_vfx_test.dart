@@ -25,6 +25,54 @@ class _ImageCanvas implements ui.Canvas {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('held attack VFX is drawn AFTER the held sprite in the foreground', () async {
+    await TestWidgetsFlutterBinding.instance.runAsync(() async {
+      SpriteRegistry.resetForTest();
+      final recorder1 = ui.PictureRecorder();
+      ui.Canvas(recorder1).drawPaint(ui.Paint()..color = const ui.Color(0xffff0000));
+      final picture1 = recorder1.endRecording();
+      final heldImage = await picture1.toImage(16, 16);
+      final recorder2 = ui.PictureRecorder();
+      ui.Canvas(recorder2).drawPaint(ui.Paint()..color = const ui.Color(0xff00ffff));
+      final picture2 = recorder2.endRecording();
+      final vfxImage = await picture2.toImage(16, 16);
+      await SpriteRegistry.register(
+        SpriteImport.grid(sheet: 'held-layer.png', width: 16, height: 16),
+        heldImage, idPrefix: 'custom.held-layer');
+      await SpriteRegistry.register(
+        SpriteImport.grid(sheet: 'vfx-layer.png', width: 16, height: 16),
+        vfxImage, idPrefix: 'custom.vfx-layer');
+      const heldId = 'custom.held-layer.sprite';
+      const vfxId = 'custom.vfx-layer.sprite';
+      expect(SpriteRegistry.has(heldId), isTrue);
+      expect(SpriteRegistry.has(vfxId), isTrue);
+      final ball = SimulationBall(
+        config: const CustomBall(id: 'layer-test', name: 'Layer',
+            primaryColor: ui.Color(0xffdd0000), glowColor: ui.Color(0xffdd0000)),
+        position: ui.Offset.zero, velocity: const ui.Offset(1, 0),
+        radius: 20, lineCount: 0,
+      );
+      ball.equipWeapon(PowerUpKind.sword, dualWield: false);
+      final canvas = _ImageCanvas();
+      PowerUpPainter.paintBallEffects(canvas, ball,
+        iconSpriteId: (_, _) => heldId,
+        heldAttackAnimation: (_, _) => HeldAttackAnimation.slash,
+        heldAttackVfxSpriteId: (_, _) => vfxId,
+        firedWeaponHoldLeft: (_, _) => 15,
+      );
+      final held = SpriteRegistry.frame(heldId);
+      final vfx = SpriteRegistry.frame(vfxId);
+      expect(canvas.images, contains(same(held)));
+      expect(canvas.images, contains(same(vfx)));
+      expect(canvas.images.last, same(vfx));
+      expect(canvas.images.indexOf(vfx!), greaterThan(canvas.images.indexOf(held!)));
+      SpriteRegistry.unregister('custom.held-layer');
+      SpriteRegistry.unregister('custom.vfx-layer');
+      heldImage.dispose(); vfxImage.dispose();
+      picture1.dispose(); picture2.dispose();
+    });
+  });
+
   test('held attack VFX draws only during the visual swing, not at rest', () async {
     await TestWidgetsFlutterBinding.instance.runAsync(() async {
       SpriteRegistry.resetForTest();

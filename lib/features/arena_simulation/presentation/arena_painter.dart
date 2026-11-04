@@ -814,6 +814,14 @@ class ArenaPainter extends CustomPainter {
           state.powerUps?.visualSkill(
             kind, ball: ball, skillId: renderedSkillId(slot),
           ).heldAttackRepeatCount ?? 1,
+      heldAttackArcScale: (kind, slot) =>
+          state.powerUps?.visualSkill(
+            kind, ball: ball, skillId: renderedSkillId(slot),
+          ).heldAttackArcScale ?? 1,
+      heldAttackVfxScale: (kind, slot) =>
+          state.powerUps?.visualSkill(
+            kind, ball: ball, skillId: renderedSkillId(slot),
+          ).heldAttackVfxScale ?? 1,
       heldAttackVfxSpriteId: (kind, slot) =>
           state.powerUps?.visualSkill(
             kind, ball: ball, skillId: renderedSkillId(slot),

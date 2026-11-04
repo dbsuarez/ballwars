@@ -3,6 +3,7 @@ name: Deploy web app to GitHub Pages
 on:
   push:
     branches: [master]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -10,7 +11,6 @@ permissions:
   pages: write
   id-token: write
 
-# One deployment at a time; a newer push replaces a queued one.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -30,8 +30,22 @@ jobs:
       - run: flutter pub get
       - run: flutter test
 
-      # Pages serves the site from https://<user>.github.io/<repo>/
-      - run: flutter build web --release --dart-define=ASSET_REVISION=${{ github.sha }} --base-href "/${{ github.event.repository.name }}/"
+      # On a release tag, embed that version in the Web package metadata.
+      # Branch builds continue using pubspec.yaml, so no tag lookup is needed.
+      # The tag event rebuilds Pages after the APK release tag is pushed.
+      - name: Build web
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            flutter build web --release \
+              --build-name "${GITHUB_REF_NAME#v}" \
+              --dart-define=ASSET_REVISION=${{ github.sha }} \
+              --base-href "/${{ github.event.repository.name }}/"
+          else
+            flutter build web --release \
+              --dart-define=ASSET_REVISION=${{ github.sha }} \
+              --base-href "/${{ github.event.repository.name }}/"
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:

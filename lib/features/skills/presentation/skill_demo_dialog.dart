@@ -15,6 +15,7 @@ import '../application/skill_demo_controller.dart';
 import '../domain/skill_library.dart';
 import 'skill_artwork_tint.dart';
 import 'skill_demo_inspector.dart';
+import 'grip_preview_dialog.dart';
 
 /// Manual editor showcase, separate from the full Power-up Test workbench.
 class SkillDemoDialog extends StatefulWidget {
@@ -694,6 +695,41 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                                _ => 'Replay skill in arena',
                             }),
                           ),
+                          if (skill.resolvedCategory == SkillCategory.weapon)
+                            OutlinedButton.icon(
+                              key: const ValueKey('skill-demo-attack-timeline'),
+                              onPressed: () => GripPreviewDialog.show(
+                                context,
+                                kind: skill.baseKind,
+                                skill: skill,
+                                spriteId: skill.effectiveHeldSpriteId,
+                                pickupSpriteId: skill.effectivePickupSpriteId,
+                                projectileSpriteId: skill.projectileSpriteId,
+                                impactSpriteId: skill.impactSpriteId,
+                                displayScale: skill.weaponDisplayScale,
+                                tint: skill.spriteTint,
+                                useSprite: skill.spriteMode == SkillVisualMode.sprite,
+                                grip: GripValues(
+                                  attackAnimation: skill.heldAttackAnimation,
+                                  attackRepeatCount: skill.heldAttackRepeatCount,
+                                  attackDurationSteps: skill.heldAttackDurationSteps,
+                                  attackArcScale: skill.heldAttackArcScale,
+                                  attackVfxScale: skill.heldAttackVfxScale,
+                                  inset: skill.weaponGripInset,
+                                  side: skill.weaponGripSide,
+                                  rotation: skill.weaponGripRotation,
+                                  facing: skill.heldFacing,
+                                  heldAttachment: skill.heldAttachment,
+                                  effectAttachment: skill.effectAttachment,
+                                  heldOffsetX: skill.heldOffsetX,
+                                  heldOffsetY: skill.heldOffsetY,
+                                  effectOffsetX: skill.effectOffsetX,
+                                  effectOffsetY: skill.effectOffsetY,
+                                ),
+                              ),
+                              icon: const Icon(Icons.slow_motion_video),
+                              label: const Text('Attack timeline'),
+                            ),
                           TextButton.icon(
                             key: const ValueKey('skill-demo-edit-focused-artwork'),
                             onPressed: () => Navigator.pop(context, _focusedArtwork),

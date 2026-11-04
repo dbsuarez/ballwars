@@ -50,12 +50,30 @@ jobs:
             echo "storeFile=../upload-keystore.jks"
           } > android/key.properties
 
-      # versionName from the tag (v1.2.3 -> 1.2.3); versionCode keeps increasing.
+      # The tag is the source of truth for versionName AND versionCode.
+      # Numeric format M*1000000 + m*1000 + p is monotonic for 0..999
+      # minor/patch values and avoids workflow-run-number resets/downgrades.
       - name: Build APK
+        shell: bash
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Expected a stable vMAJOR.MINOR.PATCH release tag"
+            exit 1
+          fi
+          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION"
+          if (( MINOR > 999 || PATCH > 999 )); then
+            echo "::error::Minor and patch components must be below 1000"
+            exit 1
+          fi
+          BUILD_NUMBER=$((10#$MAJOR * 1000000 + 10#$MINOR * 1000 + 10#$PATCH))
+          if (( BUILD_NUMBER <= 0 || BUILD_NUMBER > 2100000000 )); then
+            echo "::error::Android versionCode outside supported range"
+            exit 1
+          fi
           flutter build apk --release --dart-define=ASSET_REVISION=${{ github.sha }} \
-            --build-name "${GITHUB_REF_NAME#v}" \
-            --build-number "${{ github.run_number }}"
+            --build-name "$VERSION" \
+            --build-number "$BUILD_NUMBER"
           cp build/app/outputs/flutter-apk/app-release.apk "ballwars-${GITHUB_REF_NAME}.apk"
 
       - name: Publish release

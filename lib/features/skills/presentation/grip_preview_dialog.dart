@@ -30,6 +30,8 @@ class GripValues {
     this.attackAnimation,
     this.attackRepeatCount = 1,
     this.attackDurationSteps = 30,
+    this.attackArcScale = 1,
+    this.attackVfxScale = 1,
   });
 
   final double inset;
@@ -43,6 +45,8 @@ class GripValues {
   final HeldAttackAnimation? attackAnimation;
   final int attackRepeatCount;
   final int attackDurationSteps;
+  final double attackArcScale;
+  final double attackVfxScale;
 
   /// Moves the selected layer by a screen-space drag expressed in ball radii.
   /// Both layers retain independent offsets; values stay within editor limits.
@@ -63,6 +67,8 @@ class GripValues {
     Object? attackAnimation = _unchanged,
     int? attackRepeatCount,
     int? attackDurationSteps,
+    double? attackArcScale,
+    double? attackVfxScale,
     double? inset,
     double? side,
     double? rotation,
@@ -74,6 +80,8 @@ class GripValues {
         ? this.attackAnimation : attackAnimation as HeldAttackAnimation?,
     attackRepeatCount: (attackRepeatCount ?? this.attackRepeatCount).clamp(1, 5),
     attackDurationSteps: (attackDurationSteps ?? this.attackDurationSteps).clamp(12, 90),
+    attackArcScale: (attackArcScale ?? this.attackArcScale).clamp(0.25, 2.0),
+    attackVfxScale: (attackVfxScale ?? this.attackVfxScale).clamp(0.25, 3.0),
     inset: inset ?? this.inset,
     side: side ?? this.side,
     rotation: rotation ?? this.rotation,
@@ -186,6 +194,8 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
     attackAnimation: widget.grip.attackAnimation,
     attackRepeatCount: widget.grip.attackRepeatCount.clamp(1, 5),
     attackDurationSteps: widget.grip.attackDurationSteps.clamp(12, 90),
+    attackArcScale: widget.grip.attackArcScale.clamp(0.25, 2.0),
+    attackVfxScale: widget.grip.attackVfxScale.clamp(0.25, 3.0),
   );
 
   Widget _slider(
@@ -325,6 +335,8 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                     DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.slash, child: Text('Slash / Swing')),
                     DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.thrust, child: Text('Thrust')),
                     DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.none, child: Text('None')),
+                    DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.recoil, child: Text('Gun Recoil')),
+                    DropdownMenuItem<HeldAttackAnimation?>(value: HeldAttackAnimation.throwArc, child: Text('Throw Arc')),
                   ],
                   onChanged: (value) => setState(() => _grip = _grip.copyWith(attackAnimation: value)),
                 ),
@@ -346,6 +358,12 @@ class _GripPreviewDialogState extends State<GripPreviewDialog> {
                   onChanged: (value) => setState(() =>
                       _grip = _grip.copyWith(attackDurationSteps: value ?? 30)),
                 ),
+                _slider('attack-arc-scale', 'Swing / reach strength',
+                    _grip.attackArcScale, 0.25, 2, 'x',
+                    (v) => _grip = _grip.copyWith(attackArcScale: v)),
+                _slider('attack-vfx-scale', 'Attack VFX size',
+                    _grip.attackVfxScale, 0.25, 3, 'x',
+                    (v) => _grip = _grip.copyWith(attackVfxScale: v)),
                 _slider('attack-frame', 'Attack frame', _attackFrame, 0, 1, '',
                     (v) => _attackFrame = v),
               ],
@@ -617,6 +635,8 @@ class _GripPreviewPainter extends CustomPainter {
       heldAttackAnimation: (_, _) => grip.attackAnimation,
       heldAttackRepeatCount: (_, _) => grip.attackRepeatCount,
       heldAttackVfxSpriteId: (_, _) => skill?.heldAttackVfxSpriteId,
+      heldAttackArcScale: (_, _) => grip.attackArcScale,
+      heldAttackVfxScale: (_, _) => grip.attackVfxScale,
       heldFacing: (_, _) => grip.facing,
       handArtworkSettings: (_) => skill?.copyWith(
         heldAttachment: grip.heldAttachment,

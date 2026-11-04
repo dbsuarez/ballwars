@@ -2201,7 +2201,8 @@ class PowerUpSystem {
     final animation = struckSkill.heldAttackAnimation;
     if (weapon.isBlade &&
         (animation == HeldAttackAnimation.slash ||
-            animation == HeldAttackAnimation.thrust)) {
+            animation == HeldAttackAnimation.thrust ||
+            animation == HeldAttackAnimation.throwArc)) {
       attacker.meleeAttackVisual = MeleeAttackVisual(
         kind: weapon,
         skillId: skillId,

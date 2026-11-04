@@ -3285,6 +3285,8 @@ class PowerUpPainter {
     int Function(PowerUpKind kind, int slot)? heldAttackRepeatCount,
     int Function(PowerUpKind kind, int slot)? heldAttackDurationSteps,
     String? Function(PowerUpKind kind, int slot)? heldAttackVfxSpriteId,
+    double Function(PowerUpKind kind, int slot)? heldAttackArcScale,
+    double Function(PowerUpKind kind, int slot)? heldAttackVfxScale,
     double Function(PowerUpKind kind)? skillRange,
     SkillDefinition? Function(PowerUpKind kind)? handArtworkSettings,
     double Function(PowerUpKind kind)? handEffectScale,
@@ -3293,6 +3295,7 @@ class PowerUpPainter {
     String? Function(PowerUpKind kind, int slot)? iconSpriteId,
     bool Function(PowerUpKind kind, int slot)? hideHeldWeapon,
   }) {
+    final heldAttackOverlays = <void Function()>[];
     if (ball.equippedWeapons.contains(PowerUpKind.orbitingFlail)) {
       final flailSlot = ball.held == PowerUpKind.orbitingFlail ? 0 : 1;
       SkillArtworkTint.begin(
@@ -3910,10 +3913,8 @@ class PowerUpPainter {
     for (var slot = 0; slot < 2; slot++) {
       final weapon = slot == 0 ? ball.held : ball.heldSecondary;
       if (weapon == null || (hideHeldWeapon?.call(weapon, slot) ?? false)) continue;
-      SkillArtworkTint.begin(
-        canvas,
-        artworkTint?.call(weapon, slot) ?? 0xFFFFFFFF,
-      );
+      final weaponTint = artworkTint?.call(weapon, slot) ?? 0xFFFFFFFF;
+      SkillArtworkTint.begin(canvas, weaponTint);
       try {
         if (weapon != PowerUpKind.orbitingFlail) {
           _paintHeldWeapon(
@@ -3926,6 +3927,10 @@ class PowerUpPainter {
             attackRepeatCount: heldAttackRepeatCount?.call(weapon, slot) ?? 1,
             attackDurationSteps: heldAttackDurationSteps?.call(weapon, slot) ?? 30,
             attackVfxSpriteId: heldAttackVfxSpriteId?.call(weapon, slot),
+            attackArcScale: heldAttackArcScale?.call(weapon, slot) ?? 1,
+            attackVfxScale: heldAttackVfxScale?.call(weapon, slot) ?? 1,
+            attackVfxDraws: heldAttackOverlays,
+            attackVfxTint: weaponTint,
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),
@@ -3951,10 +3956,8 @@ class PowerUpPainter {
       // Slot 2/3 identifies transient artwork to the configuration callbacks;
       // the actual pose still uses the original primary/secondary hand slot.
       final visualSlot = melee.slot + 2;
-      SkillArtworkTint.begin(
-        canvas,
-        artworkTint?.call(weapon, visualSlot) ?? 0xFFFFFFFF,
-      );
+      final weaponTint = artworkTint?.call(weapon, visualSlot) ?? 0xFFFFFFFF;
+      SkillArtworkTint.begin(canvas, weaponTint);
       try {
         _paintHeldWeapon(
           canvas,
@@ -3966,6 +3969,10 @@ class PowerUpPainter {
           attackRepeatCount: heldAttackRepeatCount?.call(weapon, visualSlot) ?? 1,
           attackDurationSteps: heldAttackDurationSteps?.call(weapon, visualSlot) ?? 30,
           attackVfxSpriteId: heldAttackVfxSpriteId?.call(weapon, visualSlot),
+          attackArcScale: heldAttackArcScale?.call(weapon, visualSlot) ?? 1,
+          attackVfxScale: heldAttackVfxScale?.call(weapon, visualSlot) ?? 1,
+          attackVfxDraws: heldAttackOverlays,
+          attackVfxTint: weaponTint,
           useSprite: useWeaponSprite?.call(weapon, visualSlot) ?? true,
           displayScale: weaponDisplayScale?.call(weapon, visualSlot) ?? 1,
           gripInset: weaponGripInset?.call(weapon, visualSlot),
@@ -3983,6 +3990,11 @@ class PowerUpPainter {
       } finally {
         SkillArtworkTint.end(canvas);
       }
+    }
+    // Final foreground layer: attack effects are above ALL equipped sprites,
+    // including a second held weapon or the transient melee afterimage.
+    for (final overlay in heldAttackOverlays) {
+      overlay();
     }
   }
 
@@ -4048,6 +4060,20 @@ class PowerUpPainter {
     final windup = ease(phase / 0.18);
     final strike = ease((phase - 0.18) / 0.58);
     final settle = ease((phase - 0.76) / 0.24);
+    if (mode == HeldAttackAnimation.recoil) {
+      // Firearm slides towards its carrier, returns forward, without a
+      // secondary backward strike. The ball's damage/reload logic is untouched.
+      final kick = math.sin(math.pi * phase).clamp(0.0, 1.0).toDouble();
+      return (rotation: -0.12 * kick, forward: -0.48 * kick,
+          sideways: 0.035 * kick);
+    }
+    if (mode == HeldAttackAnimation.throwArc) {
+      // Cosmetic throw follow-through. Existing weapon lifecycle controls
+      // whether an equipped sprite remains visible after firing.
+      final release = ease((phase - 0.10) / 0.68);
+      return (rotation: -0.65 + 2.15 * release,
+          forward: 1.32 * release, sideways: 0.20 * math.sin(math.pi * release));
+    }
     if (mode == HeldAttackAnimation.slash) {
       return (
         rotation: -0.55 - 0.25 * windup + 2.35 * strike - 0.08 * settle,
@@ -4069,6 +4095,19 @@ class PowerUpPainter {
       int slot) => poseRotation * (math.cos(baseAngle) < 0 ? -1 : 1) *
       (slot.isEven ? 1 : -1);
 
+  // Run a held-attack effect in its own tint scope, after the weapon layer.
+  // Keeps the effect's alpha and palette independent of the held artwork.
+  static void _heldAttackForeground(
+    Canvas canvas, List<void Function()>? queue, int tint,
+    void Function() draw,
+  ) {
+    void foreground() {
+      SkillArtworkTint.begin(canvas, tint);
+      try { draw(); } finally { SkillArtworkTint.end(canvas); }
+    }
+    if (queue == null) { foreground(); } else { queue.add(foreground); }
+  }
+
   static void _paintHeldWeapon(
     Canvas canvas,
     SimulationBall ball,
@@ -4079,6 +4118,10 @@ class PowerUpPainter {
     int attackRepeatCount = 1,
     int attackDurationSteps = 30,
     String? attackVfxSpriteId,
+    double attackArcScale = 1,
+    double attackVfxScale = 1,
+    List<void Function()>? attackVfxDraws,
+    int attackVfxTint = 0xFFFFFFFF,
     bool useSprite = true,
     double displayScale = 1,
     double? gripInset,
@@ -4250,14 +4293,16 @@ class PowerUpPainter {
         ball.radius * (held.isBlade ? 0.72 : 0.36) * displayScale,
       );
       if ((attackAnimation == HeldAttackAnimation.slash ||
-              attackAnimation == HeldAttackAnimation.thrust) && firedHoldLeft > 0) {
+              attackAnimation == HeldAttackAnimation.thrust ||
+              attackAnimation == HeldAttackAnimation.recoil ||
+              attackAnimation == HeldAttackAnimation.throwArc) && firedHoldLeft > 0) {
         final pose = heldAttackPose(
           1 - firedHoldLeft / attackDurationSteps.clamp(1, 90),
           attackRepeatCount, attackAnimation!,
         );
         final baseAngle = heldAngle(ball, weapon: held, slot: slot);
-        final angle = baseAngle + heldAttackSwingRotation(baseAngle, pose.rotation, slot);
-        final reach = ball.radius * (0.9 + pose.forward);
+        final angle = baseAngle + heldAttackSwingRotation(baseAngle, pose.rotation * attackArcScale.clamp(0.25, 2.0), slot);
+        final reach = ball.radius * (0.9 + pose.forward * attackArcScale.clamp(0.25, 2.0));
         final tip = ball.position + Offset(math.cos(angle), math.sin(angle)) * reach;
         canvas.drawLine(
           ball.position,
@@ -4277,9 +4322,12 @@ class PowerUpPainter {
             ),
           );
           if (image != null) {
-            _drawSprite(canvas, image, tip, ball.radius * 1.65 * displayScale,
-              angle, flip: math.cos(baseAngle) < 0,
-              anchor: SpriteRegistry.anchor(attackVfxSpriteId));
+            _heldAttackForeground(canvas, attackVfxDraws, attackVfxTint, () {
+              _drawSprite(canvas, image, tip,
+                  ball.radius * 1.65 * displayScale * attackVfxScale.clamp(0.25, 3.0),
+                  angle, flip: math.cos(baseAngle) < 0,
+                  anchor: SpriteRegistry.anchor(attackVfxSpriteId));
+            });
           }
         }
       } else {
@@ -4294,12 +4342,15 @@ class PowerUpPainter {
     final drop = ((firedProgress - 0.35) / 0.65).clamp(0.0, 1.0);
     final animated = firedHoldLeft > 0 &&
         (attackAnimation == HeldAttackAnimation.slash ||
-         attackAnimation == HeldAttackAnimation.thrust);
+         attackAnimation == HeldAttackAnimation.thrust ||
+         attackAnimation == HeldAttackAnimation.recoil ||
+         attackAnimation == HeldAttackAnimation.throwArc);
     final pose = animated
         ? heldAttackPose(firedProgress, attackRepeatCount, attackAnimation!)
         : (rotation: 0.0, forward: 0.0, sideways: 0.0);
     final angle = animated
-        ? baseAngle + heldAttackSwingRotation(baseAngle, pose.rotation, slot)
+        ? baseAngle + heldAttackSwingRotation(baseAngle,
+            pose.rotation * attackArcScale.clamp(0.25, 2.0), slot)
         : attackAnimation == HeldAttackAnimation.none
             ? baseAngle
             : baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
@@ -4316,9 +4367,9 @@ class PowerUpPainter {
     final center = animated
         ? ball.position +
             Offset(math.cos(angle), math.sin(angle)) *
-                ((baseCenter - ball.position).distance + ball.radius * pose.forward) +
+                ((baseCenter - ball.position).distance + ball.radius * pose.forward * attackArcScale.clamp(0.25, 2.0)) +
             Offset(-math.sin(baseAngle), math.cos(baseAngle)) *
-                (ball.radius * pose.sideways *
+                (ball.radius * pose.sideways * attackArcScale.clamp(0.25, 2.0) *
                     (math.cos(baseAngle) < 0 ? -1 : 1) *
                     (slot.isEven ? 1 : -1))
         : attackAnimation == HeldAttackAnimation.none
@@ -4338,23 +4389,6 @@ class PowerUpPainter {
         : [heldAttach])) {
       final sideCenter = side == 'left' ? leftCenter : rightCenter;
       final sideFlip = side == 'left' ? !transform.flip : transform.flip;
-      // Overlay each held sprite with its own local slash/thrust animation.
-      // It uses the same grip offsets and facing as the weapon, but is never
-      // routed into Direct Hit Effects or the collision/damage system.
-      if (animated && attackVfxSpriteId != null &&
-          SpriteRegistry.has(attackVfxSpriteId)) {
-        final image = SpriteRegistry.frameAtProgress(
-          attackVfxSpriteId,
-          heldAttackCyclePhase(firedProgress, attackRepeatCount),
-        );
-        if (image != null) {
-          _drawSprite(canvas, image, sideCenter,
-            ball.radius * 1.65 * displayScale, transform.angle,
-            flip: sideFlip,
-            anchor: SpriteRegistry.anchor(attackVfxSpriteId),
-          );
-        }
-      }
       _drawSprite(
         canvas,
         sprite,
@@ -4366,6 +4400,26 @@ class PowerUpPainter {
         opacity: attackAnimation == null ? 1 - drop * drop : 1,
         anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
       );
+      // Held VFX is always drawn after the weapon in the foreground pass.
+      // It uses the same grip offsets and facing as the weapon, but is never
+      // routed into Direct Hit Effects or the collision/damage system.
+      if (animated && attackVfxSpriteId != null &&
+          SpriteRegistry.has(attackVfxSpriteId)) {
+        final image = SpriteRegistry.frameAtProgress(
+          attackVfxSpriteId,
+          heldAttackCyclePhase(firedProgress, attackRepeatCount),
+        );
+        if (image != null) {
+          _heldAttackForeground(canvas, attackVfxDraws, attackVfxTint, () {
+            _drawSprite(canvas, image, sideCenter,
+              ball.radius * 1.65 * displayScale * attackVfxScale.clamp(0.25, 3.0), transform.angle,
+              flip: sideFlip,
+              anchor: SpriteRegistry.anchor(attackVfxSpriteId),
+            );
+          });
+        }
+      }
+
     }
   }
 

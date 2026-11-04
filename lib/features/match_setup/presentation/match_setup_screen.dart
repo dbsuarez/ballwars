@@ -809,9 +809,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
-        simulationRevision: _centerObstacle != CenterObstacle.none
-            ? 6
-            : (_arenaShape == ArenaShape.square ? 5 : 4),
+        simulationRevision: 7,
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,

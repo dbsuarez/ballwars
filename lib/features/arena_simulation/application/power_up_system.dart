@@ -2999,6 +2999,7 @@ class PowerUpSystem {
   SimulationBall? _nearestTarget(SimulationBall ball) {
     final previous = _aimedTargets[ball];
     final selected = CombatTargeting.select(
+      legacyOrder: match.simulationRevision < 7,
       origin: ball.position,
       candidates: match.state.balls,
       owner: ball,
@@ -4714,6 +4715,7 @@ class PowerUpSystem {
             !target.position.dx.isFinite ||
             !target.position.dy.isFinite) {
           target = CombatTargeting.select(
+            legacyOrder: match.simulationRevision < 7,
             origin: from,
             candidates: balls,
             owner: p.owner,

@@ -1,3 +1,4 @@
+import '../../match_setup/domain/arena_rotation.dart';
 import 'dart:convert';
 import 'replay_assets.dart';
 import 'package:flutter/foundation.dart';
@@ -80,6 +81,7 @@ class ReplayLink {
   final ArenaShape arenaShape;
   final CenterObstacle centerObstacle;
   final double centerObstacleScale;
+  final ArenaRotation arenaRotation;
   final SkillLibrary skillLibrary;
   final Map<String, String> artworkRevisions;
   final Map<String, Object> artworkFrames;
@@ -122,6 +124,7 @@ class ReplayLink {
     this.arenaShape = ArenaShape.circle,
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
+    this.arenaRotation = const ArenaRotation(),
     this.skillLibrary = SkillLibrary.defaults,
     this.artworkRevisions = const {},
     this.artworkFrames = const {},
@@ -210,6 +213,10 @@ class ReplayLink {
     final obstacleToken = centerObstacle == CenterObstacle.none
         ? ''
         : '&obstacle=${centerObstacle.name}&obsize=${centerObstacleScale.toStringAsFixed(2)}';
+    final rotationToken =
+        !arenaRotation.rotateThemes && !arenaRotation.rotateShapes
+        ? ''
+        : '&rottheme=${arenaRotation.rotateThemes ? 1 : 0}&rotshape=${arenaRotation.rotateShapes ? 1 : 0}&rotsec=${arenaRotation.intervalSeconds}';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
     final minimumArena = shrinkingArena && minimumArenaScale != 0.60
         ? '&minarena=${minimumArenaScale.toStringAsFixed(2)}'
@@ -244,7 +251,7 @@ class ReplayLink {
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$obstacleToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$obstacleToken$rotationToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals$assets',
     );
@@ -277,7 +284,9 @@ class ReplayLink {
       if (marker != 'v.2' &&
           marker != 'v.3' &&
           marker != 'v.4' &&
-          marker != 'v.5') {
+          marker != 'v.5' &&
+          marker != 'v.6' &&
+          marker != 'v.7') {
         return null;
       }
       simulationRevision = int.parse(marker.substring(2));
@@ -418,6 +427,22 @@ class ReplayLink {
             params.containsKey('obsize'))) {
       return null;
     }
+    for (final key in ['rottheme', 'rotshape']) {
+      if (params.containsKey(key) && params[key] != '0' && params[key] != '1') {
+        return null;
+      }
+    }
+    final rotationSeconds = int.tryParse(params['rotsec'] ?? '60');
+    if (rotationSeconds == null ||
+        rotationSeconds < 30 ||
+        rotationSeconds > 86400) {
+      return null;
+    }
+    final arenaRotation = ArenaRotation(
+      rotateThemes: params['rottheme'] == '1',
+      rotateShapes: params['rotshape'] == '1',
+      intervalSeconds: rotationSeconds,
+    );
     final shrinkingArena = params['shrink'] == '1';
     if (params.containsKey('shrink') && params['shrink'] != '1') return null;
     final minimumArenaScale = double.tryParse(params['minarena'] ?? '0.60');
@@ -512,6 +537,7 @@ class ReplayLink {
       arenaShape: arenaShape,
       centerObstacle: centerObstacle,
       centerObstacleScale: centerObstacleScale,
+      arenaRotation: arenaRotation,
       skillLibrary: skillLibrary,
       artworkRevisions: artworkRevisions.ids,
       artworkFrames: artworkRevisions.embedded,

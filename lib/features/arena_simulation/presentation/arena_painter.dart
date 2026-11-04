@@ -32,6 +32,8 @@ class ArenaPainter extends CustomPainter {
   /// Sparks and particles. Off only hides them: they are still simulated,
   /// so the match plays out the same either way.
   final bool showEffects;
+  final bool showCallouts;
+  final bool showInitials;
   final EffectDensity visualDensity;
   final Map<String, String> artworkRevisions;
   final bool showBallGlow;
@@ -62,6 +64,8 @@ class ArenaPainter extends CustomPainter {
     this.rimInset,
     required this.rimAngle,
     this.showEffects = true,
+    this.showCallouts = true,
+    this.showInitials = true,
     this.visualDensity = EffectDensity.full,
     this.artworkRevisions = const {},
     this.showBallGlow = true,
@@ -186,6 +190,7 @@ class ArenaPainter extends CustomPainter {
         ball.radius,
         ball.config,
         ball.cachedUiImage,
+        showInitial: showInitials,
       );
       if (look == BallLook.both) {
         paintSmiley(
@@ -236,7 +241,8 @@ class ArenaPainter extends CustomPainter {
     if (state.centerObstacle == CenterObstacle.none) return;
     final extent = radius * state.centerObstacleScale;
     final outline = state.centerObstacle == CenterObstacle.circle
-        ? (Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: extent)))
+        ? (Path()
+            ..addOval(Rect.fromCircle(center: Offset.zero, radius: extent)))
         : (Path()..addRect(Rect.fromLTRB(-extent, -extent, extent, extent)));
     canvas.drawPath(outline, Paint()..color = const Color(0xFF101827));
     canvas.drawPath(
@@ -689,12 +695,18 @@ class ArenaPainter extends CustomPainter {
       canvas.drawCircle(
         ball.position,
         ball.radius + ballGlowWidth,
-        Paint()..color = Color(ballAppearance.glowColorValue ?? ball.config.glowColor.toARGB32()).withValues(alpha: 0.18),
+        Paint()
+          ..color = Color(
+            ballAppearance.glowColorValue ?? ball.config.glowColor.toARGB32(),
+          ).withValues(alpha: 0.18),
       );
       canvas.drawCircle(
         ball.position,
         ball.radius + ballGlowWidth * 0.5,
-        Paint()..color = Color(ballAppearance.glowColorValue ?? ball.config.glowColor.toARGB32()).withValues(alpha: 0.28),
+        Paint()
+          ..color = Color(
+            ballAppearance.glowColorValue ?? ball.config.glowColor.toARGB32(),
+          ).withValues(alpha: 0.28),
       );
     }
 
@@ -704,21 +716,17 @@ class ArenaPainter extends CustomPainter {
     // settings even when another weapon occupies that hand afterward.
     String? renderedSkillId(int slot) => slot >= 2
         ? ball.meleeAttackVisual?.skillId
-        : slot == 0 ? ball.heldSkillId : ball.heldSecondarySkillId;
+        : slot == 0
+        ? ball.heldSkillId
+        : ball.heldSecondarySkillId;
     double gripSide(PowerUpKind kind, int slot) =>
         state.powerUps
-            ?.visualSkill(
-              kind,
-              skillId: renderedSkillId(slot),
-            )
+            ?.visualSkill(kind, skillId: renderedSkillId(slot))
             .weaponGripSide ??
         0;
     double gripRotation(PowerUpKind kind, int slot) =>
         state.powerUps
-            ?.visualSkill(
-              kind,
-              skillId: renderedSkillId(slot),
-            )
+            ?.visualSkill(kind, skillId: renderedSkillId(slot))
             .weaponGripRotation ??
         0;
     PowerUpPainter.paintBallEffects(
@@ -771,24 +779,21 @@ class ArenaPainter extends CustomPainter {
           0xFFFFFFFF,
       artworkKind: (kind, slot) =>
           state.powerUps
-              ?.visualSkill(
-                kind,
-                skillId: renderedSkillId(slot),
-              )
+              ?.visualSkill(kind, skillId: renderedSkillId(slot))
               .displayKind ??
           kind,
       useWeaponSprite: (kind, slot) =>
-          state.powerUps?.usesSprite(
-            kind,
-            skillId: renderedSkillId(slot),
-          ) ??
+          state.powerUps?.usesSprite(kind, skillId: renderedSkillId(slot)) ??
           true,
       incomingAttackAngle: PowerUpPainter.incomingAttackAngle(state, ball),
       firedWeaponHoldLeft: (kind, slot) => slot >= 2
           ? ball.meleeAttackVisual?.stepsLeft ?? 0
           : state.powerUps?.firedWeaponHoldLeft(
-                ball, kind, skillId: renderedSkillId(slot),
-              ) ?? 0,
+                  ball,
+                  kind,
+                  skillId: renderedSkillId(slot),
+                ) ??
+                0,
       weaponDisplayScale: (kind, slot) =>
           state.powerUps?.weaponDisplayScale(
             kind,
@@ -799,10 +804,7 @@ class ArenaPainter extends CustomPainter {
           state.powerUps?.effectDisplayScale(kind, ball: ball) ?? 1,
       weaponGripInset: (kind, slot) =>
           state.powerUps
-              ?.visualSkill(
-                kind,
-                skillId: renderedSkillId(slot),
-              )
+              ?.visualSkill(kind, skillId: renderedSkillId(slot))
               .weaponGripInset ??
           kind.defaultGripInset,
       weaponGripSide: gripSide,
@@ -811,32 +813,29 @@ class ArenaPainter extends CustomPainter {
           ? ball.meleeAttackVisual?.totalSteps ?? 30
           : 30, // Fired-weapon timing remains mechanically unchanged.
       heldAttackRepeatCount: (kind, slot) =>
-          state.powerUps?.visualSkill(
-            kind, ball: ball, skillId: renderedSkillId(slot),
-          ).heldAttackRepeatCount ?? 1,
+          state.powerUps
+              ?.visualSkill(kind, ball: ball, skillId: renderedSkillId(slot))
+              .heldAttackRepeatCount ??
+          1,
       heldAttackArcScale: (kind, slot) =>
-          state.powerUps?.visualSkill(
-            kind, ball: ball, skillId: renderedSkillId(slot),
-          ).heldAttackArcScale ?? 1,
+          state.powerUps
+              ?.visualSkill(kind, ball: ball, skillId: renderedSkillId(slot))
+              .heldAttackArcScale ??
+          1,
       heldAttackVfxScale: (kind, slot) =>
-          state.powerUps?.visualSkill(
-            kind, ball: ball, skillId: renderedSkillId(slot),
-          ).heldAttackVfxScale ?? 1,
-      heldAttackVfxSpriteId: (kind, slot) =>
-          state.powerUps?.visualSkill(
-            kind, ball: ball, skillId: renderedSkillId(slot),
-          ).heldAttackVfxSpriteId,
-      heldAttackAnimation: (kind, slot) =>
-          state.powerUps?.visualSkill(
-            kind, ball: ball,
-            skillId: renderedSkillId(slot),
-          ).heldAttackAnimation,
+          state.powerUps
+              ?.visualSkill(kind, ball: ball, skillId: renderedSkillId(slot))
+              .heldAttackVfxScale ??
+          1,
+      heldAttackVfxSpriteId: (kind, slot) => state.powerUps
+          ?.visualSkill(kind, ball: ball, skillId: renderedSkillId(slot))
+          .heldAttackVfxSpriteId,
+      heldAttackAnimation: (kind, slot) => state.powerUps
+          ?.visualSkill(kind, ball: ball, skillId: renderedSkillId(slot))
+          .heldAttackAnimation,
       heldFacing: (kind, slot) =>
           state.powerUps
-              ?.visualSkill(
-                kind,
-                skillId: renderedSkillId(slot),
-              )
+              ?.visualSkill(kind, skillId: renderedSkillId(slot))
               .heldFacing ??
           SkillHeldFacing.automatic,
       skillRange: (kind) => state.powerUps?.skillRange(kind, ball: ball) ?? 1,
@@ -860,6 +859,7 @@ class ArenaPainter extends CustomPainter {
 
   void _paintFloatingText(Canvas canvas) {
     for (final text in state.floatingTexts.items) {
+      if (text.callout && !showCallouts) continue;
       final alpha = (text.opacity.clamp(0.0, 1.0) * 16).round() / 16;
       final key =
           '${text.text}|${text.color.toARGB32()}|$alpha|${text.callout}|${text.calloutStyle.name}|${text.calloutBubble.name}';

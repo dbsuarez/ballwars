@@ -6,8 +6,18 @@ import 'package:ballwars/features/replay_export/domain/replay_link.dart';
 
 void main() {
   const contestants = [
-    CustomBall(id: 'a', name: 'A', primaryColor: Colors.red, glowColor: Colors.red),
-    CustomBall(id: 'b', name: 'B', primaryColor: Colors.blue, glowColor: Colors.blue),
+    CustomBall(
+      id: 'a',
+      name: 'A',
+      primaryColor: Colors.red,
+      glowColor: Colors.red,
+    ),
+    CustomBall(
+      id: 'b',
+      name: 'B',
+      primaryColor: Colors.blue,
+      glowColor: Colors.blue,
+    ),
   ];
 
   test('Thread Growth replay preserves mode and maximum threads', () {
@@ -35,9 +45,14 @@ void main() {
       mode: MatchMode.threadGrowth,
       threadGrowthMaxThreads: 20,
     ).toUri(presetIds: {'a', 'b'});
-    expect(ReplayLink.fromUri(uri.replace(queryParameters: {
-      ...uri.queryParameters,
-      'growthmax': '181',
-    }), presets: contestants), isNull);
+    expect(
+      ReplayLink.fromUri(
+        uri.replace(
+          queryParameters: {...uri.queryParameters, 'growthmax': '181'},
+        ),
+        presets: contestants,
+      ),
+      isNull,
+    );
   });
 }

@@ -684,6 +684,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     arenaShape: widget.config.arenaShape,
     centerObstacle: widget.config.centerObstacle,
     centerObstacleScale: widget.config.centerObstacleScale,
+    arenaRotation: widget.config.arenaRotation,
     skillLibrary: widget.config.skillLibrary.remapArtwork(_roundArtwork),
     artworkRevisions: _roundArtwork,
     artworkFrames: _roundFrames,
@@ -1455,6 +1456,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 threadGrowthMaxThreads:
                                     widget.config.threadGrowthMaxThreads,
                                 arenaShape: widget.config.arenaShape,
+                                arenaRotation: widget.config.arenaRotation,
                                 centerObstacle: widget.config.centerObstacle,
                                 centerObstacleScale:
                                     widget.config.centerObstacleScale,

@@ -1,3 +1,4 @@
+import '../domain/equipped_items.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../match_setup/domain/match_config.dart';
@@ -346,21 +347,7 @@ class ScoreboardOverlay extends StatelessWidget {
     );
   }
 
-  List<PowerUpKind> _items(SimulationBall ball) => [
-    ...ball.equippedWeapons,
-    if (ball.speedLeft > 0) PowerUpKind.speed,
-    if (ball.frozenLeft > 0) PowerUpKind.freeze,
-    if (ball.ghostLeft > 0) PowerUpKind.ghost,
-    if (ball.magnetPending) PowerUpKind.magnet,
-    if (ball.repulsorLeft > 0) PowerUpKind.repulsor,
-    if (ball.timeBubbleLeft > 0) PowerUpKind.timeBubble,
-    if (ball.vampireLeft > 0) PowerUpKind.vampire,
-    if (ball.mirrorCharges > 0) PowerUpKind.mirror,
-    if (ball.overchargeLeft > 0) PowerUpKind.overcharge,
-    if (ball.gremlinShots > 0) PowerUpKind.gremlin,
-    if (ball.magneticFieldLeft > 0) PowerUpKind.magneticField,
-    if (ball.goldenArmorHits > 0) PowerUpKind.goldenArmor,
-  ];
+  List<PowerUpKind> _items(SimulationBall ball) => equippedItems(ball);
 
   String _detail(SimulationBall ball) {
     final lines = ball.isEliminated

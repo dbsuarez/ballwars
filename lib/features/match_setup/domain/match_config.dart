@@ -182,7 +182,7 @@ class MatchConfig {
   final String? question;
 
   const MatchConfig({
-    this.simulationRevision = 4,
+    this.simulationRevision = 7,
     required this.contestants,
     this.speedMultiplier = 1.0,
     this.automaticSpeedUp = true,

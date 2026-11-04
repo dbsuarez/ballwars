@@ -49,6 +49,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   // they are missing and are neither read nor written.
   String? _loadedVersion;
   bool _hasWatermarkColumns = false;
+  bool _hasExportWatermarkColumn = false;
   // Likewise the music column (migration 005).
   bool _hasMusicColumn = false;
   // And the slow-motion column (migration 006), and Home music (009).
@@ -104,6 +105,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasBallGlowColumn = row.containsKey('ball_glow_enabled');
     _hasBallGlowWidthColumn = row.containsKey('ball_glow_width');
     _hasBallAppearanceColumn = row.containsKey('ball_appearance');
+    _hasExportWatermarkColumn = row.containsKey('export_watermark_text');
     _hasBloodColorColumn = row.containsKey('blood_color');
     _hasArenaTextColumns =
         row.containsKey('arena_title') && row.containsKey('arena_subtitle');
@@ -141,6 +143,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       projectileRenderMode: _renderMode(row['projectile_render_mode']),
       explosionRenderMode: _renderMode(row['explosion_render_mode']),
       freezeRenderMode: _renderMode(row['freeze_render_mode']),
+      exportWatermarkText:
+          row['export_watermark_text'] as String? ??
+          AppSettings.defaultExportWatermark,
       watermarkText:
           row['watermark_text'] as String? ?? AppSettings.defaultWatermark,
       musicId: row['music'] as String? ?? AppSettings.defaultMusic,
@@ -195,6 +200,15 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         'Ball appearance was not saved: apply migration 025_ball_appearance.sql and reload settings.',
       );
     }
+    if (!_hasExportWatermarkColumn &&
+        settings.exportWatermarkText != AppSettings.defaultExportWatermark) {
+      throw StateError(
+        'Video watermark was not saved: apply migration 028_export_watermark.sql and reload settings.',
+      );
+    }
+    if (settings.exportWatermarkText.trim().runes.length > 80) {
+      throw StateError('Video watermark must be 80 characters or fewer.');
+    }
     final version = _loadedVersion;
     final now = DateTime.now().toUtc();
     final previousTime = DateTime.tryParse(version ?? '');
@@ -205,6 +219,8 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         .from('app_settings')
         .update({
           'headline': settings.headline.trim(),
+          if (_hasExportWatermarkColumn)
+            'export_watermark_text': settings.exportWatermarkText.trim(),
           'theme': settings.themeId,
           if (_hasWatermarkColumns)
             'watermark_enabled': settings.watermarkEnabled,
@@ -250,6 +266,13 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         version == null
             ? 'Only the admin can change settings.'
             : 'Settings changed on another device, or admin access expired. Your edits were not saved. Reload settings before retrying.',
+      );
+    }
+    if (_hasExportWatermarkColumn &&
+        updated.first['export_watermark_text'] !=
+            settings.exportWatermarkText.trim()) {
+      throw StateError(
+        'The server did not confirm the video watermark. Reload settings before saving again.',
       );
     }
     if (_hasBallAppearanceColumn &&

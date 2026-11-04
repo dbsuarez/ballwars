@@ -22,14 +22,18 @@ class CombatTargeting {
     CenterObstacle obstacle = CenterObstacle.none,
     double obstacleExtent = 0,
     bool preferClearLine = true,
+    bool legacyOrder = false,
   }) {
     if (!origin.dx.isFinite || !origin.dy.isFinite) return null;
     final eligible = <SimulationBall>[];
     for (final ball in candidates) {
-      if (identical(ball, owner) || excluded.contains(ball) ||
+      if (identical(ball, owner) ||
+          excluded.contains(ball) ||
           (isEligible != null && !isEligible(ball)) ||
-          ball.isEliminated || ball.isGhost ||
-          !ball.position.dx.isFinite || !ball.position.dy.isFinite) {
+          ball.isEliminated ||
+          ball.isGhost ||
+          !ball.position.dx.isFinite ||
+          !ball.position.dy.isFinite) {
         continue;
       }
       eligible.add(ball);
@@ -38,9 +42,17 @@ class CombatTargeting {
 
     // Prefer unoccluded opponents, but preserve legacy targeting when every
     // opponent is behind the center obstacle (rather than disabling attacks).
-    final visible = preferClearLine
-        ? eligible.where((ball) => !centerObstacleBlocks(
-              origin, ball.position, obstacle, obstacleExtent)).toList()
+    final visible = preferClearLine && !legacyOrder
+        ? eligible
+              .where(
+                (ball) => !centerObstacleBlocks(
+                  origin,
+                  ball.position,
+                  obstacle,
+                  obstacleExtent,
+                ),
+              )
+              .toList()
         : eligible;
     final pool = visible.isNotEmpty ? visible : eligible;
     SimulationBall? nearest;
@@ -49,20 +61,26 @@ class CombatTargeting {
       final distance = (ball.position - origin).distanceSquared;
       if (!distance.isFinite) continue;
       if (distance < nearestDistance ||
-          (distance == nearestDistance && nearest != null &&
+          (!legacyOrder &&
+              distance == nearestDistance &&
+              nearest != null &&
               ball.config.id.compareTo(nearest.config.id) < 0)) {
         nearest = ball;
         nearestDistance = distance;
       }
     }
-    if (previous == null || nearest == null || !pool.contains(previous)) {
+    if (legacyOrder ||
+        previous == null ||
+        nearest == null ||
+        !pool.contains(previous)) {
       return nearest;
     }
     final previousDistance = (previous.position - origin).distanceSquared;
     if (!previousDistance.isFinite) return nearest;
     // Compare squared distances to avoid square roots on every step.
     return previousDistance <= nearestDistance * retentionRatio * retentionRatio
-        ? previous : nearest;
+        ? previous
+        : nearest;
   }
 
   /// True only if the *interior* of the central wall obstructs the segment.
@@ -73,9 +91,13 @@ class CombatTargeting {
     CenterObstacle obstacle,
     double extent,
   ) {
-    if (obstacle == CenterObstacle.none || extent <= 0 || !extent.isFinite ||
-        !from.dx.isFinite || !from.dy.isFinite ||
-        !to.dx.isFinite || !to.dy.isFinite) {
+    if (obstacle == CenterObstacle.none ||
+        extent <= 0 ||
+        !extent.isFinite ||
+        !from.dx.isFinite ||
+        !from.dy.isFinite ||
+        !to.dx.isFinite ||
+        !to.dy.isFinite) {
       return false;
     }
     final delta = to - from;
@@ -83,8 +105,8 @@ class CombatTargeting {
     if (obstacle == CenterObstacle.circle) {
       final lengthSquared = delta.dx * delta.dx + delta.dy * delta.dy;
       if (lengthSquared == 0 || !lengthSquared.isFinite) return false;
-      final t = (-(from.dx * delta.dx + from.dy * delta.dy) /
-              lengthSquared).clamp(0.0, 1.0);
+      final t = (-(from.dx * delta.dx + from.dy * delta.dy) / lengthSquared)
+          .clamp(0.0, 1.0);
       final nearest = from + delta * t;
       return nearest.dx * nearest.dx + nearest.dy * nearest.dy <
           extent * extent;

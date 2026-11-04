@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
+import '../domain/replay_document.dart';
+import '../domain/replay_link.dart';
+import '../data/replay_file.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/services.dart';
@@ -6,9 +11,15 @@ import '../data/saved_replay_store.dart';
 import '../data/short_link_repository.dart';
 
 class SavedReplaysScreen extends StatefulWidget {
-  const SavedReplaysScreen({super.key, required this.onOpen, this.shortLinks});
+  const SavedReplaysScreen({
+    super.key,
+    required this.onOpen,
+    this.shortLinks,
+    this.saveFile,
+  });
   final ValueChanged<Uri> onOpen;
   final ShortLinkRepository? shortLinks;
+  final Future<bool> Function(Uint8List, String)? saveFile;
 
   @override
   State<SavedReplaysScreen> createState() => _SavedReplaysScreenState();
@@ -17,6 +28,59 @@ class SavedReplaysScreen extends StatefulWidget {
 class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
   late Future<List<SavedReplay>> _entries = SavedReplayStore.load();
   String? _sharingId;
+
+  Future<void> _exportFile(SavedReplay entry) async {
+    try {
+      final document = ReplayDocument(Uri.parse(entry.uri).queryParameters);
+      final name = entry.fileName;
+      await (widget.saveFile ?? saveReplayFile)(
+        Uint8List.fromList(utf8.encode(document.encode())),
+        name,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save replay file: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _importFile() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        withData: true,
+      );
+      if (picked == null) return;
+      final file = picked.files.single;
+      if (file.size > ReplayDocument.maxBytes || file.bytes == null) {
+        throw const FormatException(
+          'Choose a replay file smaller than 512 KiB.',
+        );
+      }
+      final document = ReplayDocument.decode(utf8.decode(file.bytes!));
+      final uri = Uri.parse(
+        ReplayLink.defaultAppUrl,
+      ).replace(queryParameters: document.query);
+      await SavedReplayStore.add(uri);
+      final entry = (await SavedReplayStore.load()).firstWhere(
+        (entry) => entry.uri == uri.toString(),
+      );
+      await SavedReplayStore.rename(entry.id, file.name);
+      if (mounted) {
+        setState(() {
+          _entries = SavedReplayStore.load();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not import replay: $error')),
+        );
+      }
+    }
+  }
 
   Future<void> _share(SavedReplay entry) async {
     if (_sharingId != null) return;
@@ -144,7 +208,16 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Saved replays')),
+    appBar: AppBar(
+      title: const Text('Saved replays'),
+      actions: [
+        IconButton(
+          tooltip: 'Import .bw replay',
+          onPressed: _importFile,
+          icon: const Icon(Icons.file_open_outlined),
+        ),
+      ],
+    ),
     body: FutureBuilder<List<SavedReplay>>(
       future: _entries,
       builder: (context, snapshot) {
@@ -193,6 +266,10 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
                   tooltip: 'Replay options',
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                    const PopupMenuItem(
+                      value: 'file',
+                      child: Text('Save .bw file'),
+                    ),
                     PopupMenuItem(
                       value: 'share',
                       child: Text(
@@ -204,6 +281,10 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
                     const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                   onSelected: (action) async {
+                    if (action == 'file') {
+                      await _exportFile(entry);
+                      return;
+                    }
                     if (action == 'share') {
                       await _share(entry);
                       return;

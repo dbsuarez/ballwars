@@ -6,7 +6,7 @@ Reference: `HANDOFF v1.14.51_RC04.md`
 
 ## Remediation update: Batches 1 and 2
 
-BW-A01 and BW-A05 through BW-A09 are implemented locally and covered by the recovery tests. BW-A10 through BW-A12 now have local fixes and regression coverage for stable finisher identity, restore retry and unsaved-draft navigation. See the [Batch 1 report](BATCH1-PERSISTENCE-RECOVERY-2026-11-04.md), [Batch 2 report](BATCH2-SKILL-EDITOR-IDENTITY-2026-11-04.md) and [current roadmap](WHOLE-APP-AUDIT-ROADMAP.md). The findings and observation probes below describe the original `91ab400` audit baseline; they remain historical evidence, not current failing acceptance tests. A02-A04 and A13 remain pending, together with hands-on acceptance.
+BW-A01 and BW-A05 through BW-A09 are implemented locally and covered by the recovery tests. BW-A10 through BW-A12 now have local fixes and regression coverage for stable finisher identity, restore retry and unsaved-draft navigation. See the [Batch 1 report](BATCH1-PERSISTENCE-RECOVERY-2026-11-04.md), [Batch 2 report](BATCH2-SKILL-EDITOR-IDENTITY-2026-11-04.md) and [current roadmap](WHOLE-APP-AUDIT-ROADMAP.md). The findings and observation probes below describe the original `91ab400` audit baseline; they remain historical evidence, not current failing acceptance tests. A02-A04 and A13 now have local Batch 4 fixes and regression coverage; remaining migration/device acceptance and historical provenance limits are recorded in the Batch 4 report. Original findings below remain baseline evidence.
 
 ## Outcome
 

@@ -1,3 +1,5 @@
+import '../domain/video_visibility.dart';
+import '../../match_setup/domain/arena_rotation.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:ui' as ui;
@@ -90,6 +92,7 @@ class ReplayVideoExporter {
     ArenaShape arenaShape = ArenaShape.circle,
     CenterObstacle centerObstacle = CenterObstacle.none,
     double centerObstacleScale = 0.22,
+    ArenaRotation arenaRotation = const ArenaRotation(),
     Set<PowerUpKind>? powerUps,
     Set<String>? customSkills,
     List<int> nudgeSteps = const [],
@@ -140,6 +143,7 @@ class ReplayVideoExporter {
         arenaShape: arenaShape,
         centerObstacle: centerObstacle,
         centerObstacleScale: centerObstacleScale,
+        arenaRotation: arenaRotation,
         powerUpKinds: powerUps,
         customSkillIds: customSkills,
         nudgeSteps: nudgeSteps,
@@ -190,11 +194,19 @@ class ReplayVideoExporter {
         if (confirmDurationLimit == null) throw const ExportDurationLimit();
         if (!await confirmDurationLimit()) throw const ExportCancelled();
       }
+      final showResults = style.visibility.shows(VideoLayer.results);
       final holdFrames = truncated ? 0 : (finalHoldSeconds * fps).round();
-      final cardFrames = truncated ? 0 : (winnerCardSeconds * fps).round();
-      final loserFrames = truncated ? 0 : (loserSeconds * fps).round();
+      final cardFrames = truncated || !showResults
+          ? 0
+          : (winnerCardSeconds * fps).round();
+      final loserFrames = truncated || !showResults
+          ? 0
+          : (loserSeconds * fps).round();
       final finisherFrames =
-          !truncated && finishersEnabled && dryRun.winningMove != null
+          !truncated &&
+              showResults &&
+              finishersEnabled &&
+              dryRun.winningMove != null
           ? (finisherSeconds * fps).round()
           : 0;
       final totalFrames =
@@ -211,7 +223,7 @@ class ReplayVideoExporter {
         audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'whistle', 0.8));
       } else {
         audioEvents.add(ReplaySoundEvent(matchFrames / fps, 'out', 0.7));
-        if (!finishersEnabled) {
+        if (showResults && !finishersEnabled) {
           audioEvents.add(
             ReplaySoundEvent(
               (matchFrames + holdFrames + loserFrames) / fps,
@@ -283,6 +295,8 @@ class ReplayVideoExporter {
               state,
               match.arenaRadius,
               worldRadius: arenaRadius,
+              arenaDecoration: match.arenaDecoration,
+              controller: match,
               videoTime: videoTime(),
               showEffects: showEffects,
               style: style,
@@ -303,6 +317,8 @@ class ReplayVideoExporter {
               finalState,
               match.arenaRadius,
               worldRadius: arenaRadius,
+              arenaDecoration: match.arenaDecoration,
+              controller: match,
               videoTime: videoTime(),
               showEffects: showEffects,
               style: style,
@@ -346,6 +362,8 @@ class ReplayVideoExporter {
               match.arenaRadius,
               loser,
               i / loserFrames,
+              arenaDecoration: match.arenaDecoration,
+              controller: match,
               worldRadius: arenaRadius,
               videoTime: videoTime(),
               showEffects: showEffects,
@@ -363,6 +381,8 @@ class ReplayVideoExporter {
                   size,
                   winner,
                   match.elapsedSeconds,
+                  finalState: finalState,
+                  controller: match,
                   videoTime: videoTime(),
                   style: style,
                 ),

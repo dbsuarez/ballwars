@@ -1,3 +1,4 @@
+import 'package:ballwars/features/match_setup/domain/arena_rotation.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,43 @@ String _legacyTuning() {
 }
 
 void main() {
+  test('changing arenas round-trip and malformed rotation is rejected', () {
+    final original = ReplayLink(
+      contestants: _presets.take(2).toList(),
+      seed: 71,
+      speedMultiplier: 1,
+      mode: MatchMode.arsenal,
+      arenaRotation: const ArenaRotation(
+        rotateThemes: true,
+        rotateShapes: true,
+        intervalSeconds: 30,
+      ),
+    );
+    final uri = original.toUri(presetIds: _presetIds);
+    final decoded = ReplayLink.fromUri(uri, presets: _presets)!;
+    expect(decoded.arenaRotation.rotateThemes, isTrue);
+    expect(decoded.arenaRotation.rotateShapes, isTrue);
+    expect(decoded.arenaRotation.intervalSeconds, 30);
+    for (final bad in ['29', 'NaN', '999999999']) {
+      expect(
+        ReplayLink.fromUri(
+          uri.replace(queryParameters: {...uri.queryParameters, 'rotsec': bad}),
+          presets: _presets,
+        ),
+        isNull,
+      );
+    }
+    expect(
+      ReplayLink.fromUri(
+        uri.replace(
+          queryParameters: {...uri.queryParameters, 'rottheme': 'yes'},
+        ),
+        presets: _presets,
+      ),
+      isNull,
+    );
+  });
+
   test('explicit empty built-ins round-trip with custom-only selection', () {
     final original = ReplayLink(
       contestants: _presets.take(2).toList(),
@@ -118,7 +156,7 @@ void main() {
   test(
     'simulation revision preserves legacy links and rejects unknown rules',
     () {
-      for (final revision in [1, 2, 3]) {
+      for (final revision in [1, 2, 3, 4, 5, 6, 7]) {
         final encoded = ReplayLink(
           simulationRevision: revision,
           seed: 7,

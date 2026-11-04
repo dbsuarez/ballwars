@@ -31,7 +31,7 @@ The new `ball_appearance` JSON column contains only cosmetic parameters. It does
 - [x] Add an optional center obstacle: outlined circle or square, configurable size, no colored fill.
 - [x] Reflect balls and bouncing ammunition against the same geometry; block straight projectiles and account for line of sight.
 - [x] Share geometry across drawing, collision, shrinking, spawning, boundary traps, portals and physics previews; regression coverage exists. Real-device acceptance remains pending.
-- [ ] Complete replay equivalence for geometry changes during a match (BW-A03); static geometry and collision regression tests exist.
+- [x] Replay reconstruction preserves rotation/geometry changes; post-transition state/outcome fixtures and pixel comparison of a rotated export frame pass (Batch 4).
 
 This needs one shared geometry contract, rather than drawing a square over circular collision rules. Center walls must never count as the outer arena boundary.
 
@@ -43,7 +43,7 @@ This needs one shared geometry contract, rather than drawing a square over circu
 - [x] User option to cycle arena presets during a match.
 - [x] Remember the interval separately per mode: default 60 seconds, minimum 30 seconds, 30-second steps.
 - [x] Bound timed-match intervals through the shared rotation model and its tests.
-- [ ] Complete replay snapshots/reconstruction of arena rotation. Live preset changes, geometry and automatic-hazard cleanup are implemented (BW-A03).
+- [x] Snapshot/reconstruct arena rotation through local/server/file replay and export (Batch 4).
 
 ## D. Arena authoring
 
@@ -54,11 +54,12 @@ This needs one shared geometry contract, rather than drawing a square over circu
 
 ## E. Replay / export ? last, as requested
 
-- [ ] Capture the actual watching layout and visible match presentation, rather than the current separate export composition.
-- [ ] Exclude BGM / SFX / UX controls, Unstuck, Close (X), Pause and Mayhem match buttons from recorded output. This describes excluded controls, not a change to the audio-inclusion choices.
-- [ ] Admin-configurable bouncing DVD-style watermark text, default `cha0s' Balls`.
-- [ ] Keep the bouncing export watermark separate from the existing winner-card tiled watermark.
-- [ ] Preserve saved-replay playback/sharing, audio choices and the existing 10-minute render warning.
+- [x] Retain Classic video and offer Watching view with independent visible presentation choices; see the Batch 4 report.
+- [x] Exclude BGM / SFX / UX controls, Unstuck, Close (X), Pause and Mayhem match buttons from recorded output. This describes excluded controls, not a change to the audio-inclusion choices.
+- [x] Admin-configurable bouncing DVD-style watermark text, default `cha0s' Balls`.
+- [x] Keep the bouncing export watermark separate from the existing winner-card tiled watermark.
+- [x] Preserve saved-replay playback/sharing, audio choices and the existing 10-minute render warning.
+- [ ] User applies migration 028 and confirms updated device/browser playback and file picking.
 
 ## Useful follow-ups for Ball Studio
 

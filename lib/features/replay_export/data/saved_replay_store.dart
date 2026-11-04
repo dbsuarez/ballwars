@@ -19,6 +19,19 @@ class SavedReplay {
 
   String get displayName => name ?? defaultName(savedAt, const []);
 
+  String get fileName {
+    var safe = displayName
+        .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1f]'), '_')
+        .trim();
+    if (safe.toLowerCase().endsWith('.bw')) {
+      safe = safe.substring(0, safe.length - 3);
+    }
+    safe = String.fromCharCodes(
+      safe.runes.take(180),
+    ).replaceAll(RegExp(r'[. ]+$'), '');
+    return '${safe.isEmpty ? 'replay' : safe}.bw';
+  }
+
   /// Local date/time and safe contestant names, suitable for a portable .bw file.
   static String defaultName(DateTime savedAt, Iterable<String> contestants) {
     final time = savedAt.toLocal();

@@ -84,6 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   final TextEditingController _headline = TextEditingController();
   final TextEditingController _watermark = TextEditingController();
+  final TextEditingController _exportWatermark = TextEditingController();
   final TextEditingController _arenaTitle = TextEditingController();
   final TextEditingController _arenaSubtitle = TextEditingController();
   bool? _isAdmin;
@@ -101,6 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_isAdmin == null) {
       _headline.text = AppSettingsScope.of(context).headline;
       _watermark.text = AppSettingsScope.of(context).watermarkText;
+      _exportWatermark.text = AppSettingsScope.of(context).exportWatermarkText;
       _arenaTitle.text = AppSettingsScope.of(context).arenaTitle;
       _arenaSubtitle.text = AppSettingsScope.of(context).arenaSubtitle;
       _checkAdmin();
@@ -111,6 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _headline.dispose();
     _watermark.dispose();
+    _exportWatermark.dispose();
     _arenaTitle.dispose();
     _arenaSubtitle.dispose();
     GameAudio.instance.stopPreview();
@@ -1205,6 +1208,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         ),
                                   child: const Text('Save watermark text'),
                                 ),
+                                const SizedBox(height: 16),
+                                TextField(controller: _exportWatermark,
+                                  maxLength: 80,
+                                  decoration: const InputDecoration(labelText: 'Bouncing video watermark', helperText: 'Saved videos only; users can hide it during export.')),
+                                TextButton(onPressed: _busy ? null : () => _save(settings.copyWith(exportWatermarkText: _exportWatermark.text.trim()), done: 'Video watermark saved.'), child: const Text('Save video watermark')),
+
                               ],
                             ),
                           ),

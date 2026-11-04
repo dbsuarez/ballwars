@@ -13,6 +13,60 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // PostgREST inspects response.request.method when handling maybeSingle GETs.
 // Its JSON response is a row array; maybeSingle unwraps it inside the SDK.
 void main() {
+  test(
+    'video watermark persists independently and missing migration fails explicitly',
+    () async {
+      for (final available in [false, true]) {
+        final row = <String, dynamic>{
+          'id': 1,
+          'headline': 'WHO WINS?',
+          'theme': 'midnight',
+          'watermark_text': 'Existing winner branding',
+          'watermark_enabled': true,
+          if (available)
+            'export_watermark_text': AppSettings.defaultExportWatermark,
+        };
+        final client = SupabaseClient(
+          'https://example.supabase.co',
+          'test-key',
+          httpClient: MockClient((request) async {
+            if (request.method == 'PATCH') {
+              row.addAll(jsonDecode(request.body) as Map<String, dynamic>);
+            }
+            return http.Response(
+              jsonEncode([row]),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+        );
+        addTearDown(client.dispose);
+        final repository = SupabaseAppSettingsRepository(client);
+        final initial = await repository.load();
+        expect(initial.exportWatermarkText, "cha0s' Balls");
+        final saved = initial.copyWith(exportWatermarkText: 'Video only');
+        if (available) {
+          await repository.save(saved);
+          final reopened = await SupabaseAppSettingsRepository(client).load();
+          expect(reopened.exportWatermarkText, 'Video only');
+          expect(reopened.watermarkText, 'Existing winner branding');
+        } else {
+          await expectLater(
+            repository.save(saved),
+            throwsA(
+              isA<StateError>().having(
+                (e) => e.message,
+                'message',
+                contains('028_export_watermark.sql'),
+              ),
+            ),
+          );
+        }
+      }
+    },
+  );
+
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
 
   test(

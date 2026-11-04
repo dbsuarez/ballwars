@@ -58,6 +58,7 @@ class AppSettings {
   final EffectRenderMode explosionRenderMode;
   final EffectRenderMode freezeRenderMode;
   final String watermarkText;
+  final String exportWatermarkText;
 
   /// [MusicTrack.id] of the background music during matches.
   final String musicId;
@@ -93,6 +94,7 @@ class AppSettings {
     this.explosionRenderMode = EffectRenderMode.sprite,
     this.freezeRenderMode = EffectRenderMode.sprite,
     this.watermarkText = defaultWatermark,
+    this.exportWatermarkText = defaultExportWatermark,
     this.musicId = defaultMusic,
     this.menuMusicId = defaultMenuMusic,
     this.slowMotionLines = defaultSlowMotionLines,
@@ -103,6 +105,7 @@ class AppSettings {
 
   static const String defaultHeadline = 'WHO WINS?';
   static const String defaultWatermark = 'dbsuarez';
+  static const String defaultExportWatermark = "cha0s' Balls";
   static const String defaultMusic = 'arena';
   static const String defaultMenuMusic = 'drift';
   static const int defaultSlowMotionLines = 10;
@@ -129,6 +132,7 @@ class AppSettings {
     EffectRenderMode? explosionRenderMode,
     EffectRenderMode? freezeRenderMode,
     String? watermarkText,
+    String? exportWatermarkText,
     String? musicId,
     String? menuMusicId,
     int? slowMotionLines,
@@ -151,6 +155,7 @@ class AppSettings {
     explosionRenderMode: explosionRenderMode ?? this.explosionRenderMode,
     freezeRenderMode: freezeRenderMode ?? this.freezeRenderMode,
     watermarkText: watermarkText ?? this.watermarkText,
+    exportWatermarkText: exportWatermarkText ?? this.exportWatermarkText,
     musicId: musicId ?? this.musicId,
     menuMusicId: menuMusicId ?? this.menuMusicId,
     slowMotionLines: slowMotionLines ?? this.slowMotionLines,

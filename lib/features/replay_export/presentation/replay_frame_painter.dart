@@ -1,3 +1,9 @@
+import '../../arena_simulation/application/match_simulation_controller.dart';
+import '../../../core/sprites/sprite_registry.dart';
+import '../../arena_simulation/domain/equipped_items.dart';
+import '../../arena_simulation/presentation/power_up_sprites.dart';
+import '../domain/video_visibility.dart';
+import '../../arena_simulation/presentation/ball_face_expression.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../match_setup/domain/match_config.dart';
@@ -25,7 +31,7 @@ class ReplayFramePainter {
   static ReplayStyle _style = const ReplayStyle();
   static const Color _gold = Color(0xFFFFD700);
 
-  static const String watermark = 'dbsuarez.github.io';
+  static const String watermark = AppSettings.defaultExportWatermark;
   // Drifts diagonally and bounces off the frame edges (design px per second).
   static const Offset _watermarkVelocity = Offset(95, 70);
   static const Offset _watermarkStart = Offset(40, 300);
@@ -37,17 +43,36 @@ class ReplayFramePainter {
     SimulationState state,
     double arenaRadius, {
     double? worldRadius,
+    ArenaDecoration? arenaDecoration,
+    MatchSimulationController? controller,
     required double videoTime,
     bool showEffects = true,
     ReplayStyle style = const ReplayStyle(),
   }) {
     _style = style;
     _withDesignSpace(canvas, size, videoTime, () {
-      _paintHeader(canvas, dimmed: false);
-      if (state.status == MatchStatus.slowMotion) _paintSlowMotionBadge(canvas);
+      if (!_style.visibility.watchingLayout) {
+        _paintHeader(canvas, dimmed: false);
+      }
+      if (state.status == MatchStatus.slowMotion) {
+        _paintSlowMotionBadge(
+          canvas,
+          y: _style.visibility.watchingLayout ? 20 : 275,
+        );
+      }
 
       canvas.save();
-      canvas.translate((designSize.width - _arenaSide) / 2, _arenaTop);
+      final details =
+          _style.visibility.shows(VideoLayer.stats) ||
+          _style.visibility.shows(VideoLayer.equipment);
+      final metadataRows = (state.balls.length / 2).ceil();
+      final side = _style.visibility.watchingLayout
+          ? 720.0
+          : details
+          ? math.min(_arenaSide, 1240 - _arenaTop - metadataRows * 96 - 64)
+          : _arenaSide;
+      final top = _style.visibility.watchingLayout ? 40.0 : _arenaTop;
+      canvas.translate((designSize.width - side) / 2, top);
       ArenaPainter(
         state: state,
         artworkRevisions: _style.artworkRevisions,
@@ -61,16 +86,187 @@ class ReplayFramePainter {
         showBallGlow: _style.ballGlowEnabled,
         ballGlowWidth: _style.ballGlowWidth,
         ballAppearance: _style.ballAppearance,
-        arenaTitle: _style.arenaTitle,
-        arenaSubtitle: _style.arenaSubtitle,
-        arenaDecoration: _style.arenaDecoration,
+        arenaTitle: _style.visibility.shows(VideoLayer.arenaText)
+            ? _style.arenaTitle
+            : '',
+        arenaSubtitle: _style.visibility.shows(VideoLayer.arenaText)
+            ? _style.arenaSubtitle
+            : '',
+        arenaDecoration: arenaDecoration ?? _style.arenaDecoration,
         background: _style.background,
         rimColor: _style.text,
-        look: _style.look,
-        showHpBars: _style.showHpBars,
-      ).paint(canvas, const Size(_arenaSide, _arenaSide));
+        look: _style.visibility.shows(VideoLayer.pictures)
+            ? (_style.look == BallLook.faces ? BallLook.pictures : _style.look)
+            : BallLook.faces,
+        showHpBars: _style.visibility.shows(VideoLayer.health),
+        showCallouts: _style.visibility.shows(VideoLayer.callouts),
+        showInitials: _style.visibility.shows(VideoLayer.names),
+      ).paint(canvas, Size(side, side));
       canvas.restore();
+      final untilChange = controller?.secondsUntilArenaRotation;
+      if (_style.visibility.shows(VideoLayer.callouts) &&
+          untilChange != null &&
+          untilChange > 0 &&
+          untilChange <= 3) {
+        _paintText(
+          canvas,
+          'ARENA CHANGING IN ${untilChange.ceil()}',
+          26,
+          FontWeight.w800,
+          _style.text,
+          y: top + 44,
+          maxWidth: 660,
+        );
+      }
+      final flash = controller?.arenaTransitionFlash ?? 0;
+      if (showEffects && flash > 0) {
+        final rect = Rect.fromLTWH(
+          (designSize.width - side) / 2,
+          top,
+          side,
+          side,
+        );
+        if (state.arenaShape == ArenaShape.circle) {
+          canvas.drawOval(
+            rect,
+            Paint()..color = Colors.white.withValues(alpha: flash * .12),
+          );
+        } else {
+          canvas.drawRect(
+            rect,
+            Paint()..color = Colors.white.withValues(alpha: flash * .12),
+          );
+        }
+      }
+      _paintWatchingDetails(
+        canvas,
+        state,
+        top + side + 28,
+        controller: controller,
+      );
     });
+  }
+
+  static void _paintWatchingDetails(
+    Canvas canvas,
+    SimulationState state,
+    double top, {
+    MatchSimulationController? controller,
+  }) {
+    final match = controller ?? state.powerUps?.match;
+    final visible = [...state.balls];
+    if (_style.visibility.shows(VideoLayer.stats)) {
+      visible.sort((a, b) {
+        final kills = (match?.eliminations[b.config.id] ?? 0).compareTo(
+          match?.eliminations[a.config.id] ?? 0,
+        );
+        if (kills != 0) return kills;
+        final deaths = (match?.deaths[a.config.id] ?? 0).compareTo(
+          match?.deaths[b.config.id] ?? 0,
+        );
+        return deaths != 0 ? deaths : b.life.compareTo(a.life);
+      });
+      _paintText(
+        canvas,
+        '${(state.step / 60).toStringAsFixed(1)}s',
+        24,
+        FontWeight.bold,
+        _style.text,
+        y: top,
+      );
+      top += 36;
+    }
+    final options = _style.visibility;
+    if (!options.shows(VideoLayer.names) &&
+        !options.shows(VideoLayer.equipment) &&
+        !options.shows(VideoLayer.stats)) {
+      return;
+    }
+    final rows = (visible.length / 2).ceil();
+    final rowHeight = math.min(96.0, (1240 - top) / math.max(1, rows));
+    for (var i = 0; i < visible.length; i++) {
+      final ball = visible[i];
+      final x = 20.0 + (i % 2) * 350;
+      final y = top + (i ~/ 2) * rowHeight;
+      final rect = Rect.fromLTWH(x, y, 330, rowHeight - 4);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(10)),
+        Paint()..color = _style.text.withValues(alpha: .06),
+      );
+      canvas.drawCircle(
+        Offset(x + 12, y + 12),
+        4,
+        Paint()..color = ball.config.primaryColor,
+      );
+      if (options.shows(VideoLayer.names)) {
+        final name = _layout(
+          ball.config.name,
+          24,
+          FontWeight.w700,
+          _style.text,
+          maxWidth: 300,
+        );
+        name.paint(canvas, Offset(x + 22, y + 4));
+      }
+      if (options.shows(VideoLayer.stats)) {
+        final stats =
+            '${match?.eliminations[ball.config.id] ?? 0} KO / ${match?.deaths[ball.config.id] ?? 0} deaths';
+        final health = options.shows(VideoLayer.health)
+            ? ' / ${match?.mode.isThreadOnly == true ? ball.lineCount : ball.life.ceil()} ${match?.mode.isThreadOnly == true ? 'lines' : 'HP'}'
+            : '';
+        final label = _layout(
+          '$stats$health',
+          20,
+          FontWeight.w500,
+          _style.text,
+          maxWidth: 306,
+        );
+        label.paint(
+          canvas,
+          Offset(x + 12, y + (options.shows(VideoLayer.names) ? 32 : 6)),
+        );
+      }
+      if (options.shows(VideoLayer.equipment)) {
+        var itemX = x + 12;
+        final items = equippedItems(ball).take(4);
+        for (final kind in items) {
+          final system = state.powerUps;
+          final skill = system?.visualSkill(
+            kind,
+            skillId: kind == ball.held
+                ? ball.heldSkillId
+                : kind == ball.heldSecondary
+                ? ball.heldSecondarySkillId
+                : ball.activeEffectSkillIds[kind],
+          );
+          final image = SpriteRegistry.frame(
+            skill?.iconSpriteId ?? PowerUpSprites.iconId(kind),
+          );
+          final target = Rect.fromLTWH(itemX, y + rowHeight - 24, 20, 20);
+          if (image == null) {
+            PowerUpSprites.paintIcon(canvas, kind, target);
+          } else {
+            canvas.drawImageRect(
+              image,
+              Rect.fromLTWH(
+                0,
+                0,
+                image.width.toDouble(),
+                image.height.toDouble(),
+              ),
+              target,
+              Paint()
+                ..filterQuality = FilterQuality.low
+                ..colorFilter = ColorFilter.mode(
+                  Color(skill?.spriteTint ?? 0xffffffff),
+                  BlendMode.modulate,
+                ),
+            );
+          }
+          itemX += 26;
+        }
+      }
+    }
   }
 
   /// The closing winner card.
@@ -79,6 +275,8 @@ class ReplayFramePainter {
     Size size,
     SimulationBall winner,
     double matchSeconds, {
+    SimulationState? finalState,
+    MatchSimulationController? controller,
     required double videoTime,
     ReplayStyle style = const ReplayStyle(),
   }) {
@@ -86,6 +284,31 @@ class ReplayFramePainter {
     _withDesignSpace(canvas, size, videoTime, () {
       _paintHeader(canvas, dimmed: true);
       ConfettiPainter(videoTime).paint(canvas, designSize);
+      if (_style.visibility.watchingLayout ||
+          _style.visibility.shows(VideoLayer.stats)) {
+        _paintBallFace(canvas, winner, const Offset(360, 310), 110);
+        _paintText(
+          canvas,
+          _style.visibility.shows(VideoLayer.names)
+              ? winner.config.name
+              : 'WINNER',
+          44,
+          FontWeight.w900,
+          _style.text,
+          y: 470,
+          maxWidth: 680,
+        );
+        _paintText(canvas, 'WINS!', 36, FontWeight.w800, _gold, y: 530);
+        if (finalState != null) {
+          _paintWatchingDetails(
+            canvas,
+            finalState,
+            620,
+            controller: controller,
+          );
+        }
+        return;
+      }
 
       const center = Offset(360, 560);
       const radius = 150.0;
@@ -102,7 +325,9 @@ class ReplayFramePainter {
 
       _paintText(
         canvas,
-        winner.config.name.toUpperCase(),
+        _style.visibility.shows(VideoLayer.names)
+            ? winner.config.name.toUpperCase()
+            : 'WINNER',
         64,
         FontWeight.w900,
         _style.text,
@@ -130,7 +355,9 @@ class ReplayFramePainter {
       );
       _paintText(
         canvas,
-        'MATCH TIME ${matchSeconds.toStringAsFixed(1)}s',
+        _style.visibility.shows(VideoLayer.stats)
+            ? 'MATCH TIME ${matchSeconds.toStringAsFixed(1)}s'
+            : '',
         28,
         FontWeight.w600,
         _style.muted,
@@ -188,7 +415,9 @@ class ReplayFramePainter {
       );
       _paintText(
         canvas,
-        '${winner.config.name.toUpperCase()} FINISHES IT!',
+        _style.visibility.shows(VideoLayer.names)
+            ? '${winner.config.name.toUpperCase()} FINISHES IT!'
+            : 'FINISHING MOVE',
         26,
         FontWeight.w800,
         _style.text,
@@ -208,6 +437,8 @@ class ReplayFramePainter {
     SimulationBall loser,
     double progress, {
     double? worldRadius,
+    ArenaDecoration? arenaDecoration,
+    MatchSimulationController? controller,
     required double videoTime,
     bool showEffects = true,
     ReplayStyle style = const ReplayStyle(),
@@ -218,6 +449,8 @@ class ReplayFramePainter {
       state,
       arenaRadius,
       worldRadius: worldRadius,
+      arenaDecoration: arenaDecoration,
+      controller: controller,
       videoTime: videoTime,
       showEffects: showEffects,
       style: style,
@@ -294,16 +527,19 @@ class ReplayFramePainter {
       size.height / designSize.height,
     );
     paint();
-    _paintWatermark(canvas, videoTime);
+    if (_style.visibility.shows(VideoLayer.watermark)) {
+      _paintWatermark(canvas, videoTime);
+    }
     canvas.restore();
   }
 
   static TextPainter _watermarkText() => _layout(
-    watermark,
+    _style.watermarkText,
     32,
     FontWeight.w800,
     _style.text.withValues(alpha: 0.35),
     letterSpacing: 2,
+    maxWidth: 680,
   );
 
   static void _paintWatermark(Canvas canvas, double videoTime) {
@@ -353,7 +589,7 @@ class ReplayFramePainter {
     );
   }
 
-  static void _paintSlowMotionBadge(Canvas canvas) {
+  static void _paintSlowMotionBadge(Canvas canvas, {double y = 275}) {
     final label = _layout(
       'SLOW MOTION',
       22,
@@ -364,7 +600,7 @@ class ReplayFramePainter {
     const dotGap = 22.0;
     final width = label.width + dotGap + 32;
     final rect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: const Offset(360, 275), width: width, height: 40),
+      Rect.fromCenter(center: Offset(360, y), width: width, height: 40),
       const Radius.circular(20),
     );
     canvas.drawRRect(
@@ -373,11 +609,11 @@ class ReplayFramePainter {
     );
     final left = rect.left + 16;
     canvas.drawCircle(
-      Offset(left + 6, 275),
+      Offset(left + 6, y),
       6,
       Paint()..color = const Color(0xFFFF7A59),
     );
-    label.paint(canvas, Offset(left + dotGap, 275 - label.height / 2));
+    label.paint(canvas, Offset(left + dotGap, y - label.height / 2));
   }
 
   static void _paintBallFace(
@@ -386,6 +622,18 @@ class ReplayFramePainter {
     Offset center,
     double radius,
   ) {
+    if (!_style.visibility.shows(VideoLayer.pictures)) {
+      paintSmiley(
+        canvas,
+        ball,
+        faceHealth(ball),
+        [ball],
+        center: center,
+        radius: radius,
+        appearance: _style.ballAppearance,
+      );
+      return;
+    }
     BallFacePainter.paint(
       canvas,
       center,
@@ -393,6 +641,7 @@ class ReplayFramePainter {
       ball.config,
       ball.cachedUiImage,
       rimWidth: 4,
+      showInitial: _style.visibility.shows(VideoLayer.names),
     );
   }
 
@@ -477,6 +726,29 @@ class ReplayStyle {
 
   /// A thin HP bar above each ball, as in the app.
   final bool showHpBars;
+  final VideoVisibility visibility;
+  final String watermarkText;
+
+  ReplayStyle forVideo(VideoVisibility options) => ReplayStyle(
+    artworkRevisions: artworkRevisions,
+    artworkFrames: artworkFrames,
+    effectRenderMode: effectRenderMode,
+    headline: headline,
+    background: background,
+    text: text,
+    muted: muted,
+    ballGlowEnabled: ballGlowEnabled,
+    ballGlowWidth: ballGlowWidth,
+    ballAppearance: ballAppearance,
+    bloodColor: bloodColor,
+    arenaTitle: arenaTitle,
+    arenaSubtitle: arenaSubtitle,
+    arenaDecoration: arenaDecoration,
+    look: look,
+    showHpBars: showHpBars,
+    visibility: options,
+    watermarkText: watermarkText,
+  );
 
   const ReplayStyle({
     this.artworkRevisions = const {},
@@ -495,5 +767,7 @@ class ReplayStyle {
     this.arenaDecoration = ArenaDecoration.defaultArena,
     this.look = BallLook.pictures,
     this.showHpBars = false,
+    this.visibility = const VideoVisibility(),
+    this.watermarkText = AppSettings.defaultExportWatermark,
   });
 }

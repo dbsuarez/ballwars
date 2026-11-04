@@ -1,3 +1,7 @@
+import 'package:ballwars/features/match_setup/domain/arena_rotation.dart';
+import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/replay_export/domain/video_visibility.dart';
+import 'package:ballwars/features/replay_export/presentation/replay_frame_painter.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -95,6 +99,74 @@ int _matchFrames(int seed, int fps) {
 }
 
 void main() {
+  testWidgets('export frame after rotation equals the live post-transition frame', (tester) async {
+    await tester.runAsync(() async {
+      final contestants = List.generate(6, (i) => CustomBall(id: 'b$i', name: 'Ball $i', primaryColor: Colors.primaries[i], glowColor: Colors.primaries[i]));
+      const rotation = ArenaRotation(rotateThemes: true, rotateShapes: true, intervalSeconds: 30);
+      const style = ReplayStyle(visibility: VideoVisibility(watchingLayout: true, layers: {}));
+      final live = MatchSimulationController(contestants, seed: 2, arenaRadius: 260,
+        simulationRevision: 7, mode: MatchMode.arsenal, mayhem: true, mayhemSeconds: 90,
+        endlessBattle: true, powerUpKinds: {}, customSkillIds: {}, arenaRotation: rotation);
+      for (var i = 0; i < 930; i++) { live.tick(1 / 30); }
+      expect(live.state.arenaShape, ArenaShape.square);
+      Future<Uint8List> pixels(ui.Picture picture) async {
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder)..scale(.25)..drawPicture(picture);
+        final scaled = recorder.endRecording();
+        final image = await scaled.toImage(180, 320);
+        try { return (await image.toByteData())!.buffer.asUint8List(); }
+        finally { image.dispose(); scaled.dispose(); }
+      }
+      final recorder = ui.PictureRecorder();
+      ReplayFramePainter.paintMatch(Canvas(recorder), const Size(720, 1280), live.state, live.arenaRadius,
+        worldRadius: 260, arenaDecoration: live.arenaDecoration, controller: live,
+        videoTime: 31, style: style);
+      final picture = recorder.endRecording();
+      final expected = await pixels(picture); picture.dispose();
+      final scratch = Uint8List(720 * 1280 * 4);
+      Uint8List? actual;
+      var frame = 0;
+      final encoder = _FakeEncoder();
+      final exporter = ReplayVideoExporter(encoder: encoder, matchFrameLimit: 931,
+        rasterize: (picture, width, height) async {
+          if (frame++ == 930) actual = await pixels(picture);
+          return scratch;
+        });
+      await exporter.export(contestants: contestants, seed: 2, arenaRadius: 260,
+        simulationRevision: 7, mode: MatchMode.arsenal, mayhem: true, mayhemSeconds: 90,
+        endlessBattle: true, powerUps: {}, customSkills: {}, arenaRotation: rotation,
+        style: style, confirmDurationLimit: () async => true);
+      expect(actual, orderedEquals(expected));
+    });
+  });
+
+  test(
+    'arena-only export omits closing cards without changing match duration',
+    () async {
+      final encoder = _FakeEncoder();
+      final exporter = ReplayVideoExporter(
+        encoder: encoder,
+        rasterize: _fakeRasterize,
+      );
+      await exporter.export(
+        contestants: _balls,
+        seed: 2,
+        arenaRadius: 260,
+        style: const ReplayStyle(
+          visibility: VideoVisibility(watchingLayout: true, layers: {}),
+        ),
+      );
+      expect(
+        encoder.frames,
+        _matchFrames(2, ReplayVideoExporter.fps) +
+            1 +
+            (ReplayVideoExporter.finalHoldSeconds * ReplayVideoExporter.fps)
+                .round(),
+      );
+      expect(encoder.finished, isTrue);
+    },
+  );
+
   for (final consent in <bool?>[null, false, true]) {
     test(
       'long video requires confirmation before encoding ($consent)',

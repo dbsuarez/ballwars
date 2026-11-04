@@ -1,3 +1,7 @@
+import 'dart:convert';
+import '../../../core/offline/device_prefs.dart';
+import '../domain/video_visibility.dart';
+import '../../match_setup/domain/arena_rotation.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import 'dart:async';
 
@@ -38,6 +42,7 @@ class ExportVideoDialog extends StatefulWidget {
   final ArenaShape arenaShape;
   final CenterObstacle centerObstacle;
   final double centerObstacleScale;
+  final ArenaRotation arenaRotation;
   final Set<PowerUpKind>? powerUps;
   final Set<String>? customSkills;
   final List<int> nudgeSteps;
@@ -73,6 +78,7 @@ class ExportVideoDialog extends StatefulWidget {
     this.arenaShape = ArenaShape.circle,
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
+    this.arenaRotation = const ArenaRotation(),
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
@@ -110,6 +116,7 @@ class ExportVideoDialog extends StatefulWidget {
     ArenaShape arenaShape = ArenaShape.circle,
     CenterObstacle centerObstacle = CenterObstacle.none,
     double centerObstacleScale = 0.22,
+    ArenaRotation arenaRotation = const ArenaRotation(),
     Set<PowerUpKind>? powerUps,
     Set<String>? customSkills,
     List<int> nudgeSteps = const [],
@@ -157,6 +164,7 @@ class ExportVideoDialog extends StatefulWidget {
         arenaShape: arenaShape,
         centerObstacle: centerObstacle,
         centerObstacleScale: centerObstacleScale,
+        arenaRotation: arenaRotation,
         powerUps: powerUps,
         customSkills: customSkills,
         nudgeSteps: nudgeSteps,
@@ -188,6 +196,7 @@ class ExportVideoDialog extends StatefulWidget {
           arenaTitle: arenaTitle,
           arenaSubtitle: arenaSubtitle,
           arenaDecoration: arenaDecoration,
+          watermarkText: AppSettingsScope.of(context).exportWatermarkText,
         ),
         encoder: backend,
         saver: backend,
@@ -203,6 +212,8 @@ enum _Phase { options, exporting, saved, failed }
 
 class _ExportVideoDialogState extends State<ExportVideoDialog> {
   _Phase _phase = _Phase.options;
+  int _optionsTab = 0;
+  VideoVisibility _visibility = const VideoVisibility();
   bool _includeBgm = true;
   bool _includeSfx = true;
   double _progress = 0;
@@ -215,9 +226,41 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
   @override
   void initState() {
     super.initState();
+    final initialLayers = {..._visibility.layers};
+    if (!widget.style.showHpBars) initialLayers.remove(VideoLayer.health);
+    if (widget.style.look == BallLook.faces) {
+      initialLayers.remove(VideoLayer.pictures);
+    }
+    _visibility = VideoVisibility(layers: Set.unmodifiable(initialLayers));
+    _loadOptions();
+  }
+
+  Future<void> _loadOptions() async {
+    final raw = await DevicePrefs.read('video-export-options');
+    if (!mounted || raw == null || _phase != _Phase.options) return;
+    try {
+      final value = jsonDecode(raw);
+      if (value is Map) {
+        setState(() {
+          _visibility = VideoVisibility.fromJson(value['visibility']);
+          _includeBgm = value['bgm'] != false;
+          _includeSfx = value['sfx'] != false;
+        });
+      }
+    } on FormatException {
+      /* Invalid preference only: keep safe defaults. */
+    }
   }
 
   void _startExport() {
+    DevicePrefs.write(
+      'video-export-options',
+      jsonEncode({
+        'visibility': _visibility.toJson(),
+        'bgm': _includeBgm,
+        'sfx': _includeSfx,
+      }),
+    );
     setState(() => _phase = _Phase.exporting);
     _elapsed.start();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -251,6 +294,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         arenaShape: widget.arenaShape,
         centerObstacle: widget.centerObstacle,
         centerObstacleScale: widget.centerObstacleScale,
+        arenaRotation: widget.arenaRotation,
         powerUps: widget.powerUps,
         customSkills: widget.customSkills,
         nudgeSteps: widget.nudgeSteps,
@@ -270,7 +314,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         bgmAsset: 'assets/${GameAudio.instance.track.asset}',
         bgmLevel: GameAudio.instance.musicLevel,
         sfxLevel: GameAudio.instance.effectsLevel,
-        style: widget.style,
+        style: widget.style.forVideo(_visibility),
         isCancelled: () => _cancelled,
         confirmDurationLimit: () async {
           if (!mounted || _cancelled) return false;
@@ -334,26 +378,88 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
       case _Phase.options:
         return AlertDialog(
           title: const Text('SAVE VIDEO'),
-          content: StatefulBuilder(
-            builder: (context, update) => Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          content: SizedBox(
+            width: 420,
+            height: 420,
+            child: Column(
               children: [
-                const Text('Include audio in this replay?'),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Background music'),
-                  value: _includeBgm,
-                  onChanged: (value) => update(
-                    () => setState(() => _includeBgm = value ?? false),
-                  ),
+                SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 0, label: Text('Video')),
+                    ButtonSegment(value: 1, label: Text('Audio')),
+                  ],
+                  selected: {_optionsTab},
+                  onSelectionChanged: (value) =>
+                      setState(() => _optionsTab = value.first),
                 ),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Sound effects'),
-                  value: _includeSfx,
-                  onChanged: (value) => update(
-                    () => setState(() => _includeSfx = value ?? false),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _optionsTab == 0
+                          ? [
+                              const Text(
+                                'These choices affect only the saved video.',
+                              ),
+                              DropdownButtonFormField<bool>(
+                                isExpanded: true,
+                                initialValue: _visibility.watchingLayout,
+                                decoration: const InputDecoration(
+                                  labelText: 'Video layout',
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: false,
+                                    child: Text('Classic video'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: true,
+                                    child: Text('Watching view'),
+                                  ),
+                                ],
+                                onChanged: (value) => setState(
+                                  () => _visibility = VideoVisibility(
+                                    watchingLayout: value ?? false,
+                                    layers: _visibility.layers,
+                                  ),
+                                ),
+                              ),
+                              for (final layer in VideoLayer.values)
+                                CheckboxListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(layer.label),
+                                  value: _visibility.shows(layer),
+                                  onChanged: (value) => setState(() {
+                                    final layers = {..._visibility.layers};
+                                    value == true
+                                        ? layers.add(layer)
+                                        : layers.remove(layer);
+                                    _visibility = VideoVisibility(
+                                      watchingLayout:
+                                          _visibility.watchingLayout,
+                                      layers: Set.unmodifiable(layers),
+                                    );
+                                  }),
+                                ),
+                            ]
+                          : [
+                              CheckboxListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('Background music'),
+                                value: _includeBgm,
+                                onChanged: (v) =>
+                                    setState(() => _includeBgm = v ?? false),
+                              ),
+                              CheckboxListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('Sound effects'),
+                                value: _includeSfx,
+                                onChanged: (v) =>
+                                    setState(() => _includeSfx = v ?? false),
+                              ),
+                            ],
+                    ),
                   ),
                 ),
                 const Text(

@@ -416,20 +416,69 @@ class _HomeScreenState extends State<_HomeScreen> {
     }
   }
 
+  Future<void> _replayProblem(
+    String message,
+    Uri uri, {
+    bool retry = false,
+  }) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: retry
+            ? SnackBarAction(
+                label: 'Retry',
+                onPressed: () => _openReplayLink(uri),
+              )
+            : null,
+      ),
+    );
+  }
+
   Future<void> _openReplayLink(Uri uri) async {
+    final originalUri = uri;
     // A short link (?r=<code>) first becomes the long link it stands for.
     final code = ReplayLink.shortCode(uri);
     if (code != null && widget.shortLinks != null) {
       try {
         final query = await widget.shortLinks!.resolve(code);
-        if (query == null) return;
+        if (query == null) {
+          await _replayProblem(
+            'This replay link no longer exists.',
+            originalUri,
+          );
+          return;
+        }
         uri = uri.replace(queryParameters: query);
       } catch (_) {
+        await _replayProblem(
+          'Could not load this replay. Check your connection.',
+          originalUri,
+          retry: true,
+        );
         return;
       }
+    } else if (code != null) {
+      await _replayProblem(
+        'Replay sharing is unavailable. Try again when connected.',
+        originalUri,
+        retry: true,
+      );
+      return;
     }
     final tokens = ReplayLink.ballTokens(uri);
-    if (tokens.isEmpty) return;
+    if (tokens.isEmpty) {
+      if (uri.queryParameters.containsKey('balls') ||
+          uri.queryParameters.containsKey('seed') ||
+          uri.queryParameters.containsKey('r')) {
+        await _replayProblem(
+          'This replay is invalid or uses an unsupported format.',
+          originalUri,
+        );
+      }
+      return;
+    }
     var extraBalls = const <String, CustomBall>{};
     try {
       extraBalls = {
@@ -443,14 +492,25 @@ class _HomeScreenState extends State<_HomeScreen> {
             b.id: b,
       };
     } catch (_) {
-      return; // Packs or groups unreachable: stay on the home screen.
+      await _replayProblem(
+        'Could not load the balls for this replay. Check your connection.',
+        originalUri,
+        retry: true,
+      );
+      return;
     }
     final link = ReplayLink.fromUri(
       uri,
       presets: LocalBallRepository.presets,
       packBalls: extraBalls,
     );
-    if (link == null) return;
+    if (link == null) {
+      await _replayProblem(
+        'This replay is invalid, unsupported, or has unavailable balls.',
+        originalUri,
+      );
+      return;
+    }
     // The look the match was played with (saved replays and newer links); older links without it use
     // the viewer's own choice.
     final look =
@@ -502,6 +562,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             arenaShape: link.arenaShape,
             centerObstacle: link.centerObstacle,
             centerObstacleScale: link.centerObstacleScale,
+            arenaRotation: link.arenaRotation,
             showEffects: link.showEffects,
             effectRenderMode: link.effectRenderMode,
             ballGlowWidth: link.ballGlowWidth,

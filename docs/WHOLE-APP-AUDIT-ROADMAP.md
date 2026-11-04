@@ -70,18 +70,19 @@ Reply with each number and Pass / Fail (plus what happened if it failed):
 
 ## Batch 4: Replay and export last
 
-Started 2026-11-04. Progress: [Batch 4 implementation log](BATCH4-REPLAY-EXPORT.md). Existing video export is retained.
+Coding completed locally, 2026-11-04. [Implementation, usage and manual checklist](BATCH4-REPLAY-EXPORT.md). Submitted for deployment/release as v1.14.53 on 2026-11-05; production workflow completion remains a manual check.
 
-- [ ] A02: Version changed targeting rules and add historical replay fixtures/compatibility policy.
-- [ ] A03: Snapshot/decode/reconstruct arena rotation in saved/server replay and video.
-- [x] A04 decoder: accept explicit empty built-in pickup sets (`w.0`), distinct from null/all; empty and custom-only link round trips tested.
-- [ ] A04 end-to-end: verify saved/server replay and exported simulation with those selections.
-- [ ] A13: Explain failed/unsupported/missing replay links and offer retry where appropriate.
-- [ ] Preserve existing export and add independent saved-video visibility choices (names, pictures, health, scores/timer/standings, equipped items, callouts, arena text and watermark), without changing live gameplay preferences; exclude interactive controls.
-- [ ] Admin-configurable bouncing export watermark, default `cha0s' Balls`.
-- Successful codec/audio checks do not complete these two presentation items. User reconfirmed the old export layout and `dbsuarez.github.io` watermark during Batch 3.
-- [ ] Decide/implement portable `.bw` file import/export UI separately from current short links.
-- [ ] Verify real audio/video playback, long-match warning and accurate post-rotation outcomes.
+- [x] A02: version targeting and document recoverable historical behavior/limitations, with fixtures.
+- [x] A03: preserve rotation through saved/server replay and video; post-transition state/outcome and exported-frame parity tests.
+- [x] A04: explicit empty/custom-only replay persistence and actual custom-only spawning.
+- [x] A13: visible missing/invalid/unsupported links and retry for transport failures.
+- [x] Preserve Classic video and offer Watching view, excluding interactive controls.
+- [x] Independent saved-video visibility choices without changing live gameplay preferences, including optional results/finishers.
+- [x] Admin-configurable bouncing video watermark, default `cha0s' Balls`, separate from winner-card branding.
+- [x] Portable .bw file import/export UI and optional existing server sharing.
+- [x] Preserve BGM/SFX selection and the 10-minute warning; arena-only duration regression covered.
+- [x] Final software verification and builds: 1,659 full-suite tests passed, one skipped; additional export-frame parity test passed; analysis clean; release web and signed APK builds passed.
+- [ ] User applies migration 028 for custom watermark persistence and performs the listed updated video/file-picker checks.
 
 ## Flame rendering feasibility study (after correctness fixes)
 

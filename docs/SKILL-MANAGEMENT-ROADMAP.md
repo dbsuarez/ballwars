@@ -174,18 +174,18 @@ Replay and video remain last, by agreement.
 
 ## Phase 9 - Replay links and video export
 
-**Status: Partial. Replay correctness and presentation work remains in audit Batch 4; device acceptance remains in Batch 3.**
+**Status: Coding and automated verification completed in audit Batch 4. Migration 028 and updated device/browser acceptance remain user checks; historical provenance limits are documented.**
 
 - [x] Store immutable custom-skill definitions or version references in replay data.
-- [ ] Preserve all historical replay rules as well as skill definitions (BW-A02 remains open).
+- [x] Explicit replay rules revision and historical targeting compatibility policy; indistinguishable historical builds cannot be perfectly recovered. See REPLAY-COMPATIBILITY.md.
 - [x] Render custom presentation in replay playback.
 - [x] Render the same presentation in exported videos.
 - [x] Add backward-compatible decoding and payload-size limits.
-- [ ] Verify complete live/replay/video equivalence, including changing arenas and historical targeting (BW-A02/A03).
+- [x] Add live/replay state/outcome, historical targeting and post-rotation export-frame parity fixtures (BW-A02/A03); coverage and limits in the Batch 4 report.
 - [x] Show elapsed export time while saving video.
 - [x] Ask whether BGM and/or SFX should be included in the export and mux the selected channels into web and Android video output.
 - [x] Keep the screen awake for the entire video export.
-- [ ] Reproduce the complete watching layout in replay/video; finishers exist, but the export still uses its own layout.
+- [x] Keep Classic export and add Watching view with selectable names/pictures/health/stats/items/callouts/branding, independent of live preferences.
 - [x] Let users save replays.
 - [x] Hide Replay Finisher whenever finishers are disabled.
 - [x] Keep interactive player controls out of exported replay video.
@@ -333,7 +333,7 @@ A-D are implemented; E-F remain unchecked follow-up work.
 
 ```text
 Phases 1-8 and 10-12: implemented, device acceptance pending.
-Phase 9: partial; see audit Batch 4. Overall completion is not yet established.
+Phase 9 coding and automated checks complete; remaining migration/device acceptance is listed in audit Batch 4. This does not claim every manual acceptance gate has passed.
 ```
 
 

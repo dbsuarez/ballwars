@@ -64,7 +64,7 @@ class SupabaseShortLinkRepository implements ShortLinkRepository {
         }
         if (e.code == 'P0001' &&
             (e.message.contains('Daily replay sharing limit') ||
-             e.message.contains('Replay exceeds the maximum size'))) {
+                e.message.contains('Replay exceeds the maximum size'))) {
           throw StateError(e.message);
         }
         if (e.code != '23505') {

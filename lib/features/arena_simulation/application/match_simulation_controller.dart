@@ -343,7 +343,7 @@ class MatchSimulationController {
     this.customSkillIds,
     PowerUpConfig tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
-    this.simulationRevision = 4,
+    this.simulationRevision = 7,
     this.dualWield = false,
     this.endlessBattle = false,
     this.mayhem = false,

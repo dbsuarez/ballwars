@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/offline/device_prefs.dart';
 
@@ -70,17 +71,36 @@ class SavedReplayStore {
   static const _key = 'saved-replays';
   static const maxEntries = 20;
 
+  static Future<void>? _mutations;
+
   static Future<List<SavedReplay>> load() async {
-    final raw = await DevicePrefs.read(_key);
+    await _mutations;
+    return _load();
+  }
+
+  static Future<List<SavedReplay>> _load() async {
+    final raw = await DevicePrefs.readRequired(_key);
     if (raw != null && raw.isNotEmpty) {
+      final Object? decoded;
       try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) {
-          return [for (final item in decoded) ?SavedReplay.fromJson(item)];
-        }
-      } catch (_) {}
+        decoded = jsonDecode(raw);
+      } catch (_) {
+        throw StateError(
+          'Saved replays could not be read. The existing record has been kept.',
+        );
+      }
+      if (decoded is! List) {
+        throw StateError('Saved replay storage has an unsupported format.');
+      }
+      final entries = decoded.map(SavedReplay.fromJson).toList();
+      if (entries.any((entry) => entry == null)) {
+        throw StateError(
+          'A saved replay record is damaged. The existing list has been kept.',
+        );
+      }
+      return entries.cast<SavedReplay>();
     }
-    final legacy = await DevicePrefs.read('saved-replay');
+    final legacy = await DevicePrefs.readRequired('saved-replay');
     if (legacy == null || legacy.isEmpty) return const [];
     return [
       SavedReplay(
@@ -91,19 +111,40 @@ class SavedReplayStore {
     ];
   }
 
+  static Future<void> _change(
+    List<SavedReplay> Function(List<SavedReplay>) change,
+  ) {
+    final task = (_mutations ?? Future<void>.value()).then((_) async {
+      final next = change(await _load());
+      await DevicePrefs.writeRequired(
+        _key,
+        jsonEncode([for (final entry in next) entry.toJson()]),
+      );
+      // Failure here must not undo or misreport the authoritative list commit.
+      await DevicePrefs.write('saved-replay', next.firstOrNull?.uri ?? '');
+    });
+    late final Future<void> tail;
+    tail = task
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          if (identical(_mutations, tail)) _mutations = null;
+        });
+    _mutations = tail;
+    return task.whenComplete(() => tail);
+  }
+
   static Future<void> add(
     Uri uri, {
     Uri? shareUri,
     Iterable<String> contestantNames = const [],
-  }) async {
+  }) => _change((entries) {
     final now = DateTime.now().toUtc();
-    final entries = await load();
     final existing = entries
         .where((entry) => entry.uri == uri.toString())
         .firstOrNull;
-    final next = [
+    return [
       SavedReplay(
-        id: existing?.id ?? now.microsecondsSinceEpoch.toString(),
+        id: existing?.id ?? const Uuid().v4(),
         savedAt: existing?.savedAt ?? now,
         uri: uri.toString(),
         name:
@@ -113,60 +154,38 @@ class SavedReplayStore {
       ),
       ...entries.where((entry) => entry.uri != uri.toString()),
     ].take(maxEntries).toList();
-    await DevicePrefs.write(
-      _key,
-      jsonEncode([for (final entry in next) entry.toJson()]),
-    );
-    await DevicePrefs.write('saved-replay', uri.toString());
-  }
+  });
 
-  static Future<void> remove(String id) async {
-    final next = (await load()).where((entry) => entry.id != id).toList();
-    await DevicePrefs.write(
-      _key,
-      jsonEncode([for (final entry in next) entry.toJson()]),
-    );
-    await DevicePrefs.write('saved-replay', next.firstOrNull?.uri ?? '');
-  }
+  static Future<void> remove(String id) =>
+      _change((entries) => entries.where((entry) => entry.id != id).toList());
 
-  static Future<void> rename(String id, String name) async {
-    final entries = await load();
-    final trimmed = name.trim();
-    await DevicePrefs.write(
-      _key,
-      jsonEncode([
-        for (final entry in entries)
-          (entry.id == id
-                  ? SavedReplay(
-                      id: entry.id,
-                      savedAt: entry.savedAt,
-                      uri: entry.uri,
-                      name: trimmed.isEmpty ? null : trimmed,
-                      shareUri: entry.shareUri,
-                    )
-                  : entry)
-              .toJson(),
-      ]),
-    );
-  }
+  static Future<void> rename(String id, String name) => _change(
+    (entries) => [
+      for (final entry in entries)
+        entry.id != id
+            ? entry
+            : SavedReplay(
+                id: entry.id,
+                savedAt: entry.savedAt,
+                uri: entry.uri,
+                name: name.trim().isEmpty ? null : name.trim(),
+                shareUri: entry.shareUri,
+              ),
+    ],
+  );
 
-  static Future<void> attachShareUri(String id, Uri uri) async {
-    final entries = await load();
-    await DevicePrefs.write(
-      _key,
-      jsonEncode([
-        for (final entry in entries)
-          (entry.id == id
-                  ? SavedReplay(
-                      id: entry.id,
-                      savedAt: entry.savedAt,
-                      uri: entry.uri,
-                      name: entry.name,
-                      shareUri: uri.toString(),
-                    )
-                  : entry)
-              .toJson(),
-      ]),
-    );
-  }
+  static Future<void> attachShareUri(String id, Uri uri) => _change(
+    (entries) => [
+      for (final entry in entries)
+        entry.id != id
+            ? entry
+            : SavedReplay(
+                id: entry.id,
+                savedAt: entry.savedAt,
+                uri: entry.uri,
+                name: entry.name,
+                shareUri: uri.toString(),
+              ),
+    ],
+  );
 }

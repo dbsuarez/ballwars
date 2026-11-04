@@ -1,3 +1,5 @@
+import '../domain/app_settings.dart';
+import '../../skills/domain/skill_library.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/audio/game_audio.dart';
@@ -50,8 +52,8 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
     if (mounted) setState(() => _isAdmin = admin);
   }
 
-  Future<void> _play(String move) async {
-    final profile = FinisherProfile.forMove(move);
+  Future<void> _play(String move, {SkillDefinition? skill}) async {
+    final profile = FinisherProfile.forMove(skill?.displayKind.label ?? move);
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (previewContext) => Scaffold(
@@ -63,20 +65,27 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                   child: HarpoonCinematic(
                     winner: _winner,
                     loser: _loser,
-                    move: move,
+                    move: skill?.name ?? move,
+                    visualMove: skill?.displayKind.label,
                     skillLibrary: AppSettingsScope.of(context).skillLibrary,
-                    skill: AppSettingsScope.of(context).skillLibrary
-                        .all(AppSettingsScope.of(context).powerUps)
-                        .where((skill) => skill.name == move)
-                        .firstOrNull,
-                    artworkTint:
-                        AppSettingsScope.of(context).skillLibrary
-                            .all(AppSettingsScope.of(context).powerUps)
-                            .where((skill) => skill.name == move)
-                            .firstOrNull
-                            ?.spriteTint ??
-                        0xFFFFFFFF,
-                    onHookFired: () => _launchSound(profile),
+                    skill: skill,
+                    artworkTint: skill?.spriteTint ?? 0xFFFFFFFF,
+                    effectSprites:
+                        skill?.usesSpriteEffects(
+                          globalSprite:
+                              AppSettingsScope.of(
+                                context,
+                              ).explosionRenderMode ==
+                              EffectRenderMode.sprite,
+                        ) ??
+                        true,
+                    onHookFired: () {
+                      if (skill != null && skill.soundCue != 'default') {
+                        GameAudio.instance.skillCue(skill.soundCue);
+                      } else {
+                        _launchSound(profile);
+                      }
+                    },
                     onImpact: () => _impactSound(profile),
                     onFinished: () {
                       GameAudio.instance.win();
@@ -220,7 +229,13 @@ class _FinisherGalleryScreenState extends State<FinisherGalleryScreen> {
                 key: ValueKey('finisher-${item.name}'),
                 profile: FinisherProfile.forMove(item.label),
                 icon: PowerUpIcon(item, size: 36),
-                onPlay: () => _play(item.label),
+                onPlay: () => _play(
+                  item.label,
+                  skill: AppSettingsScope.of(context).skillLibrary.builtIn(
+                    item,
+                    AppSettingsScope.of(context).powerUps,
+                  ),
+                ),
               ),
           ],
         );

@@ -88,9 +88,9 @@ class _AudioChannelButtonState extends State<AudioChannelButton> {
                       ),
                     ],
                   ),
-                  const _AudioChannelRow(channel: AudioChannel.bgm),
-                  const _AudioChannelRow(channel: AudioChannel.sfx),
-                  const _AudioChannelRow(channel: AudioChannel.ux),
+                  const AudioChannelRow(channel: AudioChannel.bgm),
+                  const AudioChannelRow(channel: AudioChannel.sfx),
+                  const AudioChannelRow(channel: AudioChannel.ux),
                 ],
               ),
             ),
@@ -134,16 +134,16 @@ class _AudioChannelButtonState extends State<AudioChannelButton> {
   );
 }
 
-class _AudioChannelRow extends StatefulWidget {
-  const _AudioChannelRow({required this.channel});
+class AudioChannelRow extends StatefulWidget {
+  const AudioChannelRow({super.key, required this.channel});
 
   final AudioChannel channel;
 
   @override
-  State<_AudioChannelRow> createState() => _AudioChannelRowState();
+  State<AudioChannelRow> createState() => AudioChannelRowState();
 }
 
-class _AudioChannelRowState extends State<_AudioChannelRow> {
+class AudioChannelRowState extends State<AudioChannelRow> {
   GameAudio get _audio => GameAudio.instance;
 
   String get _label => switch (widget.channel) {

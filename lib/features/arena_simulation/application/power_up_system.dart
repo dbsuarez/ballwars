@@ -84,13 +84,13 @@ class PowerUpSystem {
 
   /// Read-only counters for combat debugging and regression diagnostics.
   Map<String, int> get targetingDiagnostics => Map.unmodifiable({
-        'targetSwitches': targetSwitchCount,
-        'homingRetargets': homingRetargetCount,
-        'blockedTargetFallbacks': blockedTargetFallbackCount,
-        'projectileSweeps': projectileSweepCount,
-        'projectileContacts': projectileContactCount,
-        'projectileCenterWallBounces': projectileCenterWallBounceCount,
-      });
+    'targetSwitches': targetSwitchCount,
+    'homingRetargets': homingRetargetCount,
+    'blockedTargetFallbacks': blockedTargetFallbackCount,
+    'projectileSweeps': projectileSweepCount,
+    'projectileContacts': projectileContactCount,
+    'projectileCenterWallBounces': projectileCenterWallBounceCount,
+  });
   final List<ShellCasing> shellCasings = [];
 
   /// Casings ejected so far this match ([ShellCasing.sequence]).
@@ -101,8 +101,8 @@ class PowerUpSystem {
   /// that fired them, credited for their hits (the winning move and its finisher name it).
   final Map<Projectile, SkillDefinition> _composedIssuers = {};
 
-  /// While a payload shot lands: the firing skill's name, recorded as the move instead of the payload's.
-  String? _creditMove;
+  /// While a payload shot lands: its firing definition, retained through delayed damage as well.
+  SkillDefinition? _creditSkill;
 
   /// The definition a composed shot carries (its own skill, or the skill it was fired as), or null for a
   /// built-in shot.
@@ -127,18 +127,16 @@ class PowerUpSystem {
   // Per-owner passive trigger state. The effect executor remains responsible
   // for start delays, repeats and effect-step scheduling.
   final Map<(SimulationBall, String), SkillTriggerScheduler>
-      _passiveSchedulers = {};
+  _passiveSchedulers = {};
 
   SkillTriggerScheduler _passiveScheduler(
     SimulationBall owner,
     SkillDefinition skill,
   ) => _passiveSchedulers.putIfAbsent(
     (owner, skill.id),
-    () => SkillTriggerScheduler(skill.copyWith(
-      startDelaySeconds: 0,
-      repeatCount: 1,
-      cooldownSeconds: 0,
-    )),
+    () => SkillTriggerScheduler(
+      skill.copyWith(startDelaySeconds: 0, repeatCount: 1, cooldownSeconds: 0),
+    ),
   );
 
   bool _passiveTriggered(
@@ -150,13 +148,13 @@ class PowerUpSystem {
     final scheduler = _passiveScheduler(owner, skill);
     // A rejected activation already owns a retry slot. Do not enqueue
     // another damage event every frame while draining that retry.
-    if (event != SkillTrigger.timer && scheduler.pendingCount == 0 &&
+    if (event != SkillTrigger.timer &&
+        scheduler.pendingCount == 0 &&
         !scheduler.signal(event, time)) {
       return false;
     }
     return scheduler.advance(time).isNotEmpty;
   }
-
 
   int get activeCustomEffectCount =>
       _composedProjectiles.length +
@@ -247,7 +245,9 @@ class PowerUpSystem {
   // must agree on the same duration even if the library is edited mid-effect.
   // Expando keys are the effect instances, so expired hits are not retained.
   final Expando<int> _impactVisualLifetime = Expando<int>('impactLifetime');
-  final Expando<int> _explosionVisualLifetime = Expando<int>('explosionLifetime');
+  final Expando<int> _explosionVisualLifetime = Expando<int>(
+    'explosionLifetime',
+  );
   final Expando<ResolvedSkillEffect> _impactVisualSnapshot =
       Expando<ResolvedSkillEffect>('impactVisual');
   final Expando<ResolvedSkillEffect> _explosionVisualSnapshot =
@@ -258,13 +258,21 @@ class PowerUpSystem {
   // rather than silently falling back to unrelated legacy animations.
   ResolvedSkillEffect? impactVisual(WeaponImpact impact) =>
       _impactVisualSnapshot[impact] ??= _snapshotVisual(
-        impact.kind, impact.skillId, SkillVisualRole.impact);
+        impact.kind,
+        impact.skillId,
+        SkillVisualRole.impact,
+      );
   ResolvedSkillEffect? explosionVisual(Explosion explosion) =>
       _explosionVisualSnapshot[explosion] ??= _snapshotVisual(
-        explosion.kind, explosion.skillId, SkillVisualRole.explosion);
+        explosion.kind,
+        explosion.skillId,
+        SkillVisualRole.explosion,
+      );
 
   ResolvedSkillEffect? _snapshotVisual(
-    PowerUpKind? kind, String? skillId, SkillVisualRole role,
+    PowerUpKind? kind,
+    String? skillId,
+    SkillVisualRole role,
   ) {
     if (kind == null) return null;
     final skill = visualSkill(kind, skillId: skillId);
@@ -296,7 +304,9 @@ class PowerUpSystem {
   void _recordWeaponImpact(WeaponImpact impact) {
     impactVisualSteps(impact);
     _impactVisualSnapshot[impact] = _snapshotVisual(
-      impact.kind, impact.skillId, SkillVisualRole.impact,
+      impact.kind,
+      impact.skillId,
+      SkillVisualRole.impact,
     );
     weaponImpacts.add(impact);
   }
@@ -304,7 +314,9 @@ class PowerUpSystem {
   void _recordExplosion(Explosion explosion) {
     explosionVisualSteps(explosion);
     _explosionVisualSnapshot[explosion] = _snapshotVisual(
-      explosion.kind, explosion.skillId, SkillVisualRole.explosion,
+      explosion.kind,
+      explosion.skillId,
+      SkillVisualRole.explosion,
     );
     explosions.add(explosion);
   }
@@ -463,8 +475,10 @@ class PowerUpSystem {
   }) => effectDisplayScaleOf(visualSkill(kind, ball: ball, skillId: skillId));
   double effectDisplayScaleOf(SkillDefinition skill) =>
       match.skillLibrary.effectDisplayScaleFor(skill);
-  SkillDefinition handArtworkSettings(PowerUpKind kind, {SimulationBall? ball}) =>
-      visualSkill(kind, ball: ball);
+  SkillDefinition handArtworkSettings(
+    PowerUpKind kind, {
+    SimulationBall? ball,
+  }) => visualSkill(kind, ball: ball);
   double handEffectScale(PowerUpKind kind, {SimulationBall? ball}) =>
       visualSkill(kind, ball: ball).handEffectScale;
   Color handEffectColor(PowerUpKind kind, {SimulationBall? ball}) =>
@@ -516,13 +530,17 @@ class PowerUpSystem {
     // Respawn is a new life. Old traps and custom projectiles must not
     // outlive their owner and damage players after the reset.
     mines.removeWhere((mine) => identical(mine.owner, ball));
-    projectiles.removeWhere((shot) =>
-        identical(shot.owner, ball) && _composedProjectiles.containsKey(shot));
+    projectiles.removeWhere(
+      (shot) =>
+          identical(shot.owner, ball) && _composedProjectiles.containsKey(shot),
+    );
     final liveShotsAfterReset = projectiles.toSet();
     _composedProjectiles.removeWhere(
-        (shot, _) => !liveShotsAfterReset.contains(shot));
+      (shot, _) => !liveShotsAfterReset.contains(shot),
+    );
     _composedIssuers.removeWhere(
-        (shot, _) => !liveShotsAfterReset.contains(shot));
+      (shot, _) => !liveShotsAfterReset.contains(shot),
+    );
     // End native multi-target cinematic effects that involve this life.
     _cancelOmegaTendrilsInvolving(ball);
     persistentEffects.reset(ball);
@@ -608,9 +626,11 @@ class PowerUpSystem {
     }
     // Remove attacks from this life. Surviving owners retarget on their
     // next update instead of striking the newly respawned player.
-    shadowCloneAttacks.removeWhere((attack) =>
-        identical(attack.owner, ball) ||
-        (match.simulationRevision >= 2 && identical(attack.target, ball)));
+    shadowCloneAttacks.removeWhere(
+      (attack) =>
+          identical(attack.owner, ball) ||
+          (match.simulationRevision >= 2 && identical(attack.target, ball)),
+    );
     if (match.simulationRevision < 2) {
       for (final attack in shadowCloneAttacks) {
         if (identical(attack.target, ball)) {
@@ -703,11 +723,12 @@ class PowerUpSystem {
         (skill.baseKind.isTrap ||
             skill.resolvedCategory == SkillCategory.trap ||
             skill.resolvedCategory == SkillCategory.arenaTrap)) {
-              return;
-            }
+      return;
+    }
     if (skill.isComposed) {
       final payload = match.skillLibrary.resolvePayload(skill, _t);
-      final activated = skill.delivery == SkillDelivery.projectile || payload != null
+      final activated =
+          skill.delivery == SkillDelivery.projectile || payload != null
           ? _launchComposed(owner, target, skill, payload: payload)
           : _executeComposed(owner, skill, primary: target);
       if (activated && skill.resolvedCategory == SkillCategory.weapon) {
@@ -881,11 +902,13 @@ class PowerUpSystem {
     final radius = match.arenaRadius * 0.18;
     for (final ball in removed.affected) {
       if ((ball.position - removed.position).distance >= radius) continue;
-      if (arenaThemeHazards.any((other) =>
-          other.kind == ArenaThemeHazardKind.quicksand &&
-          (ball.position - other.position).distance < radius)) {
-            continue;
-          }
+      if (arenaThemeHazards.any(
+        (other) =>
+            other.kind == ArenaThemeHazardKind.quicksand &&
+            (ball.position - other.position).distance < radius,
+      )) {
+        continue;
+      }
       _releaseQuicksandVictim(ball, removed.position);
     }
   }
@@ -995,9 +1018,14 @@ class PowerUpSystem {
               _gooVelocity.putIfAbsent(ball, () => ball.velocity);
               _vineSnareVictims.add(ball);
               _vineSnareRemaining[ball] = math.max(
-                _vineSnareRemaining[ball] ?? 0, _t.vineSnareSteps);
+                _vineSnareRemaining[ball] ?? 0,
+                _t.vineSnareSteps,
+              );
               ball
-                ..stickyGooLeft = math.max(ball.stickyGooLeft, _t.vineSnareSteps)
+                ..stickyGooLeft = math.max(
+                  ball.stickyGooLeft,
+                  _t.vineSnareSteps,
+                )
                 ..velocity = Offset.zero;
               _yell(ball, 'VINE SNARE!');
             }
@@ -1011,8 +1039,7 @@ class PowerUpSystem {
                         ball.position.dy * direction.dx)
                     .abs();
             if (distanceToBeam < ball.radius * 0.45) {
-              if (hazard.affected.add(ball) &&
-                  laserDamagedThisStep.add(ball)) {
+              if (hazard.affected.add(ball) && laserDamagedThisStep.add(ball)) {
                 _damageArenaHazard(
                   ball,
                   _t.laserGateDamage,
@@ -1038,14 +1065,14 @@ class PowerUpSystem {
     if (ball.stickyGooLeft > 0 ||
         (_skillGooRemaining[ball] ?? 0) > 0 ||
         (_vineSnareRemaining[ball] ?? 0) > 0) {
-          return;
-        }
+      return;
+    }
     final away = ball.position - origin;
     final direction = away.distance == 0
         ? Offset.fromDirection(rng.nextDoubleRange(0, math.pi * 2))
         : away / away.distance;
-    ball.velocity = direction *
-        math.max(ball.velocity.distance, match.arenaRadius * 0.42);
+    ball.velocity =
+        direction * math.max(ball.velocity.distance, match.arenaRadius * 0.42);
     _yell(ball, 'FREE!');
   }
 
@@ -1056,8 +1083,19 @@ class PowerUpSystem {
     String move,
   ) {
     final lost = match.mode == MatchMode.arsenal
-        ? match.damage(ball, arsenalDamage, move: move)
-        : match.cutThreads(ball, allOutLines, near: ball.position, move: move);
+        ? match.damage(
+            ball,
+            arsenalDamage,
+            move: move,
+            moveSourceId: 'arena.${move.toLowerCase().replaceAll(' ', '-')}',
+          )
+        : match.cutThreads(
+            ball,
+            allOutLines,
+            near: ball.position,
+            move: move,
+            moveSourceId: 'arena.${move.toLowerCase().replaceAll(' ', '-')}',
+          );
     _showDamage(ball, ball.position, lost, 0);
   }
 
@@ -1104,8 +1142,9 @@ class PowerUpSystem {
     }
     final time = (match.stepCount + 1) / 60.0;
     final timerSkills = _activeComposedSkills(SkillTrigger.timer).toList();
-    final damageSkills =
-        _activeComposedSkills(SkillTrigger.damageTaken).toList();
+    final damageSkills = _activeComposedSkills(
+      SkillTrigger.damageTaken,
+    ).toList();
     // Remove passive state for actors or skills no longer participating.
     // Otherwise a removed custom skill may retain an old timer if recreated
     // with the same ID, and eliminated actors may retain pending events.
@@ -1113,10 +1152,13 @@ class PowerUpSystem {
     final activePassiveIds = <String>{
       for (final skill in timerSkills) skill.id,
       for (final skill in damageSkills) skill.id,
-      for (final skill in _activeComposedSkills(SkillTrigger.elimination)) skill.id,
+      for (final skill in _activeComposedSkills(SkillTrigger.elimination))
+        skill.id,
     };
-    _passiveSchedulers.removeWhere((key, _) =>
-        !liveBalls.contains(key.$1) || !activePassiveIds.contains(key.$2));
+    _passiveSchedulers.removeWhere(
+      (key, _) =>
+          !liveBalls.contains(key.$1) || !activePassiveIds.contains(key.$2),
+    );
     _lastVital.removeWhere((ball, _) => !liveBalls.contains(ball));
     for (final ball in match.state.balls) {
       final current = _vital(ball);
@@ -1145,16 +1187,25 @@ class PowerUpSystem {
     mines.removeWhere((mine) => victims.contains(mine.owner));
     // A composed projectile belongs to a specific life. Remove it when its
     // owner is eliminated, before another actor can inherit its impact job.
-    projectiles.removeWhere((shot) =>
-        victims.contains(shot.owner) && _composedProjectiles.containsKey(shot));
+    projectiles.removeWhere(
+      (shot) =>
+          victims.contains(shot.owner) &&
+          _composedProjectiles.containsKey(shot),
+    );
     final survivingShots = projectiles.toSet();
-    _composedProjectiles.removeWhere((shot, _) => !survivingShots.contains(shot));
+    _composedProjectiles.removeWhere(
+      (shot, _) => !survivingShots.contains(shot),
+    );
     _composedIssuers.removeWhere((shot, _) => !survivingShots.contains(shot));
     _passiveSchedulers.removeWhere((key, _) => victims.contains(key.$1));
     _lastVital.removeWhere((ball, _) => victims.contains(ball));
-    _scheduledComposedEffects.removeWhere((effect) => victims.contains(effect.owner));
+    _scheduledComposedEffects.removeWhere(
+      (effect) => victims.contains(effect.owner),
+    );
     _effectStepQueue.removeWhere((effect) => victims.contains(effect.owner));
-    _customDamageOverTime.removeWhere((effect) => victims.contains(effect.owner));
+    _customDamageOverTime.removeWhere(
+      (effect) => victims.contains(effect.owner),
+    );
     _composedCooldownUntil.removeWhere((key, _) => victims.contains(key.$1));
     if (!automaticPassiveTriggers) return;
     final skills = _activeComposedSkills(SkillTrigger.elimination).toList();
@@ -1164,8 +1215,13 @@ class PowerUpSystem {
       final owner = attackers[victim];
       if (owner == null || !_alive(owner)) continue;
       for (final skill in skills) {
-        _dispatchPassive(owner, skill, SkillTrigger.elimination, time,
-            primary: victim);
+        _dispatchPassive(
+          owner,
+          skill,
+          SkillTrigger.elimination,
+          time,
+          primary: victim,
+        );
       }
     }
   }
@@ -1261,8 +1317,8 @@ class PowerUpSystem {
             activeSkill.baseKind.isTrap ||
             activeSkill.resolvedCategory == SkillCategory.trap ||
             activeSkill.resolvedCategory == SkillCategory.arenaTrap)) {
-              return;
-            }
+      return;
+    }
     // Do not consume a pickup while its composed activation is unavailable.
     // The executor also checks target availability and scheduling capacity.
     if (activeSkill.isComposed && activeSkill.trigger == SkillTrigger.pickup) {
@@ -1477,6 +1533,7 @@ class PowerUpSystem {
         math.max(1, target.life),
         attacker: owner,
         move: skillName(PowerUpKind.sniperRifle),
+        moveSkill: visualSkill(PowerUpKind.sniperRifle),
         scaleForCrowd: false,
         applyFrozenMultiplier: false,
       );
@@ -1487,6 +1544,7 @@ class PowerUpSystem {
         near: target.position,
         attacker: owner,
         move: skillName(PowerUpKind.sniperRifle),
+        moveSkill: visualSkill(PowerUpKind.sniperRifle),
       );
     }
     _recordWeaponImpact(
@@ -1572,8 +1630,7 @@ class PowerUpSystem {
           attack
             ..target = null
             ..vanishAt = attack.age;
-        } else if (attack.age >=
-            attack.strikeAt(attack.clonesDone)) {
+        } else if (attack.age >= attack.strikeAt(attack.clonesDone)) {
           attack.struckAt.add(attack.strikePoint(attack.clonesDone, victim));
           attack.clonesDone++;
           _hit(
@@ -1810,10 +1867,9 @@ class PowerUpSystem {
   /// otherwise a canceled tendril can leave them motionless indefinitely.
   void _cancelOmegaTendrilsInvolving(SimulationBall ball) {
     for (final tendril in omegaTendrils.toList()) {
-      if (!identical(tendril.owner, ball) &&
-          !identical(tendril.target, ball)) {
-            continue;
-          }
+      if (!identical(tendril.owner, ball) && !identical(tendril.target, ball)) {
+        continue;
+      }
       if (!identical(tendril.target, ball) && _alive(tendril.target)) {
         tendril.target.velocity = tendril.savedVelocity;
       }
@@ -1848,6 +1904,7 @@ class PowerUpSystem {
         _t.arenaDamage(PowerUpKind.omegaTendrils),
         attacker: tendril.owner,
         move: skillName(PowerUpKind.omegaTendrils),
+        moveSkill: visualSkill(PowerUpKind.omegaTendrils),
       );
       _showDamage(target, target.position, lost, 0);
       target.hurtFlashLeft = MatchSimulationController.hurtFlashSteps;
@@ -1905,7 +1962,8 @@ class PowerUpSystem {
     for (final ball in _skillGooVictims) {
       _skillGooRemaining.remove(ball);
       final remaining = _t.arenaTrapsEnabled
-          ? (_vineSnareRemaining[ball] ?? 0) : 0;
+          ? (_vineSnareRemaining[ball] ?? 0)
+          : 0;
       ball.stickyGooLeft = remaining;
       if (remaining == 0) {
         ball.velocity = _gooVelocity.remove(ball) ?? ball.velocity;
@@ -1941,7 +1999,13 @@ class PowerUpSystem {
     for (final goo in List<StickyGoo>.of(stickyGoo)) {
       final blobs = match.arenaShape == ArenaShape.circle
           ? goo.blobPositions(fieldRadius * 0.36)
-          : arenaRimSamples(goo.position, match.arenaRadius, fieldRadius * 0.36, 15, match.arenaShape);
+          : arenaRimSamples(
+              goo.position,
+              match.arenaRadius,
+              fieldRadius * 0.36,
+              15,
+              match.arenaShape,
+            );
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         final touches = blobs.any(
@@ -1958,9 +2022,14 @@ class PowerUpSystem {
         _gooVelocity.putIfAbsent(ball, () => ball.velocity);
         _skillGooVictims.add(ball);
         _skillGooRemaining[ball] = math.max(
-          _skillGooRemaining[ball] ?? 0, PowerUpTuning.stickyGooSteps);
+          _skillGooRemaining[ball] ?? 0,
+          PowerUpTuning.stickyGooSteps,
+        );
         ball
-          ..stickyGooLeft = math.max(ball.stickyGooLeft, PowerUpTuning.stickyGooSteps)
+          ..stickyGooLeft = math.max(
+            ball.stickyGooLeft,
+            PowerUpTuning.stickyGooSteps,
+          )
           ..velocity = Offset.zero;
         _sound('trap');
         _yell(ball, 'STUCK!');
@@ -1973,7 +2042,13 @@ class PowerUpSystem {
     for (final swamp in List<PoisonSwamp>.of(poisonSwamps)) {
       final samples = match.arenaShape == ArenaShape.circle
           ? swamp.samplePositions(fieldRadius * 0.36)
-          : arenaRimSamples(swamp.position, match.arenaRadius, fieldRadius * 0.36, 15, match.arenaShape);
+          : arenaRimSamples(
+              swamp.position,
+              match.arenaRadius,
+              fieldRadius * 0.36,
+              15,
+              match.arenaShape,
+            );
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         if (!samples.any(
@@ -2096,6 +2171,7 @@ class PowerUpSystem {
         ball,
         _t.arenaDamage(PowerUpKind.spikeWall),
         move: skillName(PowerUpKind.spikeWall),
+        moveSkill: visualSkill(PowerUpKind.spikeWall),
       );
       _showDamage(ball, at, damage, 0);
     } else {
@@ -2104,6 +2180,7 @@ class PowerUpSystem {
         _t.allOutThreads(PowerUpKind.spikeWall),
         near: at,
         move: skillName(PowerUpKind.spikeWall),
+        moveSkill: visualSkill(PowerUpKind.spikeWall),
       );
       _showDamage(ball, at, cut, 0);
     }
@@ -2116,7 +2193,13 @@ class PowerUpSystem {
     for (final wall in List<SpikeWall>.of(spikeWalls)) {
       final spikes = match.arenaShape == ArenaShape.circle
           ? wall.spikePositions(fieldRadius * 0.96)
-          : arenaRimSamples(wall.position, match.arenaRadius, fieldRadius * 0.96, wall.spikeCount, match.arenaShape);
+          : arenaRimSamples(
+              wall.position,
+              match.arenaRadius,
+              fieldRadius * 0.96,
+              wall.spikeCount,
+              match.arenaShape,
+            );
       for (final ball in match.state.balls) {
         if (!_alive(ball) || ball.isGhost) continue;
         final reach = ball.radius + fieldRadius * 0.48;
@@ -2185,8 +2268,9 @@ class PowerUpSystem {
     // even when their custom skill also defines a projectile/aimed behavior.
     // Only composed non-contact carriers use the effect activation path.
     if (SkillHybridContactPolicy.usesComposedContact(composed) &&
-        !(weapon.isBlade || weapon == PowerUpKind.shield ||
-          weapon == PowerUpKind.orbitingFlail)) {
+        !(weapon.isBlade ||
+            weapon == PowerUpKind.shield ||
+            weapon == PowerUpKind.orbitingFlail)) {
       // A hybrid aimed-fire weapon can strike on contact as well as shoot.
       // A rejected activation must not destroy an equipped weapon.
       if (!_executeComposed(attacker, composed, primary: target)) return;
@@ -2228,7 +2312,8 @@ class PowerUpSystem {
       attacker.meleeAttackVisual = MeleeAttackVisual(
         kind: weapon,
         skillId: skillId,
-        slot: attacker.held == weapon &&
+        slot:
+            attacker.held == weapon &&
                 (skillId == null || attacker.heldSkillId == skillId)
             ? 0
             : 1,
@@ -2477,7 +2562,13 @@ class PowerUpSystem {
                 ball.position,
               ) <=
               radius * radius) {
-            _cutLine(ball, line, move: skillName(kind), attacker: owner);
+            _cutLine(
+              ball,
+              line,
+              move: skillName(kind),
+              moveSkill: visualSkill(kind, ball: owner),
+              attacker: owner,
+            );
           }
         }
       }
@@ -2560,12 +2651,17 @@ class PowerUpSystem {
   /// Spawns one of the chosen kinds at a random spot in the emptiest quadrant of the arena (the one with
   /// the fewest power-ups and armed mines, a seeded pick among ties), away from the rim and the center
   /// and clear of balls and other power-ups. Skipped when 10 tries find no clear spot.
-  void _spawn(int number, {PowerUpKind? forcedKind, String? forcedSkillId, bool arenaHazard = false}) {
+  void _spawn(
+    int number, {
+    PowerUpKind? forcedKind,
+    String? forcedSkillId,
+    bool arenaHazard = false,
+  }) {
     // Explicit test spawns obey the same trap policy as ordinary matches.
     if (forcedKind?.isTrap == true &&
         !(arenaHazard ? _t.arenaTrapsEnabled : _t.skillTrapsEnabled)) {
-          return;
-        }
+      return;
+    }
     // A forced custom skill may be categorized as a trap even if its base
     // pickup kind is not. Reject it before choosing any spawn position.
     if (forcedSkillId != null && !_t.skillTrapsEnabled) {
@@ -2574,8 +2670,8 @@ class PowerUpSystem {
           (requested.baseKind.isTrap ||
               requested.resolvedCategory == SkillCategory.trap ||
               requested.resolvedCategory == SkillCategory.arenaTrap)) {
-                return;
-              }
+        return;
+      }
     }
     // Uniform over the chosen kinds; with all of them chosen this draws exactly as with none chosen.
     final chosen = match.powerUpKinds;
@@ -2601,9 +2697,13 @@ class PowerUpSystem {
                   spawnableCustom.any((skill) => skill.baseKind == k))
                 k,
           ];
-    final timedKinds = kinds.where((kind) =>
-        !kind.isTrap ||
-        (_t.skillTrapsEnabled && number >= _t.trapStartSteps)).toList();
+    final timedKinds = kinds
+        .where(
+          (kind) =>
+              !kind.isTrap ||
+              (_t.skillTrapsEnabled && number >= _t.trapStartSteps),
+        )
+        .toList();
     final claimedKinds = {for (final pickup in field) pickup.kind};
     final eligibleKinds = timedKinds
         .where((kind) => kind.isTrap || !claimedKinds.contains(kind))
@@ -2651,8 +2751,8 @@ class PowerUpSystem {
         (selectedSkill.baseKind.isTrap ||
             selectedSkill.resolvedCategory == SkillCategory.trap ||
             selectedSkill.resolvedCategory == SkillCategory.arenaTrap)) {
-              return;
-            }
+      return;
+    }
     final kind = selectedSkill.baseKind;
     final radius = fieldRadius;
     final balls = match.state.balls;
@@ -2744,17 +2844,24 @@ class PowerUpSystem {
       }
       if (kind == PowerUpKind.spikeWall) {
         spikeWalls.add(
-          SpikeWall(position: spot, angle: angle, spawnStep: number,
-              arenaGenerated: arenaHazard),
+          SpikeWall(
+            position: spot,
+            angle: angle,
+            spawnStep: number,
+            arenaGenerated: arenaHazard,
+          ),
         );
         // Automatic arena spikes and skill-created spikes have independent
         // quotas. Evicting from the shared list by total length would let
         // one enabled source silently delete the other source's hazards.
         final sourceLimit = PowerUpTuning.maxOnField(_ballCount);
-        while (spikeWalls.where((wall) =>
-                wall.arenaGenerated == arenaHazard).length > sourceLimit) {
-          spikeWalls.removeAt(spikeWalls.indexWhere((wall) =>
-              wall.arenaGenerated == arenaHazard));
+        while (spikeWalls
+                .where((wall) => wall.arenaGenerated == arenaHazard)
+                .length >
+            sourceLimit) {
+          spikeWalls.removeAt(
+            spikeWalls.indexWhere((wall) => wall.arenaGenerated == arenaHazard),
+          );
         }
         return;
       }
@@ -2823,8 +2930,8 @@ class PowerUpSystem {
       if (ball.stickyGooLeft <= 0 &&
           !_skillGooRemaining.containsKey(ball) &&
           !_vineSnareRemaining.containsKey(ball)) {
-            continue;
-          }
+        continue;
+      }
       final skill = math.max(0, (_skillGooRemaining[ball] ?? 0) - 1);
       final vine = math.max(0, (_vineSnareRemaining[ball] ?? 0) - 1);
       if (skill == 0) {
@@ -2840,9 +2947,9 @@ class PowerUpSystem {
         _vineSnareRemaining[ball] = vine;
       }
       // Legacy saves may carry a timer without source bookkeeping.
-      final legacy = skill == 0 && vine == 0 &&
-          !_gooVelocity.containsKey(ball)
-          ? math.max(0, ball.stickyGooLeft - 1) : 0;
+      final legacy = skill == 0 && vine == 0 && !_gooVelocity.containsKey(ball)
+          ? math.max(0, ball.stickyGooLeft - 1)
+          : 0;
       ball.stickyGooLeft = math.max(math.max(skill, vine), legacy);
       if (ball.stickyGooLeft == 0) {
         ball.velocity = _gooVelocity.remove(ball) ?? ball.velocity;
@@ -2909,7 +3016,9 @@ class PowerUpSystem {
       _aimedTargets[ball] = selected;
       if (match.centerObstacle != CenterObstacle.none &&
           CombatTargeting.centerObstacleBlocks(
-            ball.position, selected.position, match.centerObstacle,
+            ball.position,
+            selected.position,
+            match.centerObstacle,
             match.arenaRadius * match.centerObstacleScale,
           )) {
         blockedTargetFallbackCount++;
@@ -3004,12 +3113,14 @@ class PowerUpSystem {
       case SkillDelivery.boundaryHazard:
         final bandWidth = match.arenaRadius * skill.range.clamp(0, 1);
         return targets
-            .where((target) => inArenaBoundaryBand(
-                  target.position,
-                  match.arenaRadius,
-                  bandWidth,
-                  match.arenaShape,
-                ))
+            .where(
+              (target) => inArenaBoundaryBand(
+                target.position,
+                match.arenaRadius,
+                bandWidth,
+                match.arenaShape,
+              ),
+            )
             .toList();
       case SkillDelivery.beam:
         final direction = _chosenDirection(owner, targets.firstOrNull);
@@ -3050,8 +3161,8 @@ class PowerUpSystem {
   }) {
     if (!_allowsSkillActivation(skill) ||
         (payload != null && !_allowsSkillActivation(payload))) {
-          return false;
-        }
+      return false;
+    }
     if (payload != null || skill.delivery == SkillDelivery.projectile) {
       final shotSkill = payload ?? skill;
       final delta = target.position - owner.position;
@@ -3074,7 +3185,9 @@ class PowerUpSystem {
           _ejectShellCasing(owner, baseDirection, skill);
         }
         final offset = SkillProjectileBudget.spreadOffset(
-          index: index, admitted: admitted, spreadDegrees: spread,
+          index: index,
+          admitted: admitted,
+          spreadDegrees: spread,
         );
         final radians =
             math.atan2(baseDirection.dy, baseDirection.dx) +
@@ -3136,10 +3249,11 @@ class PowerUpSystem {
   }) {
     if (!_allowsSkillActivation(skill)) return false;
     final cooldownKey = (owner, skill.id);
-    if (!projectileImpact && !SkillActivationGate.isReady(
-      match.stepCount,
-      _composedCooldownUntil[cooldownKey],
-    )) {
+    if (!projectileImpact &&
+        !SkillActivationGate.isReady(
+          match.stepCount,
+          _composedCooldownUntil[cooldownKey],
+        )) {
       return false;
     }
     var targets = switch (skill.targeting) {
@@ -3160,7 +3274,8 @@ class PowerUpSystem {
       null => const <SimulationBall>[],
     };
     targets = affectedTargets ?? _filterDeliveryTargets(owner, targets, skill);
-    final hasTargetsOrIndependentEffects = targets.isNotEmpty ||
+    final hasTargetsOrIndependentEffects =
+        targets.isNotEmpty ||
         skill.effectSteps.any(
           (step) => step.target != EffectStepTarget.affected,
         );
@@ -3175,7 +3290,8 @@ class PowerUpSystem {
     // Reserve repeat capacity before applying the first hit. Otherwise a
     // full queue silently turns a repeating skill into a single-hit skill.
     final needsSchedule = skill.startDelaySeconds > 0 || repeatCount > 1;
-    final hasScheduleCapacity = !needsSchedule ||
+    final hasScheduleCapacity =
+        !needsSchedule ||
         _scheduledComposedEffects.length < maxScheduledCustomEffects;
     final admitted = projectileImpact
         ? SkillActivationGate.canResolveProjectileImpact(
@@ -3195,7 +3311,9 @@ class PowerUpSystem {
     if (skill.startDelaySeconds > 0) {
       if (!projectileImpact && skill.cooldownSeconds > 0) {
         _composedCooldownUntil[cooldownKey] = SkillActivationGate.nextReadyStep(
-          match.stepCount, skill.cooldownSeconds);
+          match.stepCount,
+          skill.cooldownSeconds,
+        );
       }
       _scheduledComposedEffects.add(
         _ScheduledComposedEffect(
@@ -3205,14 +3323,16 @@ class PowerUpSystem {
           repeatsLeft: repeatCount,
           stepsLeft: (skill.startDelaySeconds * 60).round(),
           announceOnNext: true,
-          creditMove: _creditMove,
+          creditSkill: _creditSkill,
         ),
       );
       return true;
     }
     if (!projectileImpact && skill.cooldownSeconds > 0) {
       _composedCooldownUntil[cooldownKey] = SkillActivationGate.nextReadyStep(
-        match.stepCount, skill.cooldownSeconds);
+        match.stepCount,
+        skill.cooldownSeconds,
+      );
     }
     _applyComposedEffects(owner, targets, skill);
     if (repeatCount > 1) {
@@ -3222,7 +3342,7 @@ class PowerUpSystem {
           targets: List.unmodifiable(targets),
           skill: skill,
           repeatsLeft: repeatCount - 1,
-          creditMove: _creditMove,
+          creditSkill: _creditSkill,
           stepsLeft: (skill.repeatIntervalSeconds * 60).round(),
         ),
       );
@@ -3230,6 +3350,7 @@ class PowerUpSystem {
     _announceSkill(owner, skill);
     return true;
   }
+
   void _applyComposedEffects(
     SimulationBall owner,
     Iterable<SimulationBall> targets,
@@ -3327,7 +3448,7 @@ class PowerUpSystem {
         skill,
         step,
         match.stepCount + delay,
-        _creditMove,
+        _creditSkill,
       );
       if (delay == 0) {
         _runEffectStep(event);
@@ -3375,8 +3496,8 @@ class PowerUpSystem {
                           target.radius),
         )
         .toSet();
-    final previousCredit = _creditMove;
-    _creditMove = event.creditMove;
+    final previousCredit = _creditSkill;
+    _creditSkill = event.creditSkill ?? event.skill;
     try {
       var parameters = step.applyTo(event.skill);
       if ((step.type == SkillEffectType.damage ||
@@ -3387,7 +3508,7 @@ class PowerUpSystem {
       }
       _applyComposedEffects(owner, targets, parameters);
     } finally {
-      _creditMove = previousCredit;
+      _creditSkill = previousCredit;
     }
   }
 
@@ -3403,14 +3524,14 @@ class PowerUpSystem {
       }
       scheduled.stepsLeft--;
       if (scheduled.stepsLeft > 0) continue;
-      final previousCredit = _creditMove;
-      _creditMove = scheduled.creditMove;
+      final previousCredit = _creditSkill;
+      _creditSkill = scheduled.creditSkill;
       _applyComposedEffects(
         scheduled.owner,
         scheduled.targets,
         scheduled.skill,
       );
-      _creditMove = previousCredit;
+      _creditSkill = previousCredit;
       if (scheduled.announceOnNext) {
         _announceSkill(scheduled.owner, scheduled.skill);
         scheduled.announceOnNext = false;
@@ -3438,8 +3559,8 @@ class PowerUpSystem {
       effect.stepsLeft--;
       effect.stepsUntilTick--;
       if (effect.stepsUntilTick <= 0) {
-        final previousCredit = _creditMove;
-        _creditMove = effect.creditMove;
+        final previousCredit = _creditSkill;
+        _creditSkill = effect.creditSkill;
         _applyComposedEffect(
           effect.owner,
           effect.target,
@@ -3447,7 +3568,7 @@ class PowerUpSystem {
           SkillEffectType.damage,
           dotTick: true,
         );
-        _creditMove = previousCredit;
+        _creditSkill = previousCredit;
         effect.stepsUntilTick = (effect.skill.tickIntervalSeconds * 60).round();
       }
       if (effect.stepsLeft <= 0) _customDamageOverTime.remove(effect);
@@ -3486,7 +3607,8 @@ class PowerUpSystem {
             dotTick
                 ? (skill.dotArsenalDamage ?? skill.arsenalDamage ?? 0)
                 : (skill.arsenalDamage ?? 0),
-            move: _creditMove ?? skill.name,
+            move: (_creditSkill ?? skill).name,
+            moveSkill: _creditSkill ?? skill,
             attacker: owner,
           );
           _showDamage(target, target.position, dealt, 0);
@@ -3497,7 +3619,8 @@ class PowerUpSystem {
                 ? (skill.dotAllOutDamage ?? skill.allOutDamage ?? 0)
                 : (skill.allOutDamage ?? 0),
             near: target.position,
-            move: _creditMove ?? skill.name,
+            move: (_creditSkill ?? skill).name,
+            moveSkill: _creditSkill ?? skill,
             attacker: owner,
           );
           _showDamage(target, target.position, cut, 0);
@@ -3523,7 +3646,7 @@ class PowerUpSystem {
             owner: owner,
             target: target,
             skill: skill,
-            creditMove: _creditMove,
+            creditSkill: _creditSkill,
             stepsLeft: ((skill.durationSeconds ?? 2) * 60).round(),
             stepsUntilTick: (skill.tickIntervalSeconds * 60).round(),
           ),
@@ -3724,7 +3847,8 @@ class PowerUpSystem {
         final skill = _skillForId(weapon, entry.skillId);
         // Composed aimed shots must honor the same per-owner cooldown as
         // composed instant effects. Check before starting the aiming cycle.
-        if (skill.isComposed && skill.trigger == SkillTrigger.aimedFire &&
+        if (skill.isComposed &&
+            skill.trigger == SkillTrigger.aimedFire &&
             !SkillActivationGate.isReady(
               match.stepCount,
               _composedCooldownUntil[(ball, skill.id)],
@@ -3777,10 +3901,15 @@ class PowerUpSystem {
             if (_launchComposed(ball, target, composed, payload: payload)) {
               if (composed.isComposed &&
                   composed.trigger == SkillTrigger.aimedFire &&
-                  (payload != null || composed.delivery == SkillDelivery.projectile)) {
-                _composedCooldownUntil[(ball, composed.id)] =
-                    SkillActivationGate.nextReadyStep(
-                      match.stepCount, composed.cooldownSeconds);
+                  (payload != null ||
+                      composed.delivery == SkillDelivery.projectile)) {
+                _composedCooldownUntil[(
+                  ball,
+                  composed.id,
+                )] = SkillActivationGate.nextReadyStep(
+                  match.stepCount,
+                  composed.cooldownSeconds,
+                );
               }
               _holdFiredWeapon(ball, kind, skillId: entry.skillId);
             }
@@ -4266,7 +4395,9 @@ class PowerUpSystem {
           continue;
         }
         attack.hitTargets.add(target);
-        _recordWeaponImpact(WeaponImpact(position: target.position, strength: 1));
+        _recordWeaponImpact(
+          WeaponImpact(position: target.position, strength: 1),
+        );
         _hit(
           target,
           PowerUpKind.energyWave,
@@ -4575,9 +4706,13 @@ class PowerUpSystem {
         // A persistent homing shot must not keep steering toward a ball it
         // already contacted. Select the nearest eligible opponent from the
         // projectile's current position, not the owner's position.
-        if (target == null || !_alive(target) || target.isGhost ||
-            identical(target, p.owner) || p.hitTargets.contains(target) ||
-            !target.position.dx.isFinite || !target.position.dy.isFinite) {
+        if (target == null ||
+            !_alive(target) ||
+            target.isGhost ||
+            identical(target, p.owner) ||
+            p.hitTargets.contains(target) ||
+            !target.position.dx.isFinite ||
+            !target.position.dy.isFinite) {
           target = CombatTargeting.select(
             origin: from,
             candidates: balls,
@@ -4592,11 +4727,13 @@ class PowerUpSystem {
           p.target = target;
         }
         if (target != null &&
-            target.position.dx.isFinite && target.position.dy.isFinite) {
+            target.position.dx.isFinite &&
+            target.position.dy.isFinite) {
           final toward = target.position - from;
           final direction = _safeUnitVector(toward);
           if (direction != null) {
-            final speed = composedSkill != null && composedSkill.effectSteps.isNotEmpty
+            final speed =
+                composedSkill != null && composedSkill.effectSteps.isNotEmpty
                 ? _safeVectorLength(p.velocity)
                 : match.arenaRadius * _t.bulletSpeedRatio * 0.72;
             // An overflowing speed is not a valid steering command. Leave the
@@ -4632,16 +4769,19 @@ class PowerUpSystem {
           p.spent = true;
           continue;
         }
-        p.velocity = direction *
+        p.velocity =
+            direction *
             (composedSkill != null && composedSkill.effectSteps.isNotEmpty
                 ? match.arenaRadius *
-                    (composedSkill.projectileSpeed ?? _t.bulletSpeedRatio)
+                      (composedSkill.projectileSpeed ?? _t.bulletSpeedRatio)
                 : match.arenaRadius * .72);
       }
       // Steering may replace the velocity (homing and returning shots).
       // Validate the resulting state before it enters swept collision math.
-      if (!p.velocity.dx.isFinite || !p.velocity.dy.isFinite ||
-          !p.position.dx.isFinite || !p.position.dy.isFinite) {
+      if (!p.velocity.dx.isFinite ||
+          !p.velocity.dy.isFinite ||
+          !p.position.dx.isFinite ||
+          !p.position.dy.isFinite) {
         p.spent = true;
         continue;
       }
@@ -4649,7 +4789,8 @@ class PowerUpSystem {
       for (final ball in balls) {
         if (ball.timeBubbleLeft > 0 &&
             !identical(ball, p.owner) &&
-            ball.position.dx.isFinite && ball.position.dy.isFinite &&
+            ball.position.dx.isFinite &&
+            ball.position.dy.isFinite &&
             _safeVectorLength(from - ball.position) <
                 ball.radius * _t.timeBubbleRange) {
           projectileScale = 0.35;
@@ -4683,7 +4824,11 @@ class PowerUpSystem {
           continue;
         }
         landingT = _landingEntry(
-          from, to, landAt, projectileCollisionRadius(p));
+          from,
+          to,
+          landAt,
+          projectileCollisionRadius(p),
+        );
       }
 
       // Find the first eligible ball along the swept segment before resolving
@@ -4747,11 +4892,11 @@ class PowerUpSystem {
           final startRadius = _safeVectorLength(from);
           final radialUnit = _safeUnitVector(from);
           final travelUnit = _safeUnitVector(delta);
-          final inwardAtRim = radialUnit != null && travelUnit != null &&
-              radialUnit.dx * travelUnit.dx +
-                  radialUnit.dy * travelUnit.dy < 0;
-          if (startRadius > bound ||
-              (startRadius == bound && inwardAtRim)) {
+          final inwardAtRim =
+              radialUnit != null &&
+              travelUnit != null &&
+              radialUnit.dx * travelUnit.dx + radialUnit.dy * travelUnit.dy < 0;
+          if (startRadius > bound || (startRadius == bound && inwardAtRim)) {
             hitT = _entry(from, to, Offset.zero, bound);
           }
           if (hitT != null) {
@@ -4780,8 +4925,10 @@ class PowerUpSystem {
             // t=0 collision. The previous strict comparison skipped it.
             // Keep outward and inside-origin shots free to leave.
             if (near > entry ||
-                (near == entry && entryNormal == null &&
-                    start.abs() >= bound && start * speed < 0)) {
+                (near == entry &&
+                    entryNormal == null &&
+                    start.abs() >= bound &&
+                    start * speed < 0)) {
               entry = near;
               entryNormal = axis == 0
                   ? Offset(speed > 0 ? -1 : 1, 0)
@@ -4789,20 +4936,25 @@ class PowerUpSystem {
             }
             exit = math.min(exit, far);
           }
-          if (intersects && entry <= exit && entryNormal != null &&
-              entry >= 0 && entry <= 1) {
+          if (intersects &&
+              entry <= exit &&
+              entryNormal != null &&
+              entry >= 0 &&
+              entry <= 1) {
             hitT = entry;
             normal = entryNormal;
           }
         }
         obstacleContactT = hitT;
         obstacleContactNormal = normal;
-        if (hitT != null && normal != null && hitT >= 0 &&
-            hitT <= 1 && hitT <= strikeAt &&
+        if (hitT != null &&
+            normal != null &&
+            hitT >= 0 &&
+            hitT <= 1 &&
+            hitT <= strikeAt &&
             (landingT == null || hitT <= landingT)) {
           p.position = from + delta * hitT + normal * 0.1;
-          final dot = p.velocity.dx * normal.dx +
-              p.velocity.dy * normal.dy;
+          final dot = p.velocity.dx * normal.dx + p.velocity.dy * normal.dy;
           p.velocity -= normal * (2 * dot);
           p.wallBounces++;
           projectileCenterWallBounceCount++;
@@ -4819,7 +4971,8 @@ class PowerUpSystem {
           struck = null;
           end = landAt;
         }
-        if ((struck != null && !landed) || landed ||
+        if ((struck != null && !landed) ||
+            landed ||
             match.touchesOuterBoundary(end)) {
           p
             ..position = end
@@ -4846,7 +4999,13 @@ class PowerUpSystem {
           for (final line in List.of(ball.fanLines)) {
             // Rim anchors are unique, so the thread nearest a thread's own anchor is that thread.
             if (_crosses(from, end, line.startPoint, ball.position)) {
-              _cutLine(ball, line, move: skillName(p.kind), attacker: p.owner);
+              _cutLine(
+                ball,
+                line,
+                move: skillName(p.kind),
+                moveSkill: projectileVisualSkill(p),
+                attacker: p.owner,
+              );
             }
           }
         }
@@ -4870,7 +5029,8 @@ class PowerUpSystem {
           // so the reflected shot separates on the entry side of the defender.
           final normal = end - struck.position;
           final incoming = _safeUnitVector(p.velocity);
-          final unit = _safeUnitVector(normal) ??
+          final unit =
+              _safeUnitVector(normal) ??
               (incoming == null ? const Offset(1, 0) : -incoming);
           final along = p.velocity.dx * unit.dx + p.velocity.dy * unit.dy;
           p.velocity = p.velocity - unit * (2 * along);
@@ -4900,7 +5060,7 @@ class PowerUpSystem {
         p.hitTargets.add(struck);
         projectileContactCount++;
         final composed = _composedProjectiles[p];
-        _creditMove = _composedIssuers[p]?.name;
+        _creditSkill = _composedIssuers[p];
         p.spent = !returnsToOrigin;
         if (p.kind == PowerUpKind.hook &&
             (composed == null || composed.effectSteps.isEmpty)) {
@@ -4910,20 +5070,33 @@ class PowerUpSystem {
             // Resolve the skill before spending the projectile or creating
             // cosmetic explosions. A rejected activation must not consume a
             // composed weapon or produce a misleading impact effect.
-            final blastRadius = match.arenaRadius *
+            final blastRadius =
+                match.arenaRadius *
                 (composed.areaRadiusRatio ?? composed.range);
             final blastTargets = composed.explodesOnImpact
-                ? balls.where((ball) =>
-                    !identical(ball, p.owner) &&
-                    _alive(ball) &&
-                    (ball.position - end).distance <=
-                        blastRadius + ball.radius).toList()
+                ? balls
+                      .where(
+                        (ball) =>
+                            !identical(ball, p.owner) &&
+                            _alive(ball) &&
+                            (ball.position - end).distance <=
+                                blastRadius + ball.radius,
+                      )
+                      .toList()
                 : null;
             final accepted = composed.explodesOnImpact
-                ? _executeComposed(p.owner, composed,
-                    affectedTargets: blastTargets, projectileImpact: true)
-                : _executeComposed(p.owner, composed,
-                    primary: struck, projectileImpact: true);
+                ? _executeComposed(
+                    p.owner,
+                    composed,
+                    affectedTargets: blastTargets,
+                    projectileImpact: true,
+                  )
+                : _executeComposed(
+                    p.owner,
+                    composed,
+                    primary: struck,
+                    projectileImpact: true,
+                  );
             if (!accepted) {
               p.spent = false;
               // Keep the projectile alive but ignore this target on future
@@ -4932,26 +5105,28 @@ class PowerUpSystem {
               p.position += p.velocity.distance == 0
                   ? Offset.zero
                   : p.velocity / p.velocity.distance * 2;
-              _creditMove = null;
+              _creditSkill = null;
               continue;
             }
             if (composed.explodesOnImpact) {
               blasts++;
-              _sound(composed.soundCue == 'default'
-                  ? 'bomb' : composed.soundCue);
-              _recordExplosion(Explosion(
-                position: end,
-                direction: p.velocity,
-                radius: blastRadius,
-                kind: composed.baseKind,
-                skillId: composed.id,
-              ));
+              _sound(
+                composed.soundCue == 'default' ? 'bomb' : composed.soundCue,
+              );
+              _recordExplosion(
+                Explosion(
+                  position: end,
+                  direction: p.velocity,
+                  radius: blastRadius,
+                  kind: composed.baseKind,
+                  skillId: composed.id,
+                ),
+              );
               final shake = match.skillLibrary.screenShakeFor(composed);
               if (shake > 0) {
-                _recordWeaponImpact(WeaponImpact(
-                  position: end,
-                  strength: shake,
-                ));
+                _recordWeaponImpact(
+                  WeaponImpact(position: end, strength: shake),
+                );
               }
             }
             p.hitTargets.add(struck);
@@ -4977,7 +5152,7 @@ class PowerUpSystem {
               );
             }
           }
-          _creditMove = null;
+          _creditSkill = null;
           if (returnsToOrigin) {
             p.hitTargets.add(struck);
             // A stationary returning projectile has no valid direction to
@@ -5014,23 +5189,26 @@ class PowerUpSystem {
         // The center obstacle is a hard cutoff for subsequent contacts.
         // A contact before the wall is still valid; a target beyond the
         // wall must not receive damage during this step.
-        if (returnsToOrigin && !p.spent &&
+        if (returnsToOrigin &&
+            !p.spent &&
             identical(ownerAtContact, p.owner) &&
             !(composedSkill?.explodesOnImpact ?? false) &&
             !visualSkill(p.kind).explodesOnImpact) {
           final remaining = <(double, SimulationBall)>[];
           for (final candidate in balls) {
             if (identical(candidate, p.owner) ||
-                candidate.isEliminated || candidate.isGhost ||
+                candidate.isEliminated ||
+                candidate.isGhost ||
                 p.hitTargets.contains(candidate) ||
                 !candidate.position.dx.isFinite ||
                 !candidate.position.dy.isFinite) {
-                  continue;
-                }
+              continue;
+            }
             // Match the primary swept-contact geometry: an unused magnetic
             // field intercepts a shot at twice the defender radius. Without
             // this, a shielded second target could be skipped at high speed.
-            final contactRadius = candidate.magneticFieldLeft > 0 &&
+            final contactRadius =
+                candidate.magneticFieldLeft > 0 &&
                     !candidate.magneticReflectedOwners.contains(p.owner)
                 ? candidate.radius * 2
                 : candidate.radius + projectileCollisionRadius(p);
@@ -5040,15 +5218,18 @@ class PowerUpSystem {
             // already been recorded in hitTargets above, so accepting equality
             // here cannot damage it twice. Stable IDs order the remaining
             // simultaneous contacts independently of the contestants list.
-            if (t != null && t >= strikeAt && t <= 1 &&
+            if (t != null &&
+                t >= strikeAt &&
+                t <= 1 &&
                 (obstacleContactT == null || t < obstacleContactT)) {
               remaining.add((t, candidate));
             }
           }
           remaining.sort((a, b) {
             final byTime = a.$1.compareTo(b.$1);
-            return byTime != 0 ? byTime :
-                a.$2.config.id.compareTo(b.$2.config.id);
+            return byTime != 0
+                ? byTime
+                : a.$2.config.id.compareTo(b.$2.config.id);
           });
           // Each ball is considered once, and the number of contacts is
           // bounded by the number of contestants in this match.
@@ -5059,26 +5240,38 @@ class PowerUpSystem {
           // terminates the outgoing path immediately.
           var lastThreadContact = end;
           void cutTraversedThreads(Offset next) {
-            if (!allOut || p.kind == PowerUpKind.hook ||
+            if (!allOut ||
+                p.kind == PowerUpKind.hook ||
                 _composedProjectiles.containsKey(p)) {
-                  return;
-                }
+              return;
+            }
             if (lastThreadContact == next) return;
             for (final threadOwner in balls) {
               if (identical(threadOwner, p.owner) ||
-                  threadOwner.isEliminated || threadOwner.isGhost) {
-                    continue;
-                  }
+                  threadOwner.isEliminated ||
+                  threadOwner.isGhost) {
+                continue;
+              }
               for (final line in List.of(threadOwner.fanLines)) {
-                if (_crosses(lastThreadContact, next,
-                    line.startPoint, threadOwner.position)) {
-                  _cutLine(threadOwner, line,
-                      move: skillName(p.kind), attacker: p.owner);
+                if (_crosses(
+                  lastThreadContact,
+                  next,
+                  line.startPoint,
+                  threadOwner.position,
+                )) {
+                  _cutLine(
+                    threadOwner,
+                    line,
+                    move: skillName(p.kind),
+                    moveSkill: projectileVisualSkill(p),
+                    attacker: p.owner,
+                  );
                 }
               }
             }
             lastThreadContact = next;
           }
+
           for (final (t, candidate) in remaining) {
             if (p.spent || !identical(ownerAtContact, p.owner)) break;
             // Contacts are gathered before any damage is applied. Earlier
@@ -5086,13 +5279,14 @@ class PowerUpSystem {
             // invalidate a later candidate during this same simulation step.
             // Recheck live state and history at dispatch time rather than
             // applying a stale contact from the initial swept snapshot.
-            if (!_alive(candidate) || candidate.isGhost ||
+            if (!_alive(candidate) ||
+                candidate.isGhost ||
                 identical(candidate, p.owner) ||
                 p.hitTargets.contains(candidate) ||
                 !candidate.position.dx.isFinite ||
                 !candidate.position.dy.isFinite) {
-                  continue;
-                }
+              continue;
+            }
             final contact = Offset.lerp(from, to, t)!;
             cutTraversedThreads(contact);
             if (candidate.magneticFieldLeft > 0 ||
@@ -5106,25 +5300,32 @@ class PowerUpSystem {
                 p.spent = true;
               } else {
                 final incoming = _safeUnitVector(p.velocity);
-                final unit = _safeUnitVector(contact - candidate.position) ??
+                final unit =
+                    _safeUnitVector(contact - candidate.position) ??
                     (incoming == null ? const Offset(1, 0) : -incoming);
-                final along = p.velocity.dx * unit.dx +
-                    p.velocity.dy * unit.dy;
+                final along = p.velocity.dx * unit.dx + p.velocity.dy * unit.dy;
                 p.velocity -= unit * (2 * along);
                 p.position += unit * 2;
                 if (candidate.mirrorCharges > 0 &&
                     candidate.magneticFieldLeft == 0) {
-                  persistentEffects.defense(candidate, PowerUpKind.mirror,
-                      broken: candidate.mirrorCharges == 1);
+                  persistentEffects.defense(
+                    candidate,
+                    PowerUpKind.mirror,
+                    broken: candidate.mirrorCharges == 1,
+                  );
                   candidate.mirrorCharges--;
                 }
                 if (candidate.magneticFieldLeft > 0) {
                   persistentEffects.defense(
-                      candidate, PowerUpKind.magneticField);
+                    candidate,
+                    PowerUpKind.magneticField,
+                  );
                   candidate.magneticReflectedOwners.add(p.owner);
                 }
-                p.transferOwnership(candidate,
-                    returnsToOrigin: returnsToOrigin);
+                p.transferOwnership(
+                  candidate,
+                  returnsToOrigin: returnsToOrigin,
+                );
                 _composedIssuers.remove(p);
                 _yell(candidate, 'RETURN TO SENDER!');
               }
@@ -5134,24 +5335,36 @@ class PowerUpSystem {
             p.hitTargets.add(candidate);
             final composed = _composedProjectiles[p];
             if (composed != null) {
-              _creditMove = _composedIssuers[p]?.name;
-              final accepted = _executeComposed(p.owner, composed,
-                  primary: candidate, projectileImpact: true);
-              _creditMove = null;
+              _creditSkill = _composedIssuers[p];
+              final accepted = _executeComposed(
+                p.owner,
+                composed,
+                primary: candidate,
+                projectileImpact: true,
+              );
+              _creditSkill = null;
               if (!accepted) continue;
             } else if (p.kind == PowerUpKind.hook) {
               _catch(p.owner, candidate);
             } else {
-              _hit(candidate, p.kind, at: contact,
-                  hitDirection: p.velocity, from: p.owner, volley: p.volley);
+              _hit(
+                candidate,
+                p.kind,
+                at: contact,
+                hitDirection: p.velocity,
+                from: p.owner,
+                volley: p.volley,
+              );
             }
           }
           if (!blockedByDefense && !p.spent) {
             // Do not cut threads beyond a center obstacle, even when a fast
             // projectile's nominal endpoint lies on the opposite side.
-            final threadEnd = obstacleContactT != null &&
+            final threadEnd =
+                obstacleContactT != null &&
                     obstacleContactNormal != null &&
-                    obstacleContactT > strikeAt && obstacleContactT <= 1
+                    obstacleContactT > strikeAt &&
+                    obstacleContactT <= 1
                 ? Offset.lerp(from, to, obstacleContactT)!
                 : to;
             cutTraversedThreads(threadEnd);
@@ -5160,10 +5373,8 @@ class PowerUpSystem {
                 obstacleContactT > strikeAt &&
                 obstacleContactT <= 1) {
               final normal = obstacleContactNormal;
-              p.position = from + (to - from) * obstacleContactT +
-                  normal * 0.1;
-              final dot = p.velocity.dx * normal.dx +
-                  p.velocity.dy * normal.dy;
+              p.position = from + (to - from) * obstacleContactT + normal * 0.1;
+              final dot = p.velocity.dx * normal.dx + p.velocity.dy * normal.dy;
               p.velocity -= normal * (2 * dot);
               p.wallBounces++;
               projectileCenterWallBounceCount++;
@@ -5268,9 +5479,11 @@ class PowerUpSystem {
     final impact = at ?? target.position;
     final (_, impactAccent) = _impactColors(kind);
     final impactSkill = visualSkill(kind, ball: from, skillId: skillId);
+    final creditedSkill = _creditSkill ?? impactSkill;
     // Physical melee reach is the carrier blade's contact attack, not the
     // separately configured aimed-fire projectile effect.
-    final nativeReachStrike = kind.isBlade &&
+    final nativeReachStrike =
+        kind.isBlade &&
         impactSkill.isComposed &&
         impactSkill.meleeReach > 0 &&
         impactSkill.trigger == SkillTrigger.aimedFire &&
@@ -5350,10 +5563,13 @@ class PowerUpSystem {
         (bash
                 ? _t.arenaShieldBash
                 : skillId != null && !nativeReachStrike
-                    ? (impactSkill.arsenalDamage ?? _t.arenaDamage(kind))
-                    : _t.arenaDamage(kind)) * share * power,
+                ? (impactSkill.arsenalDamage ?? _t.arenaDamage(kind))
+                : _t.arenaDamage(kind)) *
+            share *
+            power,
         attacker: from,
-        move: skillName(kind),
+        move: creditedSkill.name,
+        moveSkill: creditedSkill,
         scaleForCrowd: scaleForCrowd,
       );
       if (from != null &&
@@ -5375,7 +5591,13 @@ class PowerUpSystem {
         );
       var cut = 0;
       for (final line in nearest.take(threads)) {
-        if (_cutLine(target, line, move: skillName(kind), attacker: from)) {
+        if (_cutLine(
+          target,
+          line,
+          move: creditedSkill.name,
+          moveSkill: creditedSkill,
+          attacker: from,
+        )) {
           cut++;
         }
       }
@@ -5453,6 +5675,7 @@ class PowerUpSystem {
               target,
               line,
               move: skillName(PowerUpKind.sword),
+              moveSkill: visualSkill(PowerUpKind.sword),
               attacker: cutter,
             );
           }
@@ -5512,6 +5735,7 @@ class PowerUpSystem {
     SimulationBall ball,
     FanLine line, {
     String? move,
+    SkillDefinition? moveSkill,
     SimulationBall? attacker,
   }) {
     if (match.cutThreads(
@@ -5519,6 +5743,7 @@ class PowerUpSystem {
           1,
           near: line.startPoint,
           move: move,
+          moveSkill: moveSkill,
           attacker: attacker,
         ) ==
         0) {
@@ -5539,7 +5764,11 @@ class PowerUpSystem {
   /// Scaling the segment avoids overflow in dot products and squared lengths
   /// for otherwise finite, extremely fast throws.
   static double? _landingEntry(
-      Offset from, Offset to, Offset landing, double tolerance) {
+    Offset from,
+    Offset to,
+    Offset landing,
+    double tolerance,
+  ) {
     final delta = to - from;
     final scale = math.max(delta.dx.abs(), delta.dy.abs());
     if (scale == 0) return from == landing ? 0 : null;
@@ -5578,16 +5807,16 @@ class PowerUpSystem {
     final normalizedLength = scaled.distance;
     if (normalizedLength == 0 || !normalizedLength.isFinite) return null;
     final direction = scaled / normalizedLength;
-    final along = relative.dx * direction.dx +
-        relative.dy * direction.dy;
+    final along = relative.dx * direction.dx + relative.dy * direction.dy;
     if (!along.isFinite || along < 0) return null;
     // The perpendicular distance uses a cross product of the unit direction
     // and relative offset. This avoids squaring the full travel distance.
     final perpendicular =
         (relative.dx * direction.dy - relative.dy * direction.dx).abs();
     if (!perpendicular.isFinite || perpendicular > radius) return null;
-    final chord = math.sqrt(math.max(0, radius - perpendicular) *
-        (radius + perpendicular));
+    final chord = math.sqrt(
+      math.max(0, radius - perpendicular) * (radius + perpendicular),
+    );
     // Divide in stages to avoid forming an overflowing full segment length.
     final entry = ((along - chord) / scale) / normalizedLength;
     return entry >= 0 && entry <= 1 ? entry : null;
@@ -5629,9 +5858,11 @@ class CastingArtwork {
   final SkillDefinition skill;
   final int steps;
   final bool Function()? active;
+
   /// Whether an authored Visual Event duration caps an active-follow cast.
   /// Captured on creation so cleanup does not depend on mutable library state.
   final bool hasExplicitDuration;
+
   /// Immutable artwork settings captured at activation.
   final ResolvedSkillEffect? resolvedVisual;
   int age = 0;
@@ -5649,7 +5880,7 @@ class _ScheduledComposedEffect {
     required this.repeatsLeft,
     required this.stepsLeft,
     this.announceOnNext = false,
-    this.creditMove,
+    this.creditSkill,
   });
 
   final SimulationBall owner;
@@ -5658,7 +5889,7 @@ class _ScheduledComposedEffect {
   int repeatsLeft;
   int stepsLeft;
   bool announceOnNext;
-  final String? creditMove;
+  final SkillDefinition? creditSkill;
 }
 
 class _CustomDamageOverTime {
@@ -5668,7 +5899,7 @@ class _CustomDamageOverTime {
     required this.skill,
     required this.stepsLeft,
     required this.stepsUntilTick,
-    this.creditMove,
+    this.creditSkill,
   });
 
   final SimulationBall owner;
@@ -5676,7 +5907,7 @@ class _CustomDamageOverTime {
   final SkillDefinition skill;
   int stepsLeft;
   int stepsUntilTick;
-  final String? creditMove;
+  final SkillDefinition? creditSkill;
 }
 
 class _ScheduledEffectStep {
@@ -5686,12 +5917,12 @@ class _ScheduledEffectStep {
     this.skill,
     this.step,
     this.dueStep,
-    this.creditMove,
+    this.creditSkill,
   );
   final SimulationBall owner;
   final List<SimulationBall> targets;
   final SkillDefinition skill;
   final SkillEffectStep step;
   final int dueStep;
-  final String? creditMove;
+  final SkillDefinition? creditSkill;
 }

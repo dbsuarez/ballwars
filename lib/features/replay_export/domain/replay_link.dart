@@ -196,9 +196,7 @@ class ReplayLink {
     final encoded = mode.isThreadOnly ? null : tuning.encode();
     final t = encoded == null ? '' : '&t=$encoded';
     // Pins the kind pool: kinds added after this link was made never spawn when it plays back.
-    final kc = mode.isThreadOnly
-        ? ''
-        : '&kc=${PowerUpKind.values.length}';
+    final kc = mode.isThreadOnly ? '' : '&kc=${PowerUpKind.values.length}';
     final dw = !mode.isThreadOnly && dualWield ? '&dw=1' : '';
     final endless = mode == MatchMode.arsenal && endlessBattle
         ? '&endless=1'
@@ -206,8 +204,11 @@ class ReplayLink {
     final mayhemToken = mode == MatchMode.arsenal && mayhem
         ? '&mayhem=1&duration=$mayhemSeconds'
         : '';
-    final shapeToken = arenaShape == ArenaShape.circle ? '' : '&shape=${arenaShape.name}';
-    final obstacleToken = centerObstacle == CenterObstacle.none ? ''
+    final shapeToken = arenaShape == ArenaShape.circle
+        ? ''
+        : '&shape=${arenaShape.name}';
+    final obstacleToken = centerObstacle == CenterObstacle.none
+        ? ''
         : '&obstacle=${centerObstacle.name}&obsize=${centerObstacleScale.toStringAsFixed(2)}';
     final shrinking = shrinkingArena ? '&shrink=1' : '';
     final minimumArena = shrinkingArena && minimumArenaScale != 0.60
@@ -273,7 +274,12 @@ class ReplayLink {
     var simulationRevision = 1;
     if (tokens.isNotEmpty && tokens.first.startsWith('v.')) {
       final marker = tokens.removeAt(0);
-      if (marker != 'v.2' && marker != 'v.3' && marker != 'v.4' && marker != 'v.5') return null;
+      if (marker != 'v.2' &&
+          marker != 'v.3' &&
+          marker != 'v.4' &&
+          marker != 'v.5') {
+        return null;
+      }
       simulationRevision = int.parse(marker.substring(2));
     }
     final hasArtworkMarker = tokens.isNotEmpty && tokens.first == 'a.1';
@@ -313,10 +319,10 @@ class ReplayLink {
       final mask = RegExp(r'^[0-9a-zA-Z]+$').hasMatch(text)
           ? BigInt.tryParse(text, radix: 36)
           : null;
-      // Only with a power-up mode, never empty, no kinds the link's app didn't have.
+      // Zero explicitly means no built-ins (including custom-only matches).
       if (mode.isThreadOnly ||
           mask == null ||
-          mask <= BigInt.zero ||
+          mask < BigInt.zero ||
           mask.bitLength > kindCount!) {
         return null;
       }
@@ -324,8 +330,7 @@ class ReplayLink {
         for (final k in PowerUpKind.values)
           if (k.index < kindCount && (mask >> k.index).isOdd) k,
       };
-    } else if (!mode.isThreadOnly &&
-        kindCount! < PowerUpKind.values.length) {
+    } else if (!mode.isThreadOnly && kindCount! < PowerUpKind.values.length) {
       powerUps = {
         for (final k in PowerUpKind.values)
           if (k.index < kindCount) k,
@@ -403,11 +408,14 @@ class ReplayLink {
     }
     final centerObstacle = CenterObstacle.byName(params['obstacle'] ?? 'none');
     final centerObstacleScale = double.tryParse(params['obsize'] ?? '0.22');
-    if (centerObstacle == null || centerObstacleScale == null ||
-        !centerObstacleScale.isFinite || centerObstacleScale < 0.10 ||
+    if (centerObstacle == null ||
+        centerObstacleScale == null ||
+        !centerObstacleScale.isFinite ||
+        centerObstacleScale < 0.10 ||
         centerObstacleScale > 0.35 ||
         (centerObstacle != CenterObstacle.none && simulationRevision < 6) ||
-        (centerObstacle == CenterObstacle.none && params.containsKey('obsize'))) {
+        (centerObstacle == CenterObstacle.none &&
+            params.containsKey('obsize'))) {
       return null;
     }
     final shrinkingArena = params['shrink'] == '1';
@@ -447,9 +455,7 @@ class ReplayLink {
     final t = params['t'];
     if (t != null) {
       // Only with a power-up mode, and only something PowerUpConfig.encode could have made.
-      final decoded = mode.isThreadOnly
-          ? null
-          : PowerUpConfig.decode(t);
+      final decoded = mode.isThreadOnly ? null : PowerUpConfig.decode(t);
       if (decoded == null) return null;
       tuning = decoded;
     }

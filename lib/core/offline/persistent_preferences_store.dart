@@ -23,6 +23,7 @@ class PersistentPreferencesStore implements OfflineStore {
       final saved = await readPersistent(key);
       if (saved != null) return saved;
     } catch (_) {
+      if (key == 'pref:saved-replays') rethrow;
       // Fall back when browser storage is blocked.
     }
     final legacy = await resources.read(key);
@@ -40,13 +41,18 @@ class PersistentPreferencesStore implements OfflineStore {
     try {
       await writePersistent(key, bytes);
     } catch (_) {
+      // Replay documents are user data, not expendable preferences. A memory
+      // fallback must never turn a blocked durable write into a fake success.
+      if (key == 'pref:saved-replays') rethrow;
       await resources.write(key, bytes);
     }
   }
 
   @override
   Future<Set<String>> missing(Iterable<String> keys) async {
-    final result = await resources.missing(keys.where((key) => !_persistent(key)));
+    final result = await resources.missing(
+      keys.where((key) => !_persistent(key)),
+    );
     for (final key in keys.where(_persistent)) {
       if (await read(key) == null) result.add(key);
     }

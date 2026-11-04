@@ -1,5 +1,8 @@
 # Ball Wars Development Roadmap
 
+> Current reconciliation (2026-11-04): this document contains historical completion claims. See the [whole-app audit](WHOLE-APP-AUDIT-2026-11-04.md#roadmap-reconciliation) and [remediation roadmap](WHOLE-APP-AUDIT-ROADMAP.md) before selecting new work. Earlier checkboxes are preserved as history.
+
+
 ## Meaning of complete
 
 Skill Management is fully complete when an administrator can create a genuinely new skill without changing Dart code, use it live, test it safely, synchronize it across devices, and reproduce it in replay links and videos.
@@ -123,7 +126,7 @@ Replay and video remain last, by agreement.
 - [x] Put arena BGM and SFX controls side by side on the right and fix missing icons.
 - [x] Add a separate UX-sound channel alongside BGM and SFX.
 - [x] Make BGM, SFX, and UX sound tap-to-toggle and long-press-for-volume; default to 100/90/90.
-- [x] Surface all three audio channels in Match Setup, the live arena, and Power-up Test through one compact volume popup.
+- [ ] Surface all three audio channels in Match Setup, the live arena, and Power-up Test through one compact volume popup. The live arena popup is verified on the phone; current Match Setup intentionally omits Audio in source, so this combined completion claim was overstated.
 - [x] Give Power-up Test a full-width mobile arena, three trap slots, compact icon-only playback, and responsive Weapon 1 / Weapon 2 / Power-up finisher previews.
 - [x] Allow My Groups balls without uploaded pictures by using generated initials.
 - [x] In Mayhem, hide groups with fewer than six balls.
@@ -171,18 +174,18 @@ Replay and video remain last, by agreement.
 
 ## Phase 9 - Replay links and video export
 
-**Status: Complete pending final real-device verification**
+**Status: Partial. Replay correctness and presentation work remains in audit Batch 4; device acceptance remains in Batch 3.**
 
 - [x] Store immutable custom-skill definitions or version references in replay data.
-- [x] Preserve old replay behavior after a skill is edited.
+- [ ] Preserve all historical replay rules as well as skill definitions (BW-A02 remains open).
 - [x] Render custom presentation in replay playback.
 - [x] Render the same presentation in exported videos.
 - [x] Add backward-compatible decoding and payload-size limits.
-- [x] Verify deterministic live, replay, and video results.
+- [ ] Verify complete live/replay/video equivalence, including changing arenas and historical targeting (BW-A02/A03).
 - [x] Show elapsed export time while saving video.
 - [x] Ask whether BGM and/or SFX should be included in the export and mux the selected channels into web and Android video output.
 - [x] Keep the screen awake for the entire video export.
-- [x] Reproduce the complete non-interactive battle UX and finishing cutscenes in replay/video.
+- [ ] Reproduce the complete watching layout in replay/video; finishers exist, but the export still uses its own layout.
 - [x] Let users save replays.
 - [x] Hide Replay Finisher whenever finishers are disabled.
 - [x] Keep interactive player controls out of exported replay video.
@@ -329,18 +332,19 @@ A-D are implemented; E-F remain unchecked follow-up work.
 - [x] List Gravity Well, Quicksand, Vine Snare and Laser Gate individually under Traps with an Arena marker and relevant controls.
 
 ```text
-[x] Phase 1 -> [x] Phase 2 -> [x] Phase 3 -> [x] Phase 4 -> [x] Phase 5 -> [x] Phase 6 -> [x] Phase 7 -> [x] Phase 8 -> [x] Phase 9 -> [x] Phase 10 -> [x] Phase 11 -> [x] Phase 12 -> Fully complete
+Phases 1-8 and 10-12: implemented, device acceptance pending.
+Phase 9: partial; see audit Batch 4. Overall completion is not yet established.
 ```
 
 
 ## Phase E implementation update, 2026-10-29
 
-Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Android performance and device/production acceptance remain manual; Phase F is pending. Migration 024 was applied by the user.
+Replay artwork revisions, dependency validation, decoded cache budgets and device visual density are implemented. Placement previews, configurable launch points, reusable AoE controls and remembered demo speed are included. See [implementation and authoring](REPLAY-ARTWORK-REVISIONS.md) and [browser measurements](SIX-BALL-PERFORMANCE.md). Phase F software is now implemented; Android performance and device/production acceptance remain pending. See the current whole-app audit roadmap. Migration 024 was applied by the user.
 
 
 ## Phase F implementation, 2026-10-29
 
-[Ordered mechanical effect steps](MECHANICAL-EFFECT-STEPS.md) are implemented: up to eight typed steps with independent targeting, delays and relevant parameters. The editor retains its four main tabs and provides a step-by-step dialog under Identity > Behavior. Native built-ins and unconverted primary/secondary skills retain their legacy execution path. New snapshots use schema 12/13; malformed step definitions are rejected explicitly. Demo inspection shows active mechanical effects and budget rejections, and projectile collision outlines follow the separate physical hit radius. Phase E Android profiling remains deferred; device/production acceptance is manual.
+[Ordered mechanical effect steps](MECHANICAL-EFFECT-STEPS.md) are implemented: up to eight typed steps with independent targeting, delays and relevant parameters. The current editor uses six main tabs: Identity, Mechanics, Timing & Delivery, Visuals & Sprites, Audio & Callouts, and Test & Preview. Ordered-step authoring remains available in the behavior controls. Native built-ins and unconverted primary/secondary skills retain their legacy execution path. New snapshots use schema 12/13; malformed step definitions are rejected explicitly. Demo inspection shows active mechanical effects and budget rejections, and projectile collision outlines follow the separate physical hit radius. Phase E Android profiling remains deferred; device/production acceptance is manual.
 
 
 New arena and ball requests, their implementation order and the deliberately deferred replay work are tracked separately in [ARENA-AND-BALL-ROADMAP.md](ARENA-AND-BALL-ROADMAP.md).

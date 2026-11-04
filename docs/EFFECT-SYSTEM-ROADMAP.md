@@ -1,5 +1,8 @@
 # Skill and sprite effect-system improvements
 
+> Current reconciliation (2026-11-04): this document contains historical completion claims. See the [whole-app audit](WHOLE-APP-AUDIT-2026-11-04.md#roadmap-reconciliation) and [remediation roadmap](WHOLE-APP-AUDIT-ROADMAP.md) before selecting new work. Earlier checkboxes are preserved as history.
+
+
 Source: [2026-10-29 audit](SKILL-SPRITE-INTEGRATION-AUDIT-2026-10-29.md).
 This tracks implementation separately from the original source findings.
 

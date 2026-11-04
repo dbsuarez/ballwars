@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show mergeSort;
 import 'package:flutter/material.dart';
+import '../domain/combat_move.dart';
 import '../../../core/utils/ball_image_loader.dart';
 import '../../../core/utils/math_utils.dart';
 import '../../../core/utils/seeded_random.dart';
@@ -106,8 +107,10 @@ class MatchSimulationController {
   Offset clampToArena(Offset point, {double inset = 2}) {
     final limit = math.max(0.0, arenaRadius - inset);
     if (arenaShape == ArenaShape.square) {
-      return Offset(point.dx.clamp(-limit, limit).toDouble(),
-          point.dy.clamp(-limit, limit).toDouble());
+      return Offset(
+        point.dx.clamp(-limit, limit).toDouble(),
+        point.dy.clamp(-limit, limit).toDouble(),
+      );
     }
     return point.distance > limit ? point / point.distance * limit : point;
   }
@@ -128,6 +131,7 @@ class MatchSimulationController {
   /// seed reproduces the match exactly (used for replays and video export).
   final int seed;
   final int rimSlotCount;
+
   /// Per-ball limit for Thread Growth only.
   final int threadGrowthMaxThreads;
   late final SeededRandom _rng;
@@ -154,8 +158,8 @@ class MatchSimulationController {
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
   String? _lastEliminatedId;
-  String? _winningMove;
-  final Map<SimulationBall, String> _lastMove = {};
+  CombatMove? _winningMove;
+  final Map<SimulationBall, CombatMove> _lastMove = {};
   final Map<String, int> eliminations = {};
 
   /// Number of times each ball has been knocked out in an endless/Mayhem match.
@@ -401,7 +405,12 @@ class MatchSimulationController {
     _initialDecoration = arenaDecoration;
     _predict();
     _rng = SeededRandom(this.seed);
-    _physics = ArenaPhysicsEngine(arenaRadius, _rng, restitution: restitution, shape: arenaShape);
+    _physics = ArenaPhysicsEngine(
+      arenaRadius,
+      _rng,
+      restitution: restitution,
+      shape: arenaShape,
+    );
     _slotOwners = List<SimulationBall?>.filled(rimSlotCount, null);
     _layoutRotation = layoutRotation ?? _rng.nextDoubleRange(0, 2 * math.pi);
 
@@ -650,6 +659,8 @@ class MatchSimulationController {
     double amount, {
     SimulationBall? attacker,
     String? move,
+    SkillDefinition? moveSkill,
+    String? moveSourceId,
     bool scaleForCrowd = true,
     bool applyFrozenMultiplier = true,
   }) {
@@ -673,7 +684,13 @@ class MatchSimulationController {
     if (ball.life < before && attacker != null && !identical(ball, attacker)) {
       _lastDamageBy[ball] = attacker;
     }
-    if (ball.life < before && move != null) _lastMove[ball] = move;
+    if (ball.life < before && move != null) {
+      _lastMove[ball] = CombatMove.hit(
+        move,
+        skill: moveSkill,
+        sourceId: moveSourceId,
+      );
+    }
     return before - ball.life;
   }
 
@@ -685,6 +702,8 @@ class MatchSimulationController {
     int count, {
     Offset? near,
     String? move,
+    SkillDefinition? moveSkill,
+    String? moveSourceId,
     SimulationBall? attacker,
   }) {
     if (count <= 0 || ball.fanLines.isEmpty) return 0;
@@ -712,7 +731,11 @@ class MatchSimulationController {
     if (cut.isNotEmpty && attacker != null && !identical(ball, attacker)) {
       _lastDamageBy[ball] = attacker;
     }
-    if (cut.isNotEmpty) _lastMove[ball] = move ?? 'Thread cut';
+    if (cut.isNotEmpty) {
+      _lastMove[ball] = move == null
+          ? CombatMove.threadCut
+          : CombatMove.hit(move, skill: moveSkill, sourceId: moveSourceId);
+    }
     return cut.length;
   }
 
@@ -735,7 +758,9 @@ class MatchSimulationController {
   /// Simulated match time so far; stops advancing once the match is finished.
   /// The last ball knocked out (the runner-up), once a match is decided.
   String? get lastEliminatedId => _lastEliminatedId;
-  String? get winningMove => _winningMove;
+  String? get winningMove => _winningMove?.label;
+  CombatMove? get winningMoveIdentity => _winningMove;
+  SkillDefinition? get winningSkill => _winningMove?.skill;
 
   /// How long the match has been playing, in the time passed to [tick]
   /// (so slow motion counts at the speed it is watched). Stops at the finish.
@@ -838,7 +863,10 @@ class MatchSimulationController {
   void _updateArenaRotation() {
     final duration = mayhem ? mayhemSeconds : null;
     final nextTheme = arenaRotation.themeAt(
-      _initialDecoration, _stepCount * fixedTimestep, matchDurationSeconds: duration);
+      _initialDecoration,
+      _stepCount * fixedTimestep,
+      matchDurationSeconds: duration,
+    );
     if (nextTheme != arenaDecoration) {
       arenaDecoration = nextTheme;
       // Use the same source-aware cleanup as Disable Arena Traps. Rotation
@@ -846,7 +874,10 @@ class MatchSimulationController {
       _powerUps?.clearAutomaticArenaHazards();
     }
     final nextShape = arenaRotation.shapeAt(
-      _initialShape, _stepCount * fixedTimestep, matchDurationSeconds: duration);
+      _initialShape,
+      _stepCount * fixedTimestep,
+      matchDurationSeconds: duration,
+    );
     if (nextShape == arenaShape) return;
     arenaShape = nextShape;
     _physics.shape = nextShape;
@@ -860,7 +891,8 @@ class MatchSimulationController {
       if (newPosition == oldPosition) continue;
       projectile.position = newPosition;
       final normal = outerWallNormal(oldPosition);
-      final outwardSpeed = projectile.velocity.dx * normal.dx +
+      final outwardSpeed =
+          projectile.velocity.dx * normal.dx +
           projectile.velocity.dy * normal.dy;
       if (outwardSpeed > 0) {
         projectile.velocity -= normal * (2 * outwardSpeed);
@@ -871,19 +903,21 @@ class MatchSimulationController {
       if (nextShape == ArenaShape.circle && ball.position.distance > limit) {
         ball.position = ball.position / ball.position.distance * limit;
       } else if (nextShape == ArenaShape.square) {
-        ball.position = Offset(ball.position.dx.clamp(-limit, limit).toDouble(),
-            ball.position.dy.clamp(-limit, limit).toDouble());
+        ball.position = Offset(
+          ball.position.dx.clamp(-limit, limit).toDouble(),
+          ball.position.dy.clamp(-limit, limit).toDouble(),
+        );
       }
       // A circle can cut off a square corner. If the ball is moved onto
       // the new rim, reflect its outward velocity before the next step.
       final normal = outerWallNormal(ball.position);
-      final outwardSpeed = ball.velocity.dx * normal.dx +
-          ball.velocity.dy * normal.dy;
+      final outwardSpeed =
+          ball.velocity.dx * normal.dx + ball.velocity.dy * normal.dy;
       if (outwardSpeed > 0 &&
           (nextShape == ArenaShape.circle
               ? ball.position.distance >= limit - 1e-6
               : ball.position.dx.abs() >= limit - 1e-6 ||
-                  ball.position.dy.abs() >= limit - 1e-6)) {
+                    ball.position.dy.abs() >= limit - 1e-6)) {
         ball.velocity -= normal * (2 * outwardSpeed);
       }
       for (final line in ball.fanLines) {
@@ -898,7 +932,7 @@ class MatchSimulationController {
     _winnerId = ranked.first.config.id;
     // The visual loser must match the bottom of the final KO/death/life tally.
     _lastEliminatedId = ranked.length > 1 ? ranked.last.config.id : null;
-    _winningMove = 'Knockout lead';
+    _winningMove = CombatMove.score;
     _status = MatchStatus.finished;
   }
 
@@ -1147,7 +1181,7 @@ class MatchSimulationController {
         threadCuts += cut.length;
         if (cut.isEmpty) continue;
         _lastDamageBy[target] = cutter;
-        _lastMove[target] = 'Thread cut';
+        _lastMove[target] = CombatMove.threadCut;
         target.hurtFlashLeft = hurtFlashSteps;
 
         // Direction from cutter to target
@@ -1218,7 +1252,7 @@ class MatchSimulationController {
           standing.isNotEmpty ? standing : _balls.where((b) => b != defeated),
         ).first.config.id;
         _lastEliminatedId = defeated.config.id;
-        _winningMove = _lastMove[defeated] ?? 'Collision';
+        _winningMove = _lastMove[defeated] ?? CombatMove.collision;
         _status = MatchStatus.finished;
         for (final ball in _balls) {
           ball.lineCount = ball.fanLines.length;
@@ -1268,7 +1302,9 @@ class MatchSimulationController {
     if (knockedOut.isNotEmpty) {
       final last = knockedOut.last;
       _lastEliminatedId = last.config.id;
-      _winningMove = _lastMove[last] ?? (arsenal ? 'Collision' : 'Thread cut');
+      _winningMove =
+          _lastMove[last] ??
+          (arsenal ? CombatMove.collision : CombatMove.threadCut);
     }
     if (activeBalls.length == 1 && _balls.length > 1) {
       _winnerId = activeBalls.first.config.id;

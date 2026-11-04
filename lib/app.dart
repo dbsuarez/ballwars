@@ -296,8 +296,8 @@ class _HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<_HomeScreen> {
   BallPackRepository get _packs => widget.packs;
   String _version = '1.14.11';
-  String? _savedReplay;
   int _savedReplayCount = 0;
+  bool _savedReplayReadFailed = false;
 
   @override
   void initState() {
@@ -312,14 +312,18 @@ class _HomeScreenState extends State<_HomeScreen> {
     GameAudio.instance.startMenuMusic();
     // Opened from a shared replay link (web): go straight to that match.
     _openReplayLink(Uri.base);
-    DevicePrefs.read('saved-replay').then((value) {
-      if (mounted && value != null && value.isNotEmpty) {
-        setState(() => _savedReplay = value);
-      }
-    });
-    SavedReplayStore.load().then((entries) {
-      if (mounted) setState(() => _savedReplayCount = entries.length);
-    });
+    SavedReplayStore.load()
+        .then((entries) {
+          if (mounted) {
+            setState(() {
+              _savedReplayCount = entries.length;
+              _savedReplayReadFailed = false;
+            });
+          }
+        })
+        .catchError((Object _) {
+          if (mounted) setState(() => _savedReplayReadFailed = true);
+        });
     // Or from a group share link: offer to add that group.
     _openGroupLink(Uri.base);
   }
@@ -693,29 +697,57 @@ class _HomeScreenState extends State<_HomeScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
-                          onPressed: () =>
-                              _openMatchSetup(MatchMode.allOut),
+                          onPressed: () => _openMatchSetup(MatchMode.allOut),
                           child: const Text('All-Out'),
                         ),
                       ),
                     ],
                   ),
-                  if (_savedReplay != null || _savedReplayCount > 0) ...[
-                    const SizedBox(height: 12),
-                    _HomeTile(
-                      title: 'Saved replays',
-                      subtitle:
-                          'Watch or delete $_savedReplayCount saved replay${_savedReplayCount == 1 ? "" : "s"}',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SavedReplaysScreen(
-                            onOpen: _openReplayLink,
-                            shortLinks: widget.shortLinks,
+                  const SizedBox(height: 12),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (customGroups != null) ...[
+                          Expanded(
+                            child: _HomeTile(
+                              icon: Icons.groups_outlined,
+                              title: 'My groups',
+                              subtitle: 'Your balls',
+                              onTap: () {
+                                GameAudio.instance.click();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MyGroupsScreen(
+                                      repository: customGroups,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: _HomeTile(
+                            icon: Icons.video_library_outlined,
+                            title: 'Saved replays',
+                            subtitle: _savedReplayReadFailed
+                                ? 'Could not load. Tap to retry.'
+                                : '$_savedReplayCount saved',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => SavedReplaysScreen(
+                                  onOpen: _openReplayLink,
+                                  shortLinks: widget.shortLinks,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                   if (!kIsWeb &&
                       defaultTargetPlatform == TargetPlatform.android)
                     TextButton.icon(
@@ -723,22 +755,6 @@ class _HomeScreenState extends State<_HomeScreen> {
                       icon: const Icon(Icons.exit_to_app),
                       label: const Text('Quit game'),
                     ),
-                  if (customGroups != null) ...[
-                    const SizedBox(height: 12),
-                    _HomeTile(
-                      title: 'My groups',
-                      subtitle: 'Your own categories of balls',
-                      onTap: () {
-                        GameAudio.instance.click();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                MyGroupsScreen(repository: customGroups),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -750,11 +766,13 @@ class _HomeScreenState extends State<_HomeScreen> {
 }
 
 class _HomeTile extends StatelessWidget {
+  final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
   const _HomeTile({
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -769,30 +787,32 @@ class _HomeTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Ink(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: c.border),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              Row(
+                children: [
+                  Icon(icon, size: 20, color: c.text),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
                       title,
                       style: AppText.ui(14, FontWeight.w700, color: c.text),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: AppText.ui(12, FontWeight.w500, color: c.muted),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Icon(Icons.chevron_right, color: c.muted),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: AppText.ui(12, FontWeight.w500, color: c.muted),
+              ),
             ],
           ),
         ),

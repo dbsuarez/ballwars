@@ -1952,7 +1952,8 @@ class SkillLibrary {
     ...[
       skill.iconSpriteId,
       skill.pickupSpriteId,
-      skill.heldSpriteId,
+      if (skill.heldSpriteId != SkillDefinition.noHeldArtwork)
+        skill.heldSpriteId,
       skill.projectileSpriteId,
       skill.impactSpriteId,
       skill.castingSpriteId,
@@ -1969,7 +1970,8 @@ class SkillLibrary {
     ...[
       skill.iconSpriteId,
       skill.pickupSpriteId,
-      skill.heldSpriteId,
+      if (skill.heldSpriteId != SkillDefinition.noHeldArtwork)
+        skill.heldSpriteId,
       skill.projectileSpriteId,
       skill.shellSprite,
     ].whereType<String>(),

@@ -9,34 +9,49 @@ class DevicePrefs {
 
   static Future<String?> read(String key) async {
     try {
-      final pending = _writes;
-      if (pending != null) await pending;
-      final bytes = await OfflineStore.instance.read('pref:$key');
-      return bytes == null ? null : utf8.decode(bytes);
+      return await readRequired(key);
     } catch (_) {
       return null;
     }
   }
 
-  // Auth refresh and explicit sign-in may save at the same time. Serialize
-  // writes so Android's atomic file replacement cannot race on one temp file.
+  /// Durable user data must not mistake an unreadable record for an empty one.
+  static Future<String?> readRequired(String key) async {
+    await _writes;
+    final bytes = await OfflineStore.instance.read('pref:$key');
+    return bytes == null ? null : utf8.decode(bytes);
+  }
+
+  // A successful queue tail keeps failed durable writes from poisoning retries.
   static Future<void>? _writes;
 
-  static Future<void> write(String key, Object value) {
+  static Future<void> write(String key, Object value) async {
+    try {
+      await writeRequired(key, value);
+    } catch (_) {}
+  }
+
+  /// Persist and read back before confirming a durable user-data save.
+  static Future<void> writeRequired(String key, Object value) {
     final store = OfflineStore.instance;
-    final bytes = utf8.encode('$value');
-    Future<void> save() async {
-      try {
-        await store.write('pref:$key', bytes);
-      } catch (_) {}
-    }
-    final pending = _writes;
-    final task = pending == null ? save() : pending.then((_) => save());
-    late final Future<void> next;
-    next = task.whenComplete(() {
-      if (identical(_writes, next)) _writes = null;
+    final text = '$value';
+    final bytes = utf8.encode(text);
+    final task = (_writes ?? Future<void>.value()).then((_) async {
+      await store.write('pref:$key', bytes);
+      final saved = await store.read('pref:$key');
+      if (saved == null || utf8.decode(saved) != text) {
+        throw StateError(
+          'Device storage did not confirm the save. Free some space and retry.',
+        );
+      }
     });
-    _writes = next;
-    return next;
+    late final Future<void> tail;
+    tail = task
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          if (identical(_writes, tail)) _writes = null;
+        });
+    _writes = tail;
+    return task.whenComplete(() => tail);
   }
 }

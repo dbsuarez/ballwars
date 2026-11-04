@@ -35,7 +35,9 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
       }
       await Clipboard.setData(ClipboardData(text: shareUri.toString()));
       if (mounted) {
-        setState(() => _entries = SavedReplayStore.load());
+        setState(() {
+          _entries = SavedReplayStore.load();
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -72,27 +74,27 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
     String? name;
     try {
       name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename replay'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 240,
-          decoration: const InputDecoration(labelText: 'Replay name'),
-          onSubmitted: (value) => Navigator.pop(context, value),
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Rename replay'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 240,
+            decoration: const InputDecoration(labelText: 'Replay name'),
+            onSubmitted: (value) => Navigator.pop(context, value),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
       );
     } finally {
       controller.dispose();
@@ -100,12 +102,33 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
     if (name == null) return;
     try {
       await SavedReplayStore.rename(entry.id, name);
-      if (mounted) setState(() => _entries = SavedReplayStore.load());
+      if (mounted) {
+        setState(() {
+          _entries = SavedReplayStore.load();
+        });
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Replay rename failed: $error')));
+      }
+    }
+  }
+
+  Future<void> _delete(SavedReplay entry) async {
+    try {
+      await SavedReplayStore.remove(entry.id);
+      if (mounted) {
+        setState(() {
+          _entries = SavedReplayStore.load();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Replay could not be deleted: $error')),
+        );
       }
     }
   }
@@ -126,6 +149,24 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
       future: _entries,
       builder: (context, snapshot) {
         final entries = snapshot.data;
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Saved replays could not be loaded. Existing data has been kept.',
+                ),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _entries = SavedReplayStore.load();
+                  }),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
         if (entries == null) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -171,10 +212,7 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
                       await _rename(entry);
                       return;
                     }
-                    await SavedReplayStore.remove(entry.id);
-                    if (mounted) {
-                      setState(() => _entries = SavedReplayStore.load());
-                    }
+                    await _delete(entry);
                   },
                 ),
               ),

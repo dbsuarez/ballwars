@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:flutter/painting.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/config/supabase_config.dart';
 import '../../../core/offline/offline_store.dart';
@@ -164,8 +166,8 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
 
   @override
   Future<List<CustomGroup>> allGroups() async {
-    final rows = await _offline('groups:all', () async {
-      await _userId();
+    final uid = await _userId();
+    final rows = await _offline('groups:all:$uid', () async {
       return _gender.run(
         (withGender) => _client
             .from('ball_groups')
@@ -253,21 +255,32 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     String key,
     Future<List<Map<String, dynamic>>> Function() query,
   ) async {
-    try {
-      final rows = await query().timeout(const Duration(seconds: 10));
-      await OfflineStore.instance.write(key, utf8.encode(jsonEncode(rows)));
-      return rows;
-    } on TimeoutException {
+    Future<List<Map<String, dynamic>>> cached() async {
       final saved = await OfflineStore.instance.read(key);
-      if (saved == null) rethrow;
-      return (jsonDecode(utf8.decode(saved)) as List)
-          .cast<Map<String, dynamic>>();
-    } on SocketException {
-      final saved = await OfflineStore.instance.read(key);
-      if (saved == null) rethrow;
+      if (saved == null) {
+        throw StateError('No offline copy is available. Connect and retry.');
+      }
       return (jsonDecode(utf8.decode(saved)) as List)
           .cast<Map<String, dynamic>>();
     }
+
+    final List<Map<String, dynamic>> rows;
+    try {
+      rows = await query().timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      return cached();
+    } on SocketException {
+      return cached();
+    } on http.ClientException {
+      return cached();
+    }
+    // Fresh server data remains usable when replaceable local caching fails.
+    try {
+      await OfflineStore.instance.write(key, utf8.encode(jsonEncode(rows)));
+    } catch (error) {
+      debugPrint('Group cache write failed: $error');
+    }
+    return rows;
   }
 
   @override
@@ -567,7 +580,7 @@ class AccountAwareCustomGroupRepository implements CustomGroupRepository {
   final CustomGroupRepository account;
   final Future<bool?> Function() isAccountActive;
   final Future<int> Function(String sourceOwner) adoptGroupsFrom;
-  Future<void>? _adoption;
+  final Map<(String, String), Future<void>> _adoptions = {};
 
   AccountAwareCustomGroupRepository({
     required this.device,
@@ -583,15 +596,31 @@ class AccountAwareCustomGroupRepository implements CustomGroupRepository {
         'Cannot verify admin account right now. Check your connection and retry.',
       );
     }
-    if (!status) return device;
-    _adoption ??= _adoptDeviceGroups();
-    await _adoption;
+    if (!status) {
+      _adoptions.clear();
+      return device;
+    }
+    final source = device.userId, target = account.userId;
+    if (source != null && target != null && source != target) {
+      final key = (source, target);
+      final pending = _adoptions.putIfAbsent(key, () async {
+        await adoptGroupsFrom(source);
+      });
+      try {
+        await pending;
+      } catch (_) {
+        if (identical(_adoptions[key], pending)) _adoptions.remove(key);
+        rethrow;
+      }
+      if (device.userId != source ||
+          account.userId != target ||
+          await isAccountActive() != true) {
+        throw StateError(
+          'The active account changed. Retry using the current account.',
+        );
+      }
+    }
     return account;
-  }
-
-  Future<void> _adoptDeviceGroups() async {
-    final sourceOwner = device.userId;
-    if (sourceOwner != null) await adoptGroupsFrom(sourceOwner);
   }
 
   @override

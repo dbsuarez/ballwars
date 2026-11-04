@@ -27,7 +27,9 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
         if (target.hitTestable().evaluate().isNotEmpty) return true;
       }
       if (position.pixels >= position.maxScrollExtent) break;
-      position.jumpTo((position.pixels + 180).clamp(0.0, position.maxScrollExtent));
+      position.jumpTo(
+        (position.pixels + 180).clamp(0.0, position.maxScrollExtent),
+      );
       await tester.pumpAndSettle();
     }
     return false;
@@ -71,7 +73,6 @@ Future<void> _revealEditor(WidgetTester tester, Finder target) async {
   }
   fail('Editor control not found: $target');
 }
-
 
 /// Selects a Unified Skill Library filter without relying on removed legacy tabs.
 Future<void> _setSkillLibraryFilter(
@@ -118,38 +119,84 @@ class _LineRecorder implements Canvas {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
-Future<void> _openTrapSettings(WidgetTester tester, void Function(SkillManagementResult) onResult) async {
-  await tester.pumpWidget(MaterialApp(
-    theme: AppTheme.build(AppPalettes.midnight),
-    home: Builder(builder: (context) => TextButton(
-      onPressed: () async {
-        final result = await Navigator.of(context).push<SkillManagementResult>(
-          MaterialPageRoute(builder: (_) => SkillManagementScreen(
-            initial: SkillLibrary.defaults,
-            tuning: PowerUpConfig.defaults,
-          )),
-        );
-        if (result != null) onResult(result);
-      },
-      child: const Text('Open Skill Management'),
-    )),
-  ));
+Future<void> _openTrapSettings(
+  WidgetTester tester,
+  void Function(SkillManagementResult) onResult,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.build(AppPalettes.midnight),
+      home: Builder(
+        builder: (context) => TextButton(
+          onPressed: () async {
+            final result = await Navigator.of(context)
+                .push<SkillManagementResult>(
+                  MaterialPageRoute(
+                    builder: (_) => SkillManagementScreen(
+                      initial: SkillLibrary.defaults,
+                      tuning: PowerUpConfig.defaults,
+                    ),
+                  ),
+                );
+            if (result != null) onResult(result);
+          },
+          child: const Text('Open Skill Management'),
+        ),
+      ),
+    ),
+  );
   await tester.tap(find.text('Open Skill Management'));
   await tester.pumpAndSettle();
 }
 
 void main() {
-  testWidgets('unified trap master override provides accessible tap help', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.build(AppPalettes.midnight),
-      home: SkillManagementScreen(initial: SkillLibrary.defaults, tuning: PowerUpConfig.defaults),
-    ));
+  testWidgets('library save failure retains route and allows retry', (
+    tester,
+  ) async {
+    var attempts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SkillManagementScreen(
+          initial: SkillLibrary.defaults,
+          tuning: PowerUpConfig.defaults,
+          onSave: (_) async {
+            if (++attempts == 1) throw StateError('offline');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save Library'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SkillManagementScreen), findsOneWidget);
+    expect(find.textContaining('Your draft is still here'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(attempts, 2);
+    expect(find.text('Skill library saved.'), findsOneWidget);
+  });
+
+  testWidgets('unified trap master override provides accessible tap help', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(AppPalettes.midnight),
+        home: SkillManagementScreen(
+          initial: SkillLibrary.defaults,
+          tuning: PowerUpConfig.defaults,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
     await tester.pumpAndSettle();
     final help = find.byKey(const ValueKey('trap-help-allTrapsDisabled'));
     await _revealGlobal(tester, help);
-    expect(tester.widget<IconButton>(help).tooltip, contains('Disable all traps'));
+    expect(
+      tester.widget<IconButton>(help).tooltip,
+      contains('Disable all traps'),
+    );
     await tester.tap(help);
     await tester.pumpAndSettle();
     expect(find.textContaining('Master override.'), findsOneWidget);
@@ -158,54 +205,63 @@ void main() {
     expect(find.textContaining('Master override.'), findsNothing);
   });
 
-  testWidgets('unified trap switches persist independent choices under master override', (tester) async {
-    SkillManagementResult? saved;
-    await _openTrapSettings(tester, (result) => saved = result);
-    await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
-    await tester.pumpAndSettle();
-    Future<void> toggle(String id, bool value) async {
-      final control = find.byKey(ValueKey('global-$id'));
-      await _revealGlobal(tester, control);
-      expect(tester.widget<SwitchListTile>(control).value, isNot(value));
-      await tester.tap(control);
+  testWidgets(
+    'unified trap switches persist independent choices under master override',
+    (tester) async {
+      SkillManagementResult? saved;
+      await _openTrapSettings(tester, (result) => saved = result);
+      await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(control).value, value);
-    }
-    await toggle('arenaTrapsEnabled', false);
-    await toggle('skillTrapsEnabled', false);
-    await toggle('allTrapsDisabled', true);
-    await tester.tap(find.text('Save Library'));
-    await tester.pumpAndSettle();
-    expect(saved, isNotNull);
-    final result = saved!.tuning;
-    expect(result.allTrapsDisabled, isTrue);
-    expect(result.arenaTrapsEnabled, isFalse);
-    expect(result.skillTrapsEnabled, isFalse);
-    final restored = PowerUpConfig.fromJson(result.toJson()).withValue('allTrapsDisabled', 0);
-    expect(restored.arenaTrapsEnabled, isFalse);
-    expect(restored.skillTrapsEnabled, isFalse);
-  });
+      Future<void> toggle(String id, bool value) async {
+        final control = find.byKey(ValueKey('global-$id'));
+        await _revealGlobal(tester, control);
+        expect(tester.widget<SwitchListTile>(control).value, isNot(value));
+        await tester.tap(control);
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(control).value, value);
+      }
 
-  testWidgets('unified master override preserves independently enabled skill traps', (tester) async {
-    SkillManagementResult? saved;
-    await _openTrapSettings(tester, (result) => saved = result);
-    await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
-    await tester.pumpAndSettle();
-    for (final id in ['arenaTrapsEnabled', 'allTrapsDisabled']) {
-      final control = find.byKey(ValueKey('global-$id'));
-      await _revealGlobal(tester, control);
-      await tester.tap(control);
+      await toggle('arenaTrapsEnabled', false);
+      await toggle('skillTrapsEnabled', false);
+      await toggle('allTrapsDisabled', true);
+      await tester.tap(find.text('Save Library'));
       await tester.pumpAndSettle();
-    }
-    await tester.tap(find.text('Save Library'));
-    await tester.pumpAndSettle();
-    expect(saved, isNotNull);
-    final result = saved!.tuning;
-    expect(result.allTrapsDisabled, isTrue);
-    final lifted = result.withValue('allTrapsDisabled', 0);
-    expect(lifted.arenaTrapsEnabled, isFalse);
-    expect(lifted.skillTrapsEnabled, isTrue);
-  });
+      expect(saved, isNotNull);
+      final result = saved!.tuning;
+      expect(result.allTrapsDisabled, isTrue);
+      expect(result.arenaTrapsEnabled, isFalse);
+      expect(result.skillTrapsEnabled, isFalse);
+      final restored = PowerUpConfig.fromJson(
+        result.toJson(),
+      ).withValue('allTrapsDisabled', 0);
+      expect(restored.arenaTrapsEnabled, isFalse);
+      expect(restored.skillTrapsEnabled, isFalse);
+    },
+  );
+
+  testWidgets(
+    'unified master override preserves independently enabled skill traps',
+    (tester) async {
+      SkillManagementResult? saved;
+      await _openTrapSettings(tester, (result) => saved = result);
+      await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
+      await tester.pumpAndSettle();
+      for (final id in ['arenaTrapsEnabled', 'allTrapsDisabled']) {
+        final control = find.byKey(ValueKey('global-$id'));
+        await _revealGlobal(tester, control);
+        await tester.tap(control);
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Save Library'));
+      await tester.pumpAndSettle();
+      expect(saved, isNotNull);
+      final result = saved!.tuning;
+      expect(result.allTrapsDisabled, isTrue);
+      final lifted = result.withValue('allTrapsDisabled', 0);
+      expect(lifted.arenaTrapsEnabled, isFalse);
+      expect(lifted.skillTrapsEnabled, isTrue);
+    },
+  );
 
   testWidgets(
     'legacy artwork has pill tags and editing preserves shared bindings',
@@ -328,21 +384,42 @@ void main() {
   testWidgets(
     'retired casting and impact selectors are absent; legacy data remains readable',
     (tester) async {
-      final legacy = SkillLibrary.defaults.builtIn(
-        PowerUpKind.pistol, PowerUpConfig.defaults,
-      ).copyWith(castingSpriteId: 'old-cast.png', impactSpriteId: 'old-hit.png');
+      final legacy = SkillLibrary.defaults
+          .builtIn(PowerUpKind.pistol, PowerUpConfig.defaults)
+          .copyWith(
+            castingSpriteId: 'old-cast.png',
+            impactSpriteId: 'old-hit.png',
+          );
       final migrated = SkillLibrary.defaults.migrateLegacyArtwork(legacy);
-      expect(migrated.library.resolveVisual(migrated.skill, SkillVisualRole.casting)?.spriteId, 'old-cast.png');
-      expect(migrated.library.resolveVisual(migrated.skill, SkillVisualRole.impact)?.spriteId, 'old-hit.png');
-      await tester.pumpWidget(MaterialApp(
-        home: SkillManagementScreen(
-          initial: migrated.library.withDefinition(migrated.skill, PowerUpConfig.defaults),
-          tuning: PowerUpConfig.defaults,
-          onSave: (_) async {},
+      expect(
+        migrated.library
+            .resolveVisual(migrated.skill, SkillVisualRole.casting)
+            ?.spriteId,
+        'old-cast.png',
+      );
+      expect(
+        migrated.library
+            .resolveVisual(migrated.skill, SkillVisualRole.impact)
+            ?.spriteId,
+        'old-hit.png',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SkillManagementScreen(
+            initial: migrated.library.withDefinition(
+              migrated.skill,
+              PowerUpConfig.defaults,
+            ),
+            tuning: PowerUpConfig.defaults,
+            onSave: (_) async {},
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
-      await tester.enterText(find.widgetWithText(TextField, 'Search skills'), 'Pistol');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
       await tester.pumpAndSettle();
@@ -410,7 +487,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(Tab, 'Global Defaults'));
       await tester.pumpAndSettle();
-      await _revealGlobal(tester, find.byKey(const ValueKey('global-callout-seconds')));
+      await _revealGlobal(
+        tester,
+        find.byKey(const ValueKey('global-callout-seconds')),
+      );
       await tester.enterText(
         find.byKey(const ValueKey('global-callout-seconds')),
         '2.5',
@@ -715,7 +795,9 @@ void main() {
       expect(knifeVolley.hitTestable(), findsOneWidget);
       await tester.tap(knifeVolley);
       await tester.pumpAndSettle();
-      final identityTab = find.byKey(const ValueKey('skill-editor-tab-identity'));
+      final identityTab = find.byKey(
+        const ValueKey('skill-editor-tab-identity'),
+      );
       expect(identityTab, findsOneWidget);
       // Identity is the default editor tab; no controller manipulation needed.
       final problem = find.byKey(const ValueKey('skill-fires-problem'));
@@ -967,10 +1049,16 @@ void main() {
       await _setSkillLibraryFilter(tester, 'category', 'Power-ups');
       expect(find.widgetWithText(ListTile, 'Apple'), findsOneWidget);
       expect(find.widgetWithText(ListTile, 'Boomerang'), findsNothing);
-      await tester.enterText(find.widgetWithText(TextField, 'Search skills'), 'Apple');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Apple',
+      );
       await tester.pumpAndSettle();
       expect(find.widgetWithText(ListTile, 'Apple'), findsOneWidget);
-      final chip = find.ancestor(of: find.text('Search: Apple'), matching: find.byType(InputChip));
+      final chip = find.ancestor(
+        of: find.text('Search: Apple'),
+        matching: find.byType(InputChip),
+      );
       tester.widget<InputChip>(chip).onDeleted!();
       await tester.pumpAndSettle();
       expect(find.widgetWithText(ListTile, 'Apple'), findsOneWidget);
@@ -1281,7 +1369,11 @@ void main() {
     await tester.tap(done);
     await tester.pumpAndSettle();
     final savedGripFields = <String, String>{};
-    for (final key in ['weaponGripInset', 'weaponGripSide', 'weaponGripRotation']) {
+    for (final key in [
+      'weaponGripInset',
+      'weaponGripSide',
+      'weaponGripRotation',
+    ]) {
       await _revealEditor(tester, find.byKey(ValueKey('skill-field-$key')));
       savedGripFields[key] = field(key);
     }
@@ -2214,64 +2306,77 @@ void main() {
     expect(save.onPressed, isNull);
   });
 
-  testWidgets('unified library reports zero matches and preserves empty state',
-      (tester) async {
+  testWidgets(
+    'unified library reports zero matches and preserves empty state',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (value) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'unlikely-no-matching-skill-987654',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('0 matching items'), findsOneWidget);
+      expect(
+        find.text('No matching skills. Adjust the filters or search.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'search appears as removable active filter and clears independently',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (_) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'pistol',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Search: pistol'), findsOneWidget);
+      final activeSearch = find.ancestor(
+        of: find.text('Search: pistol'),
+        matching: find.byType(InputChip),
+      );
+      expect(activeSearch, findsOneWidget);
+      tester.widget<InputChip>(activeSearch).onDeleted!();
+      await tester.pumpAndSettle();
+      expect(find.text('Search: pistol'), findsNothing);
+      expect(find.byKey(const ValueKey('active-skill-filters')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('clear filters is disabled until a filter or query is active', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: SkillManagementScreen(
           initial: SkillLibrary.defaults,
           tuning: PowerUpConfig.defaults,
-          onSave: (value) async {},
+          onSave: (_) async {},
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Search skills'),
-      'unlikely-no-matching-skill-987654',
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('0 matching items'), findsOneWidget);
-    expect(find.text('No matching skills. Adjust the filters or search.'),
-        findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('search appears as removable active filter and clears independently',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: SkillManagementScreen(
-        initial: SkillLibrary.defaults,
-        tuning: PowerUpConfig.defaults,
-        onSave: (_) async {},
-      ),
-    ));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Search skills'),
-      'pistol',
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Search: pistol'), findsOneWidget);
-    final activeSearch = find.ancestor(
-      of: find.text('Search: pistol'), matching: find.byType(InputChip));
-    expect(activeSearch, findsOneWidget);
-    tester.widget<InputChip>(activeSearch).onDeleted!();
-    await tester.pumpAndSettle();
-    expect(find.text('Search: pistol'), findsNothing);
-    expect(find.byKey(const ValueKey('active-skill-filters')), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('clear filters is disabled until a filter or query is active',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      home: SkillManagementScreen(
-        initial: SkillLibrary.defaults,
-        tuning: PowerUpConfig.defaults,
-        onSave: (_) async {},
-      ),
-    ));
     await tester.pumpAndSettle();
     final clear = find.byKey(const ValueKey('clear-skill-filters'));
     expect(tester.widget<TextButton>(clear).onPressed, isNull);
@@ -2287,32 +2392,39 @@ void main() {
     expect(find.text('Search: epic'), findsNothing);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('preview editor links return to the selected configuration section', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.build(AppPalettes.midnight),
-      home: SkillManagementScreen(
-        initial: SkillLibrary.defaults,
-        tuning: PowerUpConfig.defaults,
-        onSave: (_) async {},
-      ),
-    ));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Search skills'), 'Pistol');
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
-    await tester.pumpAndSettle();
-    final previewTab = find.byKey(const ValueKey('skill-editor-tab-preview'));
-    await tester.ensureVisible(previewTab);
-    await tester.tap(previewTab);
-    await tester.pumpAndSettle();
-    final editMechanics = find.widgetWithText(ActionChip, 'Edit Mechanics');
-    expect(editMechanics, findsOneWidget);
-    await tester.tap(editMechanics);
-    await tester.pumpAndSettle();
-    expect(find.text('Mechanics'), findsWidgets);
-    expect(tester.takeException(), isNull);
-  });
-
+  testWidgets(
+    'preview editor links return to the selected configuration section',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (_) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Pistol',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Pistol'));
+      await tester.pumpAndSettle();
+      final previewTab = find.byKey(const ValueKey('skill-editor-tab-preview'));
+      await tester.ensureVisible(previewTab);
+      await tester.tap(previewTab);
+      await tester.pumpAndSettle();
+      final editMechanics = find.widgetWithText(ActionChip, 'Edit Mechanics');
+      expect(editMechanics, findsOneWidget);
+      await tester.tap(editMechanics);
+      await tester.pumpAndSettle();
+      expect(find.text('Mechanics'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 const _builtInSaveNote =

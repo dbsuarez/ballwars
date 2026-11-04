@@ -5,6 +5,34 @@ import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/sprites/application/skill_sprite_readiness.dart';
 
 void main() {
+  test(
+    'no held artwork is a presentation choice, not a missing asset',
+    () async {
+      const hidden = SkillDefinition(
+        id: 'custom.unarmed-cast',
+        name: 'Unarmed cast',
+        custom: true,
+        baseKind: PowerUpKind.energyWave,
+        heldSpriteId: SkillDefinition.noHeldArtwork,
+      );
+      const library = SkillLibrary(custom: [hidden]);
+      expect(library.activeSpriteReferences(hidden), isEmpty);
+      expect(
+        await SkillSpriteReadiness.prepare(
+          library: library,
+          tuning: PowerUpConfig.defaults,
+          kinds: {},
+          customIds: {hidden.id},
+          includeTraps: false,
+        ),
+        isEmpty,
+      );
+      expect(hidden.effectiveHeldSpriteId, SkillDefinition.noHeldArtwork);
+      final armed = hidden.copyWith(heldSpriteId: 'custom.missing.held');
+      expect(library.activeSpriteReferences(armed), {'custom.missing.held'});
+    },
+  );
+
   test('dependencies include payloads but exclude unrelated custom skills', () {
     final payload = SkillDefinition(
       id: 'custom.payload',

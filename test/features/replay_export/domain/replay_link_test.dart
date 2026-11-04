@@ -61,6 +61,23 @@ String _legacyTuning() {
 }
 
 void main() {
+  test('explicit empty built-ins round-trip with custom-only selection', () {
+    final original = ReplayLink(
+      contestants: _presets.take(2).toList(),
+      seed: 42,
+      speedMultiplier: 1,
+      mode: MatchMode.arsenal,
+      powerUps: const {},
+      customSkills: const {'custom.boom'},
+    );
+    final decoded = ReplayLink.fromUri(
+      original.toUri(presetIds: _presetIds),
+      presets: _presets,
+    )!;
+    expect(decoded.powerUps, isEmpty);
+    expect(decoded.customSkills, {'custom.boom'});
+  });
+
   test('square arena replay round-trips with revision 5', () {
     final link = ReplayLink(
       simulationRevision: 5,
@@ -74,10 +91,9 @@ void main() {
     final decoded = ReplayLink.fromUri(uri, presets: _presets);
     expect(decoded?.arenaShape, ArenaShape.square);
     expect(decoded?.simulationRevision, 5);
-    final legacy = uri.replace(queryParameters: {
-      ...uri.queryParameters,
-      'shape': 'unknown',
-    });
+    final legacy = uri.replace(
+      queryParameters: {...uri.queryParameters, 'shape': 'unknown'},
+    );
     expect(ReplayLink.fromUri(legacy, presets: _presets), isNull);
   });
 
@@ -585,9 +601,9 @@ void main() {
         reason: 'w. needs a power-up mode',
       );
       expect(
-        withBalls('m.arsenal,w.0,$a,$b'),
-        isNull,
-        reason: 'empty selection',
+        withBalls('m.arsenal,w.0,$a,$b')!.powerUps,
+        isEmpty,
+        reason: 'explicit empty selection must not restore defaults',
       );
       expect(
         withBalls(

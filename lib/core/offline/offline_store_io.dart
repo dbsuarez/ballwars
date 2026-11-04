@@ -11,10 +11,13 @@ OfflineStore? createPlatformStore() => FileOfflineStore();
 class FileOfflineStore implements OfflineStore {
   final Map<String, Future<void>> _writes = {};
   final Future<Directory> _dir = getApplicationSupportDirectory().then(
-    (d) => Directory('${d.path}${Platform.pathSeparator}offline').create(recursive: true),
+    (d) => Directory(
+      '${d.path}${Platform.pathSeparator}offline',
+    ).create(recursive: true),
   );
 
-  Future<File> _file(String key) async => File('${(await _dir).path}${Platform.pathSeparator}${_name(key)}');
+  Future<File> _file(String key) async =>
+      File('${(await _dir).path}${Platform.pathSeparator}${_name(key)}');
 
   /// 64-bit FNV-1a of the key, as hex.
   static String _name(String key) {
@@ -30,13 +33,20 @@ class FileOfflineStore implements OfflineStore {
   Future<Uint8List?> read(String key) async {
     final pending = _writes[key];
     if (pending != null) {
-      try { await pending; } catch (_) {}
+      try {
+        await pending;
+      } catch (_) {}
     }
     final file = await _file(key);
     try {
       return await file.readAsBytes();
-    } on FileSystemException {
-      return null;
+    } on FileSystemException catch (error) {
+      // Missing is not the same as unreadable: durable callers must not
+      // overwrite an existing record after a permissions or I/O failure.
+      if (error.osError?.errorCode == 2 || error.osError?.errorCode == 3) {
+        return null;
+      }
+      rethrow;
     }
   }
 

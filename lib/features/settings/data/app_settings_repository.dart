@@ -47,6 +47,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 
   // The watermark columns come with migration 003; until it has been run
   // they are missing and are neither read nor written.
+  String? _loadedVersion;
   bool _hasWatermarkColumns = false;
   // Likewise the music column (migration 005).
   bool _hasMusicColumn = false;
@@ -93,6 +94,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       if (saved == null) rethrow;
       row = jsonDecode(utf8.decode(saved)) as Map<String, dynamic>;
     }
+    _loadedVersion = row?['updated_at'] as String?;
     if (row == null) return AppSettings.defaults;
     _hasWatermarkColumns = row.containsKey('watermark_enabled');
     _hasMusicColumn = row.containsKey('music');
@@ -193,7 +195,13 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         'Ball appearance was not saved: apply migration 025_ball_appearance.sql and reload settings.',
       );
     }
-    final updated = await _writer
+    final version = _loadedVersion;
+    final now = DateTime.now().toUtc();
+    final previousTime = DateTime.tryParse(version ?? '');
+    final nextVersion = previousTime != null && !now.isAfter(previousTime)
+        ? previousTime.add(const Duration(microseconds: 1))
+        : now;
+    var update = _writer
         .from('app_settings')
         .update({
           'headline': settings.headline.trim(),
@@ -231,13 +239,18 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
             'explosion_render_mode': settings.explosionRenderMode.name,
           if (_hasEffectRenderModesColumn)
             'freeze_render_mode': settings.freezeRenderMode.name,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
+          'updated_at': nextVersion.toIso8601String(),
         })
-        .eq('id', 1)
-        .select();
+        .eq('id', 1);
+    if (version != null) update = update.eq('updated_at', version);
+    final updated = await update.select();
     // RLS turns a non-admin update into "0 rows", not an error.
     if (updated.isEmpty) {
-      throw StateError('Only the admin can change settings.');
+      throw StateError(
+        version == null
+            ? 'Only the admin can change settings.'
+            : 'Settings changed on another device, or admin access expired. Your edits were not saved. Reload settings before retrying.',
+      );
     }
     if (_hasBallAppearanceColumn &&
         BallAppearance.fromJson(updated.first['ball_appearance']) !=
@@ -262,6 +275,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
         );
       }
     }
+    _loadedVersion = updated.first['updated_at'] as String?;
     try {
       await OfflineStore.instance.write(
         'settings',

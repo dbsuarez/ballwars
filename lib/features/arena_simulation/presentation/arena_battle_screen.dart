@@ -282,7 +282,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   Future<void>? _replayArtworkPreparation;
 
   Future<void> _ensureReplayArtwork() async {
-    if (_roundFrames.isNotEmpty || widget.config.artworkFrames.isNotEmpty) return;
+    if (_roundFrames.isNotEmpty || widget.config.artworkFrames.isNotEmpty) {
+      return;
+    }
     final generation = _matchGeneration;
     final artwork = Map<String, String>.of(_roundArtwork);
     final pending = _replayArtworkPreparation ??= () async {
@@ -448,14 +450,16 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       Future.delayed(_endPause, () {
         if (!current()) return;
         setState(() {
-          _winnerBall = findResultBall(_state.balls, _state.winnerId)?.config ??
+          _winnerBall =
+              findResultBall(_state.balls, _state.winnerId)?.config ??
               widget.config.contestants.firstWhere(
                 (ball) => ball.id == _state.winnerId,
                 orElse: () => widget.config.contestants.first,
               );
           // Prefer the actual last eliminated ball; tolerate a missing id.
           final loserId = _controller.lastEliminatedId;
-          _loserBall = findResultBall(_state.balls, loserId)?.config ??
+          _loserBall =
+              findResultBall(_state.balls, loserId)?.config ??
               widget.config.contestants.firstWhere(
                 (ball) => ball.id != _winnerBall?.id,
                 orElse: () => widget.config.contestants.first,
@@ -562,8 +566,15 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   }
 
   void _playFinisherLaunch() {
+    final skill = _controller.winningSkill;
+    if (skill != null && skill.soundCue != 'default') {
+      _audio.skillCue(skill.soundCue);
+      return;
+    }
     final profile = FinisherProfile.forMove(
-      _controller.winningMove ?? 'Collision',
+      _controller.winningSkill?.displayKind.label ??
+          _controller.winningMove ??
+          'Collision',
     );
     switch (profile.style) {
       case FinisherStyle.projectile:
@@ -586,7 +597,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
   void _playFinisherImpact() {
     final profile = FinisherProfile.forMove(
-      _controller.winningMove ?? 'Collision',
+      _controller.winningSkill?.displayKind.label ??
+          _controller.winningMove ??
+          'Collision',
     );
     switch (profile.style) {
       case FinisherStyle.projectile:
@@ -669,8 +682,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     minimumArenaScale: widget.config.minimumArenaScale,
     arenaDecoration: widget.config.arenaDecoration,
     arenaShape: widget.config.arenaShape,
-      centerObstacle: widget.config.centerObstacle,
-      centerObstacleScale: widget.config.centerObstacleScale,
+    centerObstacle: widget.config.centerObstacle,
+    centerObstacleScale: widget.config.centerObstacleScale,
     skillLibrary: widget.config.skillLibrary.remapArtwork(_roundArtwork),
     artworkRevisions: _roundArtwork,
     artworkFrames: _roundFrames,
@@ -699,14 +712,26 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   Future<void> _saveReplay() async {
     final uri = await _replayUriOrExplain();
     if (uri == null) return;
-    await SavedReplayStore.add(
-      uri,
-      contestantNames: widget.config.contestants.map((ball) => ball.name),
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Replay saved on this device.')),
-    );
+    try {
+      await SavedReplayStore.add(
+        uri,
+        contestantNames: widget.config.contestants.map((ball) => ball.name),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Replay saved on this device.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Replay could not be saved. Your match is still available. Resolve the storage error and retry. $error',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _togglePause() {
@@ -984,8 +1009,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       builder: (context, _) => ScoreboardOverlay(
         skillById: (id) =>
             _controller.skillLibrary.byId(id, _controller.tuning),
-        iconSpriteId: (ball, kind) =>
-            _state.powerUps?.visualSkill(kind, ball: ball).effectiveHeldSpriteId,
+        iconSpriteId: (ball, kind) => _state.powerUps
+            ?.visualSkill(kind, ball: ball)
+            .effectiveHeldSpriteId,
         artworkTint: (ball, kind) =>
             _state.powerUps?.artworkTint(kind, ball: ball) ?? 0xFFFFFFFF,
         itemRarity: (ball, kind) =>
@@ -1086,11 +1112,19 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     child: Text(
                                       'ARENA CHANGING IN ${_controller.secondsUntilArenaRotation!.ceil()}',
-                                      key: const ValueKey('arena-rotation-warning'),
-                                      style: AppText.mono(16, color: Colors.white),
+                                      key: const ValueKey(
+                                        'arena-rotation-warning',
+                                      ),
+                                      style: AppText.mono(
+                                        16,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1104,7 +1138,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 decoration: BoxDecoration(
                                   border: Border.all(
                                     color: Colors.white.withValues(
-                                      alpha: _controller.arenaTransitionFlash * 0.7,
+                                      alpha:
+                                          _controller.arenaTransitionFlash *
+                                          0.7,
                                     ),
                                     width: 5,
                                   ),
@@ -1326,45 +1362,20 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         _roundArtwork,
                       ),
                       move: _controller.winningMove ?? 'Collision',
-                      skill: _controller.skillLibrary
-                          .all(_controller.tuning)
-                          .where((s) => s.name == _controller.winningMove)
-                          .firstOrNull,
+                      skill: _controller.winningSkill,
                       effectSprites:
-                          _controller.skillLibrary
-                              .all(_controller.tuning)
-                              .where(
-                                (skill) =>
-                                    skill.name == _controller.winningMove,
-                              )
-                              .firstOrNull
-                              ?.usesSpriteEffects(
-                                globalSprite:
-                                    (widget.config.effectRenderMode ??
-                                        AppSettingsScope.of(
-                                          context,
-                                        ).explosionRenderMode) ==
-                                    EffectRenderMode.sprite,
-                              ) ??
+                          _controller.winningSkill?.usesSpriteEffects(
+                            globalSprite:
+                                (widget.config.effectRenderMode ??
+                                    AppSettingsScope.of(
+                                      context,
+                                    ).explosionRenderMode) ==
+                                EffectRenderMode.sprite,
+                          ) ??
                           true,
                       artworkTint:
-                          _controller.skillLibrary
-                              .all(_controller.tuning)
-                              .where(
-                                (skill) =>
-                                    skill.name == _controller.winningMove,
-                              )
-                              .firstOrNull
-                              ?.spriteTint ??
-                          0xFFFFFFFF,
-                      visualMove: _controller.skillLibrary
-                          .all(_controller.tuning)
-                          .where(
-                            (skill) => skill.name == _controller.winningMove,
-                          )
-                          .firstOrNull
-                          ?.displayKind
-                          .label,
+                          _controller.winningSkill?.spriteTint ?? 0xFFFFFFFF,
+                      visualMove: _controller.winningSkill?.displayKind.label,
                       onHookFired: _playFinisherLaunch,
                       onImpact: _playFinisherImpact,
                       onFinished: () {
@@ -1399,14 +1410,22 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           ? null
                           : () async {
                               _audio.click();
-                              final exportSettings = AppSettingsScope.of(context);
+                              final exportSettings = AppSettingsScope.of(
+                                context,
+                              );
                               try {
                                 await _ensureReplayArtwork();
                               } catch (error) {
-                                debugPrint('Replay artwork preparation failed: $error');
+                                debugPrint(
+                                  'Replay artwork preparation failed: $error',
+                                );
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Replay artwork could not be prepared for video export.')),
+                                    const SnackBar(
+                                      content: Text(
+                                        'Replay artwork could not be prepared for video export.',
+                                      ),
+                                    ),
                                   );
                                 }
                                 return;
@@ -1429,13 +1448,16 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                     widget.config.automaticSpeedUp,
                                 showEffects: _showEffects,
                                 slowMotionLines: exportSettings.slowMotionLines,
-                                slowMotionBeforeWinSeconds: exportSettings.slowMotionBeforeWinSeconds,
+                                slowMotionBeforeWinSeconds:
+                                    exportSettings.slowMotionBeforeWinSeconds,
                                 ballScale: widget.config.ballSize.scale,
                                 mode: widget.config.mode,
-                                threadGrowthMaxThreads: widget.config.threadGrowthMaxThreads,
-      arenaShape: widget.config.arenaShape,
-      centerObstacle: widget.config.centerObstacle,
-      centerObstacleScale: widget.config.centerObstacleScale,
+                                threadGrowthMaxThreads:
+                                    widget.config.threadGrowthMaxThreads,
+                                arenaShape: widget.config.arenaShape,
+                                centerObstacle: widget.config.centerObstacle,
+                                centerObstacleScale:
+                                    widget.config.centerObstacleScale,
                                 look: widget.config.look,
                                 showHpBars: widget.config.showHpBars,
                                 powerUps: widget.config.powerUps,
@@ -1497,7 +1519,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                   ball: b,
                                   wins: _roundWins[b.id] ?? 0,
                                   losses: _roundLosses[b.id] ?? 0,
-                                  hp: findResultBall(_state.balls, b.id)?.life ?? 0,
+                                  hp:
+                                      findResultBall(
+                                        _state.balls,
+                                        b.id,
+                                      )?.life ??
+                                      0,
                                 ),
                             ]
                           : null,

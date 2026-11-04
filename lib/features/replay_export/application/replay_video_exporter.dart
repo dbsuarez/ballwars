@@ -332,10 +332,7 @@ class ReplayVideoExporter {
               videoTime: videoTime(),
               style: style,
               skillLibrary: skillLibrary,
-              skill: skillLibrary
-                  .all(tuning)
-                  .where((s) => s.name == match.winningMove)
-                  .firstOrNull,
+              skill: match.winningSkill,
             ),
           );
         }

@@ -1,5 +1,8 @@
 # Arena and ball roadmap ? 2026-10-29
 
+> Current reconciliation (2026-11-04): this document contains historical completion claims. See the [whole-app audit](WHOLE-APP-AUDIT-2026-11-04.md#roadmap-reconciliation) and [remediation roadmap](WHOLE-APP-AUDIT-ROADMAP.md) before selecting new work. Earlier checkboxes are preserved as history.
+
+
 This batch prioritizes changes that reuse the current renderer and settings. Geometry changes and recording work remain separate. No AI image generation is used.
 
 ## A. Ball appearance and demo controls (smallest implementation)
@@ -24,28 +27,28 @@ The new `ball_appearance` JSON column contains only cosmetic parameters. It does
 
 ## B. Arena geometry and hiding spots (larger shared foundation)
 
-- [ ] Add a square outer arena alongside the circle.
-- [ ] Add an optional center obstacle: outlined circle or square, configurable size, no colored fill.
-- [ ] Reflect balls and bouncing ammunition against the same geometry; block straight projectiles and account for line of sight.
-- [ ] Keep drawing, collision, shrinking, spawn placement, boundary traps, portals and physics previews in agreement.
-- [ ] Preserve old replay geometry and add deterministic collision tests before enabling these shapes.
+- [x] Add a square outer arena alongside the circle.
+- [x] Add an optional center obstacle: outlined circle or square, configurable size, no colored fill.
+- [x] Reflect balls and bouncing ammunition against the same geometry; block straight projectiles and account for line of sight.
+- [x] Share geometry across drawing, collision, shrinking, spawning, boundary traps, portals and physics previews; regression coverage exists. Real-device acceptance remains pending.
+- [ ] Complete replay equivalence for geometry changes during a match (BW-A03); static geometry and collision regression tests exist.
 
 This needs one shared geometry contract, rather than drawing a square over circular collision rules. Center walls must never count as the outer arena boundary.
 
 ## C. Threads variation and changing arenas
 
-- [ ] Threads variation starting with exactly one thread per ball.
-- [ ] Additional threads come only from touching the actual outer arena boundary, never center walls.
-- [ ] Reuse existing wall-claim logic, with explicit initial allocation, growth rules and per-mode settings/replay tests.
-- [ ] User option to cycle arena presets during a match.
-- [ ] Remember the interval separately per mode: default 60 seconds, minimum 30 seconds, 30-second steps.
-- [ ] For timed matches, validate the maximum against half the total time rounded to the nearest 30 seconds. Decide how to handle matches too short to permit even the minimum.
-- [ ] Define what changes with the preset (decoration, arena-only traps and active hazard cleanup), and snapshot the sequence for replays.
+- [x] Threads variation starting with exactly one thread per ball.
+- [x] Additional threads come only from touching the actual outer arena boundary, never center walls.
+- [x] Reuse wall-claim logic, with explicit initial allocation, growth rules and per-mode settings/replay tests.
+- [x] User option to cycle arena presets during a match.
+- [x] Remember the interval separately per mode: default 60 seconds, minimum 30 seconds, 30-second steps.
+- [x] Bound timed-match intervals through the shared rotation model and its tests.
+- [ ] Complete replay snapshots/reconstruction of arena rotation. Live preset changes, geometry and automatic-hazard cleanup are implemented (BW-A03).
 
 ## D. Arena authoring
 
 - [ ] Admin arena editor to add named arenas.
-- [ ] Reuse the same map-selection dialog for users/admin; new maps remain user-selectable.
+- [x] Reuse the same map-selection dialog for users/admin. This is preset selection, not a persistent named-arena authoring system.
 - [ ] Author background/decorations, outer shape, center obstacles and associated traps through the shared geometry/preset model.
 - [ ] Validate safe spawning, minimum passage widths and shrinking before saving a map.
 

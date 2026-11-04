@@ -1,3 +1,4 @@
+import '../../../core/audio/audio_channel_button.dart';
 import '../../../core/sprites/visual_quality.dart';
 import 'dart:math' as math;
 import 'dart:convert';
@@ -137,7 +138,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final adminTuning = AppSettingsScope.of(context).powerUps;
     var tuning = _rarityWeights?.applyTo(adminTuning) ?? adminTuning;
     if (_matchDisableAllTraps != null) {
-      tuning = tuning.withValue('allTrapsDisabled', _matchDisableAllTraps! ? 1 : 0);
+      tuning = tuning.withValue(
+        'allTrapsDisabled',
+        _matchDisableAllTraps! ? 1 : 0,
+      );
     }
     if (_matchArenaTraps != null) {
       tuning = tuning.withValue('arenaTrapsEnabled', _matchArenaTraps! ? 1 : 0);
@@ -313,30 +317,71 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   await DevicePrefs.read('mayhem') == '1'));
     // Read per-mode geometry, falling back to the former shared keys so an
     // existing installation retains its arena choices on upgrade.
-    final rememberedShape = ArenaShape.byName(await _readProfile(
-      profileMode, 'arena-shape', mayhem: profileMayhem,
-      legacyKey: 'arena-shape'));
-    final rotateThemes = await _readProfile(profileMode,
-      'arena-rotate-themes', mayhem: profileMayhem,
-      legacyKey: 'arena-rotate-themes');
-    final rotateShapes = await _readProfile(profileMode,
-      'arena-rotate-shapes', mayhem: profileMayhem,
-      legacyKey: 'arena-rotate-shapes');
-    final rotationInterval = int.tryParse(await _readProfile(profileMode,
-      'arena-rotation-interval', mayhem: profileMayhem,
-      legacyKey: 'arena-rotation-interval') ?? '') ?? 60;
-    final centerObstacle = CenterObstacle.byName(await _readProfile(profileMode,
-      'center-obstacle', mayhem: profileMayhem,
-      legacyKey: 'center-obstacle')) ?? CenterObstacle.none;
-    final centerObstacleScale = double.tryParse(await _readProfile(profileMode,
-      'center-obstacle-scale', mayhem: profileMayhem,
-      legacyKey: 'center-obstacle-scale') ?? '') ?? 0.22;
+    final rememberedShape = ArenaShape.byName(
+      await _readProfile(
+        profileMode,
+        'arena-shape',
+        mayhem: profileMayhem,
+        legacyKey: 'arena-shape',
+      ),
+    );
+    final rotateThemes = await _readProfile(
+      profileMode,
+      'arena-rotate-themes',
+      mayhem: profileMayhem,
+      legacyKey: 'arena-rotate-themes',
+    );
+    final rotateShapes = await _readProfile(
+      profileMode,
+      'arena-rotate-shapes',
+      mayhem: profileMayhem,
+      legacyKey: 'arena-rotate-shapes',
+    );
+    final rotationInterval =
+        int.tryParse(
+          await _readProfile(
+                profileMode,
+                'arena-rotation-interval',
+                mayhem: profileMayhem,
+                legacyKey: 'arena-rotation-interval',
+              ) ??
+              '',
+        ) ??
+        60;
+    final centerObstacle =
+        CenterObstacle.byName(
+          await _readProfile(
+            profileMode,
+            'center-obstacle',
+            mayhem: profileMayhem,
+            legacyKey: 'center-obstacle',
+          ),
+        ) ??
+        CenterObstacle.none;
+    final centerObstacleScale =
+        double.tryParse(
+          await _readProfile(
+                profileMode,
+                'center-obstacle-scale',
+                mayhem: profileMayhem,
+                legacyKey: 'center-obstacle-scale',
+              ) ??
+              '',
+        ) ??
+        0.22;
     final matchDisableAllTraps = await DevicePrefs.read(
-      _profileKey(profileMode, 'match-disable-all-traps', mayhem: profileMayhem));
+      _profileKey(
+        profileMode,
+        'match-disable-all-traps',
+        mayhem: profileMayhem,
+      ),
+    );
     final matchArenaTraps = await DevicePrefs.read(
-      _profileKey(profileMode, 'match-arena-traps', mayhem: profileMayhem));
+      _profileKey(profileMode, 'match-arena-traps', mayhem: profileMayhem),
+    );
     final matchSkillTraps = await DevicePrefs.read(
-      _profileKey(profileMode, 'match-skill-traps', mayhem: profileMayhem));
+      _profileKey(profileMode, 'match-skill-traps', mayhem: profileMayhem),
+    );
     final rarityName = await _readProfile(
       profileMode,
       'rarity-preset',
@@ -374,7 +419,12 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       await _readProfile(profileMode, 'wall-spark-size', mayhem: profileMayhem),
     );
     final growthLimit = int.tryParse(
-      await _readProfile(profileMode, 'growth-max-threads', mayhem: profileMayhem) ?? '',
+      await _readProfile(
+            profileMode,
+            'growth-max-threads',
+            mayhem: profileMayhem,
+          ) ??
+          '',
     );
     final rounds = int.tryParse(
       await _readProfile(profileMode, 'rounds', mayhem: profileMayhem) ?? '',
@@ -488,9 +538,16 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _rotationInterval = rotationInterval;
       _centerObstacle = centerObstacle;
       _centerObstacleScale = centerObstacleScale;
-      _matchDisableAllTraps = matchDisableAllTraps == null || matchDisableAllTraps == 'inherit' ? null : matchDisableAllTraps == '1';
-      _matchArenaTraps = matchArenaTraps == null || matchArenaTraps == 'inherit' ? null : matchArenaTraps == '1';
-      _matchSkillTraps = matchSkillTraps == null || matchSkillTraps == 'inherit' ? null : matchSkillTraps == '1';
+      _matchDisableAllTraps =
+          matchDisableAllTraps == null || matchDisableAllTraps == 'inherit'
+          ? null
+          : matchDisableAllTraps == '1';
+      _matchArenaTraps = matchArenaTraps == null || matchArenaTraps == 'inherit'
+          ? null
+          : matchArenaTraps == '1';
+      _matchSkillTraps = matchSkillTraps == null || matchSkillTraps == 'inherit'
+          ? null
+          : matchSkillTraps == '1';
       _shrinkingArena = shrinkingArena == '1';
       _arenaDecoration = ArenaDecoration.values
           .where((value) => value.name == arenaDecoration)
@@ -752,7 +809,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
-        simulationRevision: _centerObstacle != CenterObstacle.none ? 6 : (_arenaShape == ArenaShape.square ? 5 : 4),
+        simulationRevision: _centerObstacle != CenterObstacle.none
+            ? 6
+            : (_arenaShape == ArenaShape.square ? 5 : 4),
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
@@ -780,16 +839,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         mayhemSeconds: _mayhemSeconds,
         shrinkingArena: _shrinkingArena,
         arenaShape: _arenaShape,
-        arenaRotation: ArenaRotation(rotateThemes: _rotateThemes, rotateShapes: _rotateShapes, intervalSeconds: _rotationInterval),
+        arenaRotation: ArenaRotation(
+          rotateThemes: _rotateThemes,
+          rotateShapes: _rotateShapes,
+          intervalSeconds: _rotationInterval,
+        ),
         centerObstacle: _centerObstacle,
         centerObstacleScale: _centerObstacleScale,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
         arenaDecoration:
             _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
         // The admin's power-up numbers; part of the match (and of its replay link).
-        tuning: _mode.isThreadOnly
-            ? PowerUpConfig.defaults
-            : _matchTuning,
+        tuning: _mode.isThreadOnly ? PowerUpConfig.defaults : _matchTuning,
         skillLibrary: _mode.isThreadOnly
             ? SkillLibrary.defaults
             : AppSettingsScope.of(context).skillLibrary,
@@ -1152,7 +1213,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                           icon: Icon(Icons.palette_outlined),
                           label: Text('Appearance'),
                         ),
-                        // No Audio tab: music, sound effects and UX sounds are switched in the arena.
+                        ButtonSegment(
+                          value: 2,
+                          icon: Icon(Icons.volume_up_outlined),
+                          label: Text('Audio'),
+                        ),
                       ],
                       selected: {_settingsTab},
                       showSelectedIcon: false,
@@ -1514,6 +1579,12 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      if (tab == 2)
+        _settingsGroup('Audio', const [
+          AudioChannelRow(channel: AudioChannel.bgm),
+          AudioChannelRow(channel: AudioChannel.sfx),
+          AudioChannelRow(channel: AudioChannel.ux),
+        ]),
       if (tab == 0)
         _settingsGroup('Gameplay', [
           _choice(
@@ -1637,13 +1708,19 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           ListTile(
             leading: const Icon(Icons.tune),
             title: const Text('Arena geometry editor'),
-            subtitle: const Text('Preview and edit outer shape and central obstacle'),
+            subtitle: const Text(
+              'Preview and edit outer shape and central obstacle',
+            ),
             onTap: () async {
-              final selection = await showArenaGeometryEditor(context,
-                  shape: _arenaShape, obstacle: _centerObstacle,
-                  scale: _centerObstacleScale,
-                  rotateThemes: _rotateThemes, rotateShapes: _rotateShapes,
-                  intervalSeconds: _rotationInterval);
+              final selection = await showArenaGeometryEditor(
+                context,
+                shape: _arenaShape,
+                obstacle: _centerObstacle,
+                scale: _centerObstacleScale,
+                rotateThemes: _rotateThemes,
+                rotateShapes: _rotateShapes,
+                intervalSeconds: _rotationInterval,
+              );
               if (selection == null || !mounted) return;
               _update(() {
                 _arenaShape = selection.shape;
@@ -1655,10 +1732,22 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               });
               _writeProfile('arena-shape', selection.shape.name);
               _writeProfile('center-obstacle', selection.obstacle.name);
-              _writeProfile('center-obstacle-scale', selection.scale.toString());
-              _writeProfile('arena-rotate-themes', selection.rotateThemes ? '1' : '0');
-              _writeProfile('arena-rotate-shapes', selection.rotateShapes ? '1' : '0');
-              _writeProfile('arena-rotation-interval', selection.intervalSeconds);
+              _writeProfile(
+                'center-obstacle-scale',
+                selection.scale.toString(),
+              );
+              _writeProfile(
+                'arena-rotate-themes',
+                selection.rotateThemes ? '1' : '0',
+              );
+              _writeProfile(
+                'arena-rotate-shapes',
+                selection.rotateShapes ? '1' : '0',
+              );
+              _writeProfile(
+                'arena-rotation-interval',
+                selection.intervalSeconds,
+              );
             },
           ),
           _choice(
@@ -1677,7 +1766,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         _settingsGroup('Traps for this match', [
           ListTile(
             title: const Text('Match-specific trap controls'),
-            subtitle: const Text('Initially follows admin defaults. Changes here affect only this game mode, not the global defaults.'),
+            subtitle: const Text(
+              'Initially follows admin defaults. Changes here affect only this game mode, not the global defaults.',
+            ),
             trailing: IconButton(
               icon: const Icon(Icons.help_outline),
               tooltip: 'Trap override help',
@@ -1685,8 +1776,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 context: context,
                 builder: (dialogContext) => AlertDialog(
                   title: const Text('Trap overrides'),
-                  content: const Text('Disable All Traps takes precedence. The other switches retain their selections and become available again when the master override is off.'),
-                  actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+                  content: const Text(
+                    'Disable All Traps takes precedence. The other switches retain their selections and become available again when the master override is off.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Close'),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1694,12 +1792,18 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           ListTile(
             key: const ValueKey('match-traps-reset-to-admin'),
             title: const Text('Use administrator trap defaults'),
-            subtitle: const Text('Clear all three match overrides for this game mode.'),
+            subtitle: const Text(
+              'Clear all three match overrides for this game mode.',
+            ),
             trailing: const Icon(Icons.settings_backup_restore),
-            enabled: _matchDisableAllTraps != null ||
-                _matchArenaTraps != null || _matchSkillTraps != null,
-            onTap: _matchDisableAllTraps == null &&
-                    _matchArenaTraps == null && _matchSkillTraps == null
+            enabled:
+                _matchDisableAllTraps != null ||
+                _matchArenaTraps != null ||
+                _matchSkillTraps != null,
+            onTap:
+                _matchDisableAllTraps == null &&
+                    _matchArenaTraps == null &&
+                    _matchSkillTraps == null
                 ? null
                 : () {
                     _update(() {
@@ -1724,22 +1828,40 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           SwitchListTile(
             key: const ValueKey('match-arena-traps'),
             title: const Text('Arena Traps'),
-            subtitle: _matchTuning.allTrapsDisabled ? const Text('Disabled by master override; selection preserved') : null,
-            value: _matchArenaTraps ?? (AppSettingsScope.of(context).powerUps.value('arenaTrapsEnabled') != 0),
-            onChanged: _matchTuning.allTrapsDisabled ? null : (v) {
-              _update(() => _matchArenaTraps = v);
-              _writeProfile('match-arena-traps', v ? '1' : '0');
-            },
+            subtitle: _matchTuning.allTrapsDisabled
+                ? const Text('Disabled by master override; selection preserved')
+                : null,
+            value:
+                _matchArenaTraps ??
+                (AppSettingsScope.of(
+                      context,
+                    ).powerUps.value('arenaTrapsEnabled') !=
+                    0),
+            onChanged: _matchTuning.allTrapsDisabled
+                ? null
+                : (v) {
+                    _update(() => _matchArenaTraps = v);
+                    _writeProfile('match-arena-traps', v ? '1' : '0');
+                  },
           ),
           SwitchListTile(
             key: const ValueKey('match-skill-traps'),
             title: const Text('Skill-Generated Traps'),
-            subtitle: _matchTuning.allTrapsDisabled ? const Text('Disabled by master override; selection preserved') : null,
-            value: _matchSkillTraps ?? (AppSettingsScope.of(context).powerUps.value('skillTrapsEnabled') != 0),
-            onChanged: _matchTuning.allTrapsDisabled ? null : (v) {
-              _update(() => _matchSkillTraps = v);
-              _writeProfile('match-skill-traps', v ? '1' : '0');
-            },
+            subtitle: _matchTuning.allTrapsDisabled
+                ? const Text('Disabled by master override; selection preserved')
+                : null,
+            value:
+                _matchSkillTraps ??
+                (AppSettingsScope.of(
+                      context,
+                    ).powerUps.value('skillTrapsEnabled') !=
+                    0),
+            onChanged: _matchTuning.allTrapsDisabled
+                ? null
+                : (v) {
+                    _update(() => _matchSkillTraps = v);
+                    _writeProfile('match-skill-traps', v ? '1' : '0');
+                  },
           ),
         ]),
       if (tab == 0 && !_mode.isThreadOnly)

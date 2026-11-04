@@ -14,6 +14,7 @@ import '../../skills/domain/skill_hybrid_contact_policy.dart';
 import '../../skills/domain/skill_trigger_scheduler.dart';
 import '../../skills/domain/skill_activation_gate.dart';
 import '../../settings/domain/app_settings.dart';
+import '../domain/combat_targeting.dart';
 import '../domain/fan_line.dart';
 import '../domain/arena_boundary_geometry.dart';
 import '../domain/floating_text.dart';
@@ -71,6 +72,25 @@ class PowerUpSystem {
 
   /// Bullets and pellets in flight.
   final List<Projectile> projectiles = [];
+
+  // Retained aimed targets are per-match state and are discarded on respawn.
+  final Map<SimulationBall, SimulationBall> _aimedTargets = {};
+  int targetSwitchCount = 0;
+  int homingRetargetCount = 0;
+  int blockedTargetFallbackCount = 0;
+  int projectileSweepCount = 0;
+  int projectileContactCount = 0;
+  int projectileCenterWallBounceCount = 0;
+
+  /// Read-only counters for combat debugging and regression diagnostics.
+  Map<String, int> get targetingDiagnostics => Map.unmodifiable({
+        'targetSwitches': targetSwitchCount,
+        'homingRetargets': homingRetargetCount,
+        'blockedTargetFallbacks': blockedTargetFallbackCount,
+        'projectileSweeps': projectileSweepCount,
+        'projectileContacts': projectileContactCount,
+        'projectileCenterWallBounces': projectileCenterWallBounceCount,
+      });
   final List<ShellCasing> shellCasings = [];
 
   /// Casings ejected so far this match ([ShellCasing.sequence]).
@@ -491,6 +511,8 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    _aimedTargets.remove(ball);
+    _aimedTargets.removeWhere((_, target) => identical(target, ball));
     // Respawn is a new life. Old traps and custom projectiles must not
     // outlive their owner and damage players after the reset.
     mines.removeWhere((mine) => identical(mine.owner, ball));
@@ -2865,19 +2887,35 @@ class PowerUpSystem {
     }
   }
 
-  /// The nearest opponent of [ball] a gun can aim at (still in the match, not a ghost), or null.
+  /// Stable, obstacle-aware aimed target selection. All-blocked scenarios
+  /// fall back to an opponent so the match cannot deadlock behind its wall.
   SimulationBall? _nearestTarget(SimulationBall ball) {
-    SimulationBall? best;
-    var bestDistance = double.infinity;
-    for (final other in match.state.balls) {
-      if (identical(other, ball) || !_alive(other) || other.isGhost) continue;
-      final distance = (other.position - ball.position).distanceSquared;
-      if (distance < bestDistance) {
-        best = other;
-        bestDistance = distance;
+    final previous = _aimedTargets[ball];
+    final selected = CombatTargeting.select(
+      origin: ball.position,
+      candidates: match.state.balls,
+      owner: ball,
+      previous: previous,
+      isEligible: _alive,
+      obstacle: match.centerObstacle,
+      obstacleExtent: match.arenaRadius * match.centerObstacleScale,
+    );
+    if (selected == null) {
+      _aimedTargets.remove(ball);
+    } else {
+      if (previous != null && !identical(previous, selected)) {
+        targetSwitchCount++;
+      }
+      _aimedTargets[ball] = selected;
+      if (match.centerObstacle != CenterObstacle.none &&
+          CombatTargeting.centerObstacleBlocks(
+            ball.position, selected.position, match.centerObstacle,
+            match.arenaRadius * match.centerObstacleScale,
+          )) {
+        blockedTargetFallbackCount++;
       }
     }
-    return best;
+    return selected;
   }
 
   Offset _chosenDirection(SimulationBall owner, [SimulationBall? primary]) {
@@ -4540,31 +4578,17 @@ class PowerUpSystem {
         if (target == null || !_alive(target) || target.isGhost ||
             identical(target, p.owner) || p.hitTargets.contains(target) ||
             !target.position.dx.isFinite || !target.position.dy.isFinite) {
-          target = null;
-          var nearestDistance = double.infinity;
-          for (final candidate in balls) {
-            if (identical(candidate, p.owner) || !_alive(candidate) ||
-                candidate.isGhost || p.hitTargets.contains(candidate)) {
-              continue;
-            }
-            if (!candidate.position.dx.isFinite ||
-                !candidate.position.dy.isFinite) {
-                  continue;
-                }
-            final delta = candidate.position - from;
-            final distance = _safeVectorLength(delta);
-            // Equal-distance opponents must be selected consistently even if
-            // the simulation's ball list is reordered. Keep strict distance
-            // priority; use contestant ID only for exact ties.
-            if (distance.isFinite &&
-                (distance < nearestDistance ||
-                    (distance == nearestDistance &&
-                        target != null &&
-                        candidate.config.id.compareTo(target.config.id) < 0))) {
-              nearestDistance = distance;
-              target = candidate;
-            }
-          }
+          target = CombatTargeting.select(
+            origin: from,
+            candidates: balls,
+            owner: p.owner,
+            isEligible: _alive,
+            excluded: p.hitTargets,
+            // A projectile already in flight uses its current position;
+            // avoid changing homing trajectory rules based on wall visibility.
+            preferClearLine: false,
+          );
+          if (target != null) homingRetargetCount++;
           p.target = target;
         }
         if (target != null &&
@@ -4645,6 +4669,7 @@ class PowerUpSystem {
         continue;
       }
 
+      projectileSweepCount++;
       // Compute thrown-projectile landing time before any collision resolution.
       // A landing point in front of a center wall must detonate before that
       // wall, while a wall in front of the landing point must still block it.
@@ -4780,6 +4805,7 @@ class PowerUpSystem {
               p.velocity.dy * normal.dy;
           p.velocity -= normal * (2 * dot);
           p.wallBounces++;
+          projectileCenterWallBounceCount++;
           // Avoid indefinite ricochets in enclosed geometries.
           if (p.wallBounces > 8) p.spent = true;
           continue;
@@ -4872,6 +4898,7 @@ class PowerUpSystem {
         // returning skills. This prevents a persistent or ricocheting shot
         // from re-damaging a target it has already passed through.
         p.hitTargets.add(struck);
+        projectileContactCount++;
         final composed = _composedProjectiles[p];
         _creditMove = _composedIssuers[p]?.name;
         p.spent = !returnsToOrigin;
@@ -5139,6 +5166,7 @@ class PowerUpSystem {
                   p.velocity.dy * normal.dy;
               p.velocity -= normal * (2 * dot);
               p.wallBounces++;
+              projectileCenterWallBounceCount++;
               if (p.wallBounces > 8) p.spent = true;
               continue;
             }

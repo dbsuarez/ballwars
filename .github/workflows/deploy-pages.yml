@@ -3,7 +3,6 @@ name: Deploy web app to GitHub Pages
 on:
   push:
     branches: [master]
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -30,22 +29,11 @@ jobs:
       - run: flutter pub get
       - run: flutter test
 
-      # On a release tag, embed that version in the Web package metadata.
-      # Branch builds continue using pubspec.yaml, so no tag lookup is needed.
-      # The tag event rebuilds Pages after the APK release tag is pushed.
+      # Pages deploys exclusively from master. Tag-triggered deployments are
+      # rejected by the repository's existing github-pages protection rules.
+      # The package version comes from pubspec.yaml on master.
       - name: Build web
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            flutter build web --release \
-              --build-name "${GITHUB_REF_NAME#v}" \
-              --dart-define=ASSET_REVISION=${{ github.sha }} \
-              --base-href "/${{ github.event.repository.name }}/"
-          else
-            flutter build web --release \
-              --dart-define=ASSET_REVISION=${{ github.sha }} \
-              --base-href "/${{ github.event.repository.name }}/"
-          fi
+        run: flutter build web --release --dart-define=ASSET_REVISION=${{ github.sha }} --base-href "/${{ github.event.repository.name }}/"
 
       - uses: actions/upload-pages-artifact@v3
         with:

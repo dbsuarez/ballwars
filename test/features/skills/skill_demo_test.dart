@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/audio/game_audio.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up.dart';
+import 'package:ballwars/features/match_setup/domain/match_config.dart';
+import 'package:ballwars/features/arena_simulation/domain/combat_targeting.dart';
 import 'package:ballwars/features/arena_simulation/domain/power_up_config.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_canvas.dart';
 import 'package:ballwars/features/skills/application/skill_demo_controller.dart';
@@ -22,6 +24,31 @@ void advance(SkillDemoController d, double seconds) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final obstacle in [CenterObstacle.circle, CenterObstacle.square]) {
+    test('Skill Demo switches between real blocked and clear $obstacle lanes', () {
+      final d = demo(SkillLibrary.defaults.builtIn(
+        PowerUpKind.pistol, PowerUpConfig.defaults,
+      ));
+      d.centerObstacle = obstacle;
+      d.obstacleScenario = SkillDemoObstacleScenario.headOn;
+      d.reset();
+      expect(d.obstacleBlocksAim, isTrue);
+      expect(CombatTargeting.centerObstacleBlocks(
+        d.match.state.balls.first.position,
+        d.match.state.balls.last.position,
+        obstacle,
+        d.match.arenaRadius * d.match.state.centerObstacleScale,
+      ), isTrue);
+      d.obstacleScenario = SkillDemoObstacleScenario.clearLane;
+      d.reset();
+      expect(d.obstacleBlocksAim, isFalse);
+      d.activate();
+      expect(d.obstacleBlocksAim, isFalse);
+      expect(d.match.state.centerObstacle, obstacle);
+      expect(d.match.powerUps!.automaticSpawning, isFalse);
+    });
+  }
+
   test('fresh replay resets prior event counters and projectile state', () {
     final d = demo(SkillLibrary.defaults.create('Replay shot', PowerUpKind.pistol).copyWith(
       delivery: SkillDelivery.projectile,

@@ -15,6 +15,7 @@ import '../application/skill_demo_controller.dart';
 import '../domain/skill_library.dart';
 import 'skill_artwork_tint.dart';
 import 'skill_demo_inspector.dart';
+import '../../arena_simulation/presentation/combat_diagnostics_overlay.dart';
 import 'grip_preview_dialog.dart';
 
 /// Manual editor showcase, separate from the full Power-up Test workbench.
@@ -49,6 +50,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   bool _distanceChosen = false, _facingChosen = false;
   late final Future<void> _preferences;
   bool _inspect = false;
+  bool _combatDiagnostics = false;
   String _focusedArtwork = 'Pickup';
   // Event-focused replays stop at the first matching gameplay event. These
   // are real arena events, not a separate fabricated animation timeline.
@@ -465,6 +467,12 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                                   projectileRenderMode: widget.effectMode,
                                   freezeRenderMode: widget.effectMode,
                                 ),
+                                if (_combatDiagnostics)
+                                  IgnorePointer(
+                                    child: CustomPaint(
+                                      painter: CombatDiagnosticsOverlay(_demo.match),
+                                    ),
+                                  ),
                                 if (_inspect)
                                   IgnorePointer(
                                     child: CustomPaint(
@@ -534,6 +542,47 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                             },
                           ),
                         ],
+                      ),
+                      if (_demo.centerObstacle != CenterObstacle.none) ...[
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Obstacle shot scenario')),
+                            DropdownButton<SkillDemoObstacleScenario>(
+                              key: const ValueKey('skill-demo-obstacle-scenario'),
+                              value: _demo.obstacleScenario,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: SkillDemoObstacleScenario.headOn,
+                                  child: Text('Head-on'),
+                                ),
+                                DropdownMenuItem(
+                                  value: SkillDemoObstacleScenario.clearLane,
+                                  child: Text('Clear lane'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                _mutatePreviewArena(() {
+                                  _demo.obstacleScenario = value;
+                                  _demo.reset();
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _demo.obstacleBlocksAim
+                              ? 'Shot path: blocked by center obstacle'
+                              : 'Shot path: clear of center obstacle',
+                          key: const ValueKey('skill-demo-obstacle-path'),
+                        ),
+                      ],
+                      SwitchListTile.adaptive(
+                        key: const ValueKey('skill-demo-combat-diagnostics'),
+                        title: const Text('Combat diagnostics'),
+                        subtitle: const Text('Target lines, obstruction and projectile paths'),
+                        value: _combatDiagnostics,
+                        onChanged: (value) => setState(() => _combatDiagnostics = value),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,

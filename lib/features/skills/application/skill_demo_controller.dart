@@ -1,11 +1,15 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import '../../arena_simulation/application/match_simulation_controller.dart';
+import '../../arena_simulation/domain/combat_targeting.dart';
 import '../../arena_simulation/domain/power_up.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../ball_management/domain/custom_ball.dart';
 import '../../match_setup/domain/match_config.dart';
 import '../domain/skill_library.dart';
+
+/// Position choices for exercising real projectile/target/obstacle mechanics.
+enum SkillDemoObstacleScenario { headOn, clearLane }
 
 /// Isolated, repeatable editor scenario. Nothing is saved to player settings.
 class SkillDemoController {
@@ -23,6 +27,7 @@ class SkillDemoController {
   bool facingRight = true;
   ArenaShape arenaShape = ArenaShape.circle;
   CenterObstacle centerObstacle = CenterObstacle.none;
+  SkillDemoObstacleScenario obstacleScenario = SkillDemoObstacleScenario.headOn;
   bool playing = false;
   bool started = false;
   double elapsed = 0;
@@ -112,6 +117,16 @@ class SkillDemoController {
             skill.delivery == SkillDelivery.boundaryHazard)) {
       target.position = Offset(150 * sign, 0);
     }
+    // The clear-lane scenario leaves the obstacles enabled but places both
+    // participants on the same side of the central obstacle. It uses real
+    // projectile, homing and wall collision behavior during playback.
+    if (centerObstacle != CenterObstacle.none &&
+        obstacleScenario == SkillDemoObstacleScenario.clearLane) {
+      final clearX = match.arenaRadius * .68 * sign;
+      final clearY = match.arenaRadius * .55;
+      owner.position = Offset(clearX, -clearY);
+      target.position = Offset(clearX, clearY);
+    }
     owner.velocity = target.velocity = Offset.zero;
     owner.aimTarget = target;
     if (skill.canHeal ||
@@ -136,6 +151,13 @@ class SkillDemoController {
       );
     }
   }
+
+  bool get obstacleBlocksAim => CombatTargeting.centerObstacleBlocks(
+    match.state.balls.first.position,
+    match.state.balls.last.position,
+    centerObstacle,
+    match.arenaRadius * match.state.centerObstacleScale,
+  );
 
   /// Places a collectible in the isolated demo using the real arena pickup
   /// collection and painter. Kept away from the center obstacle and balls.

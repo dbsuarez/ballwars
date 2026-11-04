@@ -1,0 +1,1318 @@
+﻿
+  1.14.51RC.log:26:                              value: _demo.obstacleScenario,
+  1.14.51RC.log:27:                                           ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:28:lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 
+  1.14.51RC.log:29:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:30: - 'SkillDemoController' is from 
+  1.14.51RC.log:31:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:32:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:33:Try correcting the name to the name of an existing setter, or defining a setter 
+or field named 
+  1.14.51RC.log:34:'obstacleScenario'.
+  1.14.51RC.log:35:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:36:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:37:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:38:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:39: - 'SkillDemoController' is from 
+  1.14.51RC.log:40:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:41:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:42:Try correcting the name to the name of an existing getter, or defining a getter 
+or field named 
+  1.14.51RC.log:43:'obstacleBlocksAim'.
+  1.14.51RC.log:44:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:45:                                ^^^^^^^^^^^^^^^^^
+> 1.14.51RC.log:46:00:00 +0 -1: loading D:/Development/ballwars/test/app_navigation_test.dart [E]
+  1.14.51RC.log:47:  Failed to load "D:/Development/ballwars/test/app_navigation_test.dart":
+  1.14.51RC.log:48:  Compilation failed for 
+testPath=D:/Development/ballwars/test/app_navigation_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:49:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:50:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:51:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:52:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:53:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:54:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:55:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:56:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:57:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:58:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:59:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:60:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:61:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:62:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:63:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:64:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:65:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:66:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:67:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:68:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:69:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:70:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:71:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:72:  .
+  1.14.51RC.log:73:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:74:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:75:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:76:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:77:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:78:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:79:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:80:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:81:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:1164:                                           ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1165:lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 
+  1.14.51RC.log:1166:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1167: - 'SkillDemoController' is from 
+  1.14.51RC.log:1168:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1169:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1170:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:1171:'obstacleScenario'.
+  1.14.51RC.log:1172:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:1173:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1174:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:1175:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1176: - 'SkillDemoController' is from 
+  1.14.51RC.log:1177:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1178:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1179:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:1180:'obstacleBlocksAim'.
+  1.14.51RC.log:1181:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:1182:                                ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1183:00:50 +901 -1: 
+D:/Development/ballwars/test/features/match_setup/presentation/rarity_preset_settings_test.dart: 
+invalid custom weights block Start and Reset to Balanced repairs them
+> 1.14.51RC.log:1184:00:50 +901 -2: loading 
+D:/Development/ballwars/test/features/settings/settings_screen_test.dart [E]
+  1.14.51RC.log:1185:  Failed to load 
+"D:/Development/ballwars/test/features/settings/settings_screen_test.dart":
+  1.14.51RC.log:1186:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/settings/settings_screen_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:1187:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:1188:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1189:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1190:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:1191:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1192:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1193:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:1194:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1195:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1196:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1197:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:1198:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:1199:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1200:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1201:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1202:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:1203:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:1204:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1205:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1206:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1207:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:1208:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:1209:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1210:  .
+> 1.14.51RC.log:1211:00:50 +901 -2: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:1212:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:1213:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:1214:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:1215:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:1216:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:1217:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:1218:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:1219:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:1220:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:1221:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:1222:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:1223:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:1224:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:1225:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:1226:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:1227:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:1228:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:1229:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:1230:  
+  1.14.51RC.log:1231:00:50 +902 -2: 
+D:/Development/ballwars/test/features/match_setup/presentation/rarity_preset_settings_test.dart: 
+invalid custom weights block Start and Reset to Balanced repairs them
+  1.14.51RC.log:1232:00:50 +903 -2: 
+D:/Development/ballwars/test/features/match_setup/presentation/rarity_preset_settings_test.dart: 
+invalid custom weights block Start and Reset to Balanced repairs them
+  1.14.51RC.log:1233:00:50 +904 -2: 
+D:/Development/ballwars/test/features/match_setup/presentation/rarity_preset_settings_test.dart: 
+invalid custom weights block Start and Reset to Balanced repairs them
+  1.14.51RC.log:1234:00:50 +905 -2: 
+D:/Development/ballwars/test/features/match_setup/presentation/rarity_preset_settings_test.dart: 
+invalid custom weights block Start and Reset to Balanced repairs them
+  1.14.51RC.log:1235:00:50 +906 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1236:00:50 +907 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1237:00:50 +908 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1238:00:50 +909 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1239:00:50 +910 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1240:00:50 +911 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1241:00:50 +912 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1242:00:50 +913 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1243:00:51 +914 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1244:00:51 +915 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1245:00:51 +916 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1246:00:52 +917 -2: 
+D:/Development/ballwars/test/features/settings/power_up_test_screen_test.dart: custom knife and 
+built-in knife keep separate identities in both slots and picker
+  1.14.51RC.log:1304:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1305: - 'SkillDemoController' is from 
+  1.14.51RC.log:1306:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1307:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1308:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:1309:'obstacleScenario'.
+  1.14.51RC.log:1310:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:1311:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1312:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:1313:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1314: - 'SkillDemoController' is from 
+  1.14.51RC.log:1315:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1316:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1317:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:1318:'obstacleBlocksAim'.
+  1.14.51RC.log:1319:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:1320:                                ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1321:00:56 +949 -2: 
+D:/Development/ballwars/test/features/match_setup/presentation/match_setup_packs_test.dart: HP bars 
+toggle is passed to matches and remembered per match type
+  1.14.51RC.log:1322:00:56 +950 -2: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1323:00:56 +951 -2: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+> 1.14.51RC.log:1324:00:56 +951 -3: loading 
+D:/Development/ballwars/test/features/skills/facing_offset_test.dart [E]
+  1.14.51RC.log:1325:  Failed to load 
+"D:/Development/ballwars/test/features/skills/facing_offset_test.dart":
+  1.14.51RC.log:1326:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/facing_offset_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:1327:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:1328:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1329:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1330:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:1331:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1332:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1333:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:1334:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1335:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1336:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1337:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:1338:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:1339:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1340:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1341:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1342:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:1343:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:1344:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1345:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1346:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1347:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:1348:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:1349:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1350:  .
+> 1.14.51RC.log:1351:00:56 +951 -3: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:1352:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:1353:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:1354:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:1355:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:1356:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:1357:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:1358:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:1359:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:1360:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:1361:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:1362:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:1363:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:1364:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:1365:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:1366:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:1367:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:1368:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:1369:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:1370:  
+  1.14.51RC.log:1371:00:56 +951 -3: 
+D:/Development/ballwars/test/features/match_setup/presentation/match_setup_packs_test.dart: Yes or 
+No lets the user ask a question
+  1.14.51RC.log:1372:BallImageLoader: Exception: HTTP 400 for 
+http://localhost:1/packs/decision/yes.svg
+  1.14.51RC.log:1373:BallImageLoader: Exception: HTTP 400 for 
+http://localhost:1/packs/decision/no.svg
+  1.14.51RC.log:1374:00:56 +952 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1375:00:57 +953 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1376:00:57 +954 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1377:00:57 +955 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1378:00:58 +956 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1379:00:58 +957 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1380:00:58 +958 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+first-to-2 series: round result, Next round, round counter
+  1.14.51RC.log:1381:Match startup: sprite readiness 55ms
+  1.14.51RC.log:1382:Match startup: audio 56ms
+  1.14.51RC.log:1383:Match startup: countdown ready in 56ms
+  1.14.51RC.log:1384:Match startup: sprite readiness 0ms
+  1.14.51RC.log:1385:Match startup: audio 0ms
+  1.14.51RC.log:1386:Match startup: countdown ready in 0ms
+  1.14.51RC.log:1529:lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 
+  1.14.51RC.log:1530:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1531: - 'SkillDemoController' is from 
+  1.14.51RC.log:1532:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1533:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1534:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:1535:'obstacleScenario'.
+  1.14.51RC.log:1536:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:1537:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1538:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:1539:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1540: - 'SkillDemoController' is from 
+  1.14.51RC.log:1541:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1542:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1543:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:1544:'obstacleBlocksAim'.
+  1.14.51RC.log:1545:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:1546:                                ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1547:01:06 +1060 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Save replay: hidden for a match opened from a link until Play again
+  1.14.51RC.log:1548:01:06 +1061 -3: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Save replay: hidden for a match opened from a link until Play again
+> 1.14.51RC.log:1549:01:06 +1061 -4: loading 
+D:/Development/ballwars/test/features/skills/mechanical_effect_steps_test.dart [E]
+  1.14.51RC.log:1550:  Failed to load 
+"D:/Development/ballwars/test/features/skills/mechanical_effect_steps_test.dart":
+  1.14.51RC.log:1551:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/mechanical_effect_steps_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:1552:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:1553:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1554:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1555:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:1556:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1557:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1558:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:1559:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1560:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1561:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1562:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:1563:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:1564:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1565:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1566:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1567:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:1568:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:1569:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1570:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1571:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1572:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:1573:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:1574:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1575:  .
+  1.14.51RC.log:1576:01:06 +1062 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Save replay: hidden for a match opened from a link until Play again
+  1.14.51RC.log:1577:01:06 +1063 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Save replay: hidden for a match opened from a link until Play again
+> 1.14.51RC.log:1578:01:06 +1063 -4: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:1579:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:1580:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:1581:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:1582:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:1583:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:1584:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:1585:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:1586:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:1587:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:1588:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:1589:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:1590:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:1591:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:1592:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:1593:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:1594:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:1595:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:1596:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:1597:  
+  1.14.51RC.log:1598:01:07 +1063 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Save replay: hidden for a match opened from a link until Play again
+  1.14.51RC.log:1599:Match startup: sprite readiness 27ms
+  1.14.51RC.log:1600:Match startup: audio 27ms
+  1.14.51RC.log:1601:Match startup: countdown ready in 27ms
+  1.14.51RC.log:1602:Match startup: sprite readiness 0ms
+  1.14.51RC.log:1603:Match startup: audio 0ms
+  1.14.51RC.log:1604:Match startup: countdown ready in 0ms
+  1.14.51RC.log:1605:Match startup: sprite readiness 0ms
+  1.14.51RC.log:1606:Match startup: audio 0ms
+  1.14.51RC.log:1607:Match startup: countdown ready in 0ms
+  1.14.51RC.log:1608:01:07 +1064 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Share and Save replay explain a too-large skill snapshot instead of failing
+  1.14.51RC.log:1609:01:08 +1065 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Share and Save replay explain a too-large skill snapshot instead of failing
+  1.14.51RC.log:1610:01:08 +1066 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Share and Save replay explain a too-large skill snapshot instead of failing
+  1.14.51RC.log:1611:01:08 +1067 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Share and Save replay explain a too-large skill snapshot instead of failing
+  1.14.51RC.log:1612:01:08 +1068 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Share and Save replay explain a too-large skill snapshot instead of failing
+  1.14.51RC.log:1613:01:08 +1069 -4: 
+D:/Development/ballwars/test/features/arena_simulation/presentation/arena_battle_screen_test.dart: 
+Share and Save replay explain a too-large skill snapshot instead of failing
+  1.14.51RC.log:1862:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1863:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:1864:'obstacleScenario'.
+  1.14.51RC.log:1865:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:1866:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1867:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:1868:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1869: - 'SkillDemoController' is from 
+  1.14.51RC.log:1870:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1871:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1872:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:1873:'obstacleBlocksAim'.
+  1.14.51RC.log:1874:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:1875:                                ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1876:01:16 +1288 -4: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: model look and fired 
+skill save, load and clear
+  1.14.51RC.log:1877:01:16 +1289 -4: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: model any combination 
+resolves to the fired skill; chains follow to the last one
+  1.14.51RC.log:1878:01:16 +1290 -4: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: model broken references 
+explain what is wrong and fall back to the own projectile
+  1.14.51RC.log:1879:01:16 +1291 -4: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: model the pickers offer 
+every projectile skill but the skill itself
+  1.14.51RC.log:1880:01:16 +1292 -4: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: model combining never 
+changes the originals; replays keep the combination
+  1.14.51RC.log:1881:01:16 +1293 -4: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: match a Knife-looking 
+skill fires three Boom-merangs that keep all their own behavior
+> 1.14.51RC.log:1882:01:16 +1293 -5: loading 
+D:/Development/ballwars/test/features/skills/skill_demo_preferences_test.dart [E]
+  1.14.51RC.log:1883:  Failed to load 
+"D:/Development/ballwars/test/features/skills/skill_demo_preferences_test.dart":
+  1.14.51RC.log:1884:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/skill_demo_preferences_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:1885:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:1886:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1887:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1888:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:1889:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1890:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:1891:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:1892:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1893:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1894:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1895:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:1896:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:1897:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1898:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1899:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1900:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:1901:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:1902:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1903:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:1904:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1905:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:1906:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:1907:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1908:  .
+> 1.14.51RC.log:1909:01:16 +1293 -5: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:1910:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:1911:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:1912:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:1913:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:1914:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:1915:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:1916:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:1917:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:1918:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:1919:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:1920:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:1921:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:1922:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:1923:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:1924:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:1925:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:1926:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:1927:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:1928:  
+  1.14.51RC.log:1929:01:16 +1294 -5: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: match payload hits deal 
+the fired skill's damage and credit the firing skill
+  1.14.51RC.log:1930:01:16 +1295 -5: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: match different 
+combinations fire at the same time, each with its own payload
+  1.14.51RC.log:1931:01:16 +1296 -5: 
+D:/Development/ballwars/test/features/skills/skill_composition_test.dart: match a broken reference 
+fires the skill's own projectile instead
+  1.14.51RC.log:1932:01:16 +1297 -5: 
+D:/Development/ballwars/test/features/skills/skill_demo_arena_options_test.dart: demo arena and 
+obstacle selection rebuild isolated simulation
+  1.14.51RC.log:1933:test/features/skills/skill_demo_test.dart:33:28: Error: Undefined name 
+'SkillDemoObstacleScenario'.
+  1.14.51RC.log:1934:      d.obstacleScenario = SkillDemoObstacleScenario.headOn;
+  1.14.51RC.log:1935:                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1936:test/features/skills/skill_demo_test.dart:42:28: Error: Undefined name 
+'SkillDemoObstacleScenario'.
+  1.14.51RC.log:1937:      d.obstacleScenario = SkillDemoObstacleScenario.clearLane;
+  1.14.51RC.log:1938:                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:1939:test/features/skills/skill_demo_test.dart:33:9: Error: The setter 
+'obstacleScenario' isn't defined 
+  1.14.51RC.log:1940:for the type 'SkillDemoController'.
+  1.14.51RC.log:1941: - 'SkillDemoController' is from 
+  1.14.51RC.log:1942:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:1943:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:1944:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:2001:                              value: _demo.obstacleScenario,
+  1.14.51RC.log:2002:                                           ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2003:lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 
+  1.14.51RC.log:2004:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2005: - 'SkillDemoController' is from 
+  1.14.51RC.log:2006:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2007:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2008:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:2009:'obstacleScenario'.
+  1.14.51RC.log:2010:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:2011:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2012:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:2013:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2014: - 'SkillDemoController' is from 
+  1.14.51RC.log:2015:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2016:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2017:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:2018:'obstacleBlocksAim'.
+  1.14.51RC.log:2019:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:2020:                                ^^^^^^^^^^^^^^^^^
+> 1.14.51RC.log:2021:01:18 +1298 -6: loading 
+D:/Development/ballwars/test/features/skills/skill_demo_test.dart [E]
+  1.14.51RC.log:2022:  Failed to load 
+"D:/Development/ballwars/test/features/skills/skill_demo_test.dart":
+  1.14.51RC.log:2023:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/skill_demo_test.dart: 
+test/features/skills/skill_demo_test.dart:33:28: Error: Undefined name 'SkillDemoObstacleScenario'.
+  1.14.51RC.log:2024:        d.obstacleScenario = SkillDemoObstacleScenario.headOn;
+  1.14.51RC.log:2025:                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2026:  test/features/skills/skill_demo_test.dart:42:28: Error: Undefined name 
+'SkillDemoObstacleScenario'.
+  1.14.51RC.log:2027:        d.obstacleScenario = SkillDemoObstacleScenario.clearLane;
+  1.14.51RC.log:2028:                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2029:  test/features/skills/skill_demo_test.dart:33:9: Error: The setter 
+'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2030:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2031:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:2032:        d.obstacleScenario = SkillDemoObstacleScenario.headOn;
+  1.14.51RC.log:2033:          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2034:  test/features/skills/skill_demo_test.dart:35:16: Error: The getter 
+'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2035:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2036:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2037:        expect(d.obstacleBlocksAim, isTrue);
+  1.14.51RC.log:2038:                 ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2039:  test/features/skills/skill_demo_test.dart:42:9: Error: The setter 
+'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2040:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2041:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:2042:        d.obstacleScenario = SkillDemoObstacleScenario.clearLane;
+  1.14.51RC.log:2043:          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2044:  test/features/skills/skill_demo_test.dart:44:16: Error: The getter 
+'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2045:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2046:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2047:        expect(d.obstacleBlocksAim, isFalse);
+  1.14.51RC.log:2048:                 ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2049:  test/features/skills/skill_demo_test.dart:46:16: Error: The getter 
+'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2050:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2051:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2052:        expect(d.obstacleBlocksAim, isFalse);
+  1.14.51RC.log:2053:                 ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2054:  lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 
+'SkillDemoObstacleScenario' isn't a type.
+  1.14.51RC.log:2055:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:2056:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2059:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2060:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2061:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:2062:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2063:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2064:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2065:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:2066:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:2067:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2068:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2069:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2070:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:2071:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:2072:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2073:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2074:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2075:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2076:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:2077:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2078:  .
+> 1.14.51RC.log:2079:01:18 +1298 -6: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:2080:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:2081:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:2082:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:2083:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:2084:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:2085:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:2086:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:2087:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:2088:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:2089:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:2090:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:2091:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:2092:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:2093:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:2094:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:2095:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:2096:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:2097:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:2098:  
+  1.14.51RC.log:2099:lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 
+'SkillDemoObstacleScenario' 
+  1.14.51RC.log:2100:isn't a type.
+  1.14.51RC.log:2101:                            DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:2102:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2103:lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2104:                                  value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:2105:                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2106:lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2107:                                  value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:2108:                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2109:lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 
+  1.14.51RC.log:2110:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2111: - 'SkillDemoController' is from 
+  1.14.51RC.log:2112:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2113:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2114:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:2116:                              value: _demo.obstacleScenario,
+  1.14.51RC.log:2117:                                           ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2118:lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 
+  1.14.51RC.log:2119:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2120: - 'SkillDemoController' is from 
+  1.14.51RC.log:2121:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2122:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2123:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:2124:'obstacleScenario'.
+  1.14.51RC.log:2125:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:2126:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2127:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:2128:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2129: - 'SkillDemoController' is from 
+  1.14.51RC.log:2130:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2131:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2132:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:2133:'obstacleBlocksAim'.
+  1.14.51RC.log:2134:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:2135:                                ^^^^^^^^^^^^^^^^^
+> 1.14.51RC.log:2136:01:20 +1298 -7: loading 
+D:/Development/ballwars/test/features/skills/skill_effects_editor_test.dart [E]
+  1.14.51RC.log:2137:  Failed to load 
+"D:/Development/ballwars/test/features/skills/skill_effects_editor_test.dart":
+  1.14.51RC.log:2138:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/skill_effects_editor_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:2139:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:2140:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2141:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2142:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:2143:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2144:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2145:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:2146:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2147:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2148:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2149:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:2150:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:2151:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2152:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2153:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2154:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:2155:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:2156:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2157:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2158:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2159:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2160:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:2161:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2162:  .
+> 1.14.51RC.log:2163:01:20 +1298 -7: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:2164:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:2165:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:2166:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:2167:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:2168:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:2169:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:2170:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:2171:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:2172:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:2173:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:2174:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:2175:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:2176:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:2177:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:2178:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:2179:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:2180:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:2181:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:2182:  
+  1.14.51RC.log:2183:01:22 +1298 -7: 
+D:/Development/ballwars/test/features/skills/skill_global_settings_test.dart: by default each skill 
+uses its own callout duration and screen shake
+  1.14.51RC.log:2184:01:22 +1299 -7: 
+D:/Development/ballwars/test/features/skills/skill_global_settings_test.dart: switched off, every 
+skill uses the global values
+  1.14.51RC.log:2185:01:22 +1300 -7: 
+D:/Development/ballwars/test/features/skills/skill_global_settings_test.dart: the global values are 
+saved, kept through skill edits, and replayed
+  1.14.51RC.log:2186:01:22 +1301 -7: 
+D:/Development/ballwars/test/features/skills/skill_hybrid_contact_policy_test.dart: hybrid 
+aimed-fire can also activate on contact
+  1.14.51RC.log:2187:01:22 +1302 -7: 
+D:/Development/ballwars/test/features/skills/skill_hybrid_contact_policy_test.dart: zero-reach 
+hybrid does not activate on contact
+  1.14.51RC.log:2188:01:22 +1303 -7: 
+D:/Development/ballwars/test/features/skills/skill_hybrid_contact_policy_test.dart: ranged 
+aimed-fire does not gain melee contact
+  1.14.51RC.log:2189:01:22 +1304 -7: 
+D:/Development/ballwars/test/features/skills/skill_hybrid_contact_policy_test.dart: collision 
+composed skills retain contact activation
+  1.14.51RC.log:2190:01:23 +1305 -7: 
+D:/Development/ballwars/test/features/skills/skill_hybrid_contact_policy_test.dart: non-composed 
+legacy weapon is unchanged
+  1.14.51RC.log:2191:01:23 +1306 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_stored_test.dart: a library matches its 
+stored copy whatever order jsonb keeps keys in
+  1.14.51RC.log:2192:01:23 +1307 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_stored_test.dart: a library does not 
+match a stored copy with different skills
+  1.14.51RC.log:2193:lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 
+'SkillDemoObstacleScenario' 
+  1.14.51RC.log:2194:isn't a type.
+  1.14.51RC.log:2195:                            DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:2196:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2197:lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2198:                                  value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:2237:01:23 +1315 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: version one definitions infer 
+category and migrate to version two
+  1.14.51RC.log:2238:01:23 +1316 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: older saved built-ins recover 
+their real arena yell
+  1.14.51RC.log:2239:01:23 +1317 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: composed chains and repeat 
+timing round-trip and clamp
+  1.14.51RC.log:2240:01:23 +1318 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: visual impact and handedness 
+settings round-trip and clamp
+  1.14.51RC.log:2241:01:23 +1319 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: impossible composed 
+combinations explain what must change
+  1.14.51RC.log:2242:01:23 +1320 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: versioned JSON import 
+round-trips and rejects unsafe shapes
+  1.14.51RC.log:2243:01:23 +1321 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: effect-heavy Mayhem skills 
+show their runtime safety limits
+  1.14.51RC.log:2244:01:23 +1322 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: built-in callout styles match 
+their actual rarity tier
+  1.14.51RC.log:2245:01:23 +1323 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: defaultGripInset matches 
+every built-in skill
+  1.14.51RC.log:2246:01:23 +1324 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: grip forward/back accepts 
+-1.5..1.5 and clamps beyond
+  1.14.51RC.log:2247:01:23 +1325 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: grip sideways and rotation 
+round trip, clamp and default to 0
+  1.14.51RC.log:2248:01:23 +1326 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: default grips are left out of 
+the JSON and replay snapshots
+  1.14.51RC.log:2249:01:23 +1327 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: shell settings default to 
+today: the four guns drop brass shells
+  1.14.51RC.log:2250:01:23 +1328 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: shell settings round trip, 
+clamp, and old JSON behaves as today
+  1.14.51RC.log:2251:01:23 +1329 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: shell settings a non-numeric 
+shell size is ignored, not thrown on
+  1.14.51RC.log:2252:01:23 +1330 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: shell settings shell count 
+and size 10 survive persistence and replay
+  1.14.51RC.log:2253:01:23 +1331 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: shell settings shell settings 
+survive the compact replay form
+  1.14.51RC.log:2254:01:23 +1332 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: custom description round 
+trips, trims, caps at 160 and defaults to empty
+  1.14.51RC.log:2255:01:23 +1333 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: built-in descriptions are 
+kept in their override and travel in snapshots
+  1.14.51RC.log:2256:01:23 +1334 -7: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: descriptions are cut on 
+characters, never inside an emoji
+> 1.14.51RC.log:2257:01:23 +1334 -8: loading 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart [E]
+  1.14.51RC.log:2258:  Failed to load 
+"D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart":
+  1.14.51RC.log:2259:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:2260:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:2261:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2262:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2263:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:2264:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2265:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2266:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:2267:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2268:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2269:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2270:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:2271:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:2272:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2273:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2274:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2275:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:2276:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:2277:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2278:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2279:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2280:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2281:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:2282:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2283:  .
+  1.14.51RC.log:2284:01:23 +1335 -8: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: replay snapshots carry 
+descriptions and still enforce their limit
+> 1.14.51RC.log:2285:01:23 +1335 -8: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:2286:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:2287:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:2288:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:2289:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:2290:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:2291:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:2292:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:2293:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:2294:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:2295:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:2296:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:2297:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:2298:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:2299:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:2300:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:2301:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:2302:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:2303:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:2304:  
+  1.14.51RC.log:2305:01:23 +1336 -8: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: melee reach round trips, 
+clamps to 0..3 and defaults to 0
+  1.14.51RC.log:2306:01:23 +1337 -8: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: hilted weapons default to an 
+inset hand grip
+  1.14.51RC.log:2307:01:23 +1338 -8: 
+D:/Development/ballwars/test/features/skills/skill_library_test.dart: advanced targeting and 
+delivery choices round-trip
+  1.14.51RC.log:2308:01:25 +1339 -8: 
+D:/Development/ballwars/test/features/skills/skill_passive_trigger_gate_test.dart: passive gate 
+delegates delay and repeats to the effect executor
+  1.14.51RC.log:2309:01:25 +1340 -8: 
+D:/Development/ballwars/test/features/skills/skill_passive_trigger_gate_test.dart: rejected damage 
+event can retry without another signal
+  1.14.51RC.log:2310:01:25 +1341 -8: 
+D:/Development/ballwars/test/features/skills/skill_passive_trigger_gate_test.dart: cancelPending 
+removes all retries after elimination
+  1.14.51RC.log:2311:01:25 +1342 -8: 
+D:/Development/ballwars/test/features/skills/skill_passive_trigger_gate_test.dart: timer gate 
+advances at match-clock seconds
+  1.14.51RC.log:2312:01:25 +1343 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: single remaining 
+slot fires on aim axis
+  1.14.51RC.log:2313:01:25 +1344 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: partial volley 
+distributes symmetrically over admitted shots
+  1.14.51RC.log:2314:01:25 +1345 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: invalid spread or 
+index cannot produce NaN angles
+  1.14.51RC.log:2315:01:25 +1346 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: full queue rejects 
+entire volley without evicting shots
+  1.14.51RC.log:2316:01:25 +1347 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: partial capacity 
+admits only available projectiles
+  1.14.51RC.log:2317:01:25 +1348 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: empty queue admits 
+requested volley
+  1.14.51RC.log:2318:01:25 +1349 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: nonpositive 
+requests and invalid limits reject safely
+  1.14.51RC.log:2319:01:25 +1350 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_budget_test.dart: negative active 
+count cannot increase capacity
+  1.14.51RC.log:2320:01:25 +1351 -8: 
+D:/Development/ballwars/test/features/skills/skill_projectile_impact_policy_test.dart: firing 
+cooldown gates a new launch but not an existing shot impact
+  1.14.51RC.log:2403:                              value: _demo.obstacleScenario,
+  1.14.51RC.log:2404:                                           ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2405:lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 
+  1.14.51RC.log:2406:'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2407: - 'SkillDemoController' is from 
+  1.14.51RC.log:2408:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2409:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2410:Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 
+  1.14.51RC.log:2411:'obstacleScenario'.
+  1.14.51RC.log:2412:                                  _demo.obstacleScenario = value;
+  1.14.51RC.log:2413:                                        ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2414:lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 
+  1.14.51RC.log:2415:'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2416: - 'SkillDemoController' is from 
+  1.14.51RC.log:2417:'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+  1.14.51RC.log:2418:('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2419:Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 
+  1.14.51RC.log:2420:'obstacleBlocksAim'.
+  1.14.51RC.log:2421:                          _demo.obstacleBlocksAim
+  1.14.51RC.log:2422:                                ^^^^^^^^^^^^^^^^^
+> 1.14.51RC.log:2423:01:30 +1417 -9: loading 
+D:/Development/ballwars/test/features/skills/visual_authoring_test.dart [E]
+  1.14.51RC.log:2424:  Failed to load 
+"D:/Development/ballwars/test/features/skills/visual_authoring_test.dart":
+  1.14.51RC.log:2425:  Compilation failed for 
+testPath=D:/Development/ballwars/test/features/skills/visual_authoring_test.dart: 
+lib/features/skills/presentation/skill_demo_dialog.dart:550:44: Error: 'SkillDemoObstacleScenario' 
+isn't a type.
+  1.14.51RC.log:2426:                              DropdownButton<SkillDemoObstacleScenario>(
+  1.14.51RC.log:2427:                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2428:  lib/features/skills/presentation/skill_demo_dialog.dart:555:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2429:                                    value: SkillDemoObstacleScenario.headOn,
+  1.14.51RC.log:2430:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2431:  lib/features/skills/presentation/skill_demo_dialog.dart:559:42: Error: Not a 
+constant expression.
+  1.14.51RC.log:2432:                                    value: SkillDemoObstacleScenario.clearLane,
+  1.14.51RC.log:2433:                                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2434:  lib/features/skills/presentation/skill_demo_dialog.dart:552:44: Error: The 
+getter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2435:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2436:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleScenario'.
+  1.14.51RC.log:2437:                                value: _demo.obstacleScenario,
+  1.14.51RC.log:2438:                                             ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2439:  lib/features/skills/presentation/skill_demo_dialog.dart:566:41: Error: The 
+setter 'obstacleScenario' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2440:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2441:  Try correcting the name to the name of an existing setter, or defining a 
+setter or field named 'obstacleScenario'.
+  1.14.51RC.log:2442:                                    _demo.obstacleScenario = value;
+  1.14.51RC.log:2443:                                          ^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2444:  lib/features/skills/presentation/skill_demo_dialog.dart:574:33: Error: The 
+getter 'obstacleBlocksAim' isn't defined for the type 'SkillDemoController'.
+  1.14.51RC.log:2445:   - 'SkillDemoController' is from 
+'package:ballwars/features/skills/application/skill_demo_controller.dart' 
+('lib/features/skills/application/skill_demo_controller.dart').
+  1.14.51RC.log:2446:  Try correcting the name to the name of an existing getter, or defining a 
+getter or field named 'obstacleBlocksAim'.
+  1.14.51RC.log:2447:                            _demo.obstacleBlocksAim
+  1.14.51RC.log:2448:                                  ^^^^^^^^^^^^^^^^^
+  1.14.51RC.log:2449:  .
+> 1.14.51RC.log:2450:01:30 +1417 -9: loading D:/Development/ballwars/test/app_navigation_test.dart 
+[E]
+  1.14.51RC.log:2451:  Error: The Dart compiler exited unexpectedly.
+  1.14.51RC.log:2452:  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  1.14.51RC.log:2453:  package:flutter_tools/src/compile.dart 911:11    
+DefaultResidentCompiler._compile.<fn>
+  1.14.51RC.log:2454:  dart:async/zone.dart 1538:47                     _rootRunUnary
+  1.14.51RC.log:2455:  dart:async/zone.dart 1429:19                     _CustomZone.runUnary
+  1.14.51RC.log:2456:  dart:async/future_impl.dart 948:45               
+Future._propagateToListeners.handleValueCallback
+  1.14.51RC.log:2457:  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  1.14.51RC.log:2458:  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  1.14.51RC.log:2459:  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  1.14.51RC.log:2460:  dart:async/future_impl.dart 804:7                
+Future._asyncCompleteWithValue.<fn>
+  1.14.51RC.log:2461:  dart:async/zone.dart 1525:13                     _rootRun
+  1.14.51RC.log:2462:  dart:async/zone.dart 1422:19                     _CustomZone.run
+  1.14.51RC.log:2463:  dart:async/zone.dart 1321:7                      _CustomZone.runGuarded
+  1.14.51RC.log:2464:  dart:async/zone.dart 1362:23                     
+_CustomZone.bindCallbackGuarded.<fn>
+  1.14.51RC.log:2465:  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  1.14.51RC.log:2466:  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  1.14.51RC.log:2467:  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  1.14.51RC.log:2468:  dart:isolate-patch/isolate_patch.dart 194:5      
+_RawReceivePort._handleMessage
+  1.14.51RC.log:2469:  
+  1.14.51RC.log:2470:01:32 +1417 -9: 
+D:/Development/ballwars/test/features/skills/weapon_presentation_taxonomy_test.dart: legacy skills 
+infer presentation without modifying their JSON
+  1.14.51RC.log:2471:01:32 +1418 -9: 
+D:/Development/ballwars/test/features/skills/weapon_presentation_taxonomy_test.dart: all authoring 
+classifications persist without changing mechanical delivery
+  1.14.51RC.log:2472:01:32 +1419 -9: 
+D:/Development/ballwars/test/features/skills/weapon_presentation_taxonomy_test.dart: optional 
+metadata can be cleared and old records still load
+  1.14.51RC.log:2473:01:32 +1420 -9: 
+D:/Development/ballwars/test/features/sprites/custom_sprite_loader_test.dart: sheet dimensions are 
+read from decoded pixels on web and native
+  1.14.51RC.log:2474:01:32 +1421 -9: 
+D:/Development/ballwars/test/features/sprites/custom_sprite_loader_test.dart: custom atlas round 
+trip retains geometry
+  1.14.51RC.log:2475:01:32 +1422 -9: 
+D:/Development/ballwars/test/features/sprites/custom_sprite_loader_test.dart: two atlases register; 
+corrupt one is isolated; deletion unregisters
+  1.14.51RC.log:2476:bad: FormatException: Choose a PNG or WebP image, not a renamed JPEG.
+  1.14.51RC.log:2477:Custom sprites unavailable: Bad state: offline
+  1.14.51RC.log:2478:01:32 +1423 -9: 
+D:/Development/ballwars/test/features/sprites/custom_sprite_loader_test.dart: oversized and 
+disguised JPEG are refused before decode or upload
+  1.14.51RC.log:2479:01:32 +1424 -9: 
+D:/Development/ballwars/test/features/sprites/presentation/sprite_frame_duplication_test.dart: 
+duplicate frame is preserved in exported playback sequence
+  1.14.51RC.log:2480:01:33 +1425 -9: 
+D:/Development/ballwars/test/features/sprites/presentation/sprite_frame_duplication_test.dart: 
+duplicate and remove frame copy in sprite editor
+  1.14.51RC.log:2481:01:33 +1426 -9: 
+D:/Development/ballwars/test/features/sprites/presentation/sprite_frame_duplication_test.dart: 
+duplicate and remove frame copy in sprite editor
+  1.14.51RC.log:2482:01:33 +1427 -9: 
+D:/Development/ballwars/test/features/sprites/presentation/sprite_frame_duplication_test.dart: 
+duplicate and remove frame copy in sprite editor
+  1.14.51RC.log:2483:01:34 +1428 -9: 
+D:/Development/ballwars/test/features/sprites/presentation/sprite_frame_duplication_test.dart: 
+duplicate and remove frame copy in sprite editor
+  1.14.51RC.log:2484:01:35 +1429 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_atlas_repository_test.dart: restore with 
+original UUID inserts a missing row
+  1.14.51RC.log:2485:01:36 +1430 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore reports a 
+failure, retries it, and loads artwork under its original ID
+  1.14.51RC.log:2499:01:37 +1444 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore reports a 
+failure, retries it, and loads artwork under its original ID
+  1.14.51RC.log:2500:01:37 +1444 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore reports a 
+failure, retries it, and loads artwork under its original ID
+  1.14.51RC.log:2501:01:38 +1445 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore reports a 
+failure, retries it, and loads artwork under its original ID
+  1.14.51RC.log:2502:01:38 +1446 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore reports a 
+failure, retries it, and loads artwork under its original ID
+  1.14.51RC.log:2503:01:38 +1447 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore reports a 
+failure, retries it, and loads artwork under its original ID
+  1.14.51RC.log:2504:01:39 +1448 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: golden burst edge 
+contact warns but does not block a valid four-frame upload
+  1.14.51RC.log:2505:01:39 +1449 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: golden burst edge 
+contact warns but does not block a valid four-frame upload
+  1.14.51RC.log:2506:01:39 +1450 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: golden burst edge 
+contact warns but does not block a valid four-frame upload
+  1.14.51RC.log:2507:01:39 +1451 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_library_search_test.dart: picker shows upload 
+names, searches artwork and returns stable ID
+  1.14.51RC.log:2508:01:39 +1452 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_backup_screen_test.dart: restore review 
+defaults conflicts to Skip and cancellation never writes
+  1.14.51RC.log:2509:01:40 +1453 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: blank animation 
+frames require explicit inclusion or exclusion
+  1.14.51RC.log:2510:01:40 +1454 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: optimized comparison 
+uses selected background and ball color without losing edits
+  1.14.51RC.log:2511:01:41 +1455 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: editing an existing 
+atlas preserves encoded pixels and IDs while changing its readable name
+  1.14.51RC.log:2512:01:42 +1456 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: per-sprite edits 
+survive tab changes and save with custom name, timing and anchor
+  1.14.51RC.log:2513:01:43 +1457 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: smooth resizing is 
+baked into optimized artwork while pixel art keeps sharp samples
+  1.14.51RC.log:2514:01:43 +1458 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: removal confirmation 
+names missing sprites and affected skills; cancel preserves old upload
+  1.14.51RC.log:2515:01:43 +1459 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: replacement keeps 
+atlas and sprite IDs and sends the expected revision
+  1.14.51RC.log:2516:01:44 +1460 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: single 
+high-resolution icon is normalized before upload; mobile tabs preserve edits
+  1.14.51RC.log:2517:01:44 +1461 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: failed save is 
+visible and preserves edits; wide screen stays 440 px
+  1.14.51RC.log:2518:01:45 +1462 ~1 -9: 
+D:/Development/ballwars/test/features/sprites/sprite_import_screen_test.dart: resizing keeps alpha 
+and trimmed positioning
+> 1.14.51RC.log:2519:01:45 +1463 ~1 -9: Some tests failed.
+
+

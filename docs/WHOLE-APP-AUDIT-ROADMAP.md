@@ -84,6 +84,17 @@ Coding completed locally, 2026-11-04. [Implementation, usage and manual checklis
 - [x] Final software verification and builds: 1,659 full-suite tests passed, one skipped; additional export-frame parity test passed; analysis clean; release web and signed APK builds passed.
 - [ ] User applies migration 028 for custom watermark persistence and performs the listed updated video/file-picker checks.
 
+## Admin Guide (2026-11-05)
+
+- [x] Searchable, bundled offline help with Tutorials / How it works / Parameters tabs.
+- [x] Twenty topics covering skill creation, sprite import, visual events and grouped parameter explanations with units/examples.
+- [x] Admin Settings > General entry and contextual links from skill-editor section/field info; the editor draft remains open underneath.
+- [x] Cross-tab search, clear search, remembered topic tab, related links and immediate matching parameter explanation.
+- [x] Explicit native-behavior limitations, including the flamethrower cone currently ignoring projectile launch-point overrides.
+- [x] Markdown reference generated from the same catalog: [Admin Guide](ADMIN-GUIDE.md). Refresh with `python tools/export_admin_guide.py`; verify with `--check`.
+- [x] 61 focused tests passed, analysis clean, release web build passed and phone/desktop runtime layouts inspected; [implementation notes](ADMIN-GUIDE-IMPLEMENTATION.md).
+- [ ] Future runtime improvement: configurable emitter origin for continuous stream/cone attacks, shared by visuals and hit detection. This is documented, not implemented by the help-screen work.
+
 ## Flame rendering feasibility study (after correctness fixes)
 
 This is an experiment, not approval to migrate engines. Keep the current renderer until measured evidence supports a change. Do not start the experiment during Batch 2.

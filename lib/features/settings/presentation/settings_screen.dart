@@ -1,3 +1,4 @@
+import '../../admin_guide/presentation/admin_guide_screen.dart';
 import 'ball_studio_screen.dart';
 import '../../../core/widgets/legacy_tag.dart';
 import 'package:flutter/material.dart';
@@ -343,6 +344,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         )
                       else ...[
+                        if (_settingsTab == 0)
+                          Card(child: ListTile(
+                            key: const ValueKey('open-admin-guide'),
+                            leading: const Icon(Icons.menu_book_outlined),
+                            title: const Text('Admin Guide'),
+                            subtitle: const Text('Create skills, understand effects and look up parameters.'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => openAdminGuide(context),
+                          )),
                         if (_settingsTab == 0)
                           _Section(
                             title: 'HEADLINE',

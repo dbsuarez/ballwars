@@ -1,3 +1,5 @@
+import '../../admin_guide/domain/admin_guide.dart';
+import '../../admin_guide/presentation/admin_guide_screen.dart';
 import '../../../core/widgets/number_stepper.dart';
 import 'mechanical_effects_editor.dart';
 import 'dart:convert';
@@ -2819,6 +2821,12 @@ class _SkillEditorState extends State<_SkillEditor>
           ),
         ),
         actions: [
+          TextButton(key: const ValueKey('skill-open-full-guide'),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              openAdminGuide(context, topic: guideTopicForEditor(safeSection, appearanceIndex));
+            }, child: const Text('Read full guide')),
+
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Close'),
@@ -3404,13 +3412,18 @@ class _SkillEditorState extends State<_SkillEditor>
     'Sound cue': 'Audio played for the selected skill event, where supported.',
   };
 
-  void _showFieldHelp(String label, String description) {
+  void _showFieldHelp(String label, String description, {String? guideTopic}) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(label),
         content: Text(description),
         actions: [
+          TextButton(onPressed: () {
+            Navigator.pop(dialogContext);
+            openAdminGuide(context, topic: guideTopic ?? guideTopicForField(label), highlight: label);
+          }, child: const Text('Read full guide')),
+
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Close'),
@@ -3827,7 +3840,7 @@ class _SkillEditorState extends State<_SkillEditor>
                   key: ValueKey('skill-number-help-$key'),
                   tooltip: 'About $label',
                   icon: const Icon(Icons.help_outline, size: 18),
-                  onPressed: () => _showFieldHelp(label, description),
+                  onPressed: () => _showFieldHelp(label, description, guideTopic: guideTopicForNumber(key)),
                 ),
               ),
             _fixedRow(

@@ -63,6 +63,21 @@ class _SignedOutAdmin implements AdminAuth {
 }
 
 void main() {
+  for (final admin in [false, true]) {
+    testWidgets('Admin Guide entry is ${admin ? "available" : "hidden"} for admin=$admin', (tester) async {
+      await tester.pumpWidget(AppSettingsScope(settings: ValueNotifier(AppSettings.defaults),
+        repository: _FakeRepo(), adminAuth: admin ? _Admin() : _SignedOutAdmin(),
+        child: MaterialApp(theme: AppTheme.build(AppPalettes.midnight), home: const SettingsScreen())));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('open-admin-guide')), admin ? findsOneWidget : findsNothing);
+      if (admin) {
+        await tester.tap(find.byKey(const ValueKey('open-admin-guide')));
+        await tester.pumpAndSettle();
+        expect(find.text('Create your first skill'), findsOneWidget);
+      }
+    });
+  }
+
   testWidgets(
     'admin Ball Studio saves shared appearance through the settings scope',
     (tester) async {

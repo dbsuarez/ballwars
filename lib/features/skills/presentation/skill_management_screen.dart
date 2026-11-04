@@ -1854,6 +1854,7 @@ class _SkillEditorState extends State<_SkillEditor>
   late String? _iconSpriteId = widget.skill.iconSpriteId;
   late String? _pickupSpriteId = widget.skill.pickupSpriteId;
   late String? _heldSpriteId = widget.skill.heldSpriteId;
+  late String? _heldAttackVfxSpriteId = widget.skill.heldAttackVfxSpriteId;
   late String? _projectileSpriteId = widget.skill.projectileSpriteId;
   late bool _originEnabled = widget.skill.projectileOriginForward != null;
   late bool _areaRadiusEnabled = widget.skill.areaRadiusRatio != null;
@@ -2219,6 +2220,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _iconSpriteId = defaults.iconSpriteId;
       _pickupSpriteId = defaults.pickupSpriteId;
       _heldSpriteId = defaults.heldSpriteId;
+      _heldAttackVfxSpriteId = defaults.heldAttackVfxSpriteId;
       _projectileSpriteId = defaults.projectileSpriteId;
       _originEnabled = defaults.projectileOriginForward != null;
       _areaRadiusEnabled = defaults.areaRadiusRatio != null;
@@ -2562,6 +2564,7 @@ class _SkillEditorState extends State<_SkillEditor>
       heldAttackAnimation: _heldAttackAnimation,
       heldAttackRepeatCount: _heldAttackRepeatCount,
       heldAttackDurationSteps: _heldAttackDurationSteps,
+      heldAttackVfxSpriteId: _heldAttackVfxSpriteId,
       trackNearestOpponent: _trackNearestOpponent,
       weaponDisplayScale: _double('weaponDisplayScale'),
       pickupDisplayScale: _double('pickupDisplayScale'),
@@ -4397,56 +4400,6 @@ class _SkillEditorState extends State<_SkillEditor>
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _fixedRow(
-                          'Held attack animation',
-                          DropdownButtonFormField<HeldAttackAnimation?>(
-                            key: const ValueKey('skill-held-attack-animation'),
-                            isExpanded: true,
-                            initialValue: _heldAttackAnimation,
-                            decoration: const InputDecoration(),
-                            items: const [
-                              DropdownMenuItem<HeldAttackAnimation?>(
-                                value: null, child: Text('Legacy (unchanged)'),
-                              ),
-                              DropdownMenuItem<HeldAttackAnimation?>(
-                                value: HeldAttackAnimation.slash, child: Text('Slash / Swing'),
-                              ),
-                              DropdownMenuItem<HeldAttackAnimation?>(
-                                value: HeldAttackAnimation.thrust, child: Text('Thrust'),
-                              ),
-                              DropdownMenuItem<HeldAttackAnimation?>(
-                                value: HeldAttackAnimation.none, child: Text('None'),
-                              ),
-                            ],
-                            onChanged: (value) => setState(() => _heldAttackAnimation = value),
-                          ),
-                        ),
-                        _fixedRow(
-                          'Attack repeats (visual only)',
-                          DropdownButtonFormField<int>(
-                            key: const ValueKey('skill-held-attack-repeats'),
-                            initialValue: _heldAttackRepeatCount,
-                            items: [for (var count = 1; count <= 5; count++)
-                              DropdownMenuItem(value: count, child: Text('$count')),
-                            ],
-                            onChanged: (value) => setState(() => _heldAttackRepeatCount = value ?? 1),
-                          ),
-                        ),
-                        _fixedRow(
-                          'Attack duration (visual only)',
-                          DropdownButtonFormField<int>(
-                            key: const ValueKey('skill-held-attack-duration'),
-                            // The fixed-row control is narrow on 360 px phones.
-                            // Constrain the selected item instead of allowing
-                            // its text and dropdown chevron to overflow.
-                            isExpanded: true,
-                            initialValue: _heldAttackDurationSteps,
-                            items: [for (var steps = 12; steps <= 90; steps++)
-                              DropdownMenuItem(value: steps, child: Text('$steps steps')),
-                            ],
-                            onChanged: (value) => setState(() => _heldAttackDurationSteps = value ?? 30),
-                          ),
-                        ),
                         const Text('Weapon class and attack delivery describe presentation. '
                             'Mechanical delivery above still controls actual attacks.'),
                       ],
@@ -4728,6 +4681,86 @@ class _SkillEditorState extends State<_SkillEditor>
                                   'Choose independent artwork for the library icon, arena pickup, and equipped weapon. '
                                   'Unassigned Pickup and Held slots use Icon artwork.',
                                 ),
+                                if (_category == SkillCategory.weapon) ...[
+                                  const SizedBox(height: 12),
+                                  _section('Held Attack Animation',
+                                      'Set Slash / Swing or Thrust, repeats and duration. Visual only; does not change damage.'),
+                                    _fixedRow(
+                                      'Held Attack Animation',
+                                      DropdownButtonFormField<HeldAttackAnimation?>(
+                                        key: const ValueKey('skill-held-attack-animation'),
+                                        isExpanded: true,
+                                        initialValue: _heldAttackAnimation,
+                                        decoration: const InputDecoration(),
+                                        items: const [
+                                          DropdownMenuItem<HeldAttackAnimation?>(
+                                            value: null, child: Text('Legacy (unchanged)'),
+                                          ),
+                                          DropdownMenuItem<HeldAttackAnimation?>(
+                                            value: HeldAttackAnimation.slash, child: Text('Slash / Swing'),
+                                          ),
+                                          DropdownMenuItem<HeldAttackAnimation?>(
+                                            value: HeldAttackAnimation.thrust, child: Text('Thrust'),
+                                          ),
+                                          DropdownMenuItem<HeldAttackAnimation?>(
+                                            value: HeldAttackAnimation.none, child: Text('None'),
+                                          ),
+                                        ],
+                                        onChanged: (value) => setState(() => _heldAttackAnimation = value),
+                                      ),
+                                    ),
+                                    _fixedRow(
+                                      'Attack repeats (visual only)',
+                                      DropdownButtonFormField<int>(
+                                        key: const ValueKey('skill-held-attack-repeats'),
+                                        initialValue: _heldAttackRepeatCount,
+                                        items: [for (var count = 1; count <= 5; count++)
+                                          DropdownMenuItem(value: count, child: Text('$count')),
+                                        ],
+                                        onChanged: (value) => setState(() => _heldAttackRepeatCount = value ?? 1),
+                                      ),
+                                    ),
+                                    _fixedRow(
+                                      'Attack duration (visual only)',
+                                      DropdownButtonFormField<int>(
+                                        key: const ValueKey('skill-held-attack-duration'),
+                                        // The fixed-row control is narrow on 360 px phones.
+                                        // Constrain the selected item instead of allowing
+                                        // its text and dropdown chevron to overflow.
+                                        isExpanded: true,
+                                        initialValue: _heldAttackDurationSteps,
+                                        items: [for (var steps = 12; steps <= 90; steps++)
+                                          DropdownMenuItem(value: steps, child: Text('$steps steps')),
+                                        ],
+                                        onChanged: (value) => setState(() => _heldAttackDurationSteps = value ?? 30),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 12),
+                                  ListTile(
+                                    key: const ValueKey('skill-held-attack-vfx'),
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: SpriteThumbnail(id: _heldAttackVfxSpriteId),
+                                    title: const Text('Held Attack VFX'),
+                                    subtitle: Text(_heldAttackVfxSpriteId == null
+                                        ? 'None - separate from Direct Hit Effects'
+                                        : SpriteRegistry.has(_heldAttackVfxSpriteId!)
+                                            ? SpriteRegistry.displayLabel(_heldAttackVfxSpriteId!)
+                                            : 'Missing sprite - choose an animated sprite'),
+                                    trailing: const Icon(Icons.chevron_right),
+                                    onTap: () async {
+                                      final picked = await selectSkillSprite(
+                                        context,
+                                        title: 'Held Attack VFX (swing trail)',
+                                        current: _heldAttackVfxSpriteId,
+                                      );
+                                      if (mounted && picked != null) {
+                                        setState(() => _heldAttackVfxSpriteId =
+                                            picked.isEmpty ? null : picked);
+                                      }
+                                    },
+                                  ),
+                                  const Text('Select a slash/thrust sprite animation. It follows the weapon during an attack; Direct Hit Effects are unchanged.'),
+                                ],
                                 const SizedBox(height: 8),
                                 for (final slot in [
                                   (

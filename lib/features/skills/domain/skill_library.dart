@@ -133,6 +133,7 @@ class SkillDefinition {
     this.heldAttackAnimation,
     this.heldAttackRepeatCount = 1,
     this.heldAttackDurationSteps = 30,
+    this.heldAttackVfxSpriteId,
     this.trackNearestOpponent = false,
     this.weaponDisplayScale = 1,
     this.pickupDisplayScale = 1,
@@ -257,6 +258,9 @@ class SkillDefinition {
   final int heldAttackRepeatCount;
   /// Cosmetic melee strike lifetime in simulation steps (12–90).
   final int heldAttackDurationSteps;
+  /// Optional animation following the held weapon during a slash or thrust.
+  /// Never replaces Direct Hit Effects or changes damage.
+  final String? heldAttackVfxSpriteId;
 
   SkillWeaponClass get effectiveWeaponClass => weaponClass ??
       (meleeReach > 0 && (delivery == SkillDelivery.projectile ||
@@ -551,6 +555,7 @@ class SkillDefinition {
     Object? heldAttackAnimation = _unset,
     int? heldAttackRepeatCount,
     int? heldAttackDurationSteps,
+    Object? heldAttackVfxSpriteId = _unset,
     bool? trackNearestOpponent,
     double? weaponDisplayScale,
     double? pickupDisplayScale,
@@ -665,6 +670,8 @@ class SkillDefinition {
         ? this.heldAttackAnimation : heldAttackAnimation as HeldAttackAnimation?,
     heldAttackRepeatCount: (heldAttackRepeatCount ?? this.heldAttackRepeatCount).clamp(1, 5),
     heldAttackDurationSteps: (heldAttackDurationSteps ?? this.heldAttackDurationSteps).clamp(12, 90),
+    heldAttackVfxSpriteId: identical(heldAttackVfxSpriteId, _unset)
+        ? this.heldAttackVfxSpriteId : heldAttackVfxSpriteId as String?,
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
@@ -803,6 +810,7 @@ class SkillDefinition {
     if (heldAttackAnimation != null) 'held_attack_animation': heldAttackAnimation!.name,
     if (heldAttackRepeatCount != 1) 'held_attack_repeat_count': heldAttackRepeatCount.clamp(1, 5),
     if (heldAttackDurationSteps != 30) 'held_attack_duration_steps': heldAttackDurationSteps.clamp(12, 90),
+    if (heldAttackVfxSpriteId != null) 'held_attack_vfx_sprite': heldAttackVfxSpriteId,
     'track_nearest_opponent': trackNearestOpponent,
     'weapon_display_scale': weaponDisplayScale,
     'pickup_display_scale': pickupDisplayScale,
@@ -960,6 +968,8 @@ class SkillDefinition {
       heldAttackAnimation: nullableEnum('held_attack_animation', HeldAttackAnimation.values),
       heldAttackRepeatCount: ((value['held_attack_repeat_count'] as num?)?.toInt() ?? 1).clamp(1, 5),
       heldAttackDurationSteps: ((value['held_attack_duration_steps'] as num?)?.toInt() ?? 30).clamp(12, 90),
+      heldAttackVfxSpriteId: value['held_attack_vfx_sprite'] is String
+          ? value['held_attack_vfx_sprite'] as String : null,
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,
@@ -1150,6 +1160,7 @@ class SkillDefinition {
     iconSpriteId: _cleanSpriteReference(iconSpriteId),
     pickupSpriteId: _cleanSpriteReference(pickupSpriteId),
     heldSpriteId: _cleanSpriteReference(heldSpriteId),
+    heldAttackVfxSpriteId: _cleanSpriteReference(heldAttackVfxSpriteId),
     projectileSpriteId: _cleanSpriteReference(projectileSpriteId),
     impactSpriteId: _cleanSpriteReference(impactSpriteId),
     castingSpriteId: _cleanSpriteReference(castingSpriteId),

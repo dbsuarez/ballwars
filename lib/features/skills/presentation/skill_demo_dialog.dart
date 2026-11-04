@@ -432,23 +432,20 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                   ],
                 ),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Manual activation · targets start still · current unsaved draft',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12),
-                      ),
+              // Keep the actual arena renderer visible while the editor controls
+              // scroll. Pickup scale comes from the same live match painter.
+              Padding(
+                key: const ValueKey('skill-demo-pinned-stage'),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                       LayoutBuilder(
                         builder: (context, bounds) => Center(
                           child: SizedBox.square(
                             dimension: math.min(
                               bounds.maxWidth,
-                              math.max(180, math.min(400, size.height * .44)),
+                              math.min(310, size.height * .34),
                             ),
                             child: Stack(
                               fit: StackFit.expand,
@@ -479,6 +476,20 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                             ),
                           ),
                         ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Manual activation · targets start still · current unsaved draft',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12),
                       ),
                       Wrap(
                         alignment: WrapAlignment.center,
@@ -522,32 +533,6 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                             },
                           ),
                         ],
-                      ),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        children: [
-                          OutlinedButton.icon(
-                            key: const ValueKey('skill-demo-spawn-pickup'),
-                            onPressed: () => _mutatePreviewArena(_demo.spawnPreviewPickup),
-                            icon: const Icon(Icons.add_location_alt_outlined),
-                            label: const Text('Spawn pickup'),
-                          ),
-                          OutlinedButton.icon(
-                            key: const ValueKey('skill-demo-clear-pickup'),
-                            onPressed: _demo.hasPreviewPickup
-                                ? () => _mutatePreviewArena(_demo.clearPreviewPickup)
-                                : null,
-                            icon: const Icon(Icons.clear),
-                            label: const Text('Clear pickup'),
-                          ),
-                        ],
-                      ),
-                      const Text(
-                        'Pickup uses the real arena artwork and scaling near the upper edge. '
-                        'Reset clears the preview pickup.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -643,13 +628,52 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           for (final mode in const [
                             'Casting', 'Equipped', 'Projectile', 'Impact', 'Pickup',
                           ])
-                            ChoiceChip(
-                              key: ValueKey('skill-demo-mode-${mode.toLowerCase()}'),
-                              label: Text(mode),
-                              selected: _focusedArtwork == mode,
-                              onSelected: (_) => _selectArtworkFocus(mode),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ChoiceChip(
+                                  key: ValueKey('skill-demo-mode-${mode.toLowerCase()}'),
+                                  label: Text(mode),
+                                  selected: _focusedArtwork == mode,
+                                  onSelected: (_) => _selectArtworkFocus(mode),
+                                ),
+                                IconButton(
+                                  key: ValueKey('skill-demo-edit-${mode.toLowerCase()}'),
+                                  tooltip: 'Edit $mode settings',
+                                  visualDensity: VisualDensity.compact,
+                                  iconSize: 18,
+                                  onPressed: () => Navigator.pop(context, mode),
+                                  icon: const Icon(Icons.tune),
+                                ),
+                              ],
                             ),
                         ],
+                      ),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            key: const ValueKey('skill-demo-spawn-pickup'),
+                            onPressed: () => _mutatePreviewArena(_demo.spawnPreviewPickup),
+                            icon: const Icon(Icons.add_location_alt_outlined),
+                            label: const Text('Spawn pickup'),
+                          ),
+                          OutlinedButton.icon(
+                            key: const ValueKey('skill-demo-clear-pickup'),
+                            onPressed: _demo.hasPreviewPickup
+                                ? () => _mutatePreviewArena(_demo.clearPreviewPickup)
+                                : null,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Clear pickup'),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Pickup displayed at match size (${_demo.match.skillLibrary.pickupDisplayScaleFor(skill).toStringAsFixed(2)}x) near the upper arena. Reset clears it.',
+                        key: const ValueKey('skill-demo-pickup-scale'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12),
                       ),
                       const SizedBox(height: 6),
                       Wrap(

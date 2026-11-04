@@ -1,8 +1,29 @@
+import 'dart:math' as math;
 import 'package:ballwars/features/skills/domain/skill_library.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_painter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('slash begins above the ball facing both right and left', () {
+    final start = PowerUpPainter.heldAttackPose(0, 1, HeldAttackAnimation.slash);
+    for (final slot in [0, 1]) {
+      final right = PowerUpPainter.heldAttackSwingRotation(0, start.rotation, slot);
+      final left = PowerUpPainter.heldAttackSwingRotation(math.pi, start.rotation, slot);
+      expect(left, closeTo(-right, 0.00001));
+      if (slot == 0) {
+        expect(math.sin(right), lessThan(0));
+        expect(math.sin(math.pi + left), lessThan(0));
+      }
+    }
+  });
+
+  test('flipped thrust is mirrored without changing forward travel', () {
+    final pose = PowerUpPainter.heldAttackPose(.5, 1, HeldAttackAnimation.thrust);
+    expect(PowerUpPainter.heldAttackSwingRotation(math.pi, pose.rotation, 0),
+        closeTo(-PowerUpPainter.heldAttackSwingRotation(0, pose.rotation, 0), .00001));
+    expect(pose.forward, greaterThan(0));
+  });
+
   test('Slash wind-up, smooth forward arc and follow-through', () {
     final start = PowerUpPainter.heldAttackPose(0, 1, HeldAttackAnimation.slash);
     final windup = PowerUpPainter.heldAttackPose(.18, 1, HeldAttackAnimation.slash);

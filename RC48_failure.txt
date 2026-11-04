@@ -1,0 +1,386 @@
+﻿
+  1.14.48RC.log:1757:01:50 +1548 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: Global: the five cards fit 
+a 360 px phone without overflow
+  1.14.48RC.log:1758:01:50 +1549 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: Global: the five cards fit 
+a 360 px phone without overflow
+  1.14.48RC.log:1759:01:50 +1550 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: Global: the five cards fit 
+a 360 px phone without overflow
+  1.14.48RC.log:1760:01:51 +1551 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: Global: the sprite size 
+switches disable the matching fields in every skill
+  1.14.48RC.log:1761:01:53 +1552 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: Combine: pick a look and a 
+fired skill; a broken reference blocks Save and says why
+  1.14.48RC.log:1762:01:54 +1553 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: editor saves directly, 
+reports failures, and keeps edits for retry
+  1.14.48RC.log:1763:01:55 +1554 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: phone editor keeps fixed 
+labels and aligned previews without overflow
+  1.14.48RC.log:1764:02:04 +1555 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: unified category filter 
+persists while searching and clears independently
+  1.14.48RC.log:1765:02:04 +1556 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: skill names use normal 
+rare epic and special tier colors
+  1.14.48RC.log:1766:02:05 +1557 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: all built-in numeric edits 
+survive Done and library Save
+  1.14.48RC.log:1767:02:05 +1558 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: a gun has no melee reach 
+field
+  1.14.48RC.log:1768:02:06 +1559 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: the orbiting flail 
+explains its own reach
+  1.14.48RC.log:1769:02:06 +1560 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: melee reach is edited on 
+contact weapons and saved
+  1.14.48RC.log:1770:02:06 +1561 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: grip preview edits 
+forward/back, sideways and rotation live
+  1.14.48RC.log:1771:02:09 +1562 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: gun skills edit their 
+shell in Appearance, restore and save
+> 1.14.48RC.log:1772:02:12 +1563 ~1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: phone subtab drafts, 
+decimal steppers and linked shell counts survive save and reopen
+> 1.14.48RC.log:1773:ΓòÉΓòÉΓòí EXCEPTION CAUGHT BY RENDERING LIBRARY Γò₧ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  1.14.48RC.log:1774:The following assertion was thrown during layout:
+  1.14.48RC.log:1775:A RenderFlex overflowed by 8.3 pixels on the right.
+  1.14.48RC.log:1776:
+  1.14.48RC.log:1777:The overflowing RenderFlex has an orientation of Axis.horizontal.
+  1.14.48RC.log:1778:The edge of the RenderFlex that is overflowing has been marked in the rendering with 
+a yellow and
+  1.14.48RC.log:1779:black striped pattern. This is usually caused by the contents being too big for the 
+RenderFlex.
+  1.14.48RC.log:1780:Consider applying a flex factor (e.g. using an Expanded widget) to force the children 
+of the
+  1.14.48RC.log:1781:RenderFlex to fit within the available space instead of being sized to their natural 
+size.
+  1.14.48RC.log:1782:This is considered an error condition because it indicates that there is content that 
+cannot be
+  1.14.48RC.log:1783:seen. If the content is legitimately bigger than the available space, consider 
+clipping it with a
+  1.14.48RC.log:1784:ClipRect widget before putting it in the flex, or using a scrollable container rather 
+than a Flex,
+  1.14.48RC.log:1785:like a ListView.
+  1.14.48RC.log:1786:The specific RenderFlex in question is: RenderFlex#623b6 DISPOSED OVERFLOWING:
+  1.14.48RC.log:1787:  creator: MultiChildRenderObjectElement#88c20(DEFUNCT) ΓåÉ
+  1.14.48RC.log:1788:    SingleChildRenderObjectElement#65ca3(DEFUNCT) ΓåÉ 
+SingleChildRenderObjectElement#5552a(DEFUNCT) ΓåÉ
+  1.14.48RC.log:1789:    InheritedElement#c03a1(DEFUNCT) ΓåÉ SlottedRenderObjectElement<_DecorationSlot,
+  1.14.48RC.log:1790:    RenderBox>#81050(DEFUNCT) ΓåÉ StatefulElement#95897(DEFUNCT) ΓåÉ
+  1.14.48RC.log:1791:    SingleChildRenderObjectElement#70e48(DEFUNCT) ΓåÉ 
+SingleChildRenderObjectElement#2f07c(DEFUNCT) ΓåÉ
+  1.14.48RC.log:1792:    StatefulElement#fc597(DEFUNCT) ΓåÉ StatelessElement#439f6(DEFUNCT) ΓåÉ
+  1.14.48RC.log:1793:    SingleChildRenderObjectElement#1c46d(DEFUNCT) ΓåÉ 
+SingleChildRenderObjectElement#61214(DEFUNCT) ΓåÉ Γï»
+  1.14.48RC.log:1794:  parentData: offset=Offset(0.0, 0.0) (can use size)
+  1.14.48RC.log:1795:  constraints: BoxConstraints(w=120.9, h=24.0)
+  1.14.48RC.log:1796:  size: Size(120.9, 24.0)
+  1.14.48RC.log:1797:  direction: horizontal
+  1.14.48RC.log:1798:  mainAxisAlignment: spaceBetween
+  1.14.48RC.log:1799:  mainAxisSize: min
+  1.14.48RC.log:1800:  crossAxisAlignment: center
+  1.14.48RC.log:1801:  textDirection: ltr
+  1.14.48RC.log:1802:  verticalDirection: down
+  1.14.48RC.log:1803:  spacing: 0.0
+  1.14.48RC.log:1804:ΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓù
+óΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓ
+ùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñ
+  1.14.48RC.log:1805:ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+> 1.14.48RC.log:1806:ΓòÉΓòÉΓòí EXCEPTION CAUGHT BY RENDERING LIBRARY Γò₧ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  1.14.48RC.log:1807:The following assertion was thrown during layout:
+  1.14.48RC.log:1808:A RenderFlex overflowed by 8.3 pixels on the right.
+  1.14.48RC.log:1809:
+  1.14.48RC.log:1810:The relevant error-causing widget was:
+  1.14.48RC.log:1811:  DropdownButtonFormField<int>-[<'skill-held-attack-duration'>]
+  1.14.48RC.log:1812:  DropdownButtonFormField:file:///D:/Development/ballwars/lib/features/skills/presenta
+tion/skill_management_screen.dart:4437:27
+  1.14.48RC.log:1813:
+  1.14.48RC.log:1814:The overflowing RenderFlex has an orientation of Axis.horizontal.
+  1.14.48RC.log:1815:The edge of the RenderFlex that is overflowing has been marked in the rendering with 
+a yellow and
+  1.14.48RC.log:1816:black striped pattern. This is usually caused by the contents being too big for the 
+RenderFlex.
+  1.14.48RC.log:1817:Consider applying a flex factor (e.g. using an Expanded widget) to force the children 
+of the
+  1.14.48RC.log:1818:RenderFlex to fit within the available space instead of being sized to their natural 
+size.
+  1.14.48RC.log:1819:This is considered an error condition because it indicates that there is content that 
+cannot be
+  1.14.48RC.log:1820:seen. If the content is legitimately bigger than the available space, consider 
+clipping it with a
+  1.14.48RC.log:1821:ClipRect widget before putting it in the flex, or using a scrollable container rather 
+than a Flex,
+  1.14.48RC.log:1822:like a ListView.
+  1.14.48RC.log:1823:The specific RenderFlex in question is: RenderFlex#f95f3 OVERFLOWING:
+  1.14.48RC.log:1824:  creator: Row ΓåÉ Padding ΓåÉ SizedBox ΓåÉ DefaultTextStyle ΓåÉ _Decorator ΓåÉ 
+InputDecorator ΓåÉ Listener ΓåÉ
+  1.14.48RC.log:1825:    _GestureSemantics ΓåÉ RawGestureDetector ΓåÉ GestureDetector ΓåÉ MouseRegion ΓåÉ 
+Semantics ΓåÉ Γï»
+  1.14.48RC.log:1826:  parentData: offset=Offset(0.0, 0.0) (can use size)
+  1.14.48RC.log:1827:  constraints: BoxConstraints(w=120.9, h=24.0)
+  1.14.48RC.log:1828:  size: Size(120.9, 24.0)
+  1.14.48RC.log:1829:  direction: horizontal
+  1.14.48RC.log:1830:  mainAxisAlignment: spaceBetween
+  1.14.48RC.log:1831:  mainAxisSize: min
+  1.14.48RC.log:1832:  crossAxisAlignment: center
+  1.14.48RC.log:1833:  textDirection: ltr
+  1.14.48RC.log:1834:  verticalDirection: down
+  1.14.48RC.log:1835:  spacing: 0.0
+  1.14.48RC.log:1836:ΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓù
+óΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓ
+ùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñΓùóΓùñ
+  1.14.48RC.log:1837:ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+> 1.14.48RC.log:1838:ΓòÉΓòÉΓòí EXCEPTION CAUGHT BY WIDGET INSPECTOR Γò₧ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  1.14.48RC.log:1839:The following assertion was thrown:
+  1.14.48RC.log:1840:Looking up a deactivated widget's ancestor is unsafe.
+  1.14.48RC.log:1841:At this point the state of the widget's element tree is no longer stable.
+  1.14.48RC.log:1842:To safely refer to a widget's ancestor in its dispose() method, save a reference to 
+the ancestor by
+  1.14.48RC.log:1843:calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() 
+method.
+  1.14.48RC.log:1844:
+  1.14.48RC.log:1845:When the exception was thrown, this was the stack:
+  1.14.48RC.log:1846:#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> 
+(package:flutter/src/widgets/framework.dart:5052:9)
+  1.14.48RC.log:1847:#1      Element._debugCheckStateIsActiveForAncestorLookup 
+(package:flutter/src/widgets/framework.dart:5066:6)
+  1.14.48RC.log:1848:#2      Element.visitAncestorElements 
+(package:flutter/src/widgets/framework.dart:5177:12)
+  1.14.48RC.log:1849:#3      _describeRelevantUserCode 
+(package:flutter/src/widgets/widget_inspector.dart:4244:13)
+  1.14.48RC.log:1850:#4      _parseDiagnosticsNode 
+(package:flutter/src/widgets/widget_inspector.dart:4163:12)
+  1.14.48RC.log:1851:#5      debugTransformDebugCreator 
+(package:flutter/src/widgets/widget_inspector.dart:4142:21)
+  1.14.48RC.log:1852:#6      _FlutterErrorDetailsNode.builder 
+(package:flutter/src/foundation/assertions.dart:1310:31)
+  1.14.48RC.log:1853:#7      DiagnosticableNode.getProperties 
+(package:flutter/src/foundation/diagnostics.dart:2945:68)
+  1.14.48RC.log:1854:#8      TextTreeRenderer._debugRender 
+(package:flutter/src/foundation/diagnostics.dart:1270:63)
+  1.14.48RC.log:1855:#9      TextTreeRenderer.render 
+(package:flutter/src/foundation/diagnostics.dart:1137:14)
+  1.14.48RC.log:1856:#10     FlutterError.dumpErrorToConsole 
+(package:flutter/src/foundation/assertions.dart:1040:13)
+  1.14.48RC.log:1857:#11     TestWidgetsFlutterBinding._runTest.<anonymous closure> 
+(package:flutter_test/src/binding.dart:886:24)
+  1.14.48RC.log:1858:#12     FlutterError.reportError 
+(package:flutter/src/foundation/assertions.dart:1203:14)
+  1.14.48RC.log:1859:#13     DebugOverflowIndicatorMixin._reportOverflow 
+(package:flutter/src/rendering/debug_overflow_indicator.dart:259:18)
+  1.14.48RC.log:1860:#14     DebugOverflowIndicatorMixin.paintOverflowIndicator 
+(package:flutter/src/rendering/debug_overflow_indicator.dart:329:7)
+  1.14.48RC.log:1861:#15     RenderFlex.paint.<anonymous closure> 
+(package:flutter/src/rendering/flex.dart:1364:7)
+  1.14.48RC.log:1862:#16     RenderFlex.paint (package:flutter/src/rendering/flex.dart:1372:6)
+  1.14.48RC.log:1863:#17     RenderObject._paintWithContext 
+(package:flutter/src/rendering/object.dart:3436:7)
+  1.14.48RC.log:1864:#18     PaintingContext.paintChild (package:flutter/src/rendering/object.dart:261:13)
+  1.14.48RC.log:1865:#19     RenderShiftedBox.paint (package:flutter/src/rendering/shifted_box.dart:81:15)
+  1.14.48RC.log:1866:#20     RenderObject._paintWithContext 
+(package:flutter/src/rendering/object.dart:3436:7)
+  1.14.48RC.log:1867:#21     PaintingContext.paintChild (package:flutter/src/rendering/object.dart:261:13)
+  1.14.48RC.log:1868:#22     RenderProxyBoxMixin.paint 
+(package:flutter/src/rendering/proxy_box.dart:140:13)
+  1.14.48RC.log:1937:#95     _revealEditor.scan 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:31:20)
+  1.14.48RC.log:1938:<asynchronous suspension>
+  1.14.48RC.log:1939:#96     _revealEditor 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:68:16)
+  1.14.48RC.log:1940:<asynchronous suspension>
+  1.14.48RC.log:1941:#97     main.<anonymous closure> 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:1452:7)
+  1.14.48RC.log:1942:<asynchronous suspension>
+  1.14.48RC.log:1943:#98     testWidgets.<anonymous closure>.<anonymous closure> 
+(package:flutter_test/src/widget_tester.dart:192:15)
+  1.14.48RC.log:1944:<asynchronous suspension>
+  1.14.48RC.log:1945:#99     TestWidgetsFlutterBinding._runTestBody 
+(package:flutter_test/src/binding.dart:1059:5)
+  1.14.48RC.log:1946:<asynchronous suspension>
+  1.14.48RC.log:1947:<asynchronous suspension>
+  1.14.48RC.log:1948:(elided 5 frames from dart:async and package:stack_trace)
+  1.14.48RC.log:1949:
+  1.14.48RC.log:1950:This exception was caught while trying to describe the user-relevant code of another 
+error.
+  1.14.48RC.log:1951:ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+> 1.14.48RC.log:1952:ΓòÉΓòÉΓòí EXCEPTION CAUGHT BY WIDGET INSPECTOR Γò₧ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  1.14.48RC.log:1953:The following assertion was thrown:
+  1.14.48RC.log:1954:Looking up a deactivated widget's ancestor is unsafe.
+  1.14.48RC.log:1955:At this point the state of the widget's element tree is no longer stable.
+  1.14.48RC.log:1956:To safely refer to a widget's ancestor in its dispose() method, save a reference to 
+the ancestor by
+  1.14.48RC.log:1957:calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() 
+method.
+  1.14.48RC.log:1958:
+  1.14.48RC.log:1959:When the exception was thrown, this was the stack:
+  1.14.48RC.log:1960:#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> 
+(package:flutter/src/widgets/framework.dart:5052:9)
+  1.14.48RC.log:1961:#1      Element._debugCheckStateIsActiveForAncestorLookup 
+(package:flutter/src/widgets/framework.dart:5066:6)
+  1.14.48RC.log:1962:#2      Element.visitAncestorElements 
+(package:flutter/src/widgets/framework.dart:5177:12)
+  1.14.48RC.log:1963:#3      _describeRelevantUserCode 
+(package:flutter/src/widgets/widget_inspector.dart:4244:13)
+  1.14.48RC.log:1964:#4      _parseDiagnosticsNode 
+(package:flutter/src/widgets/widget_inspector.dart:4163:12)
+  1.14.48RC.log:1965:#5      debugTransformDebugCreator 
+(package:flutter/src/widgets/widget_inspector.dart:4142:21)
+  1.14.48RC.log:1966:#6      _FlutterErrorDetailsNode.builder 
+(package:flutter/src/foundation/assertions.dart:1310:31)
+  1.14.48RC.log:1967:#7      DiagnosticableNode.emptyBodyDescription 
+(package:flutter/src/foundation/diagnostics.dart:2941:45)
+  1.14.48RC.log:1968:#8      TextTreeRenderer._debugRender 
+(package:flutter/src/foundation/diagnostics.dart:1307:14)
+  1.14.48RC.log:1969:#9      TextTreeRenderer.render 
+(package:flutter/src/foundation/diagnostics.dart:1137:14)
+  1.14.48RC.log:1970:#10     FlutterError.dumpErrorToConsole 
+(package:flutter/src/foundation/assertions.dart:1040:13)
+  1.14.48RC.log:1971:#11     TestWidgetsFlutterBinding._runTest.<anonymous closure> 
+(package:flutter_test/src/binding.dart:886:24)
+  1.14.48RC.log:1972:#12     FlutterError.reportError 
+(package:flutter/src/foundation/assertions.dart:1203:14)
+  1.14.48RC.log:1973:#13     DebugOverflowIndicatorMixin._reportOverflow 
+(package:flutter/src/rendering/debug_overflow_indicator.dart:259:18)
+  1.14.48RC.log:1974:#14     DebugOverflowIndicatorMixin.paintOverflowIndicator 
+(package:flutter/src/rendering/debug_overflow_indicator.dart:329:7)
+  1.14.48RC.log:1975:#15     RenderFlex.paint.<anonymous closure> 
+(package:flutter/src/rendering/flex.dart:1364:7)
+  1.14.48RC.log:1976:#16     RenderFlex.paint (package:flutter/src/rendering/flex.dart:1372:6)
+  1.14.48RC.log:1977:#17     RenderObject._paintWithContext 
+(package:flutter/src/rendering/object.dart:3436:7)
+  1.14.48RC.log:1978:#18     PaintingContext.paintChild (package:flutter/src/rendering/object.dart:261:13)
+  1.14.48RC.log:1979:#19     RenderShiftedBox.paint (package:flutter/src/rendering/shifted_box.dart:81:15)
+  1.14.48RC.log:1980:#20     RenderObject._paintWithContext 
+(package:flutter/src/rendering/object.dart:3436:7)
+  1.14.48RC.log:1981:#21     PaintingContext.paintChild (package:flutter/src/rendering/object.dart:261:13)
+  1.14.48RC.log:1982:#22     RenderProxyBoxMixin.paint 
+(package:flutter/src/rendering/proxy_box.dart:140:13)
+  1.14.48RC.log:2051:#95     _revealEditor.scan 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:31:20)
+  1.14.48RC.log:2052:<asynchronous suspension>
+  1.14.48RC.log:2053:#96     _revealEditor 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:68:16)
+  1.14.48RC.log:2054:<asynchronous suspension>
+  1.14.48RC.log:2055:#97     main.<anonymous closure> 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:1452:7)
+  1.14.48RC.log:2056:<asynchronous suspension>
+  1.14.48RC.log:2057:#98     testWidgets.<anonymous closure>.<anonymous closure> 
+(package:flutter_test/src/widget_tester.dart:192:15)
+  1.14.48RC.log:2058:<asynchronous suspension>
+  1.14.48RC.log:2059:#99     TestWidgetsFlutterBinding._runTestBody 
+(package:flutter_test/src/binding.dart:1059:5)
+  1.14.48RC.log:2060:<asynchronous suspension>
+  1.14.48RC.log:2061:<asynchronous suspension>
+  1.14.48RC.log:2062:(elided 5 frames from dart:async and package:stack_trace)
+  1.14.48RC.log:2063:
+  1.14.48RC.log:2064:This exception was caught while trying to describe the user-relevant code of another 
+error.
+  1.14.48RC.log:2065:ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+> 1.14.48RC.log:2066:ΓòÉΓòÉΓòí EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK Γò₧ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  1.14.48RC.log:2067:The following TestFailure was thrown running a test:
+> 1.14.48RC.log:2068:Expected: null
+> 1.14.48RC.log:2069:  Actual: 'Multiple exceptions (4) were detected during the running of the current 
+test, and at
+  1.14.48RC.log:2070:least one was unexpected.'
+  1.14.48RC.log:2071:
+  1.14.48RC.log:2072:When the exception was thrown, this was the stack:
+  1.14.48RC.log:2073:#4      main.<anonymous closure> 
+(file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart:1470:7)
+  1.14.48RC.log:2074:<asynchronous suspension>
+  1.14.48RC.log:2075:#5      testWidgets.<anonymous closure>.<anonymous closure> 
+(package:flutter_test/src/widget_tester.dart:192:15)
+  1.14.48RC.log:2076:<asynchronous suspension>
+  1.14.48RC.log:2077:#6      TestWidgetsFlutterBinding._runTestBody 
+(package:flutter_test/src/binding.dart:1059:5)
+  1.14.48RC.log:2078:<asynchronous suspension>
+  1.14.48RC.log:2079:<asynchronous suspension>
+  1.14.48RC.log:2080:(elided one frame from package:stack_trace)
+  1.14.48RC.log:2081:
+  1.14.48RC.log:2082:This was caught by the test expectation on the following line:
+  1.14.48RC.log:2083:  
+file:///D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart line 1470
+  1.14.48RC.log:2084:The test description was:
+> 1.14.48RC.log:2085:  phone subtab drafts, decimal steppers and linked shell counts survive save and 
+reopen
+  1.14.48RC.log:2086:ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò
+ÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓ
+òÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+> 1.14.48RC.log:2087:02:16 +1563 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: phone subtab drafts, 
+decimal steppers and linked shell counts survive save and reopen [E]
+  1.14.48RC.log:2088:  Test failed. See exception logs above.
+> 1.14.48RC.log:2089:  The test description was: phone subtab drafts, decimal steppers and linked shell 
+counts survive save and reopen
+  1.14.48RC.log:2090:  
+  1.14.48RC.log:2091:02:16 +1563 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: a composed skill that is 
+not aimed has no shell settings
+  1.14.48RC.log:2092:02:17 +1564 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: non-gun skills have no 
+shell settings
+  1.14.48RC.log:2093:02:18 +1565 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: versioned JSON can be 
+exported and imported as a draft
+  1.14.48RC.log:2094:02:18 +1566 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: unchanged prefilled 
+description retains generated behavior
+  1.14.48RC.log:2095:02:18 +1567 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: custom and built-in skills 
+take a description
+  1.14.48RC.log:2096:02:19 +1568 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: admin can duplicate, edit 
+and save a custom skill
+  1.14.48RC.log:2097:02:26 +1569 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: arena trap tuning is 
+available in unified Traps category
+  1.14.48RC.log:2098:02:26 +1570 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: item rarity is edited 
+directly with its skill
+  1.14.48RC.log:2099:02:26 +1571 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: a custom skill keeps its 
+own tier apart from its base built-in, both ways
+  1.14.48RC.log:2100:02:27 +1572 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: admin can create a 
+composed skill from scratch
+  1.14.48RC.log:2101:02:31 +1573 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: invalid composed 
+combinations are explained and cannot save
+  1.14.48RC.log:2102:02:32 +1574 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: unified library reports 
+zero matches and preserves empty state
+  1.14.48RC.log:2103:02:32 +1575 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: search appears as 
+removable active filter and clears independently
+  1.14.48RC.log:2104:02:32 +1576 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: clear filters is disabled 
+until a filter or query is active
+  1.14.48RC.log:2105:02:32 +1577 ~1 -1: 
+D:/Development/ballwars/test/features/skills/skill_management_screen_test.dart: preview editor links 
+return to the selected configuration section
+  1.14.48RC.log:2106:02:32 +1578 ~1 -1: Some tests failed.
+
+

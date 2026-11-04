@@ -616,6 +616,7 @@ class _GripPreviewPainter extends CustomPainter {
       heldAttackDurationSteps: (_, _) => grip.attackDurationSteps,
       heldAttackAnimation: (_, _) => grip.attackAnimation,
       heldAttackRepeatCount: (_, _) => grip.attackRepeatCount,
+      heldAttackVfxSpriteId: (_, _) => skill?.heldAttackVfxSpriteId,
       heldFacing: (_, _) => grip.facing,
       handArtworkSettings: (_) => skill?.copyWith(
         heldAttachment: grip.heldAttachment,

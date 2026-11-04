@@ -54,6 +54,22 @@ void main() {
     expect(const GripValues().copyWith(attackDurationSteps: 45).attackDurationSteps, 45);
   });
 
+  test('Held Attack VFX is independent of direct-hit impact and survives save', () {
+    final base = SkillLibrary.defaults.builtIn(
+        PowerUpKind.sword, PowerUpConfig.defaults);
+    final changed = base.copyWith(
+      heldAttackAnimation: HeldAttackAnimation.slash,
+      heldAttackVfxSpriteId: 'custom.crescent.sprite',
+      impactSpriteId: 'custom.hit.sprite',
+    );
+    final restored = SkillDefinition.fromJson(changed.toJson())!;
+    expect(restored.heldAttackVfxSpriteId, 'custom.crescent.sprite');
+    expect(restored.impactSpriteId, 'custom.hit.sprite');
+    expect(restored.effectiveAttackDelivery, base.effectiveAttackDelivery);
+    expect(changed.copyWith(heldAttackVfxSpriteId: null).heldAttackVfxSpriteId, isNull);
+    expect(base.toJson().containsKey('held_attack_vfx_sprite'), isFalse);
+  });
+
   test('grip preview can choose slash, thrust and restore legacy', () {
     const original = GripValues();
     final slash = original.copyWith(attackAnimation: HeldAttackAnimation.slash);

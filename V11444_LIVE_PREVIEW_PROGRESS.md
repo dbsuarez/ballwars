@@ -224,3 +224,55 @@ Extract cumulative ZIP at the repository root, overwriting matching relative pat
 - **Tested:** User reported 1,579 passing tests from Repair 01; Repair 02 has not been run under Flutter in this environment.
 - **Release readiness:** Pending focused test, full suite, and visual/device confirmation. Do not tag/release yet.
 - **Apply:** Extract this cumulative ZIP into the project root. Run `flutter analyze`, `flutter test test/features/skills/skill_management_screen_test.dart --reporter expanded`, then `flutter test --reporter expanded`.
+
+
+## v1.14.49 RC — Arena Pickup Preview and Skill Demo UX (2026-11-04)
+
+### Audit of existing functionality
+- The pre-existing Skill Demo already used the actual `FieldPowerUp` collection, live `ArenaCanvas` / `PowerUpPainter` path, a spawn/clear pair, and artwork focus chips. This work improves their usability rather than duplicating those implementations.
+
+### Implemented
+- Pinned the real arena canvas **outside** the vertically scrolling inspector/settings. The arena stays on-screen while distance, arena shape, artwork modes and settings scroll independently. It continues drawing actual pickup scale through the same game renderer and draft SkillLibrary.
+- Moved Spawn pickup/Clear pickup next to the Casting, Equipped, Projectile, Impact and Pickup focus controls. The existing spawn location remains near the top of the real isolated arena and can be cleared/reset without mutating a live match.
+- Added per-artwork **Edit settings** icon shortcuts alongside each of the five focus chips, returning the correct role to the existing Skill Editor routing (Pickup/Equipped to Appearance, Projectile and Impact to corresponding artwork subsections).
+- Added a visible effective pickup size multiplier, respecting the existing global/per-skill pickup-size policy from SkillLibrary. No independent scale approximation is used in the arena renderer.
+- Added widget regression coverage for a 360x800 viewport (arena remains at fixed screen coordinates after scrolling, spawn succeeds without layout exceptions) and editor-role shortcut navigation.
+
+### Verification and release readiness
+- [x] Existing demo and renderer behavior inspected; implementation written.
+- [x] Cumulative changes-only ZIP checked (CRC and SHA-256 manifest).
+- [ ] Dart formatter and Flutter analyzer are unavailable in this environment. Run them on your Windows Flutter SDK.
+- [ ] Run targeted `flutter test test/features/skills/skill_demo_test.dart --reporter expanded`, then full `flutter test --reporter expanded`.
+- [ ] Browser and phone: scroll settings while stage stays visible, spawn/clear pickup, compare actual size and colors against match, test every focus/edit shortcut, verify custom skill draft.
+- [ ] Release only after automated and on-device verification. Existing v1.14.48's 1,580 passing tests do not verify this new code.
+
+### Apply and deploy
+Extract the ZIP at the project root, replacing included files only. It includes the complete RC44–RC48 cumulative patch series plus v1.14.49 changes, tests, report and manifest; it is **not** a full-project archive. Format modified Dart files, review diffs, analyze/test and create the release tag only after the checks pass.
+
+
+## v1.14.49 RC Repair 01: Held Attack VFX, discoverable controls, flipped facing (2026-11-04)
+
+### Implemented (source inspection only)
+- Relocated Held Attack Animation (Slash / Swing, Thrust, None, repeats 1-5 and visual duration 12-90 steps) from Mechanics to Appearance > Held & pickup, immediately before the artwork slots. Maintained original widget keys for compatibility.
+- Added a **Held Attack VFX** sprite selection row, independent of Direct Hit Effects (impact sprite). It stores a separate optional sprite ID in `held_attack_vfx_sprite` and preserves null/missing-artwork fallback.
+- The arena painter and Grip Preview use the same Held Attack VFX binding. Animated frames follow each configured attack repeat phase, current weapon pose, grip offsets, facing direction and held-attachment side(s). The visual effect is cosmetic only, leaving impact effects and damage unchanged.
+- Corrected slash rotation to mirror around the left-facing ball; a flipped sword no longer starts its swing below the ball. Applied to both real-sprite and glyph fallback paths, including temporary melee-attack visuals.
+- Added persistence/regression tests for the independent VFX slot, left/right and secondary-hand facing poses, actual rendering of registered VFX only during attack, and presence of the control on 360-pixel phone editor layout.
+
+### Verified / release readiness
+- Original v1.14.49 RC: user-reported 1,582 passed, 1 skipped, 0 failed BEFORE this repair. These results do not verify this repair.
+- This cumulative changes-only ZIP includes all previous v1.14.49 source changes and tests; ZIP CRC and SHA-256 of packaged entries are checked.
+- No Flutter/Dart SDK installed here. `flutter analyze` and `flutter test` on this repair are **NOT RUN**. Phone/browser preview also not verified.
+- Release **BLOCKED** pending user Flutter analysis, focused and full tests, and live right/left Sword swing preview.
+
+### Deployment / verification
+Extract ZIP over the source tree of Ball Wars v1.14.48 / v1.14.49 RC, preserving relative paths. Do not use it as a complete project. Run:
+
+```powershell
+dart format lib/features/skills/domain/skill_library.dart lib/features/skills/presentation/skill_management_screen.dart lib/features/skills/presentation/grip_preview_dialog.dart lib/features/arena_simulation/presentation/arena_painter.dart lib/features/arena_simulation/presentation/power_up_painter.dart test/features/skills/held_attack_animation_test.dart test/features/skills/held_attack_motion_test.dart test/features/skills/held_attack_vfx_test.dart test/features/skills/skill_management_screen_test.dart
+flutter analyze
+flutter test test/features/skills/held_attack_vfx_test.dart test/features/skills/held_attack_animation_test.dart test/features/skills/held_attack_motion_test.dart test/features/skills/skill_management_screen_test.dart --reporter expanded
+flutter test --reporter expanded
+```
+
+Inspect Sprite Picker > Animated, choose a 4-frame slash effect, enable Slash / Swing, and preview from both directions. Direct Hit Effects must remain independent.

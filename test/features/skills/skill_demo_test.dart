@@ -329,4 +329,68 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('phone scroll keeps arena visible while pickup controls remain usable', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final originalAudio = GameAudio.instance.enabled;
+    GameAudio.instance.enabled = false;
+    addTearDown(() => GameAudio.instance.enabled = originalAudio);
+    final skill = SkillLibrary.defaults.builtIn(PowerUpKind.sword, PowerUpConfig.defaults);
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.build(AppPalettes.midnight),
+      home: Scaffold(body: SkillDemoDialog(
+        skill: skill,
+        library: SkillLibrary.defaults,
+        tuning: PowerUpConfig.defaults,
+      )),
+    ));
+    await tester.pumpAndSettle();
+    final arena = find.byKey(const ValueKey('skill-demo-arena'));
+    expect(find.byKey(const ValueKey('skill-demo-pinned-stage')), findsOneWidget);
+    final originalPosition = tester.getTopLeft(arena);
+    final controls = find.byType(SingleChildScrollView);
+    await tester.drag(controls.first, const Offset(0, -450));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(arena), originalPosition);
+    expect(tester.getTopLeft(arena).dy, greaterThan(0));
+    expect(find.byKey(const ValueKey('skill-demo-pickup-scale')), findsOneWidget);
+    final spawn = find.byKey(const ValueKey('skill-demo-spawn-pickup'));
+    await tester.ensureVisible(spawn);
+    await tester.pumpAndSettle();
+    await tester.tap(spawn);
+    await tester.pump();
+    expect(tester.widget<ArenaCanvas>(arena).state.powerUps!.field, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('artwork shortcuts return the corresponding editor role', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final skill = SkillLibrary.defaults.builtIn(PowerUpKind.sword, PowerUpConfig.defaults);
+    String? selectedRole;
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: Builder(
+      builder: (context) => TextButton(
+        onPressed: () async {
+          selectedRole = await showDialog<String>(
+            context: context,
+            builder: (_) => SkillDemoDialog(skill: skill, library: SkillLibrary.defaults,
+                tuning: PowerUpConfig.defaults),
+          );
+        },
+        child: const Text('Open demo'),
+      ),
+    ))));
+    await tester.tap(find.text('Open demo'));
+    await tester.pumpAndSettle();
+    final link = find.byKey(const ValueKey('skill-demo-edit-pickup'));
+    await tester.ensureVisible(link);
+    await tester.pumpAndSettle();
+    await tester.tap(link);
+    await tester.pumpAndSettle();
+    expect(selectedRole, 'Pickup');
+    expect(tester.takeException(), isNull);
+  });
+
 }

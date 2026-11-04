@@ -3284,6 +3284,7 @@ class PowerUpPainter {
     HeldAttackAnimation? Function(PowerUpKind kind, int slot)? heldAttackAnimation,
     int Function(PowerUpKind kind, int slot)? heldAttackRepeatCount,
     int Function(PowerUpKind kind, int slot)? heldAttackDurationSteps,
+    String? Function(PowerUpKind kind, int slot)? heldAttackVfxSpriteId,
     double Function(PowerUpKind kind)? skillRange,
     SkillDefinition? Function(PowerUpKind kind)? handArtworkSettings,
     double Function(PowerUpKind kind)? handEffectScale,
@@ -3924,6 +3925,7 @@ class PowerUpPainter {
             attackAnimation: heldAttackAnimation?.call(weapon, slot),
             attackRepeatCount: heldAttackRepeatCount?.call(weapon, slot) ?? 1,
             attackDurationSteps: heldAttackDurationSteps?.call(weapon, slot) ?? 30,
+            attackVfxSpriteId: heldAttackVfxSpriteId?.call(weapon, slot),
             useSprite: useWeaponSprite?.call(weapon, slot) ?? true,
             displayScale: weaponDisplayScale?.call(weapon, slot) ?? 1,
             gripInset: weaponGripInset?.call(weapon, slot),
@@ -3963,6 +3965,7 @@ class PowerUpPainter {
           attackAnimation: heldAttackAnimation?.call(weapon, visualSlot),
           attackRepeatCount: heldAttackRepeatCount?.call(weapon, visualSlot) ?? 1,
           attackDurationSteps: heldAttackDurationSteps?.call(weapon, visualSlot) ?? 30,
+          attackVfxSpriteId: heldAttackVfxSpriteId?.call(weapon, visualSlot),
           useSprite: useWeaponSprite?.call(weapon, visualSlot) ?? true,
           displayScale: weaponDisplayScale?.call(weapon, visualSlot) ?? 1,
           gripInset: weaponGripInset?.call(weapon, visualSlot),
@@ -4059,6 +4062,13 @@ class PowerUpPainter {
     );
   }
 
+  /// Mirrors a top-originating swing when the ball faces left. This prevents
+  /// the slash from starting below the ball after horizontal sprite flipping.
+  @visibleForTesting
+  static double heldAttackSwingRotation(double baseAngle, double poseRotation,
+      int slot) => poseRotation * (math.cos(baseAngle) < 0 ? -1 : 1) *
+      (slot.isEven ? 1 : -1);
+
   static void _paintHeldWeapon(
     Canvas canvas,
     SimulationBall ball,
@@ -4068,6 +4078,7 @@ class PowerUpPainter {
     HeldAttackAnimation? attackAnimation,
     int attackRepeatCount = 1,
     int attackDurationSteps = 30,
+    String? attackVfxSpriteId,
     bool useSprite = true,
     double displayScale = 1,
     double? gripInset,
@@ -4245,7 +4256,7 @@ class PowerUpPainter {
           attackRepeatCount, attackAnimation!,
         );
         final baseAngle = heldAngle(ball, weapon: held, slot: slot);
-        final angle = baseAngle + pose.rotation * (slot.isEven ? 1 : -1);
+        final angle = baseAngle + heldAttackSwingRotation(baseAngle, pose.rotation, slot);
         final reach = ball.radius * (0.9 + pose.forward);
         final tip = ball.position + Offset(math.cos(angle), math.sin(angle)) * reach;
         canvas.drawLine(
@@ -4257,6 +4268,20 @@ class PowerUpPainter {
             ..strokeCap = StrokeCap.round,
         );
         drawGlyph(canvas, art, tip, r * 0.62);
+        if (attackVfxSpriteId != null && SpriteRegistry.has(attackVfxSpriteId)) {
+          final image = SpriteRegistry.frameAtProgress(
+            attackVfxSpriteId,
+            heldAttackCyclePhase(
+              1 - firedHoldLeft / attackDurationSteps.clamp(1, 90),
+              attackRepeatCount,
+            ),
+          );
+          if (image != null) {
+            _drawSprite(canvas, image, tip, ball.radius * 1.65 * displayScale,
+              angle, flip: math.cos(baseAngle) < 0,
+              anchor: SpriteRegistry.anchor(attackVfxSpriteId));
+          }
+        }
       } else {
         canvas.drawCircle(badge, r, Paint()..color = const Color(0xFF15151A));
         drawGlyph(canvas, art, badge, r * 0.62);
@@ -4274,7 +4299,7 @@ class PowerUpPainter {
         ? heldAttackPose(firedProgress, attackRepeatCount, attackAnimation!)
         : (rotation: 0.0, forward: 0.0, sideways: 0.0);
     final angle = animated
-        ? baseAngle + pose.rotation * (slot.isEven ? 1 : -1)
+        ? baseAngle + heldAttackSwingRotation(baseAngle, pose.rotation, slot)
         : attackAnimation == HeldAttackAnimation.none
             ? baseAngle
             : baseAngle + drop * 1.15 * (slot.isEven ? 1 : -1);
@@ -4293,7 +4318,9 @@ class PowerUpPainter {
             Offset(math.cos(angle), math.sin(angle)) *
                 ((baseCenter - ball.position).distance + ball.radius * pose.forward) +
             Offset(-math.sin(baseAngle), math.cos(baseAngle)) *
-                (ball.radius * pose.sideways * (slot.isEven ? 1 : -1))
+                (ball.radius * pose.sideways *
+                    (math.cos(baseAngle) < 0 ? -1 : 1) *
+                    (slot.isEven ? 1 : -1))
         : attackAnimation == HeldAttackAnimation.none
             ? baseCenter
             : baseCenter + Offset(
@@ -4309,14 +4336,33 @@ class PowerUpPainter {
     for (final side in (heldAttach == 'both'
         ? const ['left', 'right']
         : [heldAttach])) {
+      final sideCenter = side == 'left' ? leftCenter : rightCenter;
+      final sideFlip = side == 'left' ? !transform.flip : transform.flip;
+      // Overlay each held sprite with its own local slash/thrust animation.
+      // It uses the same grip offsets and facing as the weapon, but is never
+      // routed into Direct Hit Effects or the collision/damage system.
+      if (animated && attackVfxSpriteId != null &&
+          SpriteRegistry.has(attackVfxSpriteId)) {
+        final image = SpriteRegistry.frameAtProgress(
+          attackVfxSpriteId,
+          heldAttackCyclePhase(firedProgress, attackRepeatCount),
+        );
+        if (image != null) {
+          _drawSprite(canvas, image, sideCenter,
+            ball.radius * 1.65 * displayScale, transform.angle,
+            flip: sideFlip,
+            anchor: SpriteRegistry.anchor(attackVfxSpriteId),
+          );
+        }
+      }
       _drawSprite(
         canvas,
         sprite,
-        side == 'left' ? leftCenter : rightCenter,
+        sideCenter,
         ball.radius * (held.isBlade ? 1.8 : 0.9) * displayScale,
         transform.angle,
         iconAngle: _iconAngle[art] ?? 0,
-        flip: side == 'left' ? !transform.flip : transform.flip,
+        flip: sideFlip,
         opacity: attackAnimation == null ? 1 - drop * drop : 1,
         anchor: skillAnchor(spriteId, PowerUpSprites.iconId(art)),
       );

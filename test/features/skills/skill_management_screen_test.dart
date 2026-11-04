@@ -1424,6 +1424,10 @@ void main() {
     final duration = find.byKey(const ValueKey('skill-held-attack-duration'));
     await _revealEditor(tester, duration);
     expect(duration.hitTestable(), findsOneWidget);
+    final attackVfx = find.byKey(const ValueKey('skill-held-attack-vfx'));
+    await _revealEditor(tester, attackVfx);
+    expect(attackVfx, findsOneWidget);
+    expect(find.text('Held Attack VFX'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

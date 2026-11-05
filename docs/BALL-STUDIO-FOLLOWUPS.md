@@ -29,3 +29,6 @@ Tap a populated item to rearm it; hold to replace. Tap an empty slot to select. 
 Automated verification and local build results are recorded in the current audit roadmap. These changes have not been deployed by this implementation task.
 
 Final local validation: 264 targeted regressions passed; eight final preview/storage checks passed; analysis clean; production release web build passed. Runtime screenshots inspected at 320px and 390px with the actual fonts. No production deployment or APK release was requested for this implementation batch.
+
+
+Power-up Test layout follow-up: arena/status/finishers/playback are centered as one group. Play/Pause is now a 72px central target; utility and finisher controls remain 36px. Short windows scroll without reducing arena width. [Preview](ux/POWERUP-TEST-CENTERED-PREVIEW.md).

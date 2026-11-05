@@ -204,3 +204,14 @@ Deployment and signed APK release submitted as v1.14.60 on 2026-11-06, including
 Detailed scope, exact validation boundaries, screenshots and provenance: [Phase A + B report](ux/PHASE-A-B-REPORT.md). No deployment or release is performed by this task. Phases C/D/E remain future work.
 
 Phase A + B and the annotated Power-up Test changes submitted for web deployment and signed APK release as v1.14.61 on 2026-11-06. Workflow completion and published-device acceptance remain manually checked.
+
+
+## Centered test arena and accessible playback (2026-11-06)
+
+- [x] Center arena, status, finishers and playback as one group; full-width arena preserved.
+- [x] Central 72px Play/Pause target, with secondary controls arranged symmetrically beside it.
+- [x] Scroll short windows without shrinking the arena; remembered collapsible rails and item behavior retained.
+- [x] 23 focused widget regressions and phone runtime previews passed.
+- [ ] Published phone acceptance after an explicit deployment request.
+
+[Preview and validation](ux/POWERUP-TEST-CENTERED-PREVIEW.md).

@@ -1277,7 +1277,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                 const Text(
                   'Freeze holds a ball in place while attacks and timers continue. '
                   'Unlock to test hooks, portals or knockback. Traps appear near the rim. '
-                  'The refresh button beside an item gives it again during a fight.',
+                  'Tap an item to re-arm it; hold to replace it or choose No item.',
                 ),
               ],
             ),
@@ -1323,7 +1323,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   Widget _playback() {
     final match = _match!;
     final finished = match.state.status == MatchStatus.finished;
-    const speeds = [0.5, 1.0, 2.0];
+    const speeds = [.5, 1.0, 2.0];
     final nextSpeed = speeds[(speeds.indexOf(_speed) + 1) % speeds.length];
     final arenaLabel =
         _selectedArena?.name ??
@@ -1335,62 +1335,54 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         : 'Pause';
     Widget cell(Widget child) =>
         SizedBox.square(dimension: _overlaySize, child: child);
+    Widget tools(List<Widget> children) => Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: children,
+      ),
+    );
     final iconStyle = IconButton.styleFrom(
       shape: _overlayShape,
       padding: EdgeInsets.zero,
       minimumSize: const Size.square(_overlaySize),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                children: [
-                  Text(
-                    'A',
-                    style: TextStyle(
-                      color: _balls[0].primaryColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  _itemPreview(0),
-                  const Spacer(),
-                  _itemPreview(1),
-                  const SizedBox(width: 4),
-                  Text(
-                    'B',
-                    style: TextStyle(
-                      color: _balls[1].primaryColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
               children: [
-                cell(
-                  IconButton.filled(
-                    key: const ValueKey('test-playback'),
-                    tooltip: playbackLabel,
-                    style: iconStyle,
-                    onPressed: _togglePlayback,
-                    icon: Icon(
-                      finished || _paused ? Icons.play_arrow : Icons.pause,
-                      size: 22,
-                    ),
+                Text(
+                  'A',
+                  style: TextStyle(
+                    color: _balls[0].primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
+                const SizedBox(width: 4),
+                _itemPreview(0),
+                const Spacer(),
+                _itemPreview(1),
+                const SizedBox(width: 4),
+                Text(
+                  'B',
+                  style: TextStyle(
+                    color: _balls[1].primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              tools([
                 cell(
                   IconButton.outlined(
                     key: const ValueKey('test-reset'),
@@ -1417,6 +1409,28 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     icon: const Icon(Icons.skip_next, size: 22),
                   ),
                 ),
+              ]),
+              const SizedBox(width: 12),
+              SizedBox.square(
+                dimension: 72,
+                child: IconButton.filled(
+                  key: const ValueKey('test-playback'),
+                  tooltip: playbackLabel,
+                  style: IconButton.styleFrom(
+                    shape: _overlayShape,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size.square(72),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: _togglePlayback,
+                  icon: Icon(
+                    finished || _paused ? Icons.play_arrow : Icons.pause,
+                    size: 36,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              tools([
                 cell(
                   Tooltip(
                     message:
@@ -1445,10 +1459,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                     icon: const Icon(Icons.stadium_outlined, size: 20),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ]),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1494,28 +1508,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             ),
           ],
         ),
-        bottomNavigationBar: _playback(),
         body: SafeArea(
-          bottom: false,
           child: LayoutBuilder(
-            builder: (context, bounds) {
-              if (bounds.maxWidth >= 600 &&
-                  bounds.maxWidth > bounds.maxHeight) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: _arena(),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return SingleChildScrollView(
-                child: _arena(squareSide: bounds.maxWidth),
-              );
-            },
+            builder: (context, bounds) => SingleChildScrollView(
+              key: const ValueKey('test-stage-scroll'),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: bounds.maxHeight),
+                child: Center(
+                  child: Column(
+                    key: const ValueKey('test-stage'),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _arena(squareSide: bounds.maxWidth),
+                      const SizedBox(height: 8),
+                      _playback(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

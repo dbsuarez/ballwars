@@ -57,9 +57,58 @@ Widget _app(
   ),
 );
 
+// Match the real phone surface. Short-window scrolling has its own explicit case.
+void _phoneTest(String description, WidgetTesterCallback body) {
+  testWidgets(description, (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await body(tester);
+  });
+}
+
 void main() {
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
-  testWidgets(
+  _phoneTest(
+    'arena and controls center together with a large reachable Play button',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_app(true));
+      await tester.pumpAndSettle();
+      final stage = tester.getRect(find.byKey(const ValueKey('test-stage')));
+      final viewport = tester.getRect(
+        find.byKey(const ValueKey('test-stage-scroll')),
+      );
+      final play = tester.getRect(find.byKey(const ValueKey('test-playback')));
+      expect(stage.center.dy, closeTo(viewport.center.dy, 1));
+      expect(play.center.dx, closeTo(viewport.center.dx, 1));
+      expect(play.size, const Size(72, 72));
+      expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
+      expect(tester.getSize(find.byType(ArenaCanvas)).width, 390);
+      final arena = tester.getRect(find.byType(ArenaCanvas));
+      expect(play.top - arena.bottom, lessThan(150));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  _phoneTest('short windows scroll the group without shrinking the arena', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 420);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(ArenaCanvas)).width, 390);
+    await tester.ensureVisible(find.byKey(const ValueKey('test-playback')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  _phoneTest(
     'rails collapse independently and remember state; finishers stay below the arena',
     (tester) async {
       tester.view.physicalSize = const Size(320, 740);
@@ -93,7 +142,7 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
-  testWidgets(
+  _phoneTest(
     'No item in the chooser removes a trap without overlay clear buttons',
     (tester) async {
       await tester.pumpWidget(_app(true));
@@ -108,7 +157,7 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
-  testWidgets('all overlay slots fit a 320px arena and share finisher height', (
+  _phoneTest('all overlay slots fit a 320px arena and share finisher height', (
     tester,
   ) async {
     OfflineStore.instance = MemoryOfflineStore();
@@ -137,7 +186,7 @@ void main() {
     }
     expect(
       tester.getSize(find.byKey(const ValueKey('test-playback'))).height,
-      36,
+      72,
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('finisher-preview-0-0'))).height,
@@ -147,7 +196,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
-  testWidgets(
+  _phoneTest(
     'dragging a paused test ball repositions only it without advancing time',
     (tester) async {
       OfflineStore.instance = MemoryOfflineStore();
@@ -180,7 +229,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _phoneTest(
     'unsaved map tests its real geometry and appearance without saving its ID',
     (tester) async {
       final previous = OfflineStore.instance;
@@ -221,7 +270,7 @@ void main() {
     },
   );
 
-  testWidgets(
+  _phoneTest(
     'custom knife and built-in knife keep separate identities in both slots and picker',
     (tester) async {
       final previous = OfflineStore.instance;
@@ -290,14 +339,14 @@ void main() {
       expect(ball.heldSecondarySkillId, knife.id);
     },
   );
-  testWidgets('test arena rejects unauthenticated users', (tester) async {
+  _phoneTest('test arena rejects unauthenticated users', (tester) async {
     await tester.pumpWidget(_app(false));
     await tester.pumpAndSettle();
     expect(find.text('Admin access required.'), findsOneWidget);
     expect(find.byTooltip('Play'), findsNothing);
   });
 
-  testWidgets('admin can equip an item and watch, pause and reset the fight', (
+  _phoneTest('admin can equip an item and watch, pause and reset the fight', (
     tester,
   ) async {
     await tester.pumpWidget(_app(true));
@@ -321,7 +370,7 @@ void main() {
     expect(arena.state.balls.first.life, greaterThan(100));
   });
 
-  testWidgets(
+  _phoneTest(
     'slot tap rearms and hold opens selection without refresh buttons',
     (tester) async {
       await tester.pumpWidget(_app(true));
@@ -354,7 +403,7 @@ void main() {
     },
   );
 
-  testWidgets('an unsaved skill opens preselected in the live test arena', (
+  _phoneTest('an unsaved skill opens preselected in the live test arena', (
     tester,
   ) async {
     final draft = SkillLibrary.defaults
@@ -373,7 +422,7 @@ void main() {
     expect(arena.state.balls.first.speedLeft, 4 * 60);
   });
 
-  testWidgets(
+  _phoneTest(
     'phone gives the arena full width and keeps controls available by scrolling',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
@@ -456,7 +505,7 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-  testWidgets(
+  _phoneTest(
     'finisher icon previews the selected move without changing the fight',
     (tester) async {
       await tester.pumpWidget(_app(true));
@@ -488,7 +537,7 @@ void main() {
     },
   );
 
-  testWidgets('damaging power-ups expose a finisher control in the arena', (
+  _phoneTest('damaging power-ups expose a finisher control in the arena', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -523,7 +572,7 @@ void main() {
     );
   });
 
-  testWidgets('tests default to endless and expose BGM, SFX and UX controls', (
+  _phoneTest('tests default to endless and expose BGM, SFX and UX controls', (
     tester,
   ) async {
     final audio = GameAudio.instance;
@@ -559,7 +608,7 @@ void main() {
     expect(audio.musicOn, !originalMusic);
   });
 
-  testWidgets('each ball has two weapon selectors and one power-up selector', (
+  _phoneTest('each ball has two weapon selectors and one power-up selector', (
     tester,
   ) async {
     await tester.pumpWidget(_app(true));
@@ -572,7 +621,7 @@ void main() {
     expect(find.byKey(const ValueKey('choose-arena-trap-0')), findsOneWidget);
   });
 
-  testWidgets('separate selectors keep searches inside their item category', (
+  _phoneTest('separate selectors keep searches inside their item category', (
     tester,
   ) async {
     await tester.pumpWidget(_app(true));
@@ -590,33 +639,32 @@ void main() {
     expect(find.text('Results from all categories'), findsNothing);
   });
 
-  testWidgets(
-    'the remembered item is selected and placed first in its picker',
-    (tester) async {
-      await tester.pumpWidget(_app(true));
-      await tester.pumpAndSettle();
-      await tester.longPress(find.byKey(const ValueKey('choose-item-0')));
-      await tester.pumpAndSettle();
+  _phoneTest('the remembered item is selected and placed first in its picker', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const ValueKey('choose-item-0')));
+    await tester.pumpAndSettle();
 
-      final pistol = find.byKey(const ValueKey('power-test-item-pistol'));
-      expect(pistol, findsOneWidget);
-      expect(tester.widget<ListTile>(pistol).selected, isTrue);
-      expect(
-        find.descendant(of: pistol, matching: find.byIcon(Icons.check_circle)),
-        findsOneWidget,
-      );
-      final visibleTiles = find.descendant(
-        of: find.byType(ListView),
-        matching: find.byType(ListTile),
-      );
-      expect(
-        visibleTiles.evaluate().first.widget.key,
-        const ValueKey('power-test-item-pistol'),
-      );
-    },
-  );
+    final pistol = find.byKey(const ValueKey('power-test-item-pistol'));
+    expect(pistol, findsOneWidget);
+    expect(tester.widget<ListTile>(pistol).selected, isTrue);
+    expect(
+      find.descendant(of: pistol, matching: find.byIcon(Icons.check_circle)),
+      findsOneWidget,
+    );
+    final visibleTiles = find.descendant(
+      of: find.byType(ListView),
+      matching: find.byType(ListTile),
+    );
+    expect(
+      visibleTiles.evaluate().first.widget.key,
+      const ValueKey('power-test-item-pistol'),
+    );
+  });
 
-  testWidgets('changing a test item preserves the live ball positions', (
+  _phoneTest('changing a test item preserves the live ball positions', (
     tester,
   ) async {
     await tester.pumpWidget(_app(true));
@@ -639,7 +687,7 @@ void main() {
     expect(after.state.balls[1].position, const Offset(-62, 19));
   });
 
-  testWidgets('change arena dialog previews arenas and applies the pick', (
+  _phoneTest('change arena dialog previews arenas and applies the pick', (
     tester,
   ) async {
     OfflineStore.instance = MemoryOfflineStore();
@@ -682,7 +730,7 @@ void main() {
     expect(await DevicePrefs.read('power-test-arena'), 'desert');
   });
 
-  testWidgets('change arena dialog marks the active arena with a check', (
+  _phoneTest('change arena dialog marks the active arena with a check', (
     tester,
   ) async {
     OfflineStore.instance = MemoryOfflineStore();
@@ -718,7 +766,7 @@ void main() {
     expect(find.text('All arena traps'), findsOneWidget);
   });
 
-  testWidgets('bottom bar fits at 360 px', (tester) async {
+  _phoneTest('bottom bar fits at 360 px', (tester) async {
     OfflineStore.instance = MemoryOfflineStore();
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;

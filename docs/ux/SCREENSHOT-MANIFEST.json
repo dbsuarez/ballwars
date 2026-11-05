@@ -105,6 +105,27 @@
       "height": 360,
       "bytes": 86759,
       "sha256": "fa434f41c6e15c359fddf65b754ef5027a454e86225a41d94eb71a395f05b673"
+    },
+    {
+      "path": "docs/ux/screenshots/powerup-centered-320x740.png",
+      "width": 320,
+      "height": 740,
+      "bytes": 81172,
+      "sha256": "fa731ee3d058c8bb5c1ed34ba3705a3c959f8eebedac931bf0d7bc28a863eb61"
+    },
+    {
+      "path": "docs/ux/screenshots/powerup-centered-390x844.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 108212,
+      "sha256": "7c6b56f5020ab2aade599985d55422306113b5234bf6af85be565799b4b65c75"
+    },
+    {
+      "path": "docs/ux/screenshots/powerup-centered-collapsed-390x844.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 107238,
+      "sha256": "9faa18bcf1733b1b8a01b8c037746ed29eae36f9787a9eb9aeed9145b29a48a5"
     }
   ]
 }

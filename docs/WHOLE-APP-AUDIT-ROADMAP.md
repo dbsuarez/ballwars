@@ -180,3 +180,5 @@ v1.14.59 validation: 1,739 tests passed / one skipped; analysis clean; productio
 - [ ] Manual web/Android acceptance. See [usage and checks](BALL-STUDIO-FOLLOWUPS.md). Not deployed by this task.
 
 Ball Studio follow-up production release web build passed locally on 2026-11-06. Publication and actual-device acceptance remain pending.
+
+Deployment and signed APK release submitted as v1.14.60 on 2026-11-06, including the arena-priority correction, Ball Studio follow-ups and compact test overlays. GitHub workflow completion remains manually checked.

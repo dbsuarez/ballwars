@@ -114,7 +114,7 @@ class CustomSpriteLoader {
         a.atlas.sprites.length > 64 ||
         a.atlas.sprites.values.fold<int>(0, (n, s) => n + s.frames.length) >
             256 ||
-        a.atlas.sprites.values.any((s) => s.output > 256 || s.height > 256)) {
+        (!a.atlas.isArenaBackground && a.atlas.sprites.values.any((s) => s.output > 256 || s.height > 256))) {
       throw const FormatException('Custom atlas exceeds limits.');
     }
     final estimated = a.atlas.sprites.values.fold<int>(

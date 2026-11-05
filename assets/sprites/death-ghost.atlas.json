@@ -1,0 +1,14 @@
+﻿{
+  "sheet": "assets/sprites/death-ghost.png",
+  "sheetSize": [1024, 256],
+  "sprites": {
+    "anim.death-ghost": {
+      "label": "Death ghost",
+      "frames": [[0, 0, 256, 256], [256, 0, 256, 256], [512, 0, 256, 256], [768, 0, 256, 256]],
+      "output": 128,
+      "fit": "contain",
+      "padding": 0,
+      "stepsPerFrame": 5
+    }
+  }
+}

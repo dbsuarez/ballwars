@@ -22,8 +22,10 @@ class ArenaDefinition {
     this.rimColor,
     this.enabled = true,
     this.arenaTrapsEnabled = true,
+    this.backgroundSpriteId,
   });
   final String id, name;
+  final String? backgroundSpriteId;
   final ArenaDecoration theme, trapTheme;
   final ArenaShape shape;
   final CenterObstacle obstacle;
@@ -35,7 +37,8 @@ class ArenaDefinition {
       arenaTrapsEnabled ? trapTheme.hazardCaption : 'No arena traps';
 
   Map<String, Object> toJson() => {
-    'version': 1,
+    'version': backgroundSpriteId == null ? 1 : 2,
+    'background': ?backgroundSpriteId,
     'id': id,
     'name': name.trim(),
     'theme': theme.name,
@@ -52,7 +55,7 @@ class ArenaDefinition {
 
   static ArenaDefinition fromJson(Object? json) {
     if (json is! Map) throw const FormatException('Arena must be an object.');
-    if (json['version'] != 1) {
+    if ((json['version'] != 1 && json['version'] != 2) || (json['background'] != null && json['version'] != 2)) {
       throw const FormatException(
         'Unsupported arena version. Update Ball Wars to open this arena.',
       );
@@ -95,7 +98,12 @@ class ArenaDefinition {
       return c;
     }
 
+    final background = json['background'];
+    if (background != null && (background is! String || !RegExp(r'^custom\.[a-zA-Z0-9_-]{1,64}\.background$').hasMatch(background))) {
+      throw const FormatException('Invalid arena background artwork.');
+    }
     return ArenaDefinition(
+      backgroundSpriteId: background as String?,
       id: id,
       name: name.trim(),
       theme: choice(ArenaDecoration.values, json['theme']),

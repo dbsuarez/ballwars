@@ -1,3 +1,4 @@
+import '../../arena_simulation/domain/simulation_ball.dart';
 import '../../arenas/domain/arena_definition.dart';
 import 'dart:math' as math;
 
@@ -62,6 +63,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   bool? _allowed;
   MatchSimulationController? _match;
   bool _paused = true;
+  SimulationBall? _dragBall;
   bool _foreground = true;
   bool _randomSpawns = false;
   bool _endless = true;
@@ -275,7 +277,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           );
     _match = MatchSimulationController(
       _balls,
-      simulationRevision: _selectedArena == null ? 8 : ArenaDefinition.replayRevision,
+      simulationRevision: 10,
       arenaRadius: 200,
       arenaShape: _arenaShape,
       centerObstacle: _selectedArena?.obstacle ?? CenterObstacle.none,
@@ -324,7 +326,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   void _tick(Duration elapsed) {
     final previous = _previous;
     _previous = elapsed;
-    if (!_foreground || _paused || previous == null || _match == null) return;
+    if (!_foreground || _paused || _dragBall != null || previous == null || _match == null) return;
     final dt = (elapsed - previous).inMicroseconds / 1000000;
     // Ignore background/resume gaps instead of skipping ahead in the fight.
     if (dt <= 0 || dt > 0.25) return;
@@ -790,8 +792,20 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                 child: Center(
                   child: AspectRatio(
                     aspectRatio: 1,
-                    child: RepaintBoundary(
-                      child: ArenaCanvas(
+                    child: LayoutBuilder(builder: (context, bounds) {
+                      Offset world(Offset p) => (p - Offset(bounds.maxWidth / 2, bounds.maxHeight / 2)) * (2 * match.arenaRadius / bounds.maxWidth);
+                      return GestureDetector(
+                        key: const Key('test-arena-drag'),
+                        onPanStart: (details) {
+                          final point = world(details.localPosition);
+                          final balls = state.balls.where((b) => !b.isEliminated && (b.position-point).distance <= b.radius * 1.5).toList()
+                            ..sort((a,b) => (a.position-point).distance.compareTo((b.position-point).distance));
+                          setState(() => _dragBall = balls.firstOrNull);
+                        },
+                        onPanUpdate: (details) { if (_dragBall case final ball?) { setState(() => match.placeTestBall(ball, world(details.localPosition))); } },
+                        onPanEnd: (_) => setState(() { _dragBall = null; _previous = null; }),
+                        onPanCancel: () => setState(() { _dragBall = null; _previous = null; }),
+                        child: RepaintBoundary(child: ArenaCanvas(
                         state: state,
                         arenaRadius: match.arenaRadius,
                         rimInset: 0,
@@ -815,8 +829,8 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         freezeRenderMode: AppSettingsScope.of(
                           context,
                         ).freezeRenderMode,
-                      ),
-                    ),
+                      )),
+                    ); }),
                   ),
                 ),
               ),

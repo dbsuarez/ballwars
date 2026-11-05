@@ -211,7 +211,7 @@ class ReplayFramePainter {
         name.paint(canvas, Offset(x + 22, y + 4));
       }
       if (options.shows(VideoLayer.stats)) {
-        final stats =
+        final stats = match?.threadCutRace == true && match?.mode == MatchMode.threadGrowth ? '${ball.threadsCut}/${match!.neoThreadsTarget} cuts / ${match.deaths[ball.config.id] ?? 0} deaths' :
             '${match?.eliminations[ball.config.id] ?? 0} KO / ${match?.deaths[ball.config.id] ?? 0} deaths';
         final health = options.shows(VideoLayer.health)
             ? ' / ${match?.mode.isThreadOnly == true ? ball.lineCount : ball.life.ceil()} ${match?.mode.isThreadOnly == true ? 'lines' : 'HP'}'

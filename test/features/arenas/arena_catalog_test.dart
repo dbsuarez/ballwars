@@ -20,6 +20,14 @@ const arena = ArenaDefinition(
   rimColor: 0xffeeeeee,
 );
 void main() {
+  test('background maps use a version gate to protect against old-client edits', () {
+    final map=ArenaDefinition.fromJson({...arena.toJson(),'version':2,'background':'custom.test-background.background'});
+    expect(map.toJson()['version'],2);
+    expect(map.backgroundSpriteId,'custom.test-background.background');
+    expect(()=>ArenaDefinition.fromJson({...map.toJson(),'version':1}),throwsFormatException);
+    expect(arena.toJson()['version'],1);
+  });
+
   test('replay geometry retains exact obstacle precision', () {
     final presets = LocalBallRepository.presets;
     const scale = 0.30000000000000004;
@@ -62,7 +70,7 @@ void main() {
       );
     }
     expect(
-      () => ArenaDefinition.fromJson({...arena.toJson(), 'version': 2}),
+      () => ArenaDefinition.fromJson({...arena.toJson(), 'version': 3}),
       throwsFormatException,
     );
     final duplicate = ArenaDefinition.fromJson({

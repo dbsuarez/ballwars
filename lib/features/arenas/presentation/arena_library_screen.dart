@@ -1,3 +1,7 @@
+import '../../settings/presentation/app_settings_scope.dart';
+import 'arena_background_import.dart';
+import '../../sprites/presentation/sprites_screen.dart';
+import '../domain/arena_placement.dart';
 import '../../admin_guide/presentation/admin_guide_screen.dart';
 import '../../settings/presentation/power_up_test_screen.dart';
 import 'dart:convert';
@@ -221,6 +225,7 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
   late int? floor = widget.initial.floorColor,
       accent = widget.initial.accentColor,
       rim = widget.initial.rimColor;
+  late String? backgroundSpriteId = widget.initial.backgroundSpriteId;
   late bool enabled = widget.initial.enabled;
   late bool arenaTraps = widget.initial.arenaTrapsEnabled;
   bool busy = false, allowPop = false;
@@ -233,6 +238,7 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
     shape: shape,
     obstacle: obstacle,
     obstacleScale: scale,
+    backgroundSpriteId: backgroundSpriteId,
     floorColor: floor,
     accentColor: accent,
     rimColor: rim,
@@ -302,7 +308,11 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
       error = null;
     });
     try {
-      await widget.onSave(draft.validated());
+      final map = draft.validated();
+      final problem = ArenaPlacement.problem(shape: map.shape, obstacle: map.obstacle, obstacleScale: map.obstacleScale,
+        minimumScale: AppSettingsScope.of(context).minimumArenaScale, ballRadiusRatio: .107 * 1.25);
+      if (problem != null) throw FormatException(problem);
+      await widget.onSave(map);
       if (mounted) close();
     } catch (e) {
       if (mounted) {
@@ -513,6 +523,23 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
                         const Text(
                           'Full square artwork is masked by the selected arena boundary. Colors use the theme until you override them.',
                         ),
+                        const SizedBox(height:12),
+                        Wrap(spacing:8,runSpacing:8,children:[
+                          OutlinedButton.icon(onPressed:busy?null:() async {
+                            final id = await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>const ArenaBackgroundImport()));
+                            if (id != null && mounted) setState(()=>backgroundSpriteId=id);
+                          },icon:const Icon(Icons.add_photo_alternate_outlined),label:const Text('Upload & crop')),
+                          OutlinedButton.icon(onPressed:busy?null:() async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final id = await selectSkillSprite(context,title:'Background library',current:backgroundSpriteId);
+                            if(id!=null && mounted) {
+                              if (!id.endsWith('.background')) { messenger.showSnackBar(const SnackBar(content:Text('Choose an arena background uploaded with Upload & crop.'))); return; }
+                              setState(()=>backgroundSpriteId=id);
+                            }
+                          },icon:const Icon(Icons.photo_library_outlined),label:const Text('Library')),
+                          if(backgroundSpriteId!=null) TextButton.icon(onPressed:busy?null:()=>setState(()=>backgroundSpriteId=null),icon:const Icon(Icons.close),label:const Text('Use template')),
+                        ]),
+                        if(backgroundSpriteId!=null) const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text('Uploaded background active. Floor and detail colors apply to templates; boundary color still applies.')),
                         colorRow('Floor', floor, (v) => floor = v),
                         colorRow('Details', accent, (v) => accent = v),
                         colorRow('Boundary', rim, (v) => rim = v),

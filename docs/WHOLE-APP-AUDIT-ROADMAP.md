@@ -61,7 +61,7 @@ Reply with each number and Pass / Fail (plus what happened if it failed):
  - User answer: Check Supabase Snippet Untitled query.csv
 2. [ ] **Native cold audio:** enable the audio you want, fully close/reopen the Android app, start a match and confirm countdown/first-shot audio starts promptly. Browser audio and exported-video audio already passed.
 3. [ ] **Laptop browser:** check match setup, live arena, audio controls and replay navigation for readability, working buttons and prompt audio. Skill Management readability/editing already passed.
-4. [ ] **After a future deployment:** confirm the published web app and APK contain these fixes. Local builds passed; these changes have not been pushed/deployed. No GitHub deployment monitoring is required.
+4. [ ] **Published build acceptance:** confirm the published web app and APK contain the fixes. Master and release tags through v1.14.56 were pushed; workflow completion/device acceptance is not implied. No GitHub deployment monitoring is required.
 
 ### Coding follow-ups carried into Batch 4
 
@@ -123,3 +123,14 @@ added to production. The named-arena editor implementation is documented below.
 - Deployment and APK release submitted as v1.14.56; workflow completion remains a manual check.
 
 Completed implementation boxes reflect the local remediation batches and their linked verification reports. No release/deployment is implied by a passing local check.
+
+## Follow-up implementation (2026-11-05)
+
+- [x] Reconcile outdated arena-authoring, composition, audio and deployment checklist claims against current source; retain unchecked manual acceptance.
+- [x] Map clearance and safe spawning; uploaded background crop/resize/library integration and replay pinning.
+- [x] Neo Threads Cut Race modifier with configurable target, optional zero-thread survival, size progression and remembered preferences.
+- [x] Six-to-eight-ball Mayhem and test-only drag placement.
+- [x] Rising death ghost before delayed respawn, guarded by replay revision 10.
+- [ ] Manual phone/browser acceptance for this new batch. See [details](GAMEPLAY-ARENA-ADDITIONS.md).
+
+Follow-up verification: full suite 1,718 passed / one skipped; final map/schema suite 35 passed; analysis clean. Background crop and numeric target dialogs were rendered at phone width, along with the supplied Ghost Orb animation. Device acceptance remains manual.

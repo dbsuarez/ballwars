@@ -40,6 +40,9 @@ class ExportVideoDialog extends StatefulWidget {
   final double ballScale;
   final MatchMode mode;
   final int threadGrowthMaxThreads;
+  final int neoThreadsTarget;
+  final bool threadCutRace;
+  final bool cutRaceSurvival;
   final ArenaShape arenaShape;
   final CenterObstacle centerObstacle;
   final double centerObstacleScale;
@@ -76,6 +79,9 @@ class ExportVideoDialog extends StatefulWidget {
     this.ballScale = 1.0,
     this.mode = MatchMode.threads,
     this.threadGrowthMaxThreads = 180,
+    this.neoThreadsTarget = 50,
+    this.threadCutRace = false,
+    this.cutRaceSurvival = true,
     this.arenaShape = ArenaShape.circle,
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
@@ -114,6 +120,9 @@ class ExportVideoDialog extends StatefulWidget {
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
     int threadGrowthMaxThreads = 180,
+    int neoThreadsTarget = 50,
+    bool threadCutRace = false,
+    bool cutRaceSurvival = true,
     ArenaShape arenaShape = ArenaShape.circle,
     CenterObstacle centerObstacle = CenterObstacle.none,
     double centerObstacleScale = 0.22,
@@ -163,6 +172,9 @@ class ExportVideoDialog extends StatefulWidget {
         ballScale: ballScale,
         mode: mode,
         threadGrowthMaxThreads: threadGrowthMaxThreads,
+      neoThreadsTarget: neoThreadsTarget,
+      threadCutRace: threadCutRace,
+      cutRaceSurvival: cutRaceSurvival,
         arenaShape: arenaShape,
         centerObstacle: centerObstacle,
         centerObstacleScale: centerObstacleScale,
@@ -294,6 +306,9 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         ballScale: widget.ballScale,
         mode: widget.mode,
         threadGrowthMaxThreads: widget.threadGrowthMaxThreads,
+      neoThreadsTarget: widget.neoThreadsTarget,
+      threadCutRace: widget.threadCutRace,
+      cutRaceSurvival: widget.cutRaceSurvival,
         arenaShape: widget.arenaShape,
         centerObstacle: widget.centerObstacle,
         centerObstacleScale: widget.centerObstacleScale,

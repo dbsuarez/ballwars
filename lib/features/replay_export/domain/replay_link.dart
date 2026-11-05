@@ -109,6 +109,9 @@ class ReplayLink {
     this.ballSize = BallSize.medium,
     this.mode = MatchMode.threads,
     this.threadGrowthMaxThreads = 180,
+    this.neoThreadsTarget = 50,
+    this.threadCutRace = false,
+    this.cutRaceSurvival = true,
     this.question,
     this.look,
     this.powerUps,
@@ -159,9 +162,16 @@ class ReplayLink {
 
   /// Thread Growth cap; older links default to the original 180-slot limit.
   final int threadGrowthMaxThreads;
+  final int neoThreadsTarget;
+  final bool threadCutRace;
+  final bool cutRaceSurvival;
 
   /// [presets] are balls every copy of the app has; they are linked by id.
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
+    if (((mode == MatchMode.threadGrowth && threadCutRace) || arenaPreset?.backgroundSpriteId != null || (mayhem && contestants.length > 6)) && simulationRevision < 10) {
+      throw StateError('Neo Threads and expanded Mayhem require replay revision 10.');
+    }
+    if (neoThreadsTarget < 1 || neoThreadsTarget > 1000) throw StateError('Cuts to win must be between 1 and 1000.');
     if (arenaPreset != null && simulationRevision < ArenaDefinition.replayRevision) {
       throw StateError('Custom arenas require replay revision 9. Start a new match with this arena.');
     }
@@ -195,10 +205,12 @@ class ReplayLink {
     final app = Uri.parse(appUrl ?? defaultAppUrl);
     // Built by hand so the ball list keeps its readable commas.
     final size = ballSize == BallSize.medium ? '' : '&size=${ballSize.id}';
+    final neoTarget = (mode == MatchMode.threadGrowth && threadCutRace) ? '&race=1&neotarget=$neoThreadsTarget${cutRaceSurvival ? '' : '&survive=0'}' : '';
     final growthCap =
         mode == MatchMode.threadGrowth && threadGrowthMaxThreads != 180
-        ? '&growthmax=$threadGrowthMaxThreads'
-        : '';
+        ? '$neoTarget&growthmax=$threadGrowthMaxThreads'
+        : neoTarget;
+    // Neo target is independent of the Thread Growth cap.
     final q = question == null
         ? ''
         : '&q=${Uri.encodeQueryComponent(question!)}';
@@ -295,7 +307,7 @@ class ReplayLink {
           marker != 'v.6' &&
           marker != 'v.7' &&
           marker != 'v.8' &&
-          marker != 'v.9') {
+          marker != 'v.9' && marker != 'v.10') {
         return null;
       }
       simulationRevision = int.parse(marker.substring(2));
@@ -309,6 +321,17 @@ class ReplayLink {
       );
       if (parsedMode == null) return null;
       mode = parsedMode;
+    }
+    final threadCutRace = params['race'] == '1';
+    final cutRaceSurvival = params['survive'] != '0';
+    if(params.containsKey('survive') && (!threadCutRace || params['survive'] != '0')) return null;
+    if (params.containsKey('race') && (!threadCutRace || mode != MatchMode.threadGrowth || simulationRevision < 10)) return null;
+    final neoText = params['neotarget'];
+    final neoTarget = int.tryParse(neoText ?? '50');
+    if (neoTarget == null || neoTarget < 1 || neoTarget > 1000 ||
+        (neoText != null && (!(mode == MatchMode.threadGrowth && threadCutRace) || '$neoTarget' != neoText)) ||
+        ((mode == MatchMode.threadGrowth && threadCutRace) && simulationRevision < 10)) {
+      return null;
     }
     final growthText = params['growthmax'];
     final growthMax = growthText == null ? 180 : int.tryParse(growthText);
@@ -365,7 +388,7 @@ class ReplayLink {
     if (params.containsKey('mayhem') && params['mayhem'] != '1') return null;
     if (seed == null ||
         tokens.length < minBalls ||
-        tokens.length > (mayhem ? mayhemBalls : maxBalls)) {
+        tokens.length > (mayhem ? maxMayhemBalls : maxBalls)) {
       return null;
     }
     if (!speed.isFinite || speed < minSpeed || speed > maxSpeed) return null;
@@ -403,7 +426,7 @@ class ReplayLink {
     if (mayhem &&
         (mode != MatchMode.arsenal ||
             !endlessBattle ||
-            tokens.length != mayhemBalls)) {
+            (tokens.length < 6 || (simulationRevision < 10 && tokens.length != 6)))) {
       return null;
     }
     int? endStep;
@@ -477,7 +500,7 @@ class ReplayLink {
       if (simulationRevision < ArenaDefinition.replayRevision) return null;
       try { arenaPreset = ArenaDefinition.decode(params['map']!); }
       on FormatException { return null; }
-      if (arenaPreset.trapTheme != arenaDecoration) return null;
+      if (arenaPreset.trapTheme != arenaDecoration || (arenaPreset.backgroundSpriteId != null && simulationRevision < 10)) return null;
     }
     final ballGlowWidth = double.tryParse(params['glow'] ?? '4');
     if (ballGlowWidth == null ||
@@ -536,6 +559,9 @@ class ReplayLink {
       ballSize: ballSize,
       mode: mode,
       threadGrowthMaxThreads: growthMax,
+      neoThreadsTarget: neoTarget,
+      threadCutRace: threadCutRace,
+      cutRaceSurvival: cutRaceSurvival,
       question: cleanQuestion(params['q']),
       look: BallLook.byName(params['look']),
       powerUps: powerUps,
@@ -647,6 +673,7 @@ class ReplayLink {
   static const int minBalls = 2;
   static const int maxBalls = 4;
   static const int mayhemBalls = 6;
+  static const int maxMayhemBalls = 8;
   static const double minSpeed = 0.25;
   static const double maxSpeed = 4;
 

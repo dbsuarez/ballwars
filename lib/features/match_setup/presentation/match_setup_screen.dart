@@ -1,3 +1,5 @@
+import '../../../core/widgets/number_stepper.dart';
+import '../../arenas/domain/arena_placement.dart';
 import '../../arenas/domain/arena_definition.dart';
 import '../../../core/audio/audio_channel_button.dart';
 import '../../../core/sprites/visual_quality.dart';
@@ -91,7 +93,7 @@ class MatchSetupScreen extends StatefulWidget {
 }
 
 class _MatchSetupScreenState extends State<MatchSetupScreen> {
-  int get _maxBalls => _mayhem ? 6 : 4;
+  int get _maxBalls => _mayhem ? 8 : 4;
   static const int _searchFrom = 20;
   static const List<double> _speeds = [0.5, 1, 2];
 
@@ -303,6 +305,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   _CategoryFilter _filter = _CategoryFilter.defaults;
   int _winsNeeded = 1;
   int _threadGrowthMaxThreads = 180;
+  int _neoThreadsTarget = 50;
+  bool _threadCutRace = false;
+  bool _cutRaceSurvival = true;
   String? _category;
   List<BallPack> _packs = const [];
   // The user's groups, listed before the built-in packs.
@@ -433,6 +438,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     final wallSparkSize = WallSparkSize.byId(
       await _readProfile(profileMode, 'wall-spark-size', mayhem: profileMayhem),
     );
+    final survival = await _readProfile(profileMode, 'cut-race-survival', mayhem: profileMayhem);
+    final cutRace = await _readProfile(profileMode, 'cut-race', mayhem: profileMayhem);
+    final neoTarget = int.tryParse(await _readProfile(profileMode, 'neo-target', mayhem: profileMayhem) ?? '50');
     final growthLimit = int.tryParse(
       await _readProfile(
             profileMode,
@@ -587,6 +595,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _settingCards = settingCards;
       _wallSparkSize = wallSparkSize ?? WallSparkSize.normal;
       _winsNeeded = const [1, 2, 3].contains(rounds) ? rounds! : 1;
+      _neoThreadsTarget = (neoTarget ?? 50).clamp(1,1000);
+      _threadCutRace = cutRace == '1';
+      _cutRaceSurvival = survival != '0';
       _threadGrowthMaxThreads =
           const [5, 10, 20, 40, 80, 180].contains(growthLimit)
           ? growthLimit!
@@ -808,7 +819,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool get _canStart =>
       _rarityError == null &&
       (_mayhem
-          ? _selected.length == 6
+          ? _selected.length >= 6 && _selected.length <= 8
           : _selected.length >= 2 && _selected.length <= _maxBalls);
 
   Future<void> _chooseArena() async {
@@ -839,16 +850,38 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     _writeProfile('arena-decoration-user', picked.name);
   }
 
+  Future<void> _editCutTarget() async {
+    final input = TextEditingController(text:'$_neoThreadsTarget');
+    final value = await showDialog<int>(context:context,builder:(context)=>StatefulBuilder(builder:(context,refresh) {
+      final parsed = int.tryParse(input.text);
+      final valid = parsed != null && parsed >= 1 && parsed <= 1000;
+      return AlertDialog(title:const Text('Cuts to win'),content:TextField(key:const ValueKey('cut-race-target'),controller:input,
+        keyboardType:TextInputType.number,onChanged:(_)=>refresh((){}),
+        decoration:numberStepperDecoration(controller:input,decoration:InputDecoration(helperText:'1–1000 cuts',errorText:valid?null:'Enter 1–1000'),
+          label:'Cuts to win',step:1,min:1,max:1000,integer:true,onChanged:()=>refresh((){}))),
+        actions:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('Cancel')),
+          FilledButton(onPressed:valid?()=>Navigator.pop(context,parsed):null,child:const Text('Done'))]);
+    }));
+    // Dialog route completes its closing animation before disposing its field.
+    await Future<void>.delayed(const Duration(milliseconds:250));
+    input.dispose();
+    if(value!=null && mounted) { _update(()=>_neoThreadsTarget=value); _writeProfile('neo-target',value); }
+  }
+
   void _start() {
     if (!_canStart) return;
     if ((_effectiveArenaId ?? '').isNotEmpty && _selectedArena==null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Saved arena is unavailable. Choose another arena.')));
       return;
     }
+    final geometryProblem = ArenaPlacement.problem(shape: _arenaShape, obstacle: _centerObstacle,
+      obstacleScale: _centerObstacleScale, minimumScale: _shrinkingArena ? AppSettingsScope.of(context).minimumArenaScale : 1,
+      ballRadiusRatio: .107 * _ballSize.scale * ((_mode == MatchMode.threadGrowth && _threadCutRace) ? 1.5 : 1));
+    if (geometryProblem != null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(geometryProblem))); return; }
     GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
-        simulationRevision: _selectedArena == null ? 8 : ArenaDefinition.replayRevision,
+        simulationRevision: 10,
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
@@ -861,6 +894,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         ballSize: _mayhem ? BallSize.small : _ballSize,
         mode: _mayhem ? MatchMode.arsenal : _mode,
         threadGrowthMaxThreads: _threadGrowthMaxThreads,
+      neoThreadsTarget: _neoThreadsTarget,
+      threadCutRace: _threadCutRace,
+      cutRaceSurvival: _cutRaceSurvival,
         finishersEnabled: _finishersOn,
         look: _look,
         handsOnPictures: _handsOnPictures,
@@ -1147,7 +1183,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           'SPEED: Playback at 0.5x, 1x or 2x.\n'
           'PICKUPS: Choose enabled weapons and power-ups; traps stay on.\n'
           'DUAL WIELD: Carry two compatible weapons. Two-handed weapons occupy both slots.\n'
-          'MAYHEM: Six balls, your chosen match time, respawns. Most KOs wins; remaining life breaks ties.\n'
+          'MAYHEM: Six to eight balls, your chosen match time, respawns. Most KOs wins; remaining life breaks ties.\n'
           'ENDLESS BATTLE: Respawn eliminated balls and count KOs.\n'
           'SHRINKING ARENA: Boundary contracts after ten seconds.\n'
           'EFFECTS: Show particles and visual feedback.\n'
@@ -1239,6 +1275,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     child: SegmentedButton<int>(
                       key: const ValueKey('match-settings-tabs'),
+                      style:const ButtonStyle(padding:WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal:6)),textStyle:WidgetStatePropertyAll(TextStyle(fontSize:12))),
                       segments: const [
                         ButtonSegment(
                           value: 0,
@@ -1380,7 +1417,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   child: _selected.isEmpty
                       ? Text(
                           _mayhem
-                              ? 'Pick exactly 6 balls'
+                              ? 'Pick 6–8 balls'
                               : 'Pick 2 to 4 balls',
                           style: AppText.ui(
                             13,
@@ -1635,6 +1672,15 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               _writeProfile('rounds', v);
             },
           ),
+          if (_mode == MatchMode.threadGrowth) ...[
+            _choice(Icons.content_cut, 'Cut Race', const [false,true], _threadCutRace,
+              (v) => v ? 'On' : 'Off', (v) { _update(()=>_threadCutRace=v); _writeProfile('cut-race',v?'1':'0'); }),
+            if (_threadCutRace) _choice(Icons.shield_outlined,'Stay in play at zero threads',const [true,false],_cutRaceSurvival,
+              (v)=>v?'On':'Off',(v){ _update(()=>_cutRaceSurvival=v); _writeProfile('cut-race-survival',v?'1':'0'); }),
+            if (_threadCutRace) ListTile(leading: const Icon(Icons.flag_outlined), title: const Text('Cuts to win'),
+              subtitle: Text(_cutRaceSurvival ? 'Size follows threads held. First to target wins.' : 'Size follows threads held. Target or last survivor wins.'),
+              trailing: Text('$_neoThreadsTarget'), onTap:_editCutTarget),
+          ],
           if (_mode == MatchMode.threadGrowth)
             _choice(
               Icons.linear_scale,

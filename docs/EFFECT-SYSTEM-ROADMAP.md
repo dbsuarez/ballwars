@@ -88,7 +88,7 @@ production acceptance remain manual; deployment workflows are not monitored.
 - [x] Add replay dependency manifests and an explicit missing-revision policy.
 - [x] Add total decoded-memory estimates and a cache/eviction budget.
 - [x] Add effect-instance budgets and visual-quality density settings without changing mechanics.
-- [ ] Deferred until after Phase F: finish six-ball Android performance/memory verification. Windows Chrome measurements are recorded below.
+- [ ] Extended six-ball Android effects soak remains manual. Sample phone performance/memory checks now exist in Batch 3 and the Flame feasibility study; they do not replace a longer effects-specific soak.
 
 ## F. Mechanical effect composition
 

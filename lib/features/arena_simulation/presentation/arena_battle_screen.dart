@@ -214,6 +214,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       ballScale: widget.config.ballSize.scale,
       mode: widget.config.mode,
       threadGrowthMaxThreads: widget.config.threadGrowthMaxThreads,
+      neoThreadsTarget: widget.config.neoThreadsTarget,
+      threadCutRace: widget.config.threadCutRace,
+      cutRaceSurvival: widget.config.cutRaceSurvival,
       arenaShape: widget.config.arenaShape,
       arenaRotation: widget.config.arenaRotation,
       centerObstacle: widget.config.centerObstacle,
@@ -318,6 +321,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       includeTraps: !widget.config.mode.isThreadOnly,
     );
     requiredSprites.addAll(widget.config.artworkRevisions.values);
+    if(widget.config.simulationRevision>=10) requiredSprites.add('anim.death-ghost');
+    if(widget.config.arenaPreset?.backgroundSpriteId case final id?) requiredSprites.add(id);
     _spriteLease?.call();
     _spriteLease = SpriteRegistry.pin(requiredSprites);
     final startupWatch = Stopwatch()..start();
@@ -327,7 +332,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       final audioWatch = Stopwatch()..start();
       final audioReady = _audio.prepareMatchAudio();
       final missing = await SkillSpriteReadiness.prepare(
-        extraIds: widget.config.artworkRevisions.values,
+        extraIds: [...widget.config.artworkRevisions.values, if(widget.config.simulationRevision>=10) 'anim.death-ghost', ?widget.config.arenaPreset?.backgroundSpriteId],
         embedded: widget.config.artworkFrames,
         includeTraps: !widget.config.mode.isThreadOnly,
         library: widget.config.skillLibrary,
@@ -669,6 +674,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     ballSize: widget.config.ballSize,
     mode: widget.config.mode,
     threadGrowthMaxThreads: widget.config.threadGrowthMaxThreads,
+      neoThreadsTarget: widget.config.neoThreadsTarget,
+      threadCutRace: widget.config.threadCutRace,
+      cutRaceSurvival: widget.config.cutRaceSurvival,
     question: widget.config.question,
     look: widget.config.look,
     powerUps: widget.config.powerUps,
@@ -1398,7 +1406,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         for (final ball in _state.balls)
                           (
                             ball.config,
-                            _controller.eliminations[ball.config.id] ?? 0,
+                            widget.config.mode == MatchMode.threadGrowth && widget.config.threadCutRace ? ball.threadsCut : _controller.eliminations[ball.config.id] ?? 0,
                             _controller.deaths[ball.config.id] ?? 0,
                             widget.config.mode == MatchMode.arsenal
                                 ? ball.life
@@ -1406,6 +1414,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           ),
                       ],
                       tallyIsHealth: widget.config.mode == MatchMode.arsenal,
+                      tallyIsCuts: widget.config.mode == MatchMode.threadGrowth && widget.config.threadCutRace,
                       question: widget.config.question,
                       durationSeconds: _controller.elapsedSeconds,
                       winningMove: _controller.winningMove,
@@ -1457,6 +1466,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 mode: widget.config.mode,
                                 threadGrowthMaxThreads:
                                     widget.config.threadGrowthMaxThreads,
+      neoThreadsTarget: widget.config.neoThreadsTarget,
+      threadCutRace: widget.config.threadCutRace,
+      cutRaceSurvival: widget.config.cutRaceSurvival,
                                 arenaShape: widget.config.arenaShape,
                                 arenaRotation: widget.config.arenaRotation,
                                 centerObstacle: widget.config.centerObstacle,

@@ -35,7 +35,7 @@ enum BallSize {
 /// others add power-ups. It changes the match, so replay links carry it ([id]).
 enum MatchMode {
   threads('threads', 'Threads'),
-  threadGrowth('threadgrowth', 'Thread Growth'),
+  threadGrowth('threadgrowth', 'Neo Threads'),
   arsenal('arsenal', 'Arsenal'),
   allOut('allout', 'All-Out');
 
@@ -113,6 +113,9 @@ class MatchConfig {
   /// Maximum owned threads per ball in Thread Growth (includes the starting one).
   /// Other game modes ignore this setting.
   final int threadGrowthMaxThreads;
+  final int neoThreadsTarget;
+  final bool threadCutRace;
+  final bool cutRaceSurvival;
 
   final BallLook look;
   final bool handsOnPictures;
@@ -135,7 +138,7 @@ class MatchConfig {
   /// Arsenal-only: eliminated balls respawn and the battle tracks knockouts.
   final bool endlessBattle;
 
-  /// Arsenal-only six-ball timed knockout battle with respawns.
+  /// Arsenal-only six-to-eight-ball timed knockout battle with respawns.
   final bool mayhem;
   final int mayhemSeconds;
 
@@ -200,5 +203,8 @@ class MatchConfig {
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
     this.threadGrowthMaxThreads = 180,
+    this.neoThreadsTarget = 50,
+    this.threadCutRace = false,
+    this.cutRaceSurvival = true,
   });
 }

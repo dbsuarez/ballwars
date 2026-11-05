@@ -28,6 +28,7 @@ class SimulationBall {
   Offset velocity;
   double radius;
   int lineCount;
+  int threadsCut = 0;
   ui.Image? cachedUiImage;
   bool isEliminated = false;
   double rotation = 0.0; // Visual spin from collisions

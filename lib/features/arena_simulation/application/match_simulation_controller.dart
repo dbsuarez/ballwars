@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_placement.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show mergeSort;
 import 'package:flutter/material.dart';
@@ -134,6 +135,9 @@ class MatchSimulationController {
 
   /// Per-ball limit for Thread Growth only.
   final int threadGrowthMaxThreads;
+  final int neoThreadsTarget;
+  final bool threadCutRace;
+  final bool cutRaceSurvival;
   late final SeededRandom _rng;
   late final ArenaPhysicsEngine _physics;
   final ParticleSystem _particles = ParticleSystem();
@@ -154,6 +158,12 @@ class MatchSimulationController {
   int ballHits = 0;
   int threadCuts = 0;
   int knockouts = 0;
+  final List<DeathGhost> _deathGhosts = [];
+  final Map<SimulationBall,int> _pendingRespawns = {};
+  void _advanceDeathGhosts(double dt) {
+    for(final ghost in _deathGhosts) { ghost.age += dt; }
+    _deathGhosts.removeWhere((g)=>g.age >= DeathGhost.duration);
+  }
   double _elapsedSeconds = 0.0;
   MatchStatus _status = MatchStatus.running;
   String? _winnerId;
@@ -332,6 +342,9 @@ class MatchSimulationController {
     double restitution = 1.0,
     this.rimSlotCount = kRimSlotCount,
     this.threadGrowthMaxThreads = 180,
+    this.neoThreadsTarget = 50,
+    this.threadCutRace = false,
+    this.cutRaceSurvival = true,
     double? layoutRotation,
     Color arenaBackground = const Color(0xFF0A0A0B),
     this.slowMotionLines = slowMotionLineThreshold,
@@ -375,6 +388,9 @@ class MatchSimulationController {
       restitution: restitution,
       rimSlotCount: rimSlotCount,
       threadGrowthMaxThreads: threadGrowthMaxThreads,
+      neoThreadsTarget: neoThreadsTarget,
+      threadCutRace: threadCutRace,
+      cutRaceSurvival: cutRaceSurvival,
       layoutRotation: layoutRotation,
       slowMotionLines: slowMotionLines,
       lookAhead: false,
@@ -511,6 +527,15 @@ class MatchSimulationController {
       );
     });
 
+    if (simulationRevision >= 10) {
+      final placed = <(Offset, double)>[];
+      for (final ball in _balls) {
+        ball.position = ArenaPlacement.nearest(ball.position, radius: arenaRadius, ballRadius: ball.radius,
+          shape: arenaShape, obstacle: centerObstacle, obstacleScale: centerObstacleScale, occupied: placed)
+          ?? (throw StateError('Arena has no safe starting position for every ball.'));
+        placed.add((ball.position, ball.radius));
+      }
+    }
     if (mode == MatchMode.arsenal) {
       for (final ball in _balls) {
         ball.life = PowerUpTuning.arenaLife;
@@ -523,6 +548,11 @@ class MatchSimulationController {
       }
       for (final ball in _balls) {
         ball.startLines = ball.fanLines.length;
+      }
+    }
+    if (mode == MatchMode.threadGrowth && threadCutRace) {
+      for(final ball in _balls) {
+        ball.radius = ballRadius * (.5 + ball.fanLines.length / math.max(1, threadGrowthMaxThreads)).clamp(.5,1.5);
       }
     }
     if (!mode.isThreadOnly) _powerUps = PowerUpSystem(this, _rng);
@@ -802,10 +832,12 @@ class MatchSimulationController {
 
   SimulationState get state => SimulationState(
     balls: _balls,
+    deathGhosts: _deathGhosts,
     particles: _particles,
     floatingTexts: _floatingTexts,
     status: _status,
     winnerId: _winnerId,
+    neoThreadsTarget: (mode == MatchMode.threadGrowth && threadCutRace) ? neoThreadsTarget : null,
     powerUps: _powerUps,
     step: _stepCount,
     arenaRadius: arenaRadius,
@@ -816,6 +848,7 @@ class MatchSimulationController {
 
   void tick(double realDeltaSeconds) {
     if (_status == MatchStatus.finished) {
+      if(realDeltaSeconds.isFinite && realDeltaSeconds > 0) _advanceDeathGhosts(realDeltaSeconds);
       // The match is over, but the last sparks and texts finish animating.
       _particles.update(realDeltaSeconds);
       _floatingTexts.update(realDeltaSeconds);
@@ -957,6 +990,19 @@ class MatchSimulationController {
   final Map<SimulationBall, Offset> _testPositions = {};
   final Map<SimulationBall, Offset> _testVelocities = {};
 
+  /// Scenario control only: does not advance time, rearm, or consume RNG.
+  bool placeTestBall(SimulationBall ball, Offset position) {
+    if (!_balls.contains(ball) || ball.isEliminated) return false;
+    final safe = ArenaPlacement.nearest(position, radius: arenaRadius, ballRadius: ball.radius,
+      shape: arenaShape, obstacle: centerObstacle, obstacleScale: centerObstacleScale,
+      occupied: [for (final other in _balls) if (other != ball && !other.isEliminated) (other.position, other.radius)]);
+    if (safe == null) return false;
+    ball.position = safe;
+    if (_testPositions.containsKey(ball)) _testPositions[ball] = safe;
+    for (final line in ball.fanLines) { line.endPoint = safe; }
+    return true;
+  }
+
   void setTestBallPinned(SimulationBall ball, bool pinned) {
     if (pinned) {
       _testPositions.putIfAbsent(ball, () => ball.position);
@@ -977,6 +1023,12 @@ class MatchSimulationController {
   }
 
   void _stepPhysics(double dt) {
+    if(simulationRevision >= 10) {
+      _advanceDeathGhosts(dt);
+      for(final ball in _pendingRespawns.keys.toList()) {
+        if(_stepCount >= _pendingRespawns[ball]!) { _pendingRespawns.remove(ball); _respawn(ball); }
+      }
+    }
     _applyNudges();
     _restoreTestPositions();
     _physics.arenaRadius = arenaRadius;
@@ -1179,6 +1231,7 @@ class MatchSimulationController {
 
         final cut = _cutLinesCrossedBy(cutter, target);
         threadCuts += cut.length;
+        if ((mode == MatchMode.threadGrowth && threadCutRace)) cutter.threadsCut += cut.length;
         if (cut.isEmpty) continue;
         _lastDamageBy[target] = cutter;
         _lastMove[target] = CombatMove.threadCut;
@@ -1210,14 +1263,34 @@ class MatchSimulationController {
       }
     }
 
+    if ((mode == MatchMode.threadGrowth && threadCutRace)) {
+      for (final ball in _balls) {
+        ball.lineCount = ball.fanLines.length;
+        final base = initialArenaRadius * ballRadiusRatio * ballScale;
+        ball.radius = base * (.5 + ball.fanLines.length / math.max(1, threadGrowthMaxThreads)).clamp(.5, 1.5);
+        ball.position = clampToArena(ball.position, inset: ball.radius + .01);
+        _physics.resolveObstacleCollision(ball, obstacle: centerObstacle, obstacleScale: centerObstacleScale);
+      }
+      // Same-step ties use stable identity, never contestant iteration order.
+      final reached = _balls.where((b) => b.threadsCut >= neoThreadsTarget).toList()
+        ..sort((a,b) { final score = b.threadsCut.compareTo(a.threadsCut); return score != 0 ? score : a.config.id.compareTo(b.config.id); });
+      if (reached.isNotEmpty) {
+        _winnerId = reached.first.config.id;
+        _winningMove = CombatMove.threadCut;
+        _status = MatchStatus.finished;
+      }
+      if (_status == MatchStatus.finished || cutRaceSurvival) return;
+    }
+
     // 5. Elimination check: ball eliminated when all its lines are cut (Arsenal: its life is gone)
     final eliminatedNow = <SimulationBall>[];
     for (final ball in _balls) {
       if (ball.isEliminated) continue;
 
-      if (arsenal ? ball.life < 1 : ball.fanLines.isEmpty) {
+      if (arsenal ? ball.life < 1 : !(mode == MatchMode.threadGrowth && threadCutRace && cutRaceSurvival) && ball.fanLines.isEmpty) {
         ball.isEliminated = true;
         knockouts++;
+        if(simulationRevision >= 10) _deathGhosts.add(DeathGhost(ball.config.id,ball.position,ball.radius));
         eliminatedNow.add(ball);
         _floatingTexts.spawn(
           ball.position,
@@ -1241,7 +1314,10 @@ class MatchSimulationController {
           );
         }
         // End battle was pressed: this knockout ends the match, so the ball stays down.
-        if (_endStep == null || _stepCount + 1 < _endStep!) _respawn(ball);
+        if (_endStep == null || _stepCount + 1 < _endStep!) {
+          if(simulationRevision >= 10) { _pendingRespawns[ball] = _stepCount + 45; }
+          else { _respawn(ball); }
+        }
       }
       if (_endStep != null && _stepCount + 1 >= _endStep!) {
         final defeated = eliminatedNow.last;
@@ -1262,6 +1338,11 @@ class MatchSimulationController {
       eliminatedNow.clear();
     }
 
+    // Waiting for a respawn must never accidentally award last-standing victory.
+    if(endlessBattle && _pendingRespawns.isNotEmpty) {
+      for(final ball in _balls) { ball.lineCount=ball.fanLines.length; }
+      return;
+    }
     // 6. Win condition: last ball with >=1 line wins
     var activeBalls = _balls.where((b) => !b.isEliminated).toList();
     if (activeBalls.isEmpty && eliminatedNow.isNotEmpty && _balls.length > 1) {
@@ -1358,6 +1439,11 @@ class MatchSimulationController {
           Offset(math.cos(heading), math.sin(heading)) *
           _cruiseSpeed(ball.config) *
           _crowdSpeedFactor(_balls.length);
+    if (simulationRevision >= 10) {
+      ball.position = ArenaPlacement.nearest(ball.position, radius: arenaRadius, ballRadius: ball.radius,
+        shape: arenaShape, obstacle: centerObstacle, obstacleScale: centerObstacleScale,
+        occupied: [for(final other in _balls) if(other != ball && !other.isEliminated) (other.position,other.radius)]) ?? ball.position;
+    }
     _floatingTexts.spawn(ball.position, 'RESPAWN!', ball.config.primaryColor);
   }
 

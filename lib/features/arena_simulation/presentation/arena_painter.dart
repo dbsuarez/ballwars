@@ -140,6 +140,7 @@ class ArenaPainter extends CustomPainter {
       if (ball.isEliminated) continue;
       _paintSingleBall(canvas, ball);
     }
+    _paintDeathGhosts(canvas);
     PowerUpPainter.paintShadowClones(canvas, state, paintBody: _paintBody);
     PowerUpPainter.paintCasting(
       canvas,
@@ -153,6 +154,14 @@ class ArenaPainter extends CustomPainter {
       showEffects: showEffects,
       effectRenderMode: explosionRenderMode,
     );
+    if (state.neoThreadsTarget case final target?) {
+      for (final ball in state.balls) {
+        final text = TextPainter(text: TextSpan(text: '${ball.threadsCut}/$target',
+          style: TextStyle(color: Colors.white, fontSize: math.max(12 / scale, ball.radius * .55), fontWeight: FontWeight.bold,
+            shadows: const [Shadow(blurRadius: 3, color: Colors.black)])), textDirection: TextDirection.ltr)..layout();
+        text.paint(canvas, ball.position + Offset(-text.width/2, ball.radius + 3));
+      }
+    }
     // After every ball, so the bars sit on top.
     if (showHpBars) {
       HpBar.paintAll(
@@ -209,6 +218,33 @@ class ArenaPainter extends CustomPainter {
     }
   }
 
+  void _paintDeathGhosts(Canvas canvas) {
+    for(final ghost in state.deathGhosts) {
+      if(state.balls.any((b)=>b.config.id==ghost.ballId && !b.isEliminated)) continue;
+      final t=(ghost.age/.75).clamp(0.0,1.0);
+      final r=ghost.radius;
+      final p=ghost.position+Offset(math.sin(t*math.pi*2)*r*.2,-r*3*t);
+      final frame = SpriteRegistry.frameAt('anim.death-ghost', (ghost.age * 60).floor());
+      if(frame != null) {
+        final side = r * 3;
+        canvas.drawImageRect(frame, Rect.fromLTWH(0,0,frame.width.toDouble(),frame.height.toDouble()),
+          Rect.fromCenter(center:p,width:side,height:side), Paint()..color=Colors.white.withValues(alpha:1-t)..filterQuality=FilterQuality.none);
+        continue;
+      }
+      canvas.save(); canvas.translate(p.dx,p.dy);
+      final path=Path()..moveTo(-r,r*.75)..lineTo(-r,0)
+        ..cubicTo(-r,-r*1.4,r,-r*1.4,r,0)..lineTo(r,r*.75);
+      for(var i=3;i>=0;i--) { path.lineTo(-r+i*r*.5,r*(i.isEven ? .6 : 1)); }
+      path.close();
+      canvas.drawPath(path,Paint()..color=const Color(0xffd8faff).withValues(alpha:(1-t)*.85));
+      final eyes=Paint()..color=Colors.black.withValues(alpha:1-t);
+      canvas.drawOval(Rect.fromCenter(center:Offset(-r*.32,-r*.1),width:r*.18,height:r*.3),eyes);
+      canvas.drawOval(Rect.fromCenter(center:Offset(r*.32,-r*.1),width:r*.18,height:r*.3),eyes);
+      canvas.drawOval(Rect.fromCenter(center:Offset(0,r*.3),width:r*.23,height:r*.28),eyes);
+      canvas.restore();
+    }
+  }
+
   Path _arenaOutline(double radius) {
     final rect = Rect.fromLTRB(-radius, -radius, radius, radius);
     return state.arenaShape == ArenaShape.square
@@ -227,6 +263,12 @@ class ArenaPainter extends CustomPainter {
     canvas.save();
     canvas.clipPath(Path()..addPath(_arenaOutline(visibleRadius), Offset.zero));
     canvas.drawRect(Rect.fromLTRB(-visibleRadius,-visibleRadius,visibleRadius,visibleRadius), Paint()..color = _floor(background));
+    final imageId = _activePreset?.backgroundSpriteId;
+    final backgroundImage = imageId == null ? null : SpriteRegistry.frame(imageId);
+    if (backgroundImage != null) {
+      canvas.drawImageRect(backgroundImage, Rect.fromLTWH(0,0,backgroundImage.width.toDouble(),backgroundImage.height.toDouble()),
+        Rect.fromLTRB(-visibleRadius,-visibleRadius,visibleRadius,visibleRadius), Paint()..filterQuality=FilterQuality.medium);
+    } else {
     switch (arenaPreset != null && arenaDecoration == arenaPreset!.trapTheme
         ? arenaPreset!.theme : arenaDecoration) {
       case ArenaDecoration.defaultArena:
@@ -241,6 +283,7 @@ class ArenaPainter extends CustomPainter {
         _paintNeonFloor(canvas, visibleRadius);
       case ArenaDecoration.chaotic:
         _paintChaoticFloor(canvas, visibleRadius);
+    }
     }
     canvas.restore();
     _paintCenterObstacle(canvas, visibleRadius);

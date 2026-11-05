@@ -1,3 +1,4 @@
+import 'dart:ui';
 import '../application/power_up_system.dart';
 import 'floating_text.dart';
 import 'particle_system.dart';
@@ -5,10 +6,21 @@ import 'simulation_ball.dart';
 import 'fan_line.dart';
 import '../../match_setup/domain/match_config.dart';
 
+/// Presentation snapshot of a defeated ball, independent of the Ghost power-up.
+class DeathGhost {
+  DeathGhost(this.ballId,this.position,this.radius);
+  final String ballId;
+  final Offset position;
+  final double radius;
+  double age = 0;
+  static const duration = .75;
+}
+
 enum MatchStatus { running, slowMotion, beamAttack, finished }
 
 class SimulationState {
   final List<SimulationBall> balls;
+  final List<DeathGhost> deathGhosts;
   final ParticleSystem particles;
   final FloatingTextManager floatingTexts;
   final MatchStatus status;
@@ -25,6 +37,7 @@ class SimulationState {
 
   /// Simulation steps taken so far (drives the power-ups' pulse and the mines' blink).
   final int step;
+  final int? neoThreadsTarget;
 
   /// Live collision boundary. This changes while shrinking-arena mode runs.
   final double arenaRadius;
@@ -34,6 +47,7 @@ class SimulationState {
 
   const SimulationState({
     required this.balls,
+    this.deathGhosts = const [],
     required this.particles,
     required this.floatingTexts,
     required this.status,
@@ -44,6 +58,7 @@ class SimulationState {
     this.beamTimer = 0.0,
     this.powerUps,
     this.step = 0,
+    this.neoThreadsTarget,
     required this.arenaRadius,
     this.arenaShape = ArenaShape.circle,
     this.centerObstacle = CenterObstacle.none,

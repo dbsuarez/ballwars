@@ -715,11 +715,11 @@ Open Admin Settings > Appearance > Manage arenas. Create an arena or duplicate a
 
 ### 2. Customize appearance
 
-Appearance chooses the background template and optional floor, detail and boundary colors. Color buttons open a picker; reset returns to the theme color. All themes cover a square surface. The active boundary masks the artwork for circle arenas.
+Appearance chooses the background template and optional floor, detail and boundary colors. Color buttons open a picker; reset returns to the theme color. All themes cover a square surface. The active boundary masks the artwork for circle arenas. Upload & crop selects PNG/JPEG/WebP, crops a square with zoom and position sliders and resizes to a maximum of 512 or 1024 pixels before upload. The original file stays unchanged. Library reuses stored backgrounds; Use template clears the image. Uploaded artwork is saved in the sprite library first; Save the arena afterward.
 
 ### 3. Choose geometry and traps
 
-Geometry opens the existing visual boundary/center-obstacle editor. Select a circle or square outer boundary, an optional center wall and its size. Obstacle sizes are limited to 12-34% of the arena radius to retain playable space. Pick the built-in arena trap set independently of the floor theme. Arena traps by default can be switched off; players may override trap toggles in Match Settings. Damage and timing come from Skill Management.
+Geometry opens the existing visual boundary/center-obstacle editor. Select a circle or square outer boundary, an optional center wall and its size. Obstacle sizes are limited to 12-34% of the arena radius to retain playable space. Pick the built-in arena trap set independently of the floor theme. Arena traps by default can be switched off; players may override trap toggles in Match Settings. Damage and timing come from Skill Management. Saving checks the narrowest passage at the configured minimum arena size. Starting a match checks its selected ball size too.
 
 ### 4. Save and choose it
 

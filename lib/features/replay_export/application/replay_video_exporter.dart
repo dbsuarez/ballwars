@@ -89,6 +89,9 @@ class ReplayVideoExporter {
     double ballScale = 1.0,
     MatchMode mode = MatchMode.threads,
     int threadGrowthMaxThreads = 180,
+    int neoThreadsTarget = 50,
+    bool threadCutRace = false,
+    bool cutRaceSurvival = true,
     ArenaShape arenaShape = ArenaShape.circle,
     CenterObstacle centerObstacle = CenterObstacle.none,
     double centerObstacleScale = 0.22,
@@ -119,6 +122,8 @@ class ReplayVideoExporter {
   }) async {
     final pinned = {
       ...style.artworkRevisions.values,
+      if(simulationRevision>=10) 'anim.death-ghost',
+      ?style.arenaPreset?.backgroundSpriteId,
       ...SkillSpriteReadiness.dependencies(
         library: skillLibrary,
         tuning: tuning,
@@ -140,6 +145,9 @@ class ReplayVideoExporter {
         ballScale: ballScale,
         mode: mode,
         threadGrowthMaxThreads: threadGrowthMaxThreads,
+      neoThreadsTarget: neoThreadsTarget,
+      threadCutRace: threadCutRace,
+      cutRaceSurvival: cutRaceSurvival,
         arenaShape: arenaShape,
         centerObstacle: centerObstacle,
         centerObstacleScale: centerObstacleScale,
@@ -162,7 +170,8 @@ class ReplayVideoExporter {
         randomizedHairstyles: randomizedHairstyles,
       );
       final missing = await SkillSpriteReadiness.prepare(
-        extraIds: style.artworkRevisions.values,
+        extraIds: [...style.artworkRevisions.values,
+      if(simulationRevision>=10) 'anim.death-ghost', ?style.arenaPreset?.backgroundSpriteId],
         embedded: style.artworkFrames,
         library: skillLibrary,
         tuning: tuning,

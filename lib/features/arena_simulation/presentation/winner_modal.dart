@@ -29,6 +29,7 @@ class WinnerModal extends StatefulWidget {
   /// Final Mayhem knockouts for every contestant, including zero scores.
   final List<(CustomBall, int, int, double)>? mayhemTally;
   final bool tallyIsHealth;
+  final bool tallyIsCuts;
 
   /// Yes or No: the question the match answered; the card then shows the winner as the answer.
   final String? question;
@@ -73,6 +74,7 @@ class WinnerModal extends StatefulWidget {
     this.winningMove,
     this.mayhemTally,
     this.tallyIsHealth = true,
+    this.tallyIsCuts = false,
     this.question,
     required this.onReplay,
     this.onReplayFinisher,
@@ -247,7 +249,7 @@ class _WinnerModalState extends State<WinnerModal>
           children: [
             Text(title, style: AppText.mono(12, color: c.muted)),
             Text(
-              'Wins / fewer eliminations / remaining ${widget.tallyIsHealth ? "health" : "threads"}',
+              '${widget.tallyIsCuts ? 'Cuts' : 'Wins'} / fewer eliminations / remaining ${widget.tallyIsHealth ? "health" : "threads"}',
               style: AppText.ui(11, FontWeight.w500, color: c.muted),
             ),
             const SizedBox(height: 6),
@@ -307,9 +309,9 @@ class _WinnerModalState extends State<WinnerModal>
                               : null,
                         ),
                         SizedBox(
-                          width: 34,
+                          width: widget.tallyIsCuts ? 46 : 34,
                           child: Text(
-                            '$knockouts W',
+                            '$knockouts ${widget.tallyIsCuts ? 'C' : 'W'}',
                             textAlign: TextAlign.right,
                             style: AppText.mono(12, color: c.text),
                           ),

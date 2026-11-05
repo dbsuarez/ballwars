@@ -126,7 +126,7 @@ Replay and video remain last, by agreement.
 - [x] Put arena BGM and SFX controls side by side on the right and fix missing icons.
 - [x] Add a separate UX-sound channel alongside BGM and SFX.
 - [x] Make BGM, SFX, and UX sound tap-to-toggle and long-press-for-volume; default to 100/90/90.
-- [ ] Surface all three audio channels in Match Setup, the live arena, and Power-up Test through one compact volume popup. The live arena popup is verified on the phone; current Match Setup intentionally omits Audio in source, so this combined completion claim was overstated.
+- [x] Surface BGM/SFX/UX controls: compact popup in the live/test arena and explicit channel rows in Match Setup > Audio. Match Setup has an Audio tab in current source; an earlier absence note is obsolete. Manual acceptance is separate.
 - [x] Give Power-up Test a full-width mobile arena, three trap slots, compact icon-only playback, and responsive Weapon 1 / Weapon 2 / Power-up finisher previews.
 - [x] Allow My Groups balls without uploaded pictures by using generated initials.
 - [x] In Mayhem, hide groups with fewer than six balls.
@@ -273,7 +273,7 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Add per-skill Artwork tint in Appearance, including a gold swatch and original-color reset. Persist tint in skill/replay data and apply it to icons, held/dropped artwork, projectiles, skill effects and finishers without modifying shared source images.
 - [x] Use numeric up/down controls for whole-number skill fields, retaining direct typing and enforcing minimum/maximum bounds; preserve decimal inputs for fractional settings.
 - [x] Add general Effect visuals selection, admin defaults starting at Sprite, and per-mode player preferences preserved in replay links and exports. Explicit skill choices override the shared default.
-- [ ] Add independent equipped artwork and fired-skill selection (Knife firing three Boom-merangs). See [next feature handoff](NEXT-SKILL-COMPOSITION.md).
+- [x] Add independent equipped artwork and fired-skill selection (Knife firing three Boom-merangs). See [next feature handoff](NEXT-SKILL-COMPOSITION.md).
 - [x] Default newly saved replay names to local date/time and filename-safe contestant names with a `.bw` suffix; preserve custom names on re-save.
 
 - [x] Implement the [Skill Management audit](SKILL-MANAGEMENT-AUDIT.md): grouped fixed-label controls, visible validation, aligned sprite/projectile previews, and runtime sizing/parameter corrections.
@@ -288,10 +288,8 @@ Architecture reference: [Recommended Skill Model](RECOMMENDED-SKILL-MODEL.md).
 - [x] Replace hex-only Effect color entry with a visual picker for all skills, with swatches, hue, saturation and brightness controls.
 
 - [x] Final static analysis and automated tests pass (452-test full suite; 2026-10-27), including actual equipped-size pixel rendering and a 390px editor layout.
-- [ ] Browser verification passes.
-- [ ] Android phone verification passes.
-- [ ] Cross-device synchronization passes.
-- [ ] Production deployment is verified.
+- Baseline browser/Android and cross-device checks are recorded in [Batch 3](BATCH3-ACCEPTANCE-2026-11-04.md).
+- [ ] Remaining manual checks are tracked in the [current audit roadmap](WHOLE-APP-AUDIT-ROADMAP.md), including native cold audio and published-build acceptance; newer feature batches retain their own device checklists.
 
 ### Loadout presets (2026-10-29)
 

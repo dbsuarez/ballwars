@@ -87,7 +87,7 @@ class SpriteBackup {
         a.sprites.isEmpty ||
         a.sprites.length > 64 ||
         a.sprites.values.fold<int>(0, (n, s) => n + s.frames.length) > 256 ||
-        a.sprites.values.any((s) => s.output > 256 || s.height > 256) ||
+        (!a.isArenaBackground && a.sprites.values.any((s) => s.output > 256 || s.height > 256)) ||
         a.sprites.keys.any(
           (name) => !RegExp(r'^[a-z0-9-]{1,40}$').hasMatch(name),
         )) {

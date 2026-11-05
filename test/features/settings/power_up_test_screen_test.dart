@@ -55,6 +55,25 @@ Widget _app(
 );
 
 void main() {
+  testWidgets('dragging a paused test ball repositions only it without advancing time', (tester) async {
+    OfflineStore.instance=MemoryOfflineStore();
+    await tester.pumpWidget(_app(true)); await tester.pumpAndSettle();
+    final before=tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
+    final ball=before.balls.first; final other=before.balls.last.position;
+    final original=ball.position; final velocity=ball.velocity; final held=ball.held;
+    final surface=find.byKey(const Key('test-arena-drag'));
+    final rect=tester.getRect(surface);
+    final scale=rect.width/(2*before.arenaRadius);
+    final from=rect.center+ball.position*scale;
+    final gesture=await tester.startGesture(from);
+    await gesture.moveBy(const Offset(25,0)); await tester.pump();
+    await gesture.moveBy(const Offset(15,5)); await tester.pump(); await gesture.up(); await tester.pump();
+    expect(ball.position,isNot(original)); expect(ball.velocity,velocity); expect(ball.held,held);
+    final after=tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
+    expect(after.step,before.step); expect(after.balls.last.position,other);
+    expect(tester.takeException(),isNull);
+  });
+
   testWidgets('unsaved map tests its real geometry and appearance without saving its ID', (tester)async{
     final previous=OfflineStore.instance;OfflineStore.instance=MemoryOfflineStore();
     addTearDown(()=>OfflineStore.instance=previous);

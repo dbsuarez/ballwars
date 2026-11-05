@@ -82,6 +82,11 @@ class SpriteDef {
 
 /// A sprite sheet and the sprites cut from it, read from a JSON manifest.
 class SpriteAtlas {
+  /// Background imports are one static square, capped separately from effects.
+  bool get isArenaBackground => sprites.length == 1 && sprites.containsKey('background') &&
+    sprites['background']!.frames.length == 1 && sprites['background']!.output <= 1024 &&
+    sprites['background']!.height == sprites['background']!.output;
+
   final String sheet;
   final Map<String, SpriteDef> sprites;
 

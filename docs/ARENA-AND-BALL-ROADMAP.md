@@ -47,10 +47,10 @@ This needs one shared geometry contract, rather than drawing a square over circu
 
 ## D. Arena authoring
 
-- [ ] Admin arena editor to add named arenas.
-- [x] Reuse the same map-selection dialog for users/admin. This is preset selection, not a persistent named-arena authoring system.
-- [ ] Author background/decorations, outer shape, center obstacles and associated traps through the shared geometry/preset model.
-- [ ] Validate safe spawning, minimum passage widths and shrinking before saving a map.
+- [x] Admin arena editor to add named arenas; see [Arena editor](ARENA-EDITOR.md).
+- [x] Reuse the same map-selection dialog for users/admin. The shared chooser includes the persistent custom catalog.
+- [x] Author template colors, uploaded/cropped square backgrounds, outer shape, center obstacle and native trap sets through the shared preset model.
+- [x] Validate passage clearance against minimum arena scale; revision 10 uses safe non-overlapping spawns and respawns. Match Start also checks actual ball size and Cut Race maximum size.
 
 ## E. Replay / export ? last, as requested
 
@@ -59,7 +59,8 @@ This needs one shared geometry contract, rather than drawing a square over circu
 - [x] Admin-configurable bouncing DVD-style watermark text, default `cha0s' Balls`.
 - [x] Keep the bouncing export watermark separate from the existing winner-card tiled watermark.
 - [x] Preserve saved-replay playback/sharing, audio choices and the existing 10-minute render warning.
-- [ ] User applies migration 028 and confirms updated device/browser playback and file picking.
+- [x] Migration 028 applied (user confirmed).
+- [ ] Updated device/browser playback and file-picker acceptance remains manual.
 
 ## Useful follow-ups for Ball Studio
 
@@ -75,3 +76,16 @@ These are suggestions for later, not promises marked complete by this batch.
 963 tests passed, with one opt-in performance test skipped. Analysis and the release web build pass. Phone-sized Body / Face & hands / HP bar views and the eleven-expression gallery were rendered and inspected. Tests cover shared/offline persistence, explicit missing-migration/server-confirmation failures, admin navigation and saving, retrying failed saves, actual arena settings updates, HP geometry/outline scaling, expression uniqueness, hand-size isolation from collisions, remembered demo preferences and bounded ball spacing. Long ordered-step timelines are included in the demo duration estimate while keeping the existing 45-second safety limit.
 
 Android/browser hands-on acceptance remains unchecked. GitHub deployment completion is not monitored.
+
+## F. Neo Threads modifiers and Mayhem expansion (2026-11-05)
+
+- [x] Keep existing Threads and Thread Growth/Neo Threads rules unchanged when modifiers are off.
+- [x] Neo Threads > Cut Race: editable target 1–1000, default 50; manual input and numeric up/down. Remember it per mode.
+- [x] Separate Stay in play at zero threads toggle. On: only target wins; Off: zero threads eliminates, target or last survivor wins.
+- [x] Cut Race size follows owned threads, bounded to 0.5–1.5 times selected size; the configured maximum threads is the upper endpoint. Collision body follows the visible size.
+- [x] Mayhem accepts 6, 7 or 8 selected balls, preserving duration, respawns and ranking rules.
+- [x] Drag balls in Power-up Test/Live Arena. Placement avoids walls and the other ball; dragging temporarily suspends simulation and preserves velocity, equipment, time and idle pinning.
+- [x] Defeated balls turn into rising/fading ghosts; Mayhem/Unlimited respawn after 0.75 simulation seconds. Historical revisions retain immediate respawn.
+- [ ] Manual phone checks for eight-ball density, background picking/upload, dragging and death animation.
+
+Implementation and verification: [Gameplay and arena additions](GAMEPLAY-ARENA-ADDITIONS.md).

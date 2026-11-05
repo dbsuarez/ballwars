@@ -94,6 +94,39 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('Neo Threads modifier target is editable and remembered independently', (tester) async {
+    await pumpSetup(tester,initialMode:MatchMode.threadGrowth);
+    await openSettings(tester);
+    await tester.tap(find.byKey(const ValueKey('setting-Cut Race'))); await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Cuts to win')); await tester.tap(find.text('Cuts to win')); await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('cut-race-target')),'100'); await tester.pump();
+    await tester.tap(find.text('Done')); await tester.pumpAndSettle();
+    await tester.runAsync(() async { await Future<void>.delayed(const Duration(milliseconds:300)); });
+    await closeSettings(tester);
+    await tester.tap(find.byIcon(Icons.shuffle)); await tester.pump(); await tester.tap(find.text('Start'));
+    expect(started!.mode,MatchMode.threadGrowth); expect(started!.threadCutRace,true); expect(started!.neoThreadsTarget,100);
+    await tester.pumpWidget(const SizedBox());
+    await pumpSetup(tester,initialMode:MatchMode.threadGrowth);
+    await tester.tap(find.byIcon(Icons.shuffle)); await tester.pump(); await tester.tap(find.text('Start'));
+    expect(started!.neoThreadsTarget,100); expect(started!.threadCutRace,true);
+    await tester.pumpWidget(const SizedBox()); await pumpSetup(tester,initialMode:MatchMode.threads);
+    await tester.tap(find.byIcon(Icons.shuffle)); await tester.pump(); await tester.tap(find.text('Start'));
+    expect(started!.threadCutRace,false);
+  });
+
+  testWidgets('Mayhem accepts six seven or eight selected balls', (tester) async {
+    await pumpSetup(tester,initialMode:MatchMode.arsenal,initialMayhem:true);
+    await pickCategory(tester,'Countries');
+    for(var i=0;i<8;i++) {
+      await tester.enterText(find.widgetWithText(TextField,'Search'),'country $i'); await tester.pumpAndSettle();
+      await tester.tap(find.text('Country $i')); await tester.pump();
+      if(i>=5) {
+        await tester.tap(find.text('Start')); await tester.pump();
+        expect(started!.contestants,hasLength(i+1)); expect(started!.mayhem,true);
+      }
+    }
+  });
+
   testWidgets('custom map defaults reach the actual match and stay per mode', (tester)async{
     const map=ArenaDefinition(id:'square-court',name:'Square court',theme:ArenaDecoration.desert,
       trapTheme:ArenaDecoration.neonGrid,shape:ArenaShape.square,obstacle:CenterObstacle.square,
@@ -105,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     expect(started,isNotNull);
-    expect(started!.simulationRevision,9);
+    expect(started!.simulationRevision,10);
     expect(started!.arenaPreset!.id,map.id);
     expect(started!.arenaDecoration,ArenaDecoration.neonGrid);
     expect(started!.arenaShape,ArenaShape.square);
@@ -132,7 +165,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     expect(started,isNotNull);
-    expect(started!.simulationRevision,9);
+    expect(started!.simulationRevision,10);
     expect(started!.arenaPreset!.id,map.id);expect(started!.arenaShape,ArenaShape.circle);
   });
 

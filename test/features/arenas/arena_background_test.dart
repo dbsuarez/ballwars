@@ -1,3 +1,5 @@
+import 'package:ballwars/core/sprites/sprite_registry.dart';
+import 'package:ballwars/core/sprites/sprite_atlas.dart';
 import 'package:ballwars/features/replay_export/presentation/replay_frame_painter.dart';
 import 'package:ballwars/features/replay_export/domain/video_visibility.dart';
 import 'dart:math' as math;
@@ -19,6 +21,7 @@ Future<List<int>> corner(
   ArenaDecoration theme,
   ArenaShape shape, {
   bool custom = true,
+  String? backgroundSpriteId,
   Offset point = const Offset(83, 77),
 }) async {
   final state = SimulationState(
@@ -41,6 +44,7 @@ Future<List<int>> corner(
     arenaDecoration: theme,
     arenaPreset: custom
         ? ArenaDefinition(
+            backgroundSpriteId: backgroundSpriteId,
             id: 'test',
             name: 'Test',
             theme: theme,
@@ -66,6 +70,38 @@ Future<List<int>> corner(
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  test('supplied death ghost has four isolated animated frames', ()async{
+    await SpriteRegistry.load();
+    expect(SpriteRegistry.loadProblems, isEmpty);
+    final first=SpriteRegistry.frameAt('anim.death-ghost',0)!;
+    expect(first.width,128); expect(first.height,128);
+    expect(identical(first,SpriteRegistry.frameAt('anim.death-ghost',5)),false);
+    expect(identical(first,SpriteRegistry.frameAt('anim.death-ghost',20)),true);
+    for(var frame=0;frame<4;frame++) {
+      final image=SpriteRegistry.frame('anim.death-ghost',frame)!;
+      final bytes=(await image.toByteData(format:ui.ImageByteFormat.rawRgba))!.buffer.asUint8List();
+      for(final point in [const Offset(0,0),const Offset(127,0),const Offset(0,127),const Offset(127,127)]) {
+        expect(bytes[(point.dy.toInt()*128+point.dx.toInt())*4+3],0);
+      }
+    }
+  });
+
+  test('uploaded square background fills corners and clips for circle', ()async{
+    final recorder=ui.PictureRecorder();
+    Canvas(recorder).drawColor(const Color(0xff3366cc),BlendMode.src);
+    final picture=recorder.endRecording();final image=await picture.toImage(16,16);
+    await SpriteRegistry.register(const SpriteAtlas(sheet:'background.png',sprites:{
+      'background':SpriteDef(id:'background',frames:[Rect.fromLTWH(0,0,16,16)],output:16,padding:0,
+        bleedOk:true,bleedNote:'Single full-frame background')
+    }),image,idPrefix:'custom.test-background');
+    image.dispose();picture.dispose();
+    final square=await corner(ArenaDecoration.desert,ArenaShape.square,backgroundSpriteId:'custom.test-background.background');
+    final circle=await corner(ArenaDecoration.desert,ArenaShape.circle,backgroundSpriteId:'custom.test-background.background');
+    expect(square.take(3),[51,102,204]); expect(circle.take(3),[0,0,0]);
+    SpriteRegistry.unregister('custom.test-background');
+  });
+
   test(
     'video rendering retains a custom arena snapshot through visibility choices',
     () async {

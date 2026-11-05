@@ -1,10 +1,10 @@
 # Ball Wars game UI: Phase A + B
 
-Status: implemented locally on 2026-11-06. [Validation and screenshots](PHASE-A-B-REPORT.md). No deployment or APK release is performed by this batch.
+Status: Phase A + B implemented and submitted for deployment/release as v1.14.61. The centered Power-up Test follow-up is submitted as v1.14.62 on 2026-11-06. Workflow completion and device acceptance remain manual. [Validation and screenshots](PHASE-A-B-REPORT.md).
 
 The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_CODEX_HANDOFF.md). The reference checkpoint was refreshed against master v1.14.60 (`15c500d`), preserving all five existing mode entries, current settings, simulation and release workflows.
 
-## Phase A ? foundation
+## Phase A - foundation
 
 - [x] Shared color/typography treatments, beveled panels, background chrome, mode tiles, primary actions, section headings, icon buttons and player dialogs.
 - [x] Existing fields, sliders, switches, tabs, dropdowns and validation retained through the scoped theme; no per-screen replacements of their state/controllers.
@@ -15,7 +15,7 @@ The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_COD
 - [x] Free-tool and asset/font provenance reviewed; no new packages or paid services. [Manifest](ASSET-MANIFEST.json).
 - [x] Public Credits & licenses entry with bundled font/icon notices.
 
-## Phase B ? Home and Match Setup
+## Phase B - Home and Match Setup
 
 - [x] Home with a large Play action, mode-specific tiles, remembered last-used mode, My groups / Saved replays in one row, music, Settings and Android Quit.
 - [x] User-owned illustration approved for reuse on 2026-11-06, processed locally; UI labels and controls remain native Flutter widgets.
@@ -29,13 +29,17 @@ The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_COD
 
 - [x] Independently collapsible side rails, remembered on this device.
 - [x] Remove overlay clear buttons. Hold a populated slot and choose No item to remove it.
-- [x] Use the finisher buttons' 36px rounded-square shape consistently, as requested.
-- [x] Move finisher previews below the arena, above playback controls.
+- [x] Keep utility/finisher buttons at 36px; use a centered 72px Play/Pause target for easier reach.
+- [x] Center arena, status, finishers and playback as one group. Scroll short windows instead of shrinking the arena. [Preview](POWERUP-TEST-CENTERED-PREVIEW.md).
 - [x] Keep the arena full width, tap-to-rearm, hold-to-choose, random initial direction and normal bounce physics. Play does not rearm automatically.
 
 ## Next visual slices
 
-- [ ] Phase C: Skill Library, Skill Editor, Ball Studio and Skill Demo.
+- [ ] Phase C (next session): Skill Library, Skill Editor, Ball Studio and Skill Demo.
+  - [ ] Tier-aware skill cards, filters and shared game navigation.
+  - [ ] Editor sections and grouped controls, preserving all fields, previews and Save validation.
+  - [ ] Bring Ball Studio and Skill Demo into the same visual system.
+  - [ ] Regression tests and portrait/landscape screenshots before publication.
 - [ ] Phase D: battle HUD, results and replay presentation, preserving arena area and replay/export choices.
 - [ ] Phase E: additional motion, measured performance polish and remaining player screens.
 

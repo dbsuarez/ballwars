@@ -78,6 +78,15 @@ double faceHealth(SimulationBall ball) => ball.startLines > 0
     ? ball.lineCount / ball.startLines
     : ball.life / PowerUpTuning.arenaLife;
 
+/// Cosmetic timeline only. Stable IDs stagger blinks without consuming game RNG.
+bool isFaceBlinking(String id, int step, BallAppearance appearance) {
+  if (appearance.blinkInterval <= 0 || step <= 0) return false;
+  final period = (appearance.blinkInterval * 60).round();
+  final duration = (appearance.blinkDuration * 60).round();
+  final phase = id.codeUnits.fold<int>(0, (sum, unit) => (sum * 31 + unit) % period);
+  return (step + phase) % period < duration;
+}
+
 /// Draws [ball]'s smiley: the ball's color, two white eyes with black pupils (or squeezed shut on a
 /// fresh hit), brows only when worried or hurt, and a black mouth arc. By default it fills the ball (the
 /// arena); with [center] and [radius] it is drawn there instead (beside the picture in the VS header),
@@ -92,6 +101,7 @@ void paintSmiley(
   double backgroundAlpha = 1,
   BallAppearance appearance = BallAppearance.defaults,
   FaceExpression? expressionOverride,
+  int animationStep = 0,
 }) {
   final c = center ?? ball.position;
   final r = radius ?? ball.radius;
@@ -126,7 +136,12 @@ void paintSmiley(
     c + Offset(r * 0.34, -r * 0.18),
   ];
 
-  if (expression == FaceExpression.wince) {
+  final blinking = isFaceBlinking(ball.config.id, animationStep, appearance);
+  if (blinking && !{FaceExpression.wince, FaceExpression.knockedOut, FaceExpression.dizzy}.contains(expression)) {
+    for (final eye in eyes) {
+      canvas.drawLine(eye - Offset(eyeR, 0), eye + Offset(eyeR, 0), ink);
+    }
+  } else if (expression == FaceExpression.wince) {
     // > <
     for (final (i, eye) in eyes.indexed) {
       final dir = i == 0 ? 1.0 : -1.0;
@@ -164,7 +179,7 @@ void paintSmiley(
       canvas.drawPath(spiral, ink);
     }
   } else {
-    final look = pupilOffset(ball, balls, eyeR);
+    final look = pupilOffset(ball, balls, eyeR) * appearance.pupilFollow;
     for (final eye in eyes) {
       canvas.drawCircle(eye, eyeR, Paint()..color = Colors.white);
       canvas.drawCircle(eye, eyeR, ink..strokeWidth = math.max(1.0, r * 0.05));
@@ -205,6 +220,10 @@ void paintSmiley(
 
   final mouth = c + Offset(0, r * (0.38 + appearance.mouthOffset));
   final w = r * 0.42;
+  canvas.save();
+  canvas.translate(mouth.dx, mouth.dy);
+  canvas.scale(appearance.mouthScale);
+  canvas.translate(-mouth.dx, -mouth.dy);
   switch (expression) {
     case FaceExpression.happy:
       canvas.drawArc(
@@ -292,6 +311,7 @@ void paintSmiley(
       );
       canvas.drawPath(wave, ink);
   }
+  canvas.restore();
 }
 
 /// Draws the Faces look's white cartoon gloves. A held item gets one gripping

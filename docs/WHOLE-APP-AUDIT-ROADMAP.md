@@ -168,3 +168,15 @@ Arena media and ball-creation fixes submitted for deployment and signed APK rele
 - [ ] Published phone/browser acceptance. See [implementation and checks](APP-FRAME-AND-STARTUP.md).
 
 v1.14.59 validation: 1,739 tests passed / one skipped; analysis clean; production release web build passed. Master/tag publication triggers Pages and the signed APK workflow; completion remains manually checked.
+
+## Ball Studio follow-ups and test overlays (2026-11-06)
+
+- [x] Preview a saved My Groups/built-in ball with Picture / Face / Both; remembered preview choices.
+- [x] Shared mouth size, blink interval/duration and pupil-follow controls alongside existing eye size and mouth position; same arena/replay renderer, no gameplay RNG changes.
+- [x] Portrait-phone and distinct six-ball visual-density previews.
+- [x] Named device-local appearance presets with confirmed writes, visible failure/retry, apply-to-draft, replace/delete confirmation and explicit shared Save.
+- [x] Icon-only A/B movement and loadout side overlays; three bottom trap slots, existing finishers and clearing preserved. Uniform 36px buttons; arena remains full width.
+- [x] Bundled Admin Guide and generated Markdown updated. 264 targeted regressions passed; eight final preview/failure checks passed; analysis clean. Phone-sized layouts inspected with real fonts.
+- [ ] Manual web/Android acceptance. See [usage and checks](BALL-STUDIO-FOLLOWUPS.md). Not deployed by this task.
+
+Ball Studio follow-up production release web build passed locally on 2026-11-06. Publication and actual-device acceptance remain pending.

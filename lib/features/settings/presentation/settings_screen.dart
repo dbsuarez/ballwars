@@ -212,6 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => BallStudioScreen(
+          groups: widget.customGroups,
           initial: scope.notifier!.value,
           onSave: (draft) async {
             final next = scope.notifier!.value.copyWith(

@@ -64,12 +64,12 @@ This needs one shared geometry contract, rather than drawing a square over circu
 
 ## Useful follow-ups for Ball Studio
 
-- [ ] Preview different ball looks (picture / face / both) with an actual saved ball.
-- [ ] Optional eye/mouth size, blink timing and pupil-follow strength using the same code renderer.
-- [ ] Portrait-phone preview and a six-ball visual-density preview.
-- [ ] Named appearance presets if multiple styles become useful.
+- [x] Preview different ball looks (picture / face / both) with an actual saved ball.
+- [x] Optional eye/mouth size, blink timing and pupil-follow strength using the same code renderer.
+- [x] Portrait-phone preview and a six-ball visual-density preview.
+- [x] Named appearance presets if multiple styles become useful.
 
-These are suggestions for later, not promises marked complete by this batch.
+Implemented locally on 2026-11-05. Named presets are device-local; Save publishes the applied draft through shared settings. See [Ball Studio follow-ups](BALL-STUDIO-FOLLOWUPS.md) for usage and remaining device checks.
 
 ## Verification for batch A
 

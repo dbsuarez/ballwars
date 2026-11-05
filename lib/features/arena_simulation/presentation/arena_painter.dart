@@ -204,6 +204,7 @@ class ArenaPainter extends CustomPainter {
         state.balls,
         appearance: ballAppearance,
         expressionOverride: previewExpression,
+        animationStep: state.step,
       );
     } else {
       BallFacePainter.paint(
@@ -223,6 +224,7 @@ class ArenaPainter extends CustomPainter {
           backgroundAlpha: 0.38,
           appearance: ballAppearance,
           expressionOverride: previewExpression,
+        animationStep: state.step,
         );
       }
     }

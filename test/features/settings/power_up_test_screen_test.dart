@@ -50,51 +50,126 @@ Widget _app(
   adminAuth: _Auth(admin),
   child: MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
-    home: PowerUpTestScreen(initialSkill: initialSkill, initialArena:initialArena),
+    home: PowerUpTestScreen(
+      initialSkill: initialSkill,
+      initialArena: initialArena,
+    ),
   ),
 );
 
 void main() {
-  testWidgets('dragging a paused test ball repositions only it without advancing time', (tester) async {
-    OfflineStore.instance=MemoryOfflineStore();
-    await tester.pumpWidget(_app(true)); await tester.pumpAndSettle();
-    final before=tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
-    final ball=before.balls.first; final other=before.balls.last.position;
-    final original=ball.position; final velocity=ball.velocity; final held=ball.held;
-    final surface=find.byKey(const Key('test-arena-drag'));
-    final rect=tester.getRect(surface);
-    final scale=rect.width/(2*before.arenaRadius);
-    final from=rect.center+ball.position*scale;
-    final gesture=await tester.startGesture(from);
-    await gesture.moveBy(const Offset(25,0)); await tester.pump();
-    await gesture.moveBy(const Offset(15,5)); await tester.pump(); await gesture.up(); await tester.pump();
-    expect(ball.position,isNot(original)); expect(ball.velocity,velocity); expect(ball.held,held);
-    final after=tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
-    expect(after.step,before.step); expect(after.balls.last.position,other);
-    expect(tester.takeException(),isNull);
+  testWidgets('all overlay slots fit a 320px arena and share finisher height', (
+    tester,
+  ) async {
+    OfflineStore.instance = MemoryOfflineStore();
+    tester.view.physicalSize = const Size(320, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(true));
+    await tester.pumpAndSettle();
+    final rect = tester.getRect(find.byType(ArenaCanvas));
+    expect(rect.width, 320);
+    for (final key in [
+      'choose-item-0',
+      'choose-weapon-2-0',
+      'choose-power-0',
+      'choose-item-1',
+      'choose-weapon-2-1',
+      'choose-power-1',
+      'choose-arena-trap-0',
+      'choose-arena-trap-1',
+      'choose-arena-trap-2',
+    ]) {
+      final button = find.byKey(ValueKey(key));
+      expect(button.hitTestable(), findsOneWidget, reason: key);
+      expect(rect.contains(tester.getCenter(button)), isTrue, reason: key);
+      expect(tester.getSize(button).height, 36, reason: key);
+    }
+    expect(
+      tester.getSize(find.byKey(const ValueKey('test-playback'))).height,
+      36,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('finisher-preview-0-0'))).height,
+      36,
+    );
+    expect(find.text('Weapon 1'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
   });
+  testWidgets(
+    'dragging a paused test ball repositions only it without advancing time',
+    (tester) async {
+      OfflineStore.instance = MemoryOfflineStore();
+      await tester.pumpWidget(_app(true));
+      await tester.pumpAndSettle();
+      final before = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
+      final ball = before.balls.first;
+      final other = before.balls.last.position;
+      final original = ball.position;
+      final velocity = ball.velocity;
+      final held = ball.held;
+      final surface = find.byKey(const Key('test-arena-drag'));
+      final rect = tester.getRect(surface);
+      final scale = rect.width / (2 * before.arenaRadius);
+      final from = rect.center + ball.position * scale;
+      final gesture = await tester.startGesture(from);
+      await gesture.moveBy(const Offset(25, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(15, 5));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      expect(ball.position, isNot(original));
+      expect(ball.velocity, velocity);
+      expect(ball.held, held);
+      final after = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).state;
+      expect(after.step, before.step);
+      expect(after.balls.last.position, other);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('unsaved map tests its real geometry and appearance without saving its ID', (tester)async{
-    final previous=OfflineStore.instance;OfflineStore.instance=MemoryOfflineStore();
-    addTearDown(()=>OfflineStore.instance=previous);
-    const arena=ArenaDefinition(id:'draft',name:'Draft court',shape:ArenaShape.square,obstacle:CenterObstacle.square,obstacleScale:.34,floorColor:0xffbbaa55);
-    await tester.pumpWidget(_app(true,initialArena:arena));
-    await tester.pumpAndSettle();
-    final canvas=tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
-    expect(canvas.arenaPreset,same(arena));
-    expect(canvas.state.arenaShape,ArenaShape.square);
-    expect(canvas.state.centerObstacle,CenterObstacle.square);
-    expect(canvas.state.balls.every((ball)=>ball.position.dx.abs() >= 200*.34+ball.radius),isTrue);
-    expect(await DevicePrefs.read('power-test-arena-preset'),isNull);
-    await tester.tap(find.byTooltip('Change arena: Draft court'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('unavailable'),findsNothing);
-    await tester.tap(find.byKey(const ValueKey('arena-option-draft')));
-    await tester.pumpAndSettle();
-    expect(tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).arenaPreset,same(arena));
-    expect(await DevicePrefs.read('power-test-arena-preset'),isNull);
-    expect(tester.takeException(),isNull);
-  });
+  testWidgets(
+    'unsaved map tests its real geometry and appearance without saving its ID',
+    (tester) async {
+      final previous = OfflineStore.instance;
+      OfflineStore.instance = MemoryOfflineStore();
+      addTearDown(() => OfflineStore.instance = previous);
+      const arena = ArenaDefinition(
+        id: 'draft',
+        name: 'Draft court',
+        shape: ArenaShape.square,
+        obstacle: CenterObstacle.square,
+        obstacleScale: .34,
+        floorColor: 0xffbbaa55,
+      );
+      await tester.pumpWidget(_app(true, initialArena: arena));
+      await tester.pumpAndSettle();
+      final canvas = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+      expect(canvas.arenaPreset, same(arena));
+      expect(canvas.state.arenaShape, ArenaShape.square);
+      expect(canvas.state.centerObstacle, CenterObstacle.square);
+      expect(
+        canvas.state.balls.every(
+          (ball) => ball.position.dx.abs() >= 200 * .34 + ball.radius,
+        ),
+        isTrue,
+      );
+      expect(await DevicePrefs.read('power-test-arena-preset'), isNull);
+      await tester.tap(find.byTooltip('Change arena: Draft court'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('unavailable'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('arena-option-draft')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).arenaPreset,
+        same(arena),
+      );
+      expect(await DevicePrefs.read('power-test-arena-preset'), isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'custom knife and built-in knife keep separate identities in both slots and picker',
@@ -260,8 +335,21 @@ void main() {
 
       final motionA = find.byKey(const ValueKey('motion-A'));
       final motionB = find.byKey(const ValueKey('motion-B'));
-      expect(motionA.hitTestable(), findsOneWidget);
-      expect(motionB.hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Ball A: Moving').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Ball B: Moving').hitTestable(), findsOneWidget);
+      final arenaRect = tester.getRect(find.byType(ArenaCanvas));
+      expect(arenaRect.contains(tester.getCenter(motionA)), isTrue);
+      expect(arenaRect.contains(tester.getCenter(motionB)), isTrue);
+      expect(tester.getCenter(motionA).dx, lessThan(arenaRect.center.dx));
+      expect(tester.getCenter(motionB).dx, greaterThan(arenaRect.center.dx));
+      expect(
+        find
+            .descendant(of: motionA, matching: find.byType(Text))
+            .evaluate()
+            .length,
+        1,
+      );
+
       expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
       expect(
         tester.getSize(find.byType(ArenaCanvas)).width,
@@ -274,7 +362,10 @@ void main() {
           .first
           .velocity;
       await tester.tap(
-        find.descendant(of: motionA, matching: find.text('Random')),
+        find.descendant(
+          of: motionA,
+          matching: find.byTooltip('Ball A: Random'),
+        ),
       );
       await tester.pump();
       final randomVelocity = tester
@@ -285,16 +376,17 @@ void main() {
           .velocity;
       expect(randomVelocity, isNot(movingVelocity));
       await tester.tap(
-        find.descendant(of: motionA, matching: find.text('Idle')),
+        find.descendant(of: motionA, matching: find.byTooltip('Ball A: Idle')),
       );
       await tester.pump();
       expect(tester.takeException(), isNull);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(find.byKey(const ValueKey('ball-rail-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('ball-rail-1')), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('choose-item-1')),
         260,
         scrollable: find.descendant(
-          of: find.byType(SingleChildScrollView),
+          of: find.byKey(const ValueKey('ball-rail-1')),
           matching: find.byType(Scrollable),
         ),
       );
@@ -360,7 +452,7 @@ void main() {
       find.byKey(const ValueKey('choose-power-0')),
       300,
       scrollable: find.descendant(
-        of: find.byType(SingleChildScrollView),
+        of: find.byKey(const ValueKey('ball-rail-1')),
         matching: find.byType(Scrollable),
       ),
     );
@@ -537,13 +629,7 @@ void main() {
     expect(find.byKey(const ValueKey('arena-option-desert')), findsNothing);
     final arena = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
     expect(arena.arenaDecoration, ArenaDecoration.desert);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('test-arena')),
-        matching: find.text('Desert'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byTooltip('Change arena: Desert'), findsOneWidget);
     expect(await DevicePrefs.read('power-test-arena'), 'desert');
   });
 

@@ -836,6 +836,37 @@
         }
       ],
       "related": []
+    },
+    {
+      "id": "ball-studio",
+      "tab": "tutorials",
+      "title": "Preview and save ball appearances",
+      "summary": "Use real saved balls, tune faces and keep named appearance presets.",
+      "sections": [
+        {
+          "title": "Choose a preview",
+          "where": "Admin Settings > Appearance > Ball Studio > Preview",
+          "body": "Choose a saved ball from My Groups or a built-in ball, then Picture, Face or Both. Single tests a large ball; Phone checks a portrait frame; Six balls checks visual density and pupil tracking. Color, radius, health, equipment and forced expression are test-only choices remembered on this device."
+        },
+        {
+          "title": "Tune the shared appearance",
+          "where": "Body / Face & hands / HP bar",
+          "body": "Body controls glow. Face & hands groups expressions, hand style/size, eye size, mouth position/size, pupil tracking and blinking. Tracking 0 centers pupils; 1 is normal. Blink is optional, with interval and closed-eye duration in seconds. HP bar selects Small, Medium or Large. These are cosmetic: collisions, damage and gameplay timing do not change."
+        },
+        {
+          "title": "Keep a named preset",
+          "where": "Presets",
+          "body": "Enter a name and Save draft as preset. Presets are stored on this device, including glow and all face/hand/HP settings. Choose a preset and Apply to draft to preview it. Reusing a name asks before replacing it; deleting asks for confirmation. Storage errors are shown and leave the draft available for retry."
+        },
+        {
+          "title": "Publish to matches",
+          "where": "Save at the bottom of Ball Studio",
+          "body": "Save publishes the current draft using the existing shared settings. Applying or saving a device preset does not publish it. Live matches and arena-based exports use the same face renderer and deterministic blink clock. Cinematic finishers retain their separate choreography. No new database migration is required."
+        }
+      ],
+      "related": [
+        "arena-editor"
+      ]
     }
   ]
 }

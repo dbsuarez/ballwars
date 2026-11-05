@@ -11,6 +11,7 @@ Open Admin Settings > General > Admin Guide, or Read full guide from a skill edi
 - [Import an icon or animated sprite sheet](#sprites-tutorial)
 - [Add an explosion that actually does damage](#explosion-tutorial)
 - [Create and customize an arena](#arena-editor)
+- [Preview and save ball appearances](#ball-studio)
 
 ## How it works
 
@@ -732,3 +733,34 @@ New matches, saved replays, .bw files and video exports keep the selected arena 
 ### If saving fails
 
 Your draft stays open after a failed save. The backend requires migration 029_arena_catalog.sql for shared arena persistence. A missing column, stale settings or unconfirmed server write is shown as an error instead of silently saving only on this device.
+
+<a id="ball-studio"></a>
+## Preview and save ball appearances
+
+Use real saved balls, tune faces and keep named appearance presets.
+
+### Choose a preview
+
+Where: Admin Settings > Appearance > Ball Studio > Preview
+
+Choose a saved ball from My Groups or a built-in ball, then Picture, Face or Both. Single tests a large ball; Phone checks a portrait frame; Six balls checks visual density and pupil tracking. Color, radius, health, equipment and forced expression are test-only choices remembered on this device.
+
+### Tune the shared appearance
+
+Where: Body / Face & hands / HP bar
+
+Body controls glow. Face & hands groups expressions, hand style/size, eye size, mouth position/size, pupil tracking and blinking. Tracking 0 centers pupils; 1 is normal. Blink is optional, with interval and closed-eye duration in seconds. HP bar selects Small, Medium or Large. These are cosmetic: collisions, damage and gameplay timing do not change.
+
+### Keep a named preset
+
+Where: Presets
+
+Enter a name and Save draft as preset. Presets are stored on this device, including glow and all face/hand/HP settings. Choose a preset and Apply to draft to preview it. Reusing a name asks before replacing it; deleting asks for confirmation. Storage errors are shown and leave the draft available for retry.
+
+### Publish to matches
+
+Where: Save at the bottom of Ball Studio
+
+Save publishes the current draft using the existing shared settings. Applying or saving a device preset does not publish it. Live matches and arena-based exports use the same face renderer and deterministic blink clock. Cinematic finishers retain their separate choreography. No new database migration is required.
+
+Related: [Create and customize an arena](#arena-editor)

@@ -95,19 +95,24 @@ Coding completed locally, 2026-11-04. [Implementation, usage and manual checklis
 - [x] 61 focused tests passed, analysis clean, release web build passed and phone/desktop runtime layouts inspected; [implementation notes](ADMIN-GUIDE-IMPLEMENTATION.md).
 - [x] Shared runtime emitter: configurable saved launch offsets reused by projectiles, flamethrower cones, Energy Wave and custom beam targeting; native controls exposed. Revision 8 preserves old replay origins. 1,678 tests passed, one skipped; final 62 focused checks passed; analysis clean; release web build passed. See [shared emitter notes](SHARED-ATTACK-EMITTER.md).
 
-## Flame rendering feasibility study (recommended next after emitter work)
+## Flame rendering feasibility study (2026-11-05)
 
-This is an experiment, not approval to migrate engines. Keep the current renderer until measured evidence supports a change. Do not start the experiment during Batch 2.
+[Study and decision](FLAME-RENDERING-FEASIBILITY.md): keep the current production
+renderer. The isolated prototype demonstrates compatibility, but performance is
+workload-dependent and no custom domain subsystem was removed. This is not
+approval to migrate engines.
 
-- [ ] Use a separate branch/worktree after preserving the current audit fixes; never overwrite unrelated work.
-- [ ] Feed the existing simulation state to a small Flame renderer. Keep physics, targeting, damage, fixed-step timing and seeded randomness in the current simulation.
-- [ ] Render six balls, equipped/dual-wield weapons, slash VFX, animated effects, projectiles and center obstacles, including shrinking/changing arenas.
-- [ ] Use the same recorded states/seeds for visual correctness, layering, scale, mirroring and replay/export comparisons.
-- [ ] Measure release-mode frame times, memory, cold loading and smoothness on the actual Android phone and browser.
-- [ ] Compare maintainability: identify custom infrastructure genuinely removed, dependency/adapter cost and offscreen export support. Wrapping ArenaPainter alone is only an integration smoke check.
-- [ ] Write a go/no-go report with evidence and migration cost. Keep the current renderer if gains are not worthwhile; if justified, propose incremental rendering-only migration with fallback.
+- [x] Separate `experiment/flame-renderer` branch/worktree, preserving unrelated work.
+- [x] Feed the existing simulation to Flame without changing physics, targeting, damage, fixed-step timing or seeded randomness.
+- [x] Render six balls, dual weapons, slash VFX, animated effects, projectiles and center obstacles, including shrinking/changing arenas.
+- [x] Compare identical states/seeds: all three Flame paths match current pixels; unmodified production references match too. Replay/export checks pass.
+- [x] Release measurements: connected Infinix X695 and headless Chrome, 16 valid cases each, matched repaint boundaries, memory observations and shared preload timing recorded.
+- [x] Maintenance review: retained custom infrastructure, adapter/dependency cost, sprite rendering and offscreen bootstrap limitations documented.
+- [x] No-go report and evidence saved; keep production unchanged and preserve the experiment.
+- [ ] Manual visible-browser/subjective phone acceptance; separate cold-launch and longer soak/additional-phone checks before reconsidering migration.
 
-Reference: [Flame game/rendering documentation](https://docs.flame-engine.org/latest/flame/game.html). No Flame dependency or engine migration is included in the current audit remediation batches.
+Flame 1.35.1 exists only in `.worktrees/flame-renderer`; no engine dependency is
+added to production. The next proposed feature remains the named-arena editor.
 
 ## Separate future feature
 

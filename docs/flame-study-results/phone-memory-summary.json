@@ -1,0 +1,92 @@
+[
+  {
+    "time": "2026-11-05T02:44:21.954Z",
+    "completedCases": 0,
+    "pssKiB": 186489
+  },
+  {
+    "time": "2026-11-05T02:44:36.961Z",
+    "completedCases": 1,
+    "pssKiB": 147304
+  },
+  {
+    "time": "2026-11-05T02:44:51.963Z",
+    "completedCases": 2,
+    "pssKiB": 146419
+  },
+  {
+    "time": "2026-11-05T02:45:06.966Z",
+    "completedCases": 3,
+    "pssKiB": 150096
+  },
+  {
+    "time": "2026-11-05T02:45:21.971Z",
+    "completedCases": 4,
+    "pssKiB": 154716
+  },
+  {
+    "time": "2026-11-05T02:45:36.973Z",
+    "completedCases": 5,
+    "pssKiB": 156540
+  },
+  {
+    "time": "2026-11-05T02:45:51.983Z",
+    "completedCases": 5,
+    "pssKiB": 163684
+  },
+  {
+    "time": "2026-11-05T02:46:06.986Z",
+    "completedCases": 6,
+    "pssKiB": 161716
+  },
+  {
+    "time": "2026-11-05T02:46:21.990Z",
+    "completedCases": 7,
+    "pssKiB": 162398
+  },
+  {
+    "time": "2026-11-05T02:46:37.001Z",
+    "completedCases": 8,
+    "pssKiB": 161928
+  },
+  {
+    "time": "2026-11-05T02:46:52.000Z",
+    "completedCases": 9,
+    "pssKiB": 161636
+  },
+  {
+    "time": "2026-11-05T02:47:07.003Z",
+    "completedCases": 10,
+    "pssKiB": 161177
+  },
+  {
+    "time": "2026-11-05T02:47:22.012Z",
+    "completedCases": 11,
+    "pssKiB": 162773
+  },
+  {
+    "time": "2026-11-05T02:47:37.013Z",
+    "completedCases": 12,
+    "pssKiB": 162516
+  },
+  {
+    "time": "2026-11-05T02:47:52.014Z",
+    "completedCases": 13,
+    "pssKiB": 162758
+  },
+  {
+    "time": "2026-11-05T02:48:07.023Z",
+    "completedCases": 13,
+    "pssKiB": 160168
+  },
+  {
+    "time": "2026-11-05T02:48:22.025Z",
+    "completedCases": 14,
+    "pssKiB": 161509
+  },
+  {
+    "time": "2026-11-05T02:48:37.038Z",
+    "completedCases": 15,
+    "pssKiB": 162171
+  }
+]

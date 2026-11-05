@@ -1,0 +1,142 @@
+[
+  {
+    "scenario": "sixBalls",
+    "renderer": "bridge",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 4874,
+    "cpuP95Us": 16419,
+    "simulationStep": 50,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "sixBalls",
+    "renderer": "components",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1730,
+    "cpuP95Us": 3068,
+    "simulationStep": 50,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "sixBalls",
+    "renderer": "sprites",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1731,
+    "cpuP95Us": 2785,
+    "simulationStep": 50,
+    "spriteDraws": 5445
+  },
+  {
+    "scenario": "sixBalls",
+    "renderer": "painter",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1874,
+    "cpuP95Us": 2635,
+    "simulationStep": 50
+  },
+  {
+    "scenario": "square",
+    "renderer": "bridge",
+    "baselineRgbaSha256": "c023c7d0a5b1e218d8bf7afe7561494be2edd7b0880c7fc20a566a7991726611",
+    "cpuMedianUs": 1885,
+    "cpuP95Us": 3279,
+    "simulationStep": 50,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "square",
+    "renderer": "components",
+    "baselineRgbaSha256": "c023c7d0a5b1e218d8bf7afe7561494be2edd7b0880c7fc20a566a7991726611",
+    "cpuMedianUs": 1414,
+    "cpuP95Us": 2147,
+    "simulationStep": 50,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "square",
+    "renderer": "sprites",
+    "baselineRgbaSha256": "c023c7d0a5b1e218d8bf7afe7561494be2edd7b0880c7fc20a566a7991726611",
+    "cpuMedianUs": 1343,
+    "cpuP95Us": 2089,
+    "simulationStep": 50,
+    "spriteDraws": 5445
+  },
+  {
+    "scenario": "square",
+    "renderer": "painter",
+    "baselineRgbaSha256": "c023c7d0a5b1e218d8bf7afe7561494be2edd7b0880c7fc20a566a7991726611",
+    "cpuMedianUs": 1254,
+    "cpuP95Us": 1878,
+    "simulationStep": 50
+  },
+  {
+    "scenario": "effects",
+    "renderer": "bridge",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1483,
+    "cpuP95Us": 2308,
+    "simulationStep": 50,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "effects",
+    "renderer": "components",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1301,
+    "cpuP95Us": 1859,
+    "simulationStep": 50,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "effects",
+    "renderer": "sprites",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1288,
+    "cpuP95Us": 1946,
+    "simulationStep": 50,
+    "spriteDraws": 5445
+  },
+  {
+    "scenario": "effects",
+    "renderer": "painter",
+    "baselineRgbaSha256": "5d007fd9a76eb9884e8cc9843ee87054bb1235cc283a8a823db7903f3aed4272",
+    "cpuMedianUs": 1182,
+    "cpuP95Us": 1881,
+    "simulationStep": 50
+  },
+  {
+    "scenario": "changing",
+    "renderer": "bridge",
+    "baselineRgbaSha256": "06d805454702a115eb46743442ee64007e737ed64a6d45c4fe17cf6f514b7fcd",
+    "cpuMedianUs": 1610,
+    "cpuP95Us": 2395,
+    "simulationStep": 1900,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "changing",
+    "renderer": "components",
+    "baselineRgbaSha256": "06d805454702a115eb46743442ee64007e737ed64a6d45c4fe17cf6f514b7fcd",
+    "cpuMedianUs": 2028,
+    "cpuP95Us": 3205,
+    "simulationStep": 1900,
+    "spriteDraws": 0
+  },
+  {
+    "scenario": "changing",
+    "renderer": "sprites",
+    "baselineRgbaSha256": "06d805454702a115eb46743442ee64007e737ed64a6d45c4fe17cf6f514b7fcd",
+    "cpuMedianUs": 2404,
+    "cpuP95Us": 3576,
+    "simulationStep": 1900,
+    "spriteDraws": 5445
+  },
+  {
+    "scenario": "changing",
+    "renderer": "painter",
+    "baselineRgbaSha256": "06d805454702a115eb46743442ee64007e737ed64a6d45c4fe17cf6f514b7fcd",
+    "cpuMedianUs": 1872,
+    "cpuP95Us": 3150,
+    "simulationStep": 1900
+  }
+]

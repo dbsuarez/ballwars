@@ -1,0 +1,8 @@
+{
+  "model": "Infinix X695",
+  "android": "11",
+  "size": "Physical size: 1080x2460",
+  "density": "Physical density: 480",
+  "renderMode": "release",
+  "package": "com.ballwars.ballwars.flamestudy"
+}

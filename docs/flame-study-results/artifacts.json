@@ -1,0 +1,10 @@
+{
+  "build/web/main.dart.js": {
+    "bytes": 2740217,
+    "sha256": "d94180e22da633502b2288e7f1640eb9099c7b2ec378e264c4e64285ee630105"
+  },
+  "build/app/outputs/flutter-apk/app-release.apk": {
+    "bytes": 48882173,
+    "sha256": "311b2f6725d413bc0c99cf2606f5b73dc42c6a5b15dbb7227498a6f356619139"
+  }
+}

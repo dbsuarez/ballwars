@@ -89,8 +89,9 @@ class SkillSpriteReadiness {
     ids.addAll(extraIds);
     if (embedded.isNotEmpty) await SpriteRegistry.restoreEmbedded(embedded);
     if (ids.isEmpty) return {};
-    if (ids.every(SpriteRegistry.has) && loader?.isLoading != true) return {};
+    if (ids.every(SpriteRegistry.has)) return {};
     if (ids.any((id) => !id.startsWith('custom.'))) await SpriteRegistry.load();
+    if (ids.every(SpriteRegistry.has)) return {};
     if (loader != null) {
       await loader!.load().timeout(const Duration(seconds: 15));
     }

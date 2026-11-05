@@ -1,0 +1,59 @@
+{
+  "simulatedAssetLatencyMs": 60,
+  "runs": [
+    {
+      "bundledRegistryReadyMs": 3086,
+      "serializedRequests": true,
+      "spriteProblems": [],
+      "simulations": [
+        {
+          "mode": "threads",
+          "cutRace": false,
+          "constructorMs": 120,
+          "initialStep": 0
+        },
+        {
+          "mode": "threadgrowth",
+          "cutRace": true,
+          "constructorMs": 1,
+          "initialStep": 0
+        },
+        {
+          "mode": "arsenal",
+          "cutRace": false,
+          "constructorMs": 105,
+          "initialStep": 0
+        }
+      ],
+      "peakAssetRequests": 1,
+      "totalSpriteRequests": 39
+    },
+    {
+      "bundledRegistryReadyMs": 1237,
+      "serializedRequests": false,
+      "spriteProblems": [],
+      "simulations": [
+        {
+          "mode": "threads",
+          "cutRace": false,
+          "constructorMs": 81,
+          "initialStep": 0
+        },
+        {
+          "mode": "threadgrowth",
+          "cutRace": true,
+          "constructorMs": 0,
+          "initialStep": 0
+        },
+        {
+          "mode": "arsenal",
+          "cutRace": false,
+          "constructorMs": 86,
+          "initialStep": 0
+        }
+      ],
+      "peakAssetRequests": 4,
+      "totalSpriteRequests": 39
+    }
+  ]
+}

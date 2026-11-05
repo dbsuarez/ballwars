@@ -259,6 +259,7 @@ class MatchSimulationController {
     _finishStep = null;
     _settledEndgameStep = null;
     if (endlessBattle ||
+        (mode == MatchMode.threadGrowth && threadCutRace && cutRaceSurvival) ||
         !lookAhead ||
         (slowMotionBeforeWinSeconds == null && slowMotionLines <= 0)) {
       return;

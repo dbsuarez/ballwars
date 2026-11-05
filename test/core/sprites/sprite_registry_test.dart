@@ -22,6 +22,18 @@ class FakeAssetBundle extends CachingAssetBundle {
   }
 }
 
+class DelayedAssetBundle extends FakeAssetBundle {
+  int active = 0, peak = 0;
+  final Map<String,int> requests = {};
+  @override
+  Future<ByteData> load(String key) async {
+    active++; if(active > peak) peak = active;
+    requests.update(key,(n)=>n+1,ifAbsent:()=>1);
+    try { await Future<void>.delayed(const Duration(milliseconds:20)); return await super.load(key); }
+    finally { active--; }
+  }
+}
+
 /// A sheet of [frames] squares side by side, each [cell] px wide.
 Future<ui.Image> makeSheet(int frames, {int cell = 16}) async {
   final recorder = ui.PictureRecorder();
@@ -54,6 +66,19 @@ String manifest(String sheet, String id, {int frames = 2}) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('bundled downloads overlap while every registered sprite stays intact', () async {
+    SpriteRegistry.resetForTest();
+    final bundle=DelayedAssetBundle();
+    final image=await makeSheet(2);final png=await pngBytes(image);image.dispose();
+    bundle.putString(SpriteRegistry.indexPath,jsonEncode([for(var i=0;i<6;i++) '$i.json']));
+    for(var i=0;i<6;i++) { bundle.putString('$i.json',manifest('$i.png','test.$i'));bundle.files['$i.png']=png; }
+    await SpriteRegistry.load(bundle:bundle);
+    expect(bundle.peak,greaterThan(1));expect(bundle.peak,lessThanOrEqualTo(4));
+    expect(bundle.requests.values,everyElement(1));
+    expect(SpriteRegistry.loadProblems,isEmpty);
+    for(var i=0;i<6;i++) { expect(SpriteRegistry.frame('test.$i')!.width,32); }
+  });
 
   setUp(SpriteRegistry.resetForTest);
 

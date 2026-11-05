@@ -1,3 +1,4 @@
+import '../widgets/app_frame.dart';
 import 'package:flutter/material.dart';
 
 /// A two-color theme: everything else is mixed from these.
@@ -382,6 +383,8 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
+        constraints:AppFrame.windowConstraints,
+        insetPadding:const EdgeInsets.symmetric(vertical:24),
         backgroundColor: c.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
@@ -389,6 +392,7 @@ class AppTheme {
         contentTextStyle: t(14, FontWeight.w500, c.muted),
       ),
       bottomSheetTheme: BottomSheetThemeData(
+        constraints:AppFrame.windowConstraints,
         backgroundColor: c.surface,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,

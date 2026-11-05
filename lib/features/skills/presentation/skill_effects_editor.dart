@@ -695,7 +695,7 @@ class _EffectEditorState extends State<_EffectEditor> {
   Widget build(BuildContext context) => DefaultTabController(
     length: widget.role == null ? 2 : 3,
     child: AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+      insetPadding: const EdgeInsets.symmetric(vertical:20),
       title: Text(
         widget.role == null
             ? 'Edit effect'

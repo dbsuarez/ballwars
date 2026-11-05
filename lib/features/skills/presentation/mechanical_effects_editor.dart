@@ -148,7 +148,7 @@ class _MechanicalEffectsEditorState extends State<MechanicalEffectsEditor> {
     final draft = _drafts.isEmpty ? null : _drafts[_selected];
     final type = draft?.type;
     return Dialog(
-      insetPadding: const EdgeInsets.all(12),
+      insetPadding: const EdgeInsets.symmetric(vertical:12),
       child: SizedBox(
         width: 620,
         height: MediaQuery.sizeOf(context).height * .85,

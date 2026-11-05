@@ -58,8 +58,8 @@ void main() {
               )
               .first,
         );
-        expect(rect.left, greaterThan(0));
-        expect(rect.right, lessThan(width));
+        expect(rect.left, (width - width.clamp(0,440))/2);
+        expect(rect.right, lessThanOrEqualTo(width));
         expect(rect.top, greaterThan(0));
         expect(rect.width, lessThanOrEqualTo(440));
         expect(

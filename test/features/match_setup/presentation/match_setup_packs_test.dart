@@ -127,6 +127,21 @@ void main() {
     }
   });
 
+  testWidgets('ball names are independent of HP and remembered per mode', (tester)async {
+    await pumpSetup(tester,initialMode:MatchMode.threads);await openSettings(tester);
+    await tester.tap(find.text('Appearance'));await tester.pumpAndSettle();
+    final control=find.byKey(const ValueKey('setting-Ball names'));
+    await tester.ensureVisible(control);await tester.tap(control);await tester.pumpAndSettle();
+    await closeSettings(tester);await tester.tap(find.byIcon(Icons.shuffle));await tester.pump();await tester.tap(find.text('Start'));
+    expect(started!.showBallNames,true);expect(started!.showHpBars,false);
+    await tester.pumpWidget(const SizedBox());await pumpSetup(tester,initialMode:MatchMode.threads);
+    await tester.tap(find.byIcon(Icons.shuffle));await tester.pump();await tester.tap(find.text('Start'));
+    expect(started!.showBallNames,true);
+    await tester.pumpWidget(const SizedBox());await pumpSetup(tester,initialMode:MatchMode.arsenal);
+    await tester.tap(find.byIcon(Icons.shuffle));await tester.pump();await tester.tap(find.text('Start'));
+    expect(started!.showBallNames,false);
+  });
+
   testWidgets('custom map defaults reach the actual match and stay per mode', (tester)async{
     const map=ArenaDefinition(id:'square-court',name:'Square court',theme:ArenaDecoration.desert,
       trapTheme:ArenaDecoration.neonGrid,shape:ArenaShape.square,obstacle:CenterObstacle.square,

@@ -122,6 +122,7 @@ class MatchConfig {
 
   /// A thin HP bar above each ball (cosmetic, not in replay links).
   final bool showHpBars;
+  final bool showBallNames;
   final bool whitePickupBackgrounds;
   final bool randomizedHairstyles;
 
@@ -180,6 +181,7 @@ class MatchConfig {
     this.look = BallLook.pictures,
     this.handsOnPictures = false,
     this.showHpBars = false,
+    this.showBallNames = false,
     this.whitePickupBackgrounds = true,
     this.randomizedHairstyles = false,
     this.question,

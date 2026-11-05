@@ -389,7 +389,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     final skill = widget.skill;
     final size = MediaQuery.sizeOf(context);
     return Dialog(
-      insetPadding: const EdgeInsets.all(12),
+      insetPadding: const EdgeInsets.symmetric(vertical:12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
         child: SizedBox(

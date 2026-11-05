@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -817,18 +818,33 @@ class SpriteRegistry {
       _problem('Could not read $indexPath: $e');
       return;
     }
-    for (final entry in index) {
+    // Overlap a small window of network reads. Decode/register in manifest
+    // order so duplicate-ID precedence and pixels remain deterministic.
+    final buffered = _SpriteReadAheadBundle(bundle);
+    Future<void> prefetch(Object? entry) async {
+      if (entry is! String || gen != _generation) return;
+      try {
+        final atlas = SpriteAtlas.parse(jsonDecode(await buffered.loadString(entry)));
+        if (gen == _generation) await buffered.load(atlas.sheet);
+      } catch (_) {
+        // The ordered loader below reports the original asset error once.
+      }
+    }
+    for (final entry in index.take(4)) { unawaited(prefetch(entry)); }
+    for (var i = 0; i < index.length; i++) {
+      final entry = index[i];
       if (gen != _generation) return;
       if (entry is! String) {
         _problem('$indexPath has an entry that is not a manifest path');
         continue;
       }
       try {
-        await _loadManifest(bundle, entry, gen);
+        await _loadManifest(buffered, entry, gen);
       } catch (e) {
         if (gen != _generation) return;
         _problem('Manifest $entry was skipped: $e');
       }
+      if (i + 4 < index.length) unawaited(prefetch(index[i + 4]));
     }
   }
 
@@ -1129,4 +1145,13 @@ class _CutSprite {
       f.dispose();
     }
   }
+}
+
+/// Memoizes encoded reads only for the duration of a bundled registry load.
+class _SpriteReadAheadBundle extends CachingAssetBundle {
+  _SpriteReadAheadBundle(this.delegate);
+  final AssetBundle delegate;
+  final Map<String,Future<ByteData>> reads = {};
+  @override
+  Future<ByteData> load(String key) => reads.putIfAbsent(key,()=>delegate.load(key));
 }

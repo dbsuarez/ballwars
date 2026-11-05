@@ -54,7 +54,7 @@ class ArenaSelectionDialog extends StatelessWidget {
   Widget build(BuildContext context)=>DefaultTabController(length:presets.isEmpty?1:2,
     initialIndex:presets.isNotEmpty && (selectedPresetId??'').isNotEmpty?1:0,
     child:AlertDialog(key:const ValueKey('arena-selection-dialog'),constraints:const BoxConstraints(maxWidth:440),
-      insetPadding:const EdgeInsets.symmetric(horizontal:16,vertical:24),title:const Text('Choose arena'),
+      insetPadding:const EdgeInsets.symmetric(vertical:24),title:const Text('Choose arena'),
       content:SizedBox(width:400,height:math.min(460,MediaQuery.sizeOf(context).height*.57),child:Column(children:[
         if((selectedPresetId??'').isNotEmpty && !presets.any((a)=>a.id==selectedPresetId))
           const Padding(padding:EdgeInsets.only(bottom:8),child:Text('The selected arena is unavailable. Choose another.')),

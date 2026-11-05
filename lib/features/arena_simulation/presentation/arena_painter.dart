@@ -1,3 +1,4 @@
+import 'ball_name_painter.dart';
 import '../../arenas/domain/arena_definition.dart';
 import '../../../core/sprites/visual_quality.dart';
 import '../../skills/presentation/skill_effect_renderer.dart';
@@ -88,11 +89,13 @@ class ArenaPainter extends CustomPainter {
     this.rimColor = const Color(0xFFF2F2F0),
     this.look = BallLook.pictures,
     this.showHpBars = false,
+    this.showBallNames = false,
     Listenable? repaint,
   }) : super(repaint: Listenable.merge([repaint, SpriteRegistry.revision]));
 
   /// A thin HP bar above each ball (cosmetic).
   final bool showHpBars;
+  final bool showBallNames;
 
   /// Pictures, or smiley faces (cosmetic).
   final BallLook look;
@@ -154,7 +157,14 @@ class ArenaPainter extends CustomPainter {
       showEffects: showEffects,
       effectRenderMode: explosionRenderMode,
     );
-    if (state.neoThreadsTarget case final target?) {
+    if (showBallNames) {
+      for(final ball in state.balls.where((b)=>!b.isEliminated)) {
+        BallNamePainter.paint(canvas,ball,Size(size.width/scale,size.height/scale),scale,
+          score:state.neoThreadsTarget == null ? null : '${ball.threadsCut}/${state.neoThreadsTarget}');
+      }
+    }
+    if (!showBallNames && state.neoThreadsTarget != null) {
+      final target=state.neoThreadsTarget!;
       for (final ball in state.balls) {
         final text = TextPainter(text: TextSpan(text: '${ball.threadsCut}/$target',
           style: TextStyle(color: Colors.white, fontSize: math.max(12 / scale, ball.radius * .55), fontWeight: FontWeight.bold,

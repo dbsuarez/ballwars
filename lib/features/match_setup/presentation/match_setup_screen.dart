@@ -203,6 +203,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   BallLook _look = BallLook.pictures;
   bool _handsOnPictures = false;
   bool _showHpBars = false;
+  bool _showBallNames = false;
   bool _whitePickupBackgrounds = true;
   bool _randomizedHairstyles = false;
 
@@ -472,6 +473,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       'hands-on-pictures',
       mayhem: profileMayhem,
     );
+    final ballNames = await _readProfile(profileMode,'ball-names',mayhem:profileMayhem);
     final hpBars = await _readProfile(
       profileMode,
       'hp-bars',
@@ -549,6 +551,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _look = look ?? BallLook.pictures;
       _handsOnPictures = handsOnPictures == '1';
       _showHpBars = hpBars == '1';
+      _showBallNames = ballNames == '1';
       _whitePickupBackgrounds = whitePickupBackgrounds != '0';
       _randomizedHairstyles = randomizedHairstyles == '1';
       _dualWield = dualWield == '1';
@@ -901,6 +904,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         look: _look,
         handsOnPictures: _handsOnPictures,
         showHpBars: _showHpBars,
+        showBallNames: _showBallNames,
         whitePickupBackgrounds: _whitePickupBackgrounds,
         randomizedHairstyles: _randomizedHairstyles,
         powerUps: _mode.isThreadOnly ? null : _powerUps,
@@ -2047,6 +2051,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               _writeProfile('hands-on-pictures', v ? '1' : '0');
             },
           ),
+          _choice(Icons.label_outline,'Ball names',const [false,true],_showBallNames,
+            (v)=>v?'Below balls':'Off',(v){ _update(()=>_showBallNames=v); _writeProfile('ball-names',v?'1':'0'); }),
           _choice(
             Icons.health_and_safety_outlined,
             'HP bars',

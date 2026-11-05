@@ -94,6 +94,7 @@ class ReplayLink {
   /// The ball look the match was played with (Pictures or Faces). Cosmetic: it doesn't change the match,
   /// so links without it (older ones) are still valid and use the viewer's own setting. `look=`.
   final BallLook? look;
+  final bool showBallNames;
 
   const ReplayLink({
     this.simulationRevision = 4,
@@ -114,6 +115,7 @@ class ReplayLink {
     this.cutRaceSurvival = true,
     this.question,
     this.look,
+    this.showBallNames = false,
     this.powerUps,
     this.customSkills,
     this.nudgeSteps = const [],
@@ -253,7 +255,7 @@ class ReplayLink {
         ? ''
         : '&blood=${bloodColor.toARGB32().toRadixString(16)}';
     final hair = randomizedHairstyles ? '&hair=1' : '';
-    final lookToken = look == null ? '' : '&look=${look!.name}';
+    final lookToken = (look == null ? '' : '&look=${look!.name}') + (showBallNames ? '&names=1' : '');
     final chosenCustom = customSkills;
     final nudgeToken = nudgeSteps.isEmpty
         ? ''
@@ -290,6 +292,7 @@ class ReplayLink {
   }) {
     if (uri.query.length + uri.fragment.length > maxLinkLength) return null;
     final params = _params(uri);
+    if(params.containsKey('names') && params['names'] != '1') return null;
     final seed = int.tryParse(params['seed'] ?? '');
     final speed = double.tryParse(params['speed'] ?? '1') ?? 1.0;
     final tokens = (params['balls'] ?? '')
@@ -564,6 +567,7 @@ class ReplayLink {
       cutRaceSurvival: cutRaceSurvival,
       question: cleanQuestion(params['q']),
       look: BallLook.byName(params['look']),
+      showBallNames: params['names'] == '1',
       powerUps: powerUps,
       customSkills: customSkills,
       nudgeSteps: nudgeSteps,

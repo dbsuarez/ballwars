@@ -101,6 +101,7 @@ class ReplayFramePainter {
             ? (_style.look == BallLook.faces ? BallLook.pictures : _style.look)
             : BallLook.faces,
         showHpBars: _style.visibility.shows(VideoLayer.health),
+        showBallNames: _style.showBallNames && _style.visibility.shows(VideoLayer.names),
         showCallouts: _style.visibility.shows(VideoLayer.callouts),
         showInitials: _style.visibility.shows(VideoLayer.names),
       ).paint(canvas, Size(side, side));
@@ -729,6 +730,7 @@ class ReplayStyle {
 
   /// A thin HP bar above each ball, as in the app.
   final bool showHpBars;
+  final bool showBallNames;
   final VideoVisibility visibility;
   final String watermarkText;
 
@@ -750,6 +752,7 @@ class ReplayStyle {
     arenaDecoration: arenaDecoration,
     look: look,
     showHpBars: showHpBars,
+    showBallNames: showBallNames,
     visibility: options,
     watermarkText: watermarkText,
   );
@@ -772,6 +775,7 @@ class ReplayStyle {
     this.arenaPreset,
     this.look = BallLook.pictures,
     this.showHpBars = false,
+    this.showBallNames = false,
     this.visibility = const VideoVisibility(),
     this.watermarkText = AppSettings.defaultExportWatermark,
   });

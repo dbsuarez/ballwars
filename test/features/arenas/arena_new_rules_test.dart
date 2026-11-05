@@ -29,6 +29,22 @@ MatchSimulationController growth({bool race = false, int target = 50}) =>
       neoThreadsTarget: target,
     );
 void main() {
+  test('Cut Race survival skips unused prediction without changing outcomes', () {
+    MatchSimulationController create(bool lookAhead)=>MatchSimulationController(balls.take(2).toList(),arenaRadius:200,
+      seed:34,simulationRevision:10,mode:MatchMode.threadGrowth,threadCutRace:true,lookAhead:lookAhead);
+    final fast=create(true),reference=create(false);
+    expect(fast.predictedFinishStep,isNull);
+    for(var step=0;step<1200;step++) {
+      fast.tick(1/60);reference.tick(1/60);
+      expect(fast.state.status,reference.state.status);
+      expect(fast.state.winnerId,reference.state.winnerId);
+      for(var i=0;i<2;i++) {
+        expect(fast.state.balls[i].position,reference.state.balls[i].position);
+        expect(fast.state.balls[i].threadsCut,reference.state.balls[i].threadsCut);
+      }
+    }
+  });
+
   test('Mayhem ghost floats before delayed safe respawn and never ends the match', () {
     final match=MatchSimulationController(balls.take(2).toList(),arenaRadius:200,seed:30,
       lookAhead:false,simulationRevision:10,mode:MatchMode.arsenal,mayhem:true,endlessBattle:true,

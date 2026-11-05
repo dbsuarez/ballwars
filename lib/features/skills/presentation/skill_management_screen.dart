@@ -3612,10 +3612,7 @@ class _SkillEditorState extends State<_SkillEditor>
       builder: (context) => StatefulBuilder(
         builder: (context, update) => AlertDialog(
           title: const Text('Area artwork'),
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 20,
-          ),
+          insetPadding: const EdgeInsets.symmetric(vertical:20),
           content: SizedBox(
             width: 620,
             height: MediaQuery.sizeOf(context).height * .6,

@@ -679,6 +679,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       cutRaceSurvival: widget.config.cutRaceSurvival,
     question: widget.config.question,
     look: widget.config.look,
+    showBallNames: widget.config.showBallNames,
     powerUps: widget.config.powerUps,
     customSkills: widget.config.customSkills,
     tuning: widget.config.tuning,
@@ -1088,6 +1089,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               look: widget.config.look,
                               handsOnPictures: widget.config.handsOnPictures,
                               showHpBars: widget.config.showHpBars,
+                              showBallNames: widget.config.showBallNames,
                               whitePickupBackgrounds:
                                   widget.config.whitePickupBackgrounds,
                               projectileRenderMode:
@@ -1476,6 +1478,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                     widget.config.centerObstacleScale,
                                 look: widget.config.look,
                                 showHpBars: widget.config.showHpBars,
+                              showBallNames: widget.config.showBallNames,
                                 powerUps: widget.config.powerUps,
                                 customSkills: widget.config.customSkills,
                                 tuning: widget.config.tuning,

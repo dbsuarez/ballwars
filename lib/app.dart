@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'features/arena_simulation/presentation/power_up_sprites.dart';
+import 'core/widgets/app_frame.dart';
 import 'core/sprites/visual_quality.dart';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
@@ -83,6 +86,12 @@ class _BallWarsAppState extends State<BallWarsApp> {
   void initState() {
     super.initState();
     VisualQuality.load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(PowerUpSprites.load().catchError((Object error) {
+        debugPrint('Background artwork warm-up failed: $error');
+      }));
+    });
     // The admin's music choice applies to every player's matches.
     _settings.addListener(_applyMusic);
     if (widget.sprites != null) {
@@ -153,6 +162,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
         valueListenable: _settings,
         builder: (context, settings, _) => MaterialApp(
           title: 'Ball Wars',
+          builder:(context,child)=>AppFrame(child:child ?? const SizedBox.shrink()),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(AppPalettes.byId(settings.themeId)),
           home: FutureBuilder<void>(
@@ -575,6 +585,7 @@ class _HomeScreenState extends State<_HomeScreen> {
             look: look,
             handsOnPictures: handsOnPictures,
             showHpBars: hpBars,
+            showBallNames: link.showBallNames,
             whitePickupBackgrounds: whitePickupBackgrounds,
             wallSparkSize: wallSparkSize,
           ),
@@ -618,7 +629,7 @@ class _HomeScreenState extends State<_HomeScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
+            constraints: const BoxConstraints(maxWidth: AppFrame.maxWidth),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
               child: Column(

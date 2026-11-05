@@ -1,3 +1,4 @@
+import '../widgets/app_frame.dart';
 import 'package:flutter/material.dart';
 
 import 'game_audio.dart';
@@ -63,7 +64,7 @@ class _AudioChannelButtonState extends State<AudioChannelButton> {
           borderRadius: BorderRadius.circular(20),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
+            constraints: AppFrame.windowConstraints,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               child: Column(

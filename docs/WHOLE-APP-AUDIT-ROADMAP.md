@@ -158,3 +158,13 @@ Follow-up batch deployment and APK release submitted as v1.14.57 on 2026-11-05; 
 Arena media verification: 142 focused arena/setup/replay/export tests passed; lint clean; release web build passed; 320px Media Library and dimming views inspected.
 
 Arena media and ball-creation fixes submitted for deployment and signed APK release as v1.14.58 on 2026-11-05. Workflow completion and device acceptance remain manual.
+
+## Shared frame, startup and ball names (2026-11-05)
+
+- [x] Consistent home-width routes, dialogs and sheets on desktop and phones.
+- [x] Parallel encoded artwork reads, home warm-up, ready-library fast path and unused Cut Race prediction removal.
+- [x] Optional names below balls, HP above; per-mode persistence and replay/export integration.
+- [x] Controlled cold Chrome artwork diagnostic: 3,086ms to 1,237ms with identical resource counts and no sprite problems.
+- [ ] Published phone/browser acceptance. See [implementation and checks](APP-FRAME-AND-STARTUP.md).
+
+v1.14.59 validation: 1,739 tests passed / one skipped; analysis clean; production release web build passed. Master/tag publication triggers Pages and the signed APK workflow; completion remains manually checked.

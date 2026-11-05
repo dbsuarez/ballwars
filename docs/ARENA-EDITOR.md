@@ -26,6 +26,6 @@ Apply `supabase/migrations/029_arena_catalog.sql`, then reload the app before sa
 - [x] Release web build.
 - [x] Targeted domain, persistence, editor, per-mode settings, replay/video and boundary pixel regressions.
 - [x] Phone-width (320px) and desktop-width editor rendering reviewed.
-- [ ] Apply migration 029 in production.
+- [x] Migration 029 applied in production (user confirmed 2026-11-05).
 - [ ] Verify published map save/load and selection on an actual phone and a second signed-in device.
-- [ ] Deploy when requested. No APK release is included in this change.
+- Deployment and signed APK release submitted as v1.14.56; workflow completion remains a manual check.

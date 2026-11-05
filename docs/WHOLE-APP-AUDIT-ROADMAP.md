@@ -118,6 +118,8 @@ added to production. The named-arena editor implementation is documented below.
 
 - [x] Persistent named-arena editor/catalog with validated geometry, trap sets, shared user/admin chooser, draft testing and immutable replay/video snapshots. See [Arena editor](ARENA-EDITOR.md).
 - [x] Square background coverage and boundary-aware laser endpoints, including shrinking arenas.
-- [ ] Apply migration 029 and verify shared catalog saving/selection on production devices.
+- [x] Migration 029 applied (user confirmed 2026-11-05).
+- [ ] Verify shared catalog saving/selection on production devices.
+- Deployment and APK release submitted as v1.14.56; workflow completion remains a manual check.
 
 Completed implementation boxes reflect the local remediation batches and their linked verification reports. No release/deployment is implied by a passing local check.

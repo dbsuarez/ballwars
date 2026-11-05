@@ -52,6 +52,23 @@ bool _shows(String label) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => Future<void>.sync(PowerUpSprites.load));
+  testWidgets('eight-ball tally never shrinks the portrait arena', (tester) async {
+    tester.view.physicalSize = const Size(390, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final balls = List.generate(8, (i) => CustomBall(id: 'ball$i', name: 'Ball $i',
+      primaryColor: Colors.blue, glowColor: Colors.cyan));
+    await tester.pumpWidget(_app(MatchConfig(contestants: balls,
+      mode: MatchMode.arsenal, mayhem: true)));
+    await tester.pump();
+    expect(tester.getSize(find.byKey(const ValueKey('arena-priority-square'))), const Size(390,390));
+    expect(tester.takeException(), isNull);
+    await tester.drag(find.byKey(const ValueKey('arena-portrait-scroll')), const Offset(0,-400));
+    await tester.pump();
+    expect(tester.getSize(find.byKey(const ValueKey('arena-priority-square'))), const Size(390,390));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets(
     'missing skill artwork waits for an explicit fallback before countdown',
     (tester) async {

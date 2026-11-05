@@ -26,3 +26,7 @@ node tools/performance/startup_browser.mjs
 - [ ] Toggle ball names in each mode; check HP independence, replay and video privacy.
 
 Release validation: 1,739 tests passed / one skipped; static analysis clean. Production release web build passed for v1.14.59. Published device acceptance remains manual.
+
+## Arena priority correction
+
+Portrait matches reserve a width-sized square for the arena. Header, arena, tally and timer form a scrollable page so adding contestants or tally rows cannot consume the arena's height. Landscape layout is unchanged. Eight-ball, short-phone regression and all 29 battle-screen tests pass; analysis is clean.

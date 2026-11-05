@@ -1572,7 +1572,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
               if (isPortrait) {
                 return Stack(
                   children: [
-                    Column(
+                    SingleChildScrollView(
+                      key: const ValueKey('arena-portrait-scroll'),
+                      child: Column(
                       children: [
                         Padding(
                           padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
@@ -1601,7 +1603,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                             ),
                           ),
                         ),
-                        Expanded(child: arena),
+                        SizedBox(
+                          key: const ValueKey('arena-priority-square'),
+                          height: constraints.maxWidth,
+                          width: constraints.maxWidth,
+                          child: arena,
+                        ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
                           child: scoreboard,
@@ -1611,6 +1618,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           child: Row(children: [timer, restart]),
                         ),
                       ],
+                      ),
                     ),
                     ...overlays,
                   ],

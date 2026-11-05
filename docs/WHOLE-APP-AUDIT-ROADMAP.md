@@ -182,3 +182,23 @@ v1.14.59 validation: 1,739 tests passed / one skipped; analysis clean; productio
 Ball Studio follow-up production release web build passed locally on 2026-11-06. Publication and actual-device acceptance remain pending.
 
 Deployment and signed APK release submitted as v1.14.60 on 2026-11-06, including the arena-priority correction, Ball Studio follow-ups and compact test overlays. GitHub workflow completion remains manually checked.
+
+## Game presentation, first slice (2026-11-06)
+
+- [x] Shared game-style UI components and Home/Match Setup integration, with the supplied concept art processed locally through PhotoCraft.
+- [x] Preserve existing mode navigation and remembered per-mode settings; retain arena width and gameplay.
+- [x] Annotated Power-up Test changes: remembered collapsible rails, remove overlay clear buttons, shared square shape and finisher row below the arena.
+- [ ] Published phone/browser acceptance. Further visual slices and artwork provenance are tracked in [UX direction](ux/README.md).
+
+
+## Phase A + B game UI delivery (2026-11-06)
+
+- [x] Shared game presentation foundation, standalone gallery and widget/visual checks.
+- [x] Home and Match Setup, including loadout/arena/geometry dialog styling, actual mode navigation, per-mode preferences and configured palettes.
+- [x] Owner-approved illustration; PhotoCraft MIT/Apache tool notice checked; font/icon notices bundled and publicly accessible. No new package dependencies or paid services.
+- [x] Annotated Power-up Test follow-up: remembered collapsing rails, no overlay clear buttons, shared square button shape and finishers below the arena.
+- [x] Full suite: 1,758 passed / one existing skip. Final refinements: 111 focused checks, then 90 dialog/setup/visual checks passed. Final analysis clean and production web build passed; bundled artwork/notices match source hashes.
+- [x] Runtime screenshots delivered at 360x800, 800x360, 440x900 and narrow test-tool widths. No cumulative ZIP.
+- [ ] Physical-device performance and published-build acceptance remain manual.
+
+Detailed scope, exact validation boundaries, screenshots and provenance: [Phase A + B report](ux/PHASE-A-B-REPORT.md). No deployment or release is performed by this task. Phases C/D/E remain future work.

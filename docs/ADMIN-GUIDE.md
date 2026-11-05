@@ -295,7 +295,7 @@ Use the controlled scene to activate the draft and inspect held, casting, projec
 
 ### Live Arena
 
-Use Power-up Test to check actual movement, hits, damage and interaction with other skills. Tap a loadout icon to re-arm that slot; long-press to choose a different skill. Play does not automatically re-arm everything.
+Use Power-up Test to check actual movement, hits, damage and interaction with other skills. Tap a loadout icon to re-arm that slot; long-press to choose a different skill. Play does not automatically re-arm everything. The side chevrons hide or show each ball’s controls and remember your choice. Long-press a loadout or trap and choose No item to remove it. Finisher previews are below the arena above the playback controls.
 
 ### Finisher
 

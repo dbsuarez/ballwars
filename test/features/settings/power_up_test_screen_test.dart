@@ -58,6 +58,56 @@ Widget _app(
 );
 
 void main() {
+  setUp(() => OfflineStore.instance = MemoryOfflineStore());
+  testWidgets(
+    'rails collapse independently and remember state; finishers stay below the arena',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 740);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_app(true));
+      await tester.pumpAndSettle();
+      final arena = tester.getRect(find.byType(ArenaCanvas));
+      expect(
+        tester.getRect(find.byKey(const ValueKey('finisher-preview-0-0'))).top,
+        greaterThan(arena.bottom),
+      );
+      await tester.tap(find.byKey(const ValueKey('toggle-test-rail-0')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('choose-item-0')), findsNothing);
+      expect(find.byKey(const ValueKey('choose-item-1')), findsOneWidget);
+      expect(tester.getSize(find.byType(ArenaCanvas)).width, 320);
+      expect(await DevicePrefs.read('power-test-rail-0-collapsed'), '1');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      await tester.pumpWidget(_app(true));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('choose-item-0')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('toggle-test-rail-0')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('choose-item-0')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'No item in the chooser removes a trap without overlay clear buttons',
+    (tester) async {
+      await tester.pumpWidget(_app(true));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.byKey(const ValueKey('choose-arena-trap-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('No item'));
+      await tester.pumpAndSettle();
+      expect(await DevicePrefs.read('power-test-trap-0'), 'none');
+      expect(find.byKey(const ValueKey('clear-all-arena-traps')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets('all overlay slots fit a 320px arena and share finisher height', (
     tester,
   ) async {
@@ -210,8 +260,10 @@ void main() {
       await tester.pump();
       expect(ball.heldSkillId, custom.id);
       expect(ball.heldSecondarySkillId, knife.id);
-      await tester.tap(find.byKey(const ValueKey('clear-loadout-0')));
-      await tester.pump();
+      await tester.longPress(find.byKey(const ValueKey('choose-item-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('No item'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('choose-item-0')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Kutsilyo');
@@ -278,19 +330,16 @@ void main() {
       expect(find.byKey(const ValueKey('rearm-loadout-0')), findsNothing);
       expect(find.byKey(const ValueKey('rearm-weapon-1-0')), findsNothing);
       expect(find.byKey(const ValueKey('rearm-power-0')), findsNothing);
-      expect(find.byKey(const ValueKey('clear-weapon-1-0')), findsOneWidget);
-      expect(find.byKey(const ValueKey('clear-weapon-2-0')), findsOneWidget);
-      expect(find.byKey(const ValueKey('clear-power-0')), findsOneWidget);
-      expect(find.byKey(const ValueKey('clear-loadout-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('clear-weapon-1-0')), findsNothing);
+      expect(find.byKey(const ValueKey('clear-weapon-2-0')), findsNothing);
+      expect(find.byKey(const ValueKey('clear-power-0')), findsNothing);
+      expect(find.byKey(const ValueKey('clear-loadout-0')), findsNothing);
       expect(find.byKey(const ValueKey('rearm-all-arena-traps')), findsNothing);
-      expect(
-        find.byKey(const ValueKey('clear-all-arena-traps')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const ValueKey('clear-all-arena-traps')), findsNothing);
       for (var i = 0; i < 3; i++) {
         expect(find.byKey(ValueKey('choose-arena-trap-$i')), findsOneWidget);
         expect(find.byKey(ValueKey('rearm-arena-trap-$i')), findsNothing);
-        expect(find.byKey(ValueKey('clear-arena-trap-$i')), findsOneWidget);
+        expect(find.byKey(ValueKey('clear-arena-trap-$i')), findsNothing);
       }
       final before = tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
       before.state.balls.first.held = null;
@@ -347,7 +396,7 @@ void main() {
             .descendant(of: motionA, matching: find.byType(Text))
             .evaluate()
             .length,
-        1,
+        0,
       );
 
       expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
@@ -408,7 +457,7 @@ void main() {
     },
   );
   testWidgets(
-    'arena corner icon previews the selected finisher without changing the fight',
+    'finisher icon previews the selected move without changing the fight',
     (tester) async {
       await tester.pumpWidget(_app(true));
       await tester.pumpAndSettle();

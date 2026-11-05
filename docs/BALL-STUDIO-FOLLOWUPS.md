@@ -16,7 +16,7 @@ The arena and arena-based replay/video renderer use the same face controls. Blin
 
 ## Power-up Test
 
-The arena retains its full-width square. Icon-only movement and item controls overlay its sides: A left, B right. Three trap slots sit across its bottom, above the existing finisher previews. All use the 36px finisher-button size. Clear actions remain available. Tooltips and semantics identify the actions; A/B remain non-button identifiers.
+The arena retains its full-width square. Icon-only movement and item controls overlay its sides: A left, B right. Three trap slots sit across its bottom. Finisher previews sit below the arena above playback controls. All use the 36px finisher-button size and rounded-square shape. Side chevrons collapse each ball’s controls independently and remember the choice. Overlay clear buttons are removed; hold a slot and choose No item to remove its selection. Tooltips and semantics identify the actions; A/B remain non-button identifiers.
 
 Tap a populated item to rearm it; hold to replace. Tap an empty slot to select. Play does not automatically rearm. Random keeps its existing random initial direction followed by normal bounce physics. These changes do not change that behavior. The side rails can scroll independently if needed, without shrinking the arena. Playback/reset/frame/speed/map actions remain below, using compact controls.
 

@@ -93,6 +93,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 
   String _layout = 'Separated';
   final _motion = [_TestMotion.moving, _TestMotion.moving];
+  final _collapsedRails = [false, false];
   final _randomStart = math.Random();
   final _items = [PowerUpKind.pistol, PowerUpKind.shield];
   final List<PowerUpKind?> _savedItems = [PowerUpKind.pistol, null];
@@ -183,6 +184,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             widget.initialSkill!,
             settings.powerUps,
           );
+    for (var i = 0; i < 2; i++) {
+      _collapsedRails[i] =
+          await DevicePrefs.read('power-test-rail-$i-collapsed') == '1';
+    }
     _arenaPresetId = await DevicePrefs.read('power-test-arena-preset');
     final savedShape = await DevicePrefs.read('power-test-arena-shape');
     _arenaShape =
@@ -602,7 +607,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         'power-test-trap-$slot',
         _arenaTraps[slot]?.name ?? 'none',
       );
-      _rearmTrap(slot);
+      if (skill == null) {
+        _reset();
+      } else {
+        _rearmTrap(slot);
+      }
     });
   }
 
@@ -806,83 +815,49 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     }
   }
 
+  static final _overlayShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(6),
+  );
   Widget _motionButtons(int index) {
     final label = index == 0 ? 'A' : 'B';
     final color = _balls[index].primaryColor;
-    return Material(
-      color: const Color(0xD9000000),
-      borderRadius: BorderRadius.circular(6),
-      child: Column(
-        key: ValueKey('motion-$label'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final option in [
-            (_TestMotion.moving, Icons.directions_run, 'Moving'),
-            (_TestMotion.idle, Icons.pause, 'Idle'),
-            (_TestMotion.randomStart, Icons.shuffle, 'Random'),
-          ])
-            Row(
-              children: [
-                SizedBox.square(
-                  dimension: _overlaySize,
-                  child: Semantics(
-                    selected: _motion[index] == option.$1,
-                    child: IconButton(
-                      key: ValueKey('motion-$label-${option.$1.name}'),
-                      tooltip: 'Ball $label: ${option.$3}',
-                      style: IconButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size.square(_overlaySize),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        backgroundColor: _motion[index] == option.$1
-                            ? color
-                            : Colors.transparent,
-                        foregroundColor:
-                            _motion[index] == option.$1 &&
-                                ThemeData.estimateBrightnessForColor(color) ==
-                                    Brightness.light
-                            ? Colors.black
-                            : Colors.white,
-                      ),
-                      icon: Icon(option.$2, size: 22),
-                      onPressed: () => _setMotion(index, option.$1),
-                    ),
-                  ),
+    return Column(
+      key: ValueKey('motion-$label'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final option in [
+          (_TestMotion.moving, Icons.directions_run, 'Moving'),
+          (_TestMotion.idle, Icons.pause, 'Idle'),
+          (_TestMotion.randomStart, Icons.shuffle, 'Random'),
+        ])
+          SizedBox.square(
+            dimension: _overlaySize,
+            child: Semantics(
+              selected: _motion[index] == option.$1,
+              child: IconButton(
+                key: ValueKey('motion-$label-${option.$1.name}'),
+                tooltip: 'Ball $label: ${option.$3}',
+                style: IconButton.styleFrom(
+                  shape: _overlayShape,
+                  padding: EdgeInsets.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor: _motion[index] == option.$1
+                      ? color
+                      : const Color(0xD9000000),
+                  side: BorderSide(color: color.withValues(alpha: .5)),
+                  foregroundColor:
+                      _motion[index] == option.$1 &&
+                          ThemeData.estimateBrightnessForColor(color) ==
+                              Brightness.light
+                      ? Colors.black
+                      : Colors.white,
                 ),
-                SizedBox.square(
-                  dimension: _overlaySize,
-                  child: option.$1 == _TestMotion.moving
-                      ? IconButton(
-                          key: ValueKey('clear-loadout-$index'),
-                          tooltip: 'Clear all for Ball $label',
-                          style: IconButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: () => _clearLoadout(index),
-                          icon: const CanvasActionGlyph(
-                            CanvasActionGlyphType.clearAll,
-                            size: 17,
-                            color: Colors.white,
-                          ),
-                        )
-                      : option.$1 == _TestMotion.idle
-                      ? Center(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              color: color,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        )
-                      : const SizedBox(),
-                ),
-              ],
+                icon: Icon(option.$2, size: 22),
+                onPressed: () => _setMotion(index, option.$1),
+              ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -974,17 +949,15 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             ),
           ),
         ),
-        Positioned(left: 2, top: 4, bottom: 86, width: 72, child: _ballRail(0)),
+        Positioned(left: 4, top: 4, bottom: 48, width: 36, child: _ballRail(0)),
         Positioned(
-          right: 2,
+          right: 4,
           top: 4,
-          bottom: 86,
-          width: 72,
+          bottom: 48,
+          width: 36,
           child: _ballRail(1),
         ),
-        Positioned(left: 0, right: 0, bottom: 40, child: _trapRail()),
-        Positioned(left: 4, bottom: 0, child: _itemPreview(0)),
-        Positioned(right: 4, bottom: 0, child: _itemPreview(1)),
+        Positioned(left: 0, right: 0, bottom: 4, child: _trapRail()),
       ],
     );
     return Column(
@@ -1019,48 +992,71 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     key: ValueKey('ball-rail-$index'),
     child: Column(
       children: [
-        _motionButtons(index),
-        const SizedBox(height: 4),
-        for (var slot = 0; slot < 3; slot++)
-          _loadoutSlot(
-            compact: true,
-            buttonKey: ValueKey(
-              slot == 0
-                  ? 'choose-item-$index'
-                  : slot == 1
-                  ? 'choose-weapon-2-$index'
-                  : 'choose-power-$index',
+        SizedBox.square(
+          dimension: _overlaySize,
+          child: IconButton(
+            key: ValueKey('toggle-test-rail-$index'),
+            tooltip:
+                '${_collapsedRails[index] ? 'Show' : 'Hide'} Ball ${index == 0 ? 'A' : 'B'} controls',
+            style: IconButton.styleFrom(
+              shape: _overlayShape,
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              backgroundColor: const Color(0xD9000000),
+              foregroundColor: _balls[index].primaryColor,
+              side: BorderSide(
+                color: _balls[index].primaryColor.withValues(alpha: .5),
+              ),
             ),
-            clearKey: ValueKey(
-              slot == 0
-                  ? 'clear-weapon-1-$index'
-                  : slot == 1
-                  ? 'clear-weapon-2-$index'
-                  : 'clear-power-$index',
+            icon: Icon(
+              (index == 0) == !_collapsedRails[index]
+                  ? Icons.chevron_left
+                  : Icons.chevron_right,
             ),
-            label: const ['Weapon 1', 'Weapon 2', 'Power-up'][slot],
-            item: slot == 0
-                ? _savedItems[index]
-                : slot == 1
-                ? _secondaryWeapons[index]
-                : _powerUps[index],
-            skillId: _skillIds[index][slot],
-            onChoose: () => _chooseLoadoutItem(
-              index,
-              slot == 2 ? 1 : 0,
-              secondary: slot == 1,
-            ),
-            onRearm: () => _rearmItem(
-              index,
-              slot == 0
+            onPressed: () {
+              setState(() => _collapsedRails[index] = !_collapsedRails[index]);
+              DevicePrefs.write(
+                'power-test-rail-$index-collapsed',
+                _collapsedRails[index] ? '1' : '0',
+              );
+            },
+          ),
+        ),
+        if (!_collapsedRails[index]) ...[
+          _motionButtons(index),
+          const SizedBox(height: 4),
+          for (var slot = 0; slot < 3; slot++)
+            _loadoutSlot(
+              buttonKey: ValueKey(
+                slot == 0
+                    ? 'choose-item-$index'
+                    : slot == 1
+                    ? 'choose-weapon-2-$index'
+                    : 'choose-power-$index',
+              ),
+              label: const ['Weapon 1', 'Weapon 2', 'Power-up'][slot],
+              item: slot == 0
                   ? _savedItems[index]
                   : slot == 1
                   ? _secondaryWeapons[index]
                   : _powerUps[index],
-              slot: slot,
+              skillId: _skillIds[index][slot],
+              onChoose: () => _chooseLoadoutItem(
+                index,
+                slot == 2 ? 1 : 0,
+                secondary: slot == 1,
+              ),
+              onRearm: () => _rearmItem(
+                index,
+                slot == 0
+                    ? _savedItems[index]
+                    : slot == 1
+                    ? _secondaryWeapons[index]
+                    : _powerUps[index],
+                slot: slot,
+              ),
             ),
-            onClear: () => _clearLoadoutSlot(index, slot),
-          ),
+        ],
       ],
     ),
   );
@@ -1068,42 +1064,20 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   Widget _trapRail() => Center(
     child: Material(
       color: const Color(0xD9000000),
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        width: 252,
-        child: Row(
-          children: [
-            for (var i = 0; i < _arenaTraps.length; i++)
-              Expanded(
-                child: _loadoutSlot(
-                  compact: true,
-                  buttonKey: ValueKey('choose-arena-trap-$i'),
-                  clearKey: ValueKey('clear-arena-trap-$i'),
-                  label: 'Trap ${i + 1}',
-                  item: _arenaTraps[i],
-                  skillId: _trapSkillIds[i],
-                  onChoose: () => _chooseTrap(i),
-                  onRearm: () => setState(() => _rearmTrap(i)),
-                  onClear: () => _clearTrap(i),
-                ),
-              ),
-            IconButton(
-              key: const ValueKey('clear-all-arena-traps'),
-              tooltip: 'Clear all arena traps',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(
-                width: _overlaySize,
-                height: _overlaySize,
-              ),
-              onPressed: _clearAllTraps,
-              icon: const CanvasActionGlyph(
-                CanvasActionGlyphType.clearAll,
-                size: 17,
-                color: Colors.white,
-              ),
+      borderRadius: BorderRadius.circular(6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < _arenaTraps.length; i++)
+            _loadoutSlot(
+              buttonKey: ValueKey('choose-arena-trap-$i'),
+              label: 'Trap ${i + 1}',
+              item: _arenaTraps[i],
+              skillId: _trapSkillIds[i],
+              onChoose: () => _chooseTrap(i),
+              onRearm: () => setState(() => _rearmTrap(i)),
             ),
-          ],
-        ),
+        ],
       ),
     ),
   );
@@ -1120,107 +1094,24 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     );
   }
 
-  void _clearLoadoutSlot(int index, int slot) {
-    setState(() {
-      _skillIds[index][slot] = null;
-      DevicePrefs.write(
-        'power-test-${const ['item', 'secondary', 'power'][slot]}-$index-skill-id',
-        'none',
-      );
-      if (slot == 0) {
-        _savedItems[index] = null;
-        DevicePrefs.write('power-test-item-$index', 'none');
-      } else if (slot == 1) {
-        _secondaryWeapons[index] = null;
-        DevicePrefs.write('power-test-secondary-$index', 'none');
-      } else {
-        _powerUps[index] = null;
-        DevicePrefs.write('power-test-power-$index', 'none');
-      }
-      _reapplyLoadout(index);
-    });
-  }
-
-  void _clearLoadout(int index) {
-    setState(() {
-      for (var slot = 0; slot < 3; slot++) {
-        _skillIds[index][slot] = null;
-        DevicePrefs.write(
-          'power-test-${const ['item', 'secondary', 'power'][slot]}-$index-skill-id',
-          'none',
-        );
-      }
-      _savedItems[index] = null;
-      _secondaryWeapons[index] = null;
-      _powerUps[index] = null;
-      DevicePrefs.write('power-test-item-$index', 'none');
-      DevicePrefs.write('power-test-secondary-$index', 'none');
-      DevicePrefs.write('power-test-power-$index', 'none');
-      _reapplyLoadout(index);
-    });
-  }
-
-  void _clearTrap(int slot) {
-    setState(() {
-      _arenaTraps[slot] = null;
-      _trapSkillIds[slot] = null;
-      DevicePrefs.write('power-test-trap-$slot-skill-id', 'none');
-      DevicePrefs.write('power-test-trap-$slot', 'none');
-      _reset();
-    });
-  }
-
-  void _clearAllTraps() {
-    setState(() {
-      for (var i = 0; i < _arenaTraps.length; i++) {
-        _arenaTraps[i] = null;
-        _trapSkillIds[i] = null;
-        DevicePrefs.write('power-test-trap-$i-skill-id', 'none');
-        DevicePrefs.write('power-test-trap-$i', 'none');
-      }
-      _reset();
-    });
-  }
-
   Widget _loadoutSlot({
-    bool compact = false,
     required Key buttonKey,
-    required Key clearKey,
     required String label,
     required PowerUpKind? item,
     String? skillId,
     required VoidCallback onChoose,
     required VoidCallback onRearm,
-    required VoidCallback onClear,
-  }) => Row(
-    children: [
-      Expanded(
-        child: _loadoutButton(
-          key: buttonKey,
-          compact: compact,
-          label: label,
-          item: item,
-          skillId: skillId,
-          onTap: item == null ? onChoose : onRearm,
-          onLongPress: onChoose,
-        ),
-      ),
-      SizedBox.square(
-        dimension: _overlaySize,
-        child: IconButton(
-          key: clearKey,
-          tooltip: 'Clear $label',
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(
-            width: _overlaySize,
-            height: _overlaySize,
-          ),
-          onPressed: item == null ? null : onClear,
-          icon: const CanvasActionGlyph(CanvasActionGlyphType.close, size: 15),
-        ),
-      ),
-    ],
+  }) => SizedBox.square(
+    dimension: _overlaySize,
+    child: _loadoutButton(
+      key: buttonKey,
+      compact: true,
+      label: label,
+      item: item,
+      skillId: skillId,
+      onTap: item == null ? onChoose : onRearm,
+      onLongPress: onChoose,
+    ),
   );
 
   Widget _loadoutButton({
@@ -1247,6 +1138,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         child: OutlinedButton(
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
+            shape: _overlayShape,
             backgroundColor: compact ? const Color(0xD9000000) : null,
             foregroundColor: compact ? Colors.white : null,
             minimumSize: compact
@@ -1444,6 +1336,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     Widget cell(Widget child) =>
         SizedBox.square(dimension: _overlaySize, child: child);
     final iconStyle = IconButton.styleFrom(
+      shape: _overlayShape,
       padding: EdgeInsets.zero,
       minimumSize: const Size.square(_overlaySize),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1452,72 +1345,107 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            cell(
-              IconButton.filled(
-                key: const ValueKey('test-playback'),
-                tooltip: playbackLabel,
-                style: iconStyle,
-                onPressed: _togglePlayback,
-                icon: Icon(
-                  finished || _paused ? Icons.play_arrow : Icons.pause,
-                  size: 22,
-                ),
-              ),
-            ),
-            cell(
-              IconButton.outlined(
-                key: const ValueKey('test-reset'),
-                tooltip: 'Reset Fight',
-                style: iconStyle,
-                onPressed: () => setState(_reset),
-                icon: const Icon(Icons.restart_alt, size: 22),
-              ),
-            ),
-            cell(
-              IconButton.outlined(
-                key: const ValueKey('test-skip-frame'),
-                tooltip: 'Skip Frame',
-                style: iconStyle,
-                onPressed: !_paused || finished
-                    ? null
-                    : () => setState(() {
-                        match.tick(
-                          MatchSimulationController.fixedTimestep /
-                              match.playbackSpeedUp,
-                        );
-                        _playTestSounds();
-                      }),
-                icon: const Icon(Icons.skip_next, size: 22),
-              ),
-            ),
-            cell(
-              Tooltip(
-                message: 'Playback speed: ${_speed}x. Tap for ${nextSpeed}x',
-                child: OutlinedButton(
-                  key: const ValueKey('test-speed'),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size.square(_overlaySize),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Text(
+                    'A',
+                    style: TextStyle(
+                      color: _balls[0].primaryColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  onPressed: () => setState(() => _speed = nextSpeed),
-                  child: Text(
-                    '${_speed == _speed.roundToDouble() ? _speed.toInt() : _speed}x',
+                  const SizedBox(width: 4),
+                  _itemPreview(0),
+                  const Spacer(),
+                  _itemPreview(1),
+                  const SizedBox(width: 4),
+                  Text(
+                    'B',
+                    style: TextStyle(
+                      color: _balls[1].primaryColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                cell(
+                  IconButton.filled(
+                    key: const ValueKey('test-playback'),
+                    tooltip: playbackLabel,
+                    style: iconStyle,
+                    onPressed: _togglePlayback,
+                    icon: Icon(
+                      finished || _paused ? Icons.play_arrow : Icons.pause,
+                      size: 22,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            cell(
-              IconButton.outlined(
-                key: const ValueKey('test-arena'),
-                tooltip: 'Change arena: $arenaLabel',
-                style: iconStyle,
-                onPressed: _changeArena,
-                icon: const Icon(Icons.stadium_outlined, size: 20),
-              ),
+                cell(
+                  IconButton.outlined(
+                    key: const ValueKey('test-reset'),
+                    tooltip: 'Reset Fight',
+                    style: iconStyle,
+                    onPressed: () => setState(_reset),
+                    icon: const Icon(Icons.restart_alt, size: 22),
+                  ),
+                ),
+                cell(
+                  IconButton.outlined(
+                    key: const ValueKey('test-skip-frame'),
+                    tooltip: 'Skip Frame',
+                    style: iconStyle,
+                    onPressed: !_paused || finished
+                        ? null
+                        : () => setState(() {
+                            match.tick(
+                              MatchSimulationController.fixedTimestep /
+                                  match.playbackSpeedUp,
+                            );
+                            _playTestSounds();
+                          }),
+                    icon: const Icon(Icons.skip_next, size: 22),
+                  ),
+                ),
+                cell(
+                  Tooltip(
+                    message:
+                        'Playback speed: ${_speed}x. Tap for ${nextSpeed}x',
+                    child: OutlinedButton(
+                      key: const ValueKey('test-speed'),
+                      style: OutlinedButton.styleFrom(
+                        shape: _overlayShape,
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size.square(_overlaySize),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () => setState(() => _speed = nextSpeed),
+                      child: Text(
+                        '${_speed == _speed.roundToDouble() ? _speed.toInt() : _speed}x',
+                      ),
+                    ),
+                  ),
+                ),
+                cell(
+                  IconButton.outlined(
+                    key: const ValueKey('test-arena'),
+                    tooltip: 'Change arena: $arenaLabel',
+                    style: iconStyle,
+                    onPressed: _changeArena,
+                    icon: const Icon(Icons.stadium_outlined, size: 20),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

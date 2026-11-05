@@ -143,7 +143,8 @@ Follow-up batch deployment and APK release submitted as v1.14.57 on 2026-11-05; 
 - [x] Establish the account before reading ordering data; fail visibly before uploading if lookup fails or the integer range is exhausted.
 - [x] Replace the source-text test that required the timestamp with actual HTTP-request ordering tests. Verify empty groups, existing/gapped indices, integer bounds, saved fields and failure behavior.
 - [x] Group/persistence regression suite: 49 passed; lint clean; release web build passed.
-- [ ] Deploy this hotfix and confirm ball creation with and without a picture on the published app. No migration is required.
+- [x] Submit ball-creation hotfix for deployment/release as v1.14.58.
+- [ ] Confirm ball creation with and without a picture on the published app. No migration is required.
 
 ## Arena media editing (2026-11-05)
 
@@ -155,3 +156,5 @@ Follow-up batch deployment and APK release submitted as v1.14.57 on 2026-11-05; 
 - [ ] Manual browser/phone gesture and published-save acceptance. See [Arena media editing](ARENA-MEDIA-EDITING.md).
 
 Arena media verification: 142 focused arena/setup/replay/export tests passed; lint clean; release web build passed; 320px Media Library and dimming views inspected.
+
+Arena media and ball-creation fixes submitted for deployment and signed APK release as v1.14.58 on 2026-11-05. Workflow completion and device acceptance remain manual.

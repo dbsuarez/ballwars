@@ -25,3 +25,5 @@ No database migration is required. Image adjustments are encoded in definition v
 The shared renderer uses the same source-pixel crop as the touch preview, including replay/video snapshots. Tests exercise touch pan and pinch inside a scrolling page, persisted drafts, failure/retry/reopen without an uploader, schema validation/replay round-trip, image pixel colors, unchanged shared artwork and foreground wall brightness. Manual phone/browser acceptance remains separate.
 
 Validation: 142 focused arena, match-setup, replay and video-export tests passed; lint clean. The 320px media tab and dim controls were rendered and inspected. Release web build passed.
+
+Deployment and signed APK release submitted as v1.14.58 on 2026-11-05. Workflow completion remains a manual check.

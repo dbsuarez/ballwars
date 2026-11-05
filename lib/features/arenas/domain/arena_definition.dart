@@ -1,3 +1,4 @@
+import 'arena_background_style.dart';
 import 'package:characters/characters.dart';
 import 'dart:convert';
 import 'arena_theme.dart';
@@ -23,9 +24,11 @@ class ArenaDefinition {
     this.enabled = true,
     this.arenaTrapsEnabled = true,
     this.backgroundSpriteId,
+    this.backgroundStyle = const ArenaBackgroundStyle(),
   });
   final String id, name;
   final String? backgroundSpriteId;
+  final ArenaBackgroundStyle backgroundStyle;
   final ArenaDecoration theme, trapTheme;
   final ArenaShape shape;
   final CenterObstacle obstacle;
@@ -37,7 +40,14 @@ class ArenaDefinition {
       arenaTrapsEnabled ? trapTheme.hazardCaption : 'No arena traps';
 
   Map<String, Object> toJson() => {
-    'version': backgroundSpriteId == null ? 1 : 2,
+    'version': backgroundSpriteId == null
+        ? 1
+        : backgroundStyle.isDefault
+        ? 2
+        : 3,
+    'backgroundStyle': ?backgroundSpriteId != null && !backgroundStyle.isDefault
+        ? backgroundStyle.toJson()
+        : null,
     'background': ?backgroundSpriteId,
     'id': id,
     'name': name.trim(),
@@ -55,7 +65,10 @@ class ArenaDefinition {
 
   static ArenaDefinition fromJson(Object? json) {
     if (json is! Map) throw const FormatException('Arena must be an object.');
-    if ((json['version'] != 1 && json['version'] != 2) || (json['background'] != null && json['version'] != 2)) {
+    if (!const [1, 2, 3].contains(json['version']) ||
+        (json['background'] != null && json['version'] == 1) ||
+        (json['backgroundStyle'] != null &&
+            (json['version'] != 3 || json['background'] == null))) {
       throw const FormatException(
         'Unsupported arena version. Update Ball Wars to open this arena.',
       );
@@ -99,11 +112,18 @@ class ArenaDefinition {
     }
 
     final background = json['background'];
-    if (background != null && (background is! String || !RegExp(r'^custom\.[a-zA-Z0-9_-]{1,64}\.background$').hasMatch(background))) {
+    if (background != null &&
+        (background is! String ||
+            !RegExp(
+              r'^custom\.[a-zA-Z0-9_-]{1,64}\.background$',
+            ).hasMatch(background))) {
       throw const FormatException('Invalid arena background artwork.');
     }
     return ArenaDefinition(
       backgroundSpriteId: background as String?,
+      backgroundStyle: json['backgroundStyle'] == null
+          ? const ArenaBackgroundStyle()
+          : ArenaBackgroundStyle.fromJson(json['backgroundStyle']),
       id: id,
       name: name.trim(),
       theme: choice(ArenaDecoration.values, json['theme']),

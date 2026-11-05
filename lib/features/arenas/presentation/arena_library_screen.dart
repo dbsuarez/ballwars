@@ -1,3 +1,7 @@
+import 'arena_image_crop.dart';
+import '../domain/arena_background_style.dart';
+import '../../../core/sprites/sprite_registry.dart';
+import '../../sprites/application/custom_sprite_loader.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import 'arena_background_import.dart';
 import '../../sprites/presentation/sprites_screen.dart';
@@ -226,10 +230,250 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
       accent = widget.initial.accentColor,
       rim = widget.initial.rimColor;
   late String? backgroundSpriteId = widget.initial.backgroundSpriteId;
+  late ArenaBackgroundStyle backgroundStyle = widget.initial.backgroundStyle;
+  VoidCallback? _imageLease;
+  bool _preparedImage = false, _loadingImage = false;
+  String? _mediaError;
   late bool enabled = widget.initial.enabled;
   late bool arenaTraps = widget.initial.arenaTrapsEnabled;
   bool busy = false, allowPop = false;
   String? error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_preparedImage) {
+      _preparedImage = true;
+      if (backgroundSpriteId case final id?) {
+        _imageLease = SpriteRegistry.pin([id]);
+        if (!SpriteRegistry.has(id)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) loadBackground();
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> loadBackground() async {
+    final id = backgroundSpriteId;
+    if (id == null || _loadingImage) return;
+    setState(() {
+      _loadingImage = true;
+      _mediaError = null;
+    });
+    try {
+      final repository = AppSettingsScope.maybeScope(context)?.sprites;
+      if (repository == null) {
+        throw StateError(
+          'Media library is unavailable. Reopen the editor when connected.',
+        );
+      }
+      await CustomSpriteLoader(repository).load();
+      if (!SpriteRegistry.has(id)) {
+        throw StateError(
+          'Background could not be loaded. Check your connection and retry.',
+        );
+      }
+    } catch (e) {
+      if (mounted && backgroundSpriteId == id) {
+        setState(() => _mediaError = '$e');
+      }
+    } finally {
+      if (mounted) setState(() => _loadingImage = false);
+    }
+  }
+
+  void selectBackground(String? id) {
+    _imageLease?.call();
+    _imageLease = id == null ? null : SpriteRegistry.pin([id]);
+    setState(() {
+      backgroundSpriteId = id;
+      backgroundStyle = const ArenaBackgroundStyle();
+      _mediaError = null;
+    });
+    if (id != null && !SpriteRegistry.has(id)) loadBackground();
+  }
+
+  Widget mediaTab() => ValueListenableBuilder(
+    valueListenable: SpriteRegistry.revision,
+    builder: (context, _, _) {
+      final image = backgroundSpriteId == null
+          ? null
+          : SpriteRegistry.frame(backgroundSpriteId!);
+      Widget slider(
+        String label,
+        double value,
+        double min,
+        double max,
+        ValueChanged<double> changed, {
+        String? suffix,
+      }) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(label)),
+              Text(suffix ?? '${value.toStringAsFixed(2)}×'),
+            ],
+          ),
+          Slider(
+            key: ValueKey('arena-background-${label.toLowerCase()}'),
+            value: value,
+            min: min,
+            max: max,
+            onChanged: busy ? null : changed,
+          ),
+        ],
+      );
+      return ListView(
+        key: const PageStorageKey('arena-media-tab'),
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Background image',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: busy || _loadingImage
+                    ? null
+                    : () async {
+                        final id = await Navigator.push<String>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ArenaBackgroundImport(),
+                          ),
+                        );
+                        if (id != null && mounted) selectBackground(id);
+                      },
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Upload & crop'),
+              ),
+              OutlinedButton.icon(
+                onPressed: busy || _loadingImage
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final id = await selectSkillSprite(
+                          context,
+                          title: 'Background library',
+                          current: backgroundSpriteId,
+                        );
+                        if (id != null && mounted) {
+                          if (!id.endsWith('.background')) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Choose a background imported with Upload & crop.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          selectBackground(id);
+                        }
+                      },
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Library'),
+              ),
+              if (backgroundSpriteId != null)
+                TextButton.icon(
+                  onPressed: busy ? null : () => selectBackground(null),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Use template'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (image != null) ...[
+            ArenaImageCrop(
+              image: image,
+              style: backgroundStyle,
+              enabled: !busy,
+              onChanged: (value) => setState(() => backgroundStyle = value),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Drag to move. Pinch to zoom. Adjustments affect this arena only; the library image stays unchanged. Previously cropped-away areas require the original file.',
+              ),
+            ),
+            slider(
+              'Zoom',
+              backgroundStyle.zoom,
+              1,
+              4,
+              (v) => setState(
+                () => backgroundStyle = backgroundStyle.copyWith(zoom: v),
+              ),
+            ),
+            slider(
+              'Horizontal',
+              backgroundStyle.x,
+              0,
+              1,
+              (v) => setState(
+                () => backgroundStyle = backgroundStyle.copyWith(x: v),
+              ),
+              suffix: '${(backgroundStyle.x * 100).round()}%',
+            ),
+            slider(
+              'Vertical',
+              backgroundStyle.y,
+              0,
+              1,
+              (v) => setState(
+                () => backgroundStyle = backgroundStyle.copyWith(y: v),
+              ),
+              suffix: '${(backgroundStyle.y * 100).round()}%',
+            ),
+            slider(
+              'Dim image',
+              backgroundStyle.dim,
+              0,
+              1,
+              (v) => setState(
+                () => backgroundStyle = backgroundStyle.copyWith(dim: v),
+              ),
+              suffix: '${(backgroundStyle.dim * 100).round()}%',
+            ),
+            const Text(
+              'Dimming darkens only the background image. Balls, text, traps and effects keep their colors.',
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: busy
+                    ? null
+                    : () => setState(
+                        () => backgroundStyle = const ArenaBackgroundStyle(),
+                      ),
+                icon: const Icon(Icons.restart_alt),
+                label: const Text('Reset image adjustments'),
+              ),
+            ),
+          ] else if (backgroundSpriteId != null) ...[
+            if (_loadingImage) const LinearProgressIndicator(),
+            Text(_mediaError ?? 'Background is not loaded yet.'),
+            OutlinedButton.icon(
+              onPressed: _loadingImage ? null : loadBackground,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Load image'),
+            ),
+          ] else
+            const Text(
+              'Choose a library image or upload one. Template colors stay in Appearance.',
+            ),
+        ],
+      );
+    },
+  );
+
   ArenaDefinition get draft => ArenaDefinition(
     id: widget.initial.id,
     name: name.text,
@@ -239,6 +483,7 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
     obstacle: obstacle,
     obstacleScale: scale,
     backgroundSpriteId: backgroundSpriteId,
+    backgroundStyle: backgroundStyle,
     floorColor: floor,
     accentColor: accent,
     rimColor: rim,
@@ -250,6 +495,7 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
   @override
   void dispose() {
     name.dispose();
+    _imageLease?.call();
     super.dispose();
   }
 
@@ -309,8 +555,13 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
     });
     try {
       final map = draft.validated();
-      final problem = ArenaPlacement.problem(shape: map.shape, obstacle: map.obstacle, obstacleScale: map.obstacleScale,
-        minimumScale: AppSettingsScope.of(context).minimumArenaScale, ballRadiusRatio: .107 * 1.25);
+      final problem = ArenaPlacement.problem(
+        shape: map.shape,
+        obstacle: map.obstacle,
+        obstacleScale: map.obstacleScale,
+        minimumScale: AppSettingsScope.of(context).minimumArenaScale,
+        ballRadiusRatio: .107 * 1.25,
+      );
       if (problem != null) throw FormatException(problem);
       await widget.onSave(map);
       if (mounted) close();
@@ -418,7 +669,7 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
       if (!didPop) back();
     },
     child: DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -452,16 +703,20 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
                 ),
               ),
               const TabBar(
-                labelPadding: EdgeInsets.symmetric(horizontal: 4),
+                labelPadding: EdgeInsets.symmetric(horizontal: 2),
                 labelStyle: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
-                unselectedLabelStyle: TextStyle(fontSize: 13),
+                unselectedLabelStyle: TextStyle(fontSize: 12),
                 tabs: [
                   Tab(text: 'Identity'),
                   Tab(text: 'Appearance'),
                   Tab(text: 'Geometry'),
+                  Tab(
+                    key: ValueKey('arena-media-tab'),
+                    child: Text('Media\nLibrary', textAlign: TextAlign.center),
+                  ),
                 ],
               ),
               if (error != null)
@@ -523,23 +778,6 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
                         const Text(
                           'Full square artwork is masked by the selected arena boundary. Colors use the theme until you override them.',
                         ),
-                        const SizedBox(height:12),
-                        Wrap(spacing:8,runSpacing:8,children:[
-                          OutlinedButton.icon(onPressed:busy?null:() async {
-                            final id = await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>const ArenaBackgroundImport()));
-                            if (id != null && mounted) setState(()=>backgroundSpriteId=id);
-                          },icon:const Icon(Icons.add_photo_alternate_outlined),label:const Text('Upload & crop')),
-                          OutlinedButton.icon(onPressed:busy?null:() async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final id = await selectSkillSprite(context,title:'Background library',current:backgroundSpriteId);
-                            if(id!=null && mounted) {
-                              if (!id.endsWith('.background')) { messenger.showSnackBar(const SnackBar(content:Text('Choose an arena background uploaded with Upload & crop.'))); return; }
-                              setState(()=>backgroundSpriteId=id);
-                            }
-                          },icon:const Icon(Icons.photo_library_outlined),label:const Text('Library')),
-                          if(backgroundSpriteId!=null) TextButton.icon(onPressed:busy?null:()=>setState(()=>backgroundSpriteId=null),icon:const Icon(Icons.close),label:const Text('Use template')),
-                        ]),
-                        if(backgroundSpriteId!=null) const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text('Uploaded background active. Floor and detail colors apply to templates; boundary color still applies.')),
                         colorRow('Floor', floor, (v) => floor = v),
                         colorRow('Details', accent, (v) => accent = v),
                         colorRow('Boundary', rim, (v) => rim = v),
@@ -596,6 +834,7 @@ class _ArenaEditorScreenState extends State<ArenaEditorScreen> {
                         ),
                       ],
                     ),
+                    mediaTab(),
                   ],
                 ),
               ),

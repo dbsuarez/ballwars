@@ -816,7 +816,7 @@
         },
         {
           "title": "2. Customize appearance",
-          "body": "Appearance chooses the background template and optional floor, detail and boundary colors. Color buttons open a picker; reset returns to the theme color. All themes cover a square surface. The active boundary masks the artwork for circle arenas. Upload & crop selects PNG/JPEG/WebP, crops a square with zoom and position sliders and resizes to a maximum of 512 or 1024 pixels before upload. The original file stays unchanged. Library reuses stored backgrounds; Use template clears the image. Uploaded artwork is saved in the sprite library first; Save the arena afterward."
+          "body": "Appearance chooses the floor template and optional floor, detail and boundary colors. Media Library has the image controls: upload a PNG/JPEG/WebP, crop a square with one-finger pan and two-finger pinch (or sliders), and choose a 512px or 1024px maximum before upload. Choose an existing background with Library. You can adjust the saved image and dim it without reuploading; these settings affect this map only. Dimming leaves balls, walls, text and effects bright. Use template clears the image. Reset image adjustments restores the full saved image. Original cropped-away areas require selecting the original file again. Save the arena to publish image adjustments. The active boundary masks all artwork to circle/square."
         },
         {
           "title": "3. Choose geometry and traps",

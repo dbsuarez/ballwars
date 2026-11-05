@@ -1,3 +1,5 @@
+import 'arena_image_crop.dart';
+import '../domain/arena_background_style.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -9,13 +11,7 @@ import '../../settings/presentation/app_settings_scope.dart';
 
 /// Source-pixel square crop; shared by the preview and uploaded result.
 Rect arenaBackgroundCrop(Size source, double zoom, double x, double y) {
-  final side = source.shortestSide / zoom.clamp(1, 4);
-  return Rect.fromLTWH(
-    (source.width - side) * x.clamp(0, 1),
-    (source.height - side) * y.clamp(0, 1),
-    side,
-    side,
-  );
+  return ArenaBackgroundStyle(zoom: zoom, x: x, y: y).crop(source);
 }
 
 class ArenaBackgroundImport extends StatefulWidget {
@@ -194,13 +190,25 @@ class _ArenaBackgroundImportState extends State<ArenaBackgroundImport> {
             controller: name,
             maxLength: 80,
             enabled: !busy,
-            decoration: const InputDecoration(hintText: 'Name in sprite library'),
+            decoration: const InputDecoration(
+              hintText: 'Name in sprite library',
+            ),
           ),
           if (image case final source?) ...[
             const SizedBox(height: 12),
-            AspectRatio(
-              aspectRatio: 1,
-              child: CustomPaint(painter: _CropPainter(source, zoom, x, y)),
+            ArenaImageCrop(
+              image: source,
+              style: ArenaBackgroundStyle(zoom: zoom, x: x, y: y),
+              enabled: !busy,
+              onChanged: (value) => setState(() {
+                zoom = value.zoom;
+                x = value.x;
+                y = value.y;
+              }),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Drag the image to move it. Pinch to zoom.'),
             ),
             for (final field in ['Zoom', 'Horizontal', 'Vertical']) ...[
               Text(field),
@@ -271,38 +279,4 @@ class _ArenaBackgroundImportState extends State<ArenaBackgroundImport> {
       ),
     ),
   );
-}
-
-class _CropPainter extends CustomPainter {
-  _CropPainter(this.image, this.zoom, this.x, this.y);
-  final ui.Image image;
-  final double zoom, x, y;
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xff202020),
-    );
-    canvas.drawImageRect(
-      image,
-      arenaBackgroundCrop(
-        Size(image.width.toDouble(), image.height.toDouble()),
-        zoom,
-        x,
-        y,
-      ),
-      Offset.zero & size,
-      Paint()..filterQuality = FilterQuality.medium,
-    );
-    canvas.drawRect(
-      (Offset.zero & size).deflate(.5),
-      Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _CropPainter old) =>
-      old.image != image || old.zoom != zoom || old.x != x || old.y != y;
 }

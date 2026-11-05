@@ -1,3 +1,4 @@
+import 'package:ballwars/features/arenas/domain/arena_background_style.dart';
 import 'package:ballwars/core/sprites/sprite_registry.dart';
 import 'package:ballwars/core/sprites/sprite_atlas.dart';
 import 'package:ballwars/features/replay_export/presentation/replay_frame_painter.dart';
@@ -22,6 +23,8 @@ Future<List<int>> corner(
   ArenaShape shape, {
   bool custom = true,
   String? backgroundSpriteId,
+  ArenaBackgroundStyle backgroundStyle = const ArenaBackgroundStyle(),
+  CenterObstacle obstacle = CenterObstacle.none,
   Offset point = const Offset(83, 77),
 }) async {
   final state = SimulationState(
@@ -32,6 +35,7 @@ Future<List<int>> corner(
     winnerId: null,
     arenaRadius: 100,
     arenaShape: shape,
+    centerObstacle: obstacle,
   );
   final recorder = ui.PictureRecorder();
   ArenaPainter(
@@ -45,6 +49,7 @@ Future<List<int>> corner(
     arenaPreset: custom
         ? ArenaDefinition(
             backgroundSpriteId: backgroundSpriteId,
+            backgroundStyle: backgroundStyle,
             id: 'test',
             name: 'Test',
             theme: theme,
@@ -71,6 +76,24 @@ Future<List<int>> corner(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('crop and dim affect only this map background, not its center wall', ()async {
+    final rec=ui.PictureRecorder();final c=Canvas(rec);
+    c.drawRect(const Rect.fromLTWH(0,0,8,16),Paint()..color=const Color(0xffff0000));
+    c.drawRect(const Rect.fromLTWH(8,0,8,16),Paint()..color=const Color(0xff0000ff));
+    final picture=rec.endRecording();final image=await picture.toImage(16,16);
+    await SpriteRegistry.register(const SpriteAtlas(sheet:'background.png',sprites:{
+      'background':SpriteDef(id:'background',frames:[Rect.fromLTWH(0,0,16,16)],output:16,padding:0,
+        bleedOk:true,bleedNote:'Single background image')
+    }),image,idPrefix:'custom.dim-test'); image.dispose();picture.dispose();
+    const style=ArenaBackgroundStyle(zoom:2,x:0,y:0,dim:.5);
+    final dimmed=await corner(ArenaDecoration.desert,ArenaShape.square,backgroundSpriteId:'custom.dim-test.background',backgroundStyle:style);
+    final unchanged=await corner(ArenaDecoration.desert,ArenaShape.square,backgroundSpriteId:'custom.dim-test.background');
+    expect(dimmed[0],inInclusiveRange(120,130));expect(dimmed[1],0);expect(dimmed[2],0);
+    expect(unchanged.take(3),[0,0,255]);
+    final wall=await corner(ArenaDecoration.desert,ArenaShape.square,backgroundSpriteId:'custom.dim-test.background',backgroundStyle:const ArenaBackgroundStyle(dim:1),obstacle:CenterObstacle.circle,point:const Offset(22,0));
+    expect(wall[1],greaterThan(150)); // Teal wall stays bright over a black image.
+    SpriteRegistry.unregister('custom.dim-test');
+  });
   test('supplied death ghost has four isolated animated frames', ()async{
     await SpriteRegistry.load();
     expect(SpriteRegistry.loadProblems, isEmpty);

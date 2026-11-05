@@ -144,3 +144,14 @@ Follow-up batch deployment and APK release submitted as v1.14.57 on 2026-11-05; 
 - [x] Replace the source-text test that required the timestamp with actual HTTP-request ordering tests. Verify empty groups, existing/gapped indices, integer bounds, saved fields and failure behavior.
 - [x] Group/persistence regression suite: 49 passed; lint clean; release web build passed.
 - [ ] Deploy this hotfix and confirm ball creation with and without a picture on the published app. No migration is required.
+
+## Arena media editing (2026-11-05)
+
+- [x] Separate Media Library tab, with all four editor tabs visible at phone width.
+- [x] Edit saved-image crop/position without uploading or changing the shared image.
+- [x] One-finger pan and two-finger pinch in upload and saved-image previews, without page-scroll interference; sliders retained.
+- [x] Map-local image dimming preserves foreground ball/trap/text/effect colors.
+- [x] Persist adjustments, protect them with map definition version 3, and render them in preview/match/replay/video.
+- [ ] Manual browser/phone gesture and published-save acceptance. See [Arena media editing](ARENA-MEDIA-EDITING.md).
+
+Arena media verification: 142 focused arena/setup/replay/export tests passed; lint clean; release web build passed; 320px Media Library and dimming views inspected.

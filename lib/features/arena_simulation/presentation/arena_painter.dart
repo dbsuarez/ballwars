@@ -266,8 +266,9 @@ class ArenaPainter extends CustomPainter {
     final imageId = _activePreset?.backgroundSpriteId;
     final backgroundImage = imageId == null ? null : SpriteRegistry.frame(imageId);
     if (backgroundImage != null) {
-      canvas.drawImageRect(backgroundImage, Rect.fromLTWH(0,0,backgroundImage.width.toDouble(),backgroundImage.height.toDouble()),
+      canvas.drawImageRect(backgroundImage, _activePreset!.backgroundStyle.crop(Size(backgroundImage.width.toDouble(),backgroundImage.height.toDouble())),
         Rect.fromLTRB(-visibleRadius,-visibleRadius,visibleRadius,visibleRadius), Paint()..filterQuality=FilterQuality.medium);
+      canvas.drawRect(Rect.fromLTRB(-visibleRadius,-visibleRadius,visibleRadius,visibleRadius), Paint()..color=Colors.black.withValues(alpha:_activePreset!.backgroundStyle.dim));
     } else {
     switch (arenaPreset != null && arenaDecoration == arenaPreset!.trapTheme
         ? arenaPreset!.theme : arenaDecoration) {

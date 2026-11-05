@@ -22,7 +22,7 @@ Drag a ball directly in the test arena. The simulation temporarily stops while d
 
 ## Uploaded arena backgrounds and safety
 
-Admin Settings > Appearance > Manage arenas > Edit > Appearance > **Upload & crop**:
+Admin Settings > Appearance > Manage arenas > Edit > Media Library > **Upload & crop**:
 
 1. Choose PNG, JPEG or WebP (static, up to 16 MB and 16 megapixels, 8192px maximum side).
 2. Set square crop with Zoom, Horizontal and Vertical sliders.

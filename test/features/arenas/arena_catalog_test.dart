@@ -70,7 +70,7 @@ void main() {
       );
     }
     expect(
-      () => ArenaDefinition.fromJson({...arena.toJson(), 'version': 3}),
+      () => ArenaDefinition.fromJson({...arena.toJson(), 'version': 4}),
       throwsFormatException,
     );
     final duplicate = ArenaDefinition.fromJson({

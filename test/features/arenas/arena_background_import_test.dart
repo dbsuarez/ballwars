@@ -98,11 +98,20 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 100));
       });
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.textContaining('Source:'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
+      final sourceLabel = find.textContaining('Source:');
+      final viewport = tester.getRect(find.byType(ListView));
+      for (
+        var i = 0;
+        i < 20 && sourceLabel.hitTestable().evaluate().isEmpty;
+        i++
+      ) {
+        await tester.dragFrom(
+          Offset(viewport.left + 4, viewport.center.dy),
+          const Offset(0, -180),
+        );
+        await tester.pumpAndSettle();
+      }
+      await tester.ensureVisible(sourceLabel);
       expect(find.textContaining('1600 × 900'), findsOneWidget);
       await tester.tap(find.text('Upload background'));
       await tester.runAsync(() async {

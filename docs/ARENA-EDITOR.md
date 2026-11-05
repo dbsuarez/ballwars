@@ -4,9 +4,9 @@ Implemented locally on 2026-11-05. Open **Admin Settings > Appearance > Manage a
 
 ## Create and use a map
 
-Duplicate a template or create an arena. The editor has Identity, Appearance and Geometry tabs, with a live preview and a fixed Save/Test toolbar. Switching tabs preserves edits. Configure its name, player availability, background template, floor/detail/boundary colors, circle or square boundary, and optional center obstacle. Arena trap sets are independent of the background; their default enabled state is configurable.
+Duplicate a template or create an arena. The editor has Identity, Appearance, Geometry and Media Library tabs, with a live preview and a fixed Save/Test toolbar. Switching tabs preserves edits. Configure its name, player availability, background template, floor/detail/boundary colors, circle or square boundary, and optional center obstacle. Arena trap sets are independent of the background; their default enabled state is configurable.
 
-Test opens Power-up Test with the unsaved map. Save publishes the catalog through the existing administrator settings permissions. Failed saves remain visible and preserve the draft. This editor composes existing arena templates and one center obstacle; it does not provide freehand wall placement. Appearance > Upload & crop accepts PNG/JPEG/WebP, offers square crop zoom/position and a 512px or 1024px maximum, and uploads a normalized PNG to the sprite library (never enlarging a smaller crop). Source is capped at 16 MB / 16 megapixels; upload at 4 MB. The original file is unchanged. Library reuses an uploaded background; Use template removes that assignment. Save the map after upload to publish its selection.
+Test opens Power-up Test with the unsaved map. Save publishes the catalog through the existing administrator settings permissions. Failed saves remain visible and preserve the draft. This editor composes existing arena templates and one center obstacle; it does not provide freehand wall placement. Media Library > Upload & crop accepts PNG/JPEG/WebP, offers square crop zoom/position and a 512px or 1024px maximum, and uploads a normalized PNG to the sprite library (never enlarging a smaller crop). Source is capped at 16 MB / 16 megapixels; upload at 4 MB. The original file is unchanged. Library reuses an uploaded background; Use template removes that assignment. Save the map after upload to publish its selection.
 
 The shared regular selection dialog exposes available maps to players and administrators. Match Setup remembers selections and geometry overrides separately per game mode. Hidden/deleted selections require choosing another map before starting. Catalog defaults apply unless a player chooses otherwise.
 
@@ -31,3 +31,5 @@ Apply `supabase/migrations/029_arena_catalog.sql`, then reload the app before sa
 - Deployment and signed APK release submitted as v1.14.56; workflow completion remains a manual check.
 
 Map saving checks passage clearance using the configured minimum arena scale and largest regular ball. Match Start checks actual ball size, including Cut Race growth. Revision 10 spawn/respawn placement avoids the center wall and other balls without consuming additional RNG.
+
+Existing images can now be panned/zoomed and dimmed in Media Library without reupload. Both the importer and saved-image view support one-finger pan and two-finger pinch; sliders remain available. These map-local adjustments use definition version 3 and appear in the shared arena preview, games, replay and video. See [Arena media editing](ARENA-MEDIA-EDITING.md).

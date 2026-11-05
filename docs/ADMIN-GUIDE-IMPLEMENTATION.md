@@ -16,7 +16,7 @@ The guide currently documents 20 topics and 116 explanation/step sections. It us
 
 ## Flamethrower question
 
-Current `_startFlamethrower`/`_updateFlameCones` and flame painting measure from the owner ball. The projectile-origin override is used by projectile paths, not this native continuous cone. The help explicitly explains the limitation; this feature does not patch the runtime. A future configurable emitter origin should be shared by rendering and hit detection.
+The guide release did not change runtime geometry. The subsequent shared-emitter implementation now reuses saved launch offsets for projectile emission, flamethrower visuals/cone hits, Energy Wave charge/sweep/hit bearing and custom beam hit rays. See [shared emitter notes](SHARED-ATTACK-EMITTER.md).
 
 ## Verification
 

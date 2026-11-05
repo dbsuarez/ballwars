@@ -316,7 +316,7 @@ Check the relevant runtime behavior before assuming a visual control changes the
 
 ### Flamethrower: the stream does not start at my gun tip
 
-The built-in flamethrower currently draws its continuous flame cone from the ball and measures its cone hits from the ball. Projectile launch point applies to projectiles; it does not relocate this native cone. A cosmetic offset cannot move the cone's real hit origin. This is a current limitation, not a missing editor step.
+The built-in flamethrower currently supports Projectile launch point for its continuous stream. Enable it in Appearance, move Forward/back to the gun tip, and adjust Sideways using both facing previews. Flame artwork and cone hit detection share this origin and follow the caster. The same emitter placement is reused by native Energy Wave and custom beam targeting. Automatic preserves the original ball-centered cone; older replays preserve their original origin.
 
 What to check: A future configurable stream/emitter origin must move both the flame and its hit detection.
 
@@ -519,7 +519,7 @@ Choose the flying image/animation and its visual size multiplier. Scale does not
 
 ### Projectile launch point
 
-Enable the override to choose where a supported projectile leaves the ball. Forward/back and Sideways are in ball radii relative to aim. Automatic keeps the existing weapon behavior.
+Enable the override to choose where supported projectiles, continuous flames and beams leave the ball. Forward/back and Sideways are in ball radii relative to aim. Automatic keeps the existing weapon behavior.
 
 Example: Move forward to the barrel tip, then adjust sideways while checking both facing previews.
 
@@ -533,7 +533,7 @@ When supported, the held skill can fire another skill's payload. The held item a
 
 ### Continuous streams are different
 
-The built-in flamethrower cone currently uses the ball as its origin. Projectile launch point cannot move that native stream to a barrel tip yet. See Troubleshooting and current limits.
+The flamethrower uses this launch-point override for both its continuous flame visuals and cone hit detection. The point follows the caster while the firing direction stays steady. Energy Wave also uses the saved emitter placement for its charge, sweeping beam and damage bearing. Custom beam delivery measures its hit ray from this point; its selected impact artwork remains at the target. This control does not turn an instant beam into a sustained attack.
 
 Related: [Held item, grip and pickup artwork](#held-artwork), [Damage, healing and projectile mechanics](#mechanics), [Troubleshooting and current limits](#limitations)
 

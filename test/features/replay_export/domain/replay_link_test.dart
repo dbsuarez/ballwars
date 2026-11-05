@@ -156,7 +156,7 @@ void main() {
   test(
     'simulation revision preserves legacy links and rejects unknown rules',
     () {
-      for (final revision in [1, 2, 3, 4, 5, 6, 7]) {
+      for (final revision in [1, 2, 3, 4, 5, 6, 7, 8]) {
         final encoded = ReplayLink(
           simulationRevision: revision,
           seed: 7,

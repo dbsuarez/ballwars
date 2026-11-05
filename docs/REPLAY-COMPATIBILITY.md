@@ -5,7 +5,8 @@ Batch 4, 2026-11-04. Simulation rules travel in the replay's `v.N` marker, inclu
 - Unmarked historical links use revision 1.
 - Revisions 1-6 use the historical nearest-target policy: contestant-order tie breaking, no retention/hysteresis, and no preference for targets visible around the center wall. Homing retargeting preserves historical candidate order too.
 - Revision 5 introduced square geometry; revision 6 permits center obstacles. The decoder now accepts both (revision 6 was previously generated but rejected).
-- New matches use revision 7: ID-based deterministic ties, target retention and obstacle-aware preference. Prediction/look-ahead and exported simulations retain the match's recorded revision.
+- Revision 7 introduced: ID-based deterministic ties, target retention and obstacle-aware preference. Prediction/look-ahead and exported simulations retain the match's recorded revision.
+- New matches use revision 8: configurable flamethrower launch origins shared by rendering and cone hit detection. Revisions 1-7 keep their ball-centered flame origin even if a saved skill contains launch offsets. Automatic origin preserves the existing cone in every revision.
 - Unknown future revisions are rejected with a visible unsupported/invalid replay explanation rather than being interpreted using today's rules.
 
 ## Historical limitation

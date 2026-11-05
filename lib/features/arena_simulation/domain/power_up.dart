@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'power_up_config.dart';
 import 'simulation_ball.dart';
+import 'attack_emitter.dart';
 
 enum PowerUpRarity {
   normal('Normal', Color(0xFFFFFFFF)),
@@ -652,6 +653,7 @@ class EnergyWave {
     this.durationSteps = EnergyWaveAttack.beamSteps,
     this.sweepStartAngle,
     this.sweepEndAngle,
+    this.emitter = const AttackEmitter(),
   });
   final SimulationBall owner;
   final Offset start;
@@ -659,6 +661,13 @@ class EnergyWave {
   final int durationSteps;
   final double? sweepStartAngle;
   final double? sweepEndAngle;
+  final AttackEmitter emitter;
+  Offset origin(Offset direction) => emitter.resolve(
+    owner.position,
+    owner.radius,
+    direction,
+    automaticForward: 1,
+  );
   int age = 0;
 }
 
@@ -667,6 +676,7 @@ class EnergyWaveAttack {
     required this.owner,
     required this.targets,
     required this.direction,
+    this.emitter = const AttackEmitter(),
   }) : savedOwnerVelocity = owner.velocity,
        savedOwnerPosition = owner.position,
        savedVelocities = {
@@ -690,6 +700,14 @@ class EnergyWaveAttack {
   final SimulationBall owner;
   final List<SimulationBall> targets;
   final Offset direction;
+  final AttackEmitter emitter;
+  Offset origin(Offset direction, {double automaticForward = 1}) =>
+      emitter.resolve(
+        owner.position,
+        owner.radius,
+        direction,
+        automaticForward: automaticForward,
+      );
   late final double startAngle;
   late final double endAngle;
   final Offset savedOwnerVelocity;
@@ -730,9 +748,21 @@ class EnergyWaveAttack {
 }
 
 class FlameCone {
-  FlameCone({required this.owner, required this.angle});
+  FlameCone({
+    required this.owner,
+    required this.angle,
+    this.emitter = const AttackEmitter(),
+  });
   final SimulationBall owner;
   final double angle;
+
+  final AttackEmitter emitter;
+  bool get customOrigin => emitter.isCustom;
+  Offset get origin => emitter.resolve(
+    owner.position,
+    owner.radius,
+    Offset.fromDirection(angle),
+  );
   int age = 0;
 }
 

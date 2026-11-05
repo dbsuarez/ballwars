@@ -50,6 +50,58 @@ MatchSimulationController match(SkillDefinition skill) {
 }
 
 void main() {
+  for (final kind in [PowerUpKind.flamethrower, PowerUpKind.energyWave]) {
+    testWidgets(
+      '${kind.name} exposes and saves its shared emitter in the editor',
+      (tester) async {
+        SkillManagementResult? saved;
+        final name = SkillLibrary.defaults.builtIn(kind, tuning).name;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.build(AppPalettes.midnight),
+            home: SkillManagementScreen(
+              initial: SkillLibrary.defaults,
+              tuning: tuning,
+              onSave: (result) async => saved = result,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Search skills'),
+          name,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ListTile, name));
+        await tester.pumpAndSettle();
+        final visuals = find.widgetWithText(Tab, 'Visuals & Sprites');
+        await tester.ensureVisible(visuals);
+        await tester.tap(visuals);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Projectiles'));
+        await tester.tap(find.text('Projectiles'));
+        await tester.pumpAndSettle();
+        final origin = find.byKey(const ValueKey('skill-custom-origin'));
+        await tester.ensureVisible(origin);
+        await tester.tap(origin);
+        await tester.pumpAndSettle();
+        final forward = find.byKey(
+          const ValueKey('skill-slider-originForward'),
+        );
+        await tester.ensureVisible(forward);
+        tester.widget<Slider>(forward).onChanged!(2);
+        await tester.pump();
+        await tester.tap(find.byKey(const ValueKey('save-skill')));
+        await tester.pumpAndSettle();
+        expect(
+          saved!.library.builtIn(kind, saved!.tuning).projectileOriginForward,
+          2,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   TestWidgetsFlutterBinding.ensureInitialized();
   test('origin and area overrides survive full, compact and replay saves', () {
     final skill = SkillLibrary.defaults

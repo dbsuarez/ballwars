@@ -3524,7 +3524,10 @@ class _SkillEditorState extends State<_SkillEditor>
             key: const ValueKey('skill-custom-origin'),
             contentPadding: EdgeInsets.zero,
             title: const Text('Projectile launch point'),
-            subtitle: const Text('Set where the projectile leaves the ball.'),
+            subtitle: const Text(
+              'Set where projectiles, flame streams and beams leave the ball. '
+              'Supported visuals and hit detection share this point.',
+            ),
             value: _originEnabled,
             onChanged: (v) => setState(() {
               _originEnabled = v;
@@ -5823,8 +5826,10 @@ class _SkillEditorState extends State<_SkillEditor>
                                 ),
                                 if (widget.skill.isComposed
                                     ? _delivery == SkillDelivery.projectile ||
+                                          _delivery == SkillDelivery.beam ||
                                           _payload != null
-                                    : SkillLibrary.isProjectileKind(
+                                    : {PowerUpKind.flamethrower, PowerUpKind.energyWave}.contains(widget.skill.baseKind) ||
+                                        SkillLibrary.isProjectileKind(
                                             widget.skill.baseKind,
                                           ) &&
                                           widget.skill.baseKind !=

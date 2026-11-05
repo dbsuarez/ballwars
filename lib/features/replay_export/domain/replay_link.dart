@@ -286,7 +286,8 @@ class ReplayLink {
           marker != 'v.4' &&
           marker != 'v.5' &&
           marker != 'v.6' &&
-          marker != 'v.7') {
+          marker != 'v.7' &&
+          marker != 'v.8') {
         return null;
       }
       simulationRevision = int.parse(marker.substring(2));

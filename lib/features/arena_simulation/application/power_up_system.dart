@@ -1,6 +1,6 @@
 import '../../skills/domain/native_advanced_skill_config.dart';
 import '../../skills/domain/skill_projectile_budget.dart';
-import '../../../core/sprites/facing_offset.dart';
+import '../domain/attack_emitter.dart';
 import 'power_up_spawn_selector.dart';
 import 'dart:collection';
 import 'dart:math' as math;
@@ -3125,10 +3125,13 @@ class PowerUpSystem {
             .toList();
       case SkillDelivery.beam:
         final direction = _chosenDirection(owner, targets.firstOrNull);
+        final origin = emitterFor(
+          skill,
+        ).resolve(owner.position, owner.radius, direction);
         final width = match.arenaRadius * skill.range;
         return targets.where((target) {
           if (identical(target, owner)) return false;
-          final delta = target.position - owner.position;
+          final delta = target.position - origin;
           final along = delta.dx * direction.dx + delta.dy * direction.dy;
           final across = (delta.dx * direction.dy - delta.dy * direction.dx)
               .abs();
@@ -4195,26 +4198,31 @@ class PowerUpSystem {
     }
   }
 
+  /// One placement model for native/composed projectiles, cones and beams.
+  /// Legacy sustained attacks retain their original origins in old replays.
+  AttackEmitter emitterFor(SkillDefinition skill, {bool sustained = true}) =>
+      AttackEmitter(
+        forward: !sustained || match.simulationRevision >= 8
+            ? skill.projectileOriginForward
+            : null,
+        sideways: skill.projectileOriginSide,
+        mirror: match.simulationRevision >= 4,
+      );
+
   /// Shared launch geometry for every flying native/composed projectile.
   Offset projectileOrigin(
     SimulationBall owner,
     SkillDefinition skill,
     Offset direction,
   ) {
+    // Preserve the historical normalization order for recorded projectiles.
     final unit = direction.distance == 0
         ? const Offset(1, 0)
         : direction / direction.distance;
-    final point =
-        owner.position +
-        facingOffset(
-          unit,
-          owner.radius * (skill.projectileOriginForward ?? 1),
-          owner.radius *
-              (skill.projectileOriginForward == null
-                  ? 0
-                  : skill.projectileOriginSide),
-          mirror: match.simulationRevision >= 4,
-        );
+    final point = emitterFor(
+      skill,
+      sustained: false,
+    ).resolve(owner.position, owner.radius, unit, automaticForward: 1);
     if (skill.projectileOriginForward == null) return point;
     return match.clampToArena(point, inset: 1);
   }
@@ -4340,7 +4348,12 @@ class PowerUpSystem {
         ? const Offset(1, 0)
         : toward / toward.distance;
     energyWaveAttacks.add(
-      EnergyWaveAttack(owner: ball, targets: targets, direction: direction),
+      EnergyWaveAttack(
+        owner: ball,
+        targets: targets,
+        direction: direction,
+        emitter: emitterFor(visualSkill(PowerUpKind.energyWave, ball: ball)),
+      ),
     );
     final total =
         EnergyWaveAttack.chargeSteps + EnergyWaveAttack.beamSteps + 12;
@@ -4367,8 +4380,7 @@ class PowerUpSystem {
 
       if (!attack.fired) {
         attack.fired = true;
-        final start =
-            attack.owner.position + attack.direction * attack.owner.radius;
+        final start = attack.origin(attack.direction);
         final end = start + attack.direction * match.arenaRadius * 2.4;
         energyWaves.add(
           EnergyWave(
@@ -4377,6 +4389,7 @@ class PowerUpSystem {
             end: end,
             sweepStartAngle: attack.startAngle,
             sweepEndAngle: attack.endAngle,
+            emitter: attack.emitter,
           ),
         );
       }
@@ -4388,11 +4401,23 @@ class PowerUpSystem {
       final startAngle = attack.startAngle;
       for (final target in attack.targets) {
         if (!_alive(target) || attack.hitTargets.contains(target)) continue;
-        final delta = target.position - attack.owner.position;
+        final sweepDirection = Offset.fromDirection(
+          startAngle + progress * (attack.endAngle - startAngle),
+        );
+        final delta =
+            target.position -
+            (attack.emitter.isCustom
+                ? attack.origin(sweepDirection)
+                : attack.owner.position);
         final bearing =
             (math.atan2(delta.dy, delta.dx) - startAngle) % (2 * math.pi);
-        if (bearing >
-            progress * (attack.endAngle - attack.startAngle) + 0.000001) {
+        // Energy Wave is an unavoidable scripted sweep, rather than an
+        // ordinary collision ray. An extreme user offset must not strand a
+        // target outside the original sweep sector or skip its final hit.
+        final completeCustomSweep = attack.emitter.isCustom && progress >= 1;
+        if (!completeCustomSweep &&
+            bearing >
+                progress * (attack.endAngle - attack.startAngle) + 0.000001) {
           continue;
         }
         attack.hitTargets.add(target);
@@ -4442,8 +4467,13 @@ class PowerUpSystem {
 
   void _startFlamethrower(SimulationBall ball, SimulationBall target) {
     final toward = target.position - ball.position;
+    final skill = visualSkill(PowerUpKind.flamethrower, ball: ball);
     flameCones.add(
-      FlameCone(owner: ball, angle: math.atan2(toward.dy, toward.dx)),
+      FlameCone(
+        owner: ball,
+        angle: math.atan2(toward.dy, toward.dx),
+        emitter: emitterFor(skill),
+      ),
     );
     _holdFiredWeapon(
       ball,
@@ -4467,7 +4497,7 @@ class PowerUpSystem {
             target.isGhost) {
           continue;
         }
-        final offset = target.position - cone.owner.position;
+        final offset = target.position - cone.origin;
         if (offset.distance > match.arenaRadius * 0.78 + target.radius) {
           continue;
         }

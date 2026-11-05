@@ -1150,8 +1150,7 @@ class PowerUpPainter {
                         ) *
                         (attack.endAngle - attack.startAngle),
               );
-        final orb =
-            attack.owner.position + beamDirection * attack.owner.radius * 1.75;
+        final orb = attack.origin(beamDirection, automaticForward: 1.75);
         canvas.drawCircle(
           orb,
           visualRadius * (0.38 + charge * 0.52) * pulse,
@@ -1207,14 +1206,14 @@ class PowerUpPainter {
         final endAngle = wave.sweepEndAngle ?? startAngle;
         final angle = startAngle + progress * (endAngle - startAngle);
         final direction = Offset.fromDirection(angle);
-        final start = wave.owner.position + direction * wave.owner.radius;
+        final start = wave.origin(direction);
         final end = start + direction * arenaRadius * 2.4;
         // The translucent fan records the area already swept by the beam.
         canvas.save();
         canvas.clipPath(arenaBoundaryPath(arenaRadius, state.arenaShape));
         canvas.drawArc(
           Rect.fromCircle(
-            center: wave.owner.position,
+            center: wave.emitter.isCustom ? start : wave.owner.position,
             radius: arenaRadius * 2.4,
           ),
           startAngle,
@@ -1276,11 +1275,12 @@ class PowerUpPainter {
         final direction = Offset.fromDirection(cone.angle);
         final normal = Offset(-direction.dy, direction.dx);
         for (var i = 0; i < 7; i++) {
-          final distance = visualRadius * (1.35 + i * 0.78);
+          final distance =
+              visualRadius * ((cone.customOrigin ? 0 : 1.35) + i * 0.78);
           final spread = i * visualRadius * 0.16;
           final flutter = math.sin(state.step * 0.7 + i * 1.9) * spread;
           final center =
-              cone.owner.position + direction * distance + normal * flutter;
+              cone.origin + direction * distance + normal * flutter;
           final flame =
               p.usesEffectSprite(
                 PowerUpKind.flamethrower,
@@ -1309,7 +1309,7 @@ class PowerUpPainter {
         }
         canvas.drawArc(
           Rect.fromCircle(
-            center: cone.owner.position,
+            center: cone.origin,
             radius: arenaRadius * 0.78,
           ),
           cone.angle - 0.48,

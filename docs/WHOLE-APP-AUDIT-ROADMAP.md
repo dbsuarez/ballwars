@@ -82,7 +82,7 @@ Coding completed locally, 2026-11-04. [Implementation, usage and manual checklis
 - [x] Portable .bw file import/export UI and optional existing server sharing.
 - [x] Preserve BGM/SFX selection and the 10-minute warning; arena-only duration regression covered.
 - [x] Final software verification and builds: 1,659 full-suite tests passed, one skipped; additional export-frame parity test passed; analysis clean; release web and signed APK builds passed.
-- [ ] User applies migration 028 for custom watermark persistence and performs the listed updated video/file-picker checks.
+- [x] User confirmed migration 028 applied and updated video/file-picker checks completed (2026-11-05).
 
 ## Admin Guide (2026-11-05)
 
@@ -90,12 +90,12 @@ Coding completed locally, 2026-11-04. [Implementation, usage and manual checklis
 - [x] Twenty topics covering skill creation, sprite import, visual events and grouped parameter explanations with units/examples.
 - [x] Admin Settings > General entry and contextual links from skill-editor section/field info; the editor draft remains open underneath.
 - [x] Cross-tab search, clear search, remembered topic tab, related links and immediate matching parameter explanation.
-- [x] Explicit native-behavior limitations, including the flamethrower cone currently ignoring projectile launch-point overrides.
+- [x] Explicit native-behavior limitations; the later shared-emitter work updates the flamethrower explanation.
 - [x] Markdown reference generated from the same catalog: [Admin Guide](ADMIN-GUIDE.md). Refresh with `python tools/export_admin_guide.py`; verify with `--check`.
 - [x] 61 focused tests passed, analysis clean, release web build passed and phone/desktop runtime layouts inspected; [implementation notes](ADMIN-GUIDE-IMPLEMENTATION.md).
-- [ ] Future runtime improvement: configurable emitter origin for continuous stream/cone attacks, shared by visuals and hit detection. This is documented, not implemented by the help-screen work.
+- [x] Shared runtime emitter: configurable saved launch offsets reused by projectiles, flamethrower cones, Energy Wave and custom beam targeting; native controls exposed. Revision 8 preserves old replay origins. 1,678 tests passed, one skipped; final 62 focused checks passed; analysis clean; release web build passed. See [shared emitter notes](SHARED-ATTACK-EMITTER.md).
 
-## Flame rendering feasibility study (after correctness fixes)
+## Flame rendering feasibility study (recommended next after emitter work)
 
 This is an experiment, not approval to migrate engines. Keep the current renderer until measured evidence supports a change. Do not start the experiment during Batch 2.
 

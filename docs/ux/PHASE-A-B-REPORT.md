@@ -54,3 +54,5 @@ A before/after Android GPU/frame-time comparison has not been performed; no phon
 Phase A + B are implemented and software-validated locally. They are not a production or physical-device acceptance claim. No deployment, release tag, APK install or cumulative ZIP is performed by this task.
 
 Final bundle verification: the hero image and all three explicit notice files match their source SHA-256 hashes in `build/web`. See [BUILD-ASSET-CHECK.json](BUILD-ASSET-CHECK.json). Runtime screenshots and their dimensions/hashes are recorded in [SCREENSHOT-MANIFEST.json](SCREENSHOT-MANIFEST.json).
+
+Publication update: master and v1.14.61 release tag submitted on 2026-11-06 at the owner's explicit request. This triggers Pages and signed APK workflows; completion is not monitored automatically. Earlier statements describe the implementation-task boundary.

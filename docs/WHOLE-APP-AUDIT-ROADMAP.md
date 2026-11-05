@@ -202,3 +202,5 @@ Deployment and signed APK release submitted as v1.14.60 on 2026-11-06, including
 - [ ] Physical-device performance and published-build acceptance remain manual.
 
 Detailed scope, exact validation boundaries, screenshots and provenance: [Phase A + B report](ux/PHASE-A-B-REPORT.md). No deployment or release is performed by this task. Phases C/D/E remain future work.
+
+Phase A + B and the annotated Power-up Test changes submitted for web deployment and signed APK release as v1.14.61 on 2026-11-06. Workflow completion and published-device acceptance remain manually checked.

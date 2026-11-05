@@ -119,6 +119,7 @@ void main() {
         await SavedReplayStore.add(Uri.parse('https://example.com/?r=abc1234'));
         await tester.pumpWidget(BallWarsApp(shortLinks: links));
         await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Saved replays'));
         await tester.tap(find.text('Saved replays'));
         await tester.pumpAndSettle();
         await tester.tap(find.byIcon(Icons.play_circle_outline));

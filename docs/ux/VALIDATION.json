@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-06",
+  "flutter": "3.38.5",
+  "host": "Windows",
+  "baseline": "v1.14.60 / 15c500d",
+  "note": "Separate runs; counts overlap. Full suite preceded final palette/legal/dialog refinements; subsequent focused checks cover those. No production or physical-device acceptance implied.",
+  "runs": [
+    {
+      "command": "flutter test --concurrency=1",
+      "result": "1758 passed; 1 skipped",
+      "local_log": "build/game-ui-phase-ab-full-tests.log",
+      "log_sha256": "3bb519623dbaa361a26228b8ebd92493db3bcec14c823a2d9b409125c08b8002"
+    },
+    {
+      "command": "flutter test test/core/legal/app_licenses_test.dart test/core/theme test/app_navigation_test.dart test/widget_test_smoke.dart test/features/match_setup test/features/settings/power_up_test_screen_test.dart --dart-define=GAME_UI_GOLDENS=true",
+      "result": "111 passed",
+      "local_log": "build/game-ui-phase-ab-final-verified.log",
+      "log_sha256": "04dfe5ef6cc052323f848a7dc2676f973c28ff26fa9de6a71edfeb02d95a807f"
+    },
+    {
+      "command": "flutter test test/features/match_setup test/features/arena_simulation/presentation/arena_selection_dialog_test.dart test/core/theme test/visual/capture_player_ui.dart --dart-define=GAME_UI_GOLDENS=true",
+      "result": "90 passed; capture tool subsequently moved to test/visual",
+      "local_log": "build/game-ui-final-dialog-validation.log",
+      "log_sha256": "944d04a6a726134285dd3c4b229754177383956c6b16e44ac0d34cc3ca499dbd"
+    },
+    {
+      "command": "flutter test test/visual/capture_player_ui.dart",
+      "result": "1 passed",
+      "local_log": "build/game-ui-phase-ab-screenshots.log",
+      "log_sha256": "d991b3a4a05e5c353fbd703953b96d42a5f410577467e5f24925066e096825a7"
+    },
+    {
+      "command": "flutter analyze",
+      "result": "No issues",
+      "local_log": "build/game-ui-phase-ab-final-analysis.log",
+      "log_sha256": "b786a8255cf734c291ffec7d4fbb9185ff76df484166aa0760bd8c8cc6c7dfb2"
+    },
+    {
+      "command": "flutter build web --release --no-wasm-dry-run",
+      "result": "Built build/web",
+      "local_log": "build/game-ui-phase-ab-final-web.log",
+      "log_sha256": "3eaa89eb9f42751f66e90683a2980c7dfdfae37d52d1c7e08b224205f0976519"
+    }
+  ]
+}

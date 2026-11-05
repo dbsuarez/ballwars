@@ -1,3 +1,5 @@
+import '../../../core/theme/game_ui.dart';
+import '../../arena_simulation/presentation/arena_preview.dart';
 import '../../../core/widgets/number_stepper.dart';
 import '../../arenas/domain/arena_placement.dart';
 import '../../arenas/domain/arena_definition.dart';
@@ -759,7 +761,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   Future<void> _chooseWeapons() async {
     GameAudio.instance.click();
     final spawnable = _spawnableCustom;
-    final choice = await showDialog<_WeaponChoice>(
+    final choice = await showGameDialog<_WeaponChoice>(
       context: context,
       builder: (_) => _WeaponsDialog(
         skillLibrary: AppSettingsScope.of(context).skillLibrary,
@@ -829,6 +831,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     ArenaDefinition? custom;
     final picked = await showArenaSelectionDialog(
       context,
+      theme:GameUi.theme(context),
       selected: _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
       selectedPresetId: _effectiveArenaId,
       shape: _arenaShape,
@@ -855,7 +858,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
 
   Future<void> _editCutTarget() async {
     final input = TextEditingController(text:'$_neoThreadsTarget');
-    final value = await showDialog<int>(context:context,builder:(context)=>StatefulBuilder(builder:(context,refresh) {
+    final value = await showGameDialog<int>(context:context,builder:(context)=>StatefulBuilder(builder:(context,refresh) {
       final parsed = int.tryParse(input.text);
       final valid = parsed != null && parsed >= 1 && parsed <= 1000;
       return AlertDialog(title:const Text('Cuts to win'),content:TextField(key:const ValueKey('cut-race-target'),controller:input,
@@ -941,47 +944,139 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameTheme(child: Builder(builder: _buildSetup));
+
+  Widget _buildSetup(BuildContext context) {
     final c = BallWarsColors.of(context);
     final balls = _visibleBalls;
 
     final modeTitle = _mayhem ? 'Mayhem' : _mode.label;
     return Scaffold(
-      appBar: AppBar(title: Text(modeTitle)),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                  child: _categoryPicker(c),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(modeTitle),
+            const Text(
+              'MATCH SETUP',
+              style: TextStyle(
+                fontSize: 9,
+                color: GameUi.cyan,
+                letterSpacing: 1.8,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: GameBackdrop(
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, bounds) {
+              final compact = bounds.maxHeight < 520;
+              final content = ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 720,
+                  minHeight: bounds.maxHeight,
+                  maxHeight: compact ? double.infinity : bounds.maxHeight,
                 ),
-                if (_categoryBalls.length > _searchFrom)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                    child: TextField(
-                      controller: _search,
-                      onChanged: (_) => _update(() {}),
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
-                        hintText: 'Search',
-                        isDense: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+                      child: GamePanel(
+                        accent: _modeAccent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(_modeIcon, color: _modeAccent, size: 32),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'BUILD YOUR LINEUP',
+                                    style: TextStyle(
+                                      color: c.text,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: .4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    _mayhem
+                                        ? 'Six to eight balls. Most KOs wins.'
+                                        : _mode.isThreadOnly
+                                        ? 'Cut their threads. Claim the arena.'
+                                        : 'Choose your fighters. Set the rules.',
+                                    style: TextStyle(
+                                      color: c.muted,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                Expanded(child: _ballGrid(c, balls)),
-                _footer(c),
-              ],
-            ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                      child: _categoryPicker(c),
+                    ),
+                    if (_categoryBalls.length > _searchFrom)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        child: TextField(
+                          controller: _search,
+                          onChanged: (_) => _update(() {}),
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Search',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    if (compact)
+                      SizedBox(height: 240, child: _ballGrid(c, balls))
+                    else
+                      Expanded(child: _ballGrid(c, balls)),
+                    _footer(c),
+                  ],
+                ),
+              );
+              return SingleChildScrollView(
+                key: const ValueKey('match-setup-scroll'),
+                physics: compact ? null : const NeverScrollableScrollPhysics(),
+                child: Center(child: content),
+              );
+            },
           ),
         ),
       ),
     );
   }
-
+  Color get _modeAccent => _mayhem
+      ? GameUi.purple
+      : _mode == MatchMode.allOut
+      ? GameUi.orange
+      : _mode == MatchMode.threadGrowth
+      ? GameUi.purple
+      : GameUi.cyan;
+  IconData get _modeIcon => _mayhem
+      ? Icons.cyclone
+      : _mode == MatchMode.allOut
+      ? Icons.local_fire_department
+      : _mode.isThreadOnly
+      ? Icons.hub_outlined
+      : Icons.gps_fixed;
   Widget _categoryPicker(BallWarsColors c) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -993,7 +1088,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           ],
           selected: {_filter},
           showSelectedIcon: false,
-          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          style: const ButtonStyle(visualDensity: VisualDensity.compact,padding:WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal:6,vertical:10)),textStyle:WidgetStatePropertyAll(TextStyle(fontFamily:'Manrope',fontSize:12,fontWeight:FontWeight.w700))),
           onSelectionChanged: (v) => _setFilter(v.first),
         ),
         const SizedBox(height: 12),
@@ -1123,10 +1218,10 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 92,
-        mainAxisExtent: 112,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 14,
+        maxCrossAxisExtent: 110,
+        mainAxisExtent: 132,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
       ),
       itemCount: balls.length,
       itemBuilder: (context, index) {
@@ -1142,32 +1237,51 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             borderRadius: BorderRadius.circular(14),
             child: Opacity(
               opacity: full ? 0.35 : 1,
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: selected ? c.text : Colors.transparent,
-                        width: 2,
+              child: GamePanel(
+                selected: selected,
+                accent: selected ? GameUi.gold : GameUi.blue,
+                padding: const EdgeInsets.fromLTRB(5, 8, 5, 6),
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: selected ? c.text : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: CircularBallPreview(ball: ball, size: 56),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          ball.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: AppText.ui(
+                            12,
+                            selected ? FontWeight.w700 : FontWeight.w600,
+                            color: selected ? c.text : c.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (selected)
+                      const Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Icon(
+                          Icons.check_circle,
+                          color: GameUi.gold,
+                          size: 17,
+                        ),
                       ),
-                    ),
-                    child: CircularBallPreview(ball: ball, size: 56),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    ball.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: AppText.ui(
-                      12,
-                      selected ? FontWeight.w700 : FontWeight.w600,
-                      color: selected ? c.text : c.muted,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1175,8 +1289,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       },
     );
   }
-
-  Future<void> _settingsInfo() => showDialog<void>(
+  Future<void> _settingsInfo() => showGameDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Match settings guide'),
@@ -1216,7 +1329,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         builder: (sheetContext) => StatefulBuilder(
           builder: (context, refresh) {
             _refreshDrawer = () => refresh(() {});
-            return ConstrainedBox(
+            return GameTheme(child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(context).height * 0.9,
               ),
@@ -1307,7 +1420,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   Flexible(
                     child: SingleChildScrollView(
                       child: _settingsPanel(
-                        BallWarsColors.of(context),
+                        GameUi.theme(context).extension<BallWarsColors>()!,
                         _settingsTab,
                       ),
                     ),
@@ -1328,7 +1441,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                   ),
                 ],
               ),
-            );
+            ));
           },
         ),
       );
@@ -1345,8 +1458,11 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
+        gradient: LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,
+          colors:c.background==GameUi.navy?const [Color(0xFF192C59),GameUi.navy]:[c.surface,c.background]),
+        border: Border(
+          top: BorderSide(color: _modeAccent.withValues(alpha: .65)),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1380,32 +1496,79 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 await _loadPrefs();
               },
             ),
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              dense: true,
-              title: const Text('Edit match settings'),
-              subtitle: Text(
-                [
-                  _winsNeeded == 1 ? '1 round' : 'First to $_winsNeeded',
-                  '${_speedMultiplier}x',
-                  _ballSize.label,
-                  'Effects ${_showEffects ? "on" : "off"}',
-                  'Finishers ${_finishersOn ? "on" : "off"}',
-                  if (!_mode.isThreadOnly) pickups,
-                  if (_dualWield && !_mode.isThreadOnly) 'Dual wield',
-                  if (_mayhem) 'Mayhem',
-                  if (_endlessBattle && !_mayhem && _mode == MatchMode.arsenal)
-                    'Endless',
-                  if (_mode == MatchMode.threadGrowth)
-                    'Max $_threadGrowthMaxThreads threads',
-                  if (_shrinkingArena) 'Shrinking arena',
-                ].join(' / '),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: const Icon(Icons.tune),
-              onTap: _openSettings,
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Tooltip(
+                  message: 'Choose arena',
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _chooseArena,
+                      child: GamePanel(
+                        accent: _modeAccent,
+                        padding: const EdgeInsets.all(6),
+                        child: Column(
+                          children: [
+                            ArenaPreview(
+                              decoration:
+                                  _arenaDecoration ??
+                                  AppSettingsScope.of(context).arenaDecoration,
+                              arena: _selectedArena,
+                              shape: _arenaShape,
+                              size: 44,
+                            ),
+                            const Text(
+                              'Arena',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GamePanel(
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      dense: true,
+                      title: const Text('Edit match settings'),
+                      subtitle: Text(
+                        [
+                          _winsNeeded == 1
+                              ? '1 round'
+                              : 'First to $_winsNeeded',
+                          '${_speedMultiplier}x',
+                          _ballSize.label,
+                          'Effects ${_showEffects ? "on" : "off"}',
+                          'Finishers ${_finishersOn ? "on" : "off"}',
+                          if (!_mode.isThreadOnly) pickups,
+                          if (_dualWield && !_mode.isThreadOnly) 'Dual wield',
+                          if (_mayhem) 'Mayhem',
+                          if (_endlessBattle &&
+                              !_mayhem &&
+                              _mode == MatchMode.arsenal)
+                            'Endless',
+                          if (_mode == MatchMode.threadGrowth)
+                            'Max $_threadGrowthMaxThreads threads',
+                          if (_shrinkingArena) 'Shrinking arena',
+                        ].join(' / '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: const Icon(Icons.tune),
+                      onTap: _openSettings,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(
@@ -1420,9 +1583,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 Expanded(
                   child: _selected.isEmpty
                       ? Text(
-                          _mayhem
-                              ? 'Pick 6–8 balls'
-                              : 'Pick 2 to 4 balls',
+                          _mayhem ? 'Pick 6–8 balls' : 'Pick 2 to 4 balls',
                           style: AppText.ui(
                             13,
                             FontWeight.w500,
@@ -1451,7 +1612,12 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                                   onDeleted: () => _toggle(ball),
                                   backgroundColor: c.surfaceHigh,
                                   side: BorderSide.none,
-                                  shape: const StadiumBorder(),
+                                  shape: BeveledRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    side: BorderSide(
+                                      color: _modeAccent.withValues(alpha: .4),
+                                    ),
+                                  ),
                                 ),
                               ),
                           ],
@@ -1483,15 +1649,20 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           Row(
             children: [
               OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 48),
+                ),
                 onPressed: _categoryBalls.length >= 2 ? _randomMatchup : null,
-                icon: const Icon(Icons.shuffle),
-                label: const Text('Random'),
+                icon: const Icon(Icons.shuffle, size: 18),
+                label: const Text('Random', style: TextStyle(fontSize: 12)),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton(
+                child: GameActionButton(
+                  key: const ValueKey('start-battle'),
+                  label: 'Start',
                   onPressed: _canStart ? _start : null,
-                  child: const Text('Start'),
                 ),
               ),
             ],
@@ -1500,7 +1671,6 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       ),
     );
   }
-
   bool get _useSettingCards => _settingCards;
 
   Widget _choice<T>(
@@ -1801,6 +1971,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             onTap: () async {
               final selection = await showArenaGeometryEditor(
                 context,
+                theme:GameUi.theme(context),
                 shape: _arenaShape,
                 obstacle: _centerObstacle,
                 scale: _centerObstacleScale,
@@ -1861,7 +2032,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             trailing: IconButton(
               icon: const Icon(Icons.help_outline),
               tooltip: 'Trap override help',
-              onPressed: () => showDialog<void>(
+              onPressed: () => showGameDialog<void>(
                 context: context,
                 builder: (dialogContext) => AlertDialog(
                   title: const Text('Trap overrides'),
@@ -2188,7 +2359,7 @@ class _WeaponsDialogState extends State<_WeaponsDialog> {
   late final Set<String> _customOn = {...widget.initialCustom};
 
   Future<void> _presets() async {
-    final preset = await showDialog<LoadoutPreset>(
+    final preset = await showGameDialog<LoadoutPreset>(
       context: context,
       builder: (_) => LoadoutPresetsDialog(
         currentKinds: {..._on},

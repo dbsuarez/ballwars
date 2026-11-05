@@ -5,8 +5,14 @@ import '../../arena_simulation/domain/arena_boundary_geometry.dart';
 /// Editable preview of the arena's outer boundary and hollow obstacle.
 /// This editor shares the same shape and obstacle values used by physics.
 class ArenaGeometrySelection {
-  const ArenaGeometrySelection(this.shape, this.obstacle, this.scale,
-      this.rotateThemes, this.rotateShapes, this.intervalSeconds);
+  const ArenaGeometrySelection(
+    this.shape,
+    this.obstacle,
+    this.scale,
+    this.rotateThemes,
+    this.rotateShapes,
+    this.intervalSeconds,
+  );
   final ArenaShape shape;
   final CenterObstacle obstacle;
   final double scale;
@@ -24,17 +30,21 @@ Future<ArenaGeometrySelection?> showArenaGeometryEditor(
   bool rotateShapes = false,
   int intervalSeconds = 60,
   bool allowRotation = true,
+  ThemeData? theme,
 }) => showDialog<ArenaGeometrySelection>(
   context: context,
-  builder: (context) => _ArenaGeometryEditor(
-    allowRotation: allowRotation,
-    initialShape: shape,
-    initialObstacle: obstacle,
-    initialScale: scale,
-    initialRotateThemes: rotateThemes,
-    initialRotateShapes: rotateShapes,
-    initialIntervalSeconds: intervalSeconds,
-  ),
+  builder: (context) {
+    final dialog = _ArenaGeometryEditor(
+      allowRotation: allowRotation,
+      initialShape: shape,
+      initialObstacle: obstacle,
+      initialScale: scale,
+      initialRotateThemes: rotateThemes,
+      initialRotateShapes: rotateShapes,
+      initialIntervalSeconds: intervalSeconds,
+    );
+    return theme == null ? dialog : Theme(data: theme, child: dialog);
+  },
 );
 
 class _ArenaGeometryEditor extends StatefulWidget {
@@ -65,8 +75,10 @@ class _ArenaGeometryEditorState extends State<_ArenaGeometryEditor> {
   late double scale = widget.initialScale.clamp(0.12, 0.34);
   late bool rotateThemes = widget.initialRotateThemes;
   late bool rotateShapes = widget.initialRotateShapes;
-  late int intervalSeconds = [30, 60, 90, 120, 180, 300].contains(widget.initialIntervalSeconds)
-      ? widget.initialIntervalSeconds : 60;
+  late int intervalSeconds =
+      [30, 60, 90, 120, 180, 300].contains(widget.initialIntervalSeconds)
+      ? widget.initialIntervalSeconds
+      : 60;
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -80,45 +92,68 @@ class _ArenaGeometryEditorState extends State<_ArenaGeometryEditor> {
             SizedBox.square(
               dimension: 230,
               child: CustomPaint(
-                painter: _GeometryPainter(shape, obstacle, scale,
-                    Theme.of(context).colorScheme.primary),
+                painter: _GeometryPainter(
+                  shape,
+                  obstacle,
+                  scale,
+                  Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
             DropdownButtonFormField<ArenaShape>(
               initialValue: shape,
               decoration: const InputDecoration(labelText: 'Outer boundary'),
-              items: [for (final value in ArenaShape.values)
-                DropdownMenuItem(value: value, child: Text(value.label))],
-              onChanged: (value) { if (value != null) setState(() => shape = value); },
+              items: [
+                for (final value in ArenaShape.values)
+                  DropdownMenuItem(value: value, child: Text(value.label)),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => shape = value);
+              },
             ),
             DropdownButtonFormField<CenterObstacle>(
               initialValue: obstacle,
               decoration: const InputDecoration(labelText: 'Center obstacle'),
-              items: [for (final value in CenterObstacle.values)
-                DropdownMenuItem(value: value, child: Text(value.label))],
-              onChanged: (value) { if (value != null) setState(() => obstacle = value); },
+              items: [
+                for (final value in CenterObstacle.values)
+                  DropdownMenuItem(value: value, child: Text(value.label)),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => obstacle = value);
+              },
             ),
             const Divider(),
-            if(widget.allowRotation) SwitchListTile(
-              key: const ValueKey('editor-rotate-themes'),
-              title: const Text('Rotate arena themes'),
-              subtitle: const Text('Default, Neon Grid, Desert, Space, Wilderness'),
-              value: rotateThemes,
-              onChanged: (value) => setState(() => rotateThemes = value),
-            ),
-            if(widget.allowRotation) SwitchListTile(
-              key: const ValueKey('editor-rotate-shapes'),
-              title: const Text('Rotate circle / square'),
-              value: rotateShapes,
-              onChanged: (value) => setState(() => rotateShapes = value),
-            ),
+            if (widget.allowRotation)
+              SwitchListTile(
+                key: const ValueKey('editor-rotate-themes'),
+                title: const Text('Rotate arena themes'),
+                subtitle: const Text(
+                  'Default, Neon Grid, Desert, Space, Wilderness',
+                ),
+                value: rotateThemes,
+                onChanged: (value) => setState(() => rotateThemes = value),
+              ),
+            if (widget.allowRotation)
+              SwitchListTile(
+                key: const ValueKey('editor-rotate-shapes'),
+                title: const Text('Rotate circle / square'),
+                value: rotateShapes,
+                onChanged: (value) => setState(() => rotateShapes = value),
+              ),
             if (widget.allowRotation && (rotateThemes || rotateShapes))
               DropdownButtonFormField<int>(
                 key: const ValueKey('editor-rotation-interval'),
                 initialValue: intervalSeconds,
-                decoration: const InputDecoration(labelText: 'Rotation interval'),
-                items: [for (final seconds in [30, 60, 90, 120, 180, 300])
-                  DropdownMenuItem(value: seconds, child: Text('$seconds seconds'))],
+                decoration: const InputDecoration(
+                  labelText: 'Rotation interval',
+                ),
+                items: [
+                  for (final seconds in [30, 60, 90, 120, 180, 300])
+                    DropdownMenuItem(
+                      value: seconds,
+                      child: Text('$seconds seconds'),
+                    ),
+                ],
                 onChanged: (value) {
                   if (value != null) setState(() => intervalSeconds = value);
                 },
@@ -138,10 +173,22 @@ class _ArenaGeometryEditorState extends State<_ArenaGeometryEditor> {
       ),
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
       FilledButton(
-        onPressed: () => Navigator.pop(context, ArenaGeometrySelection(shape, obstacle, scale,
-          rotateThemes, rotateShapes, intervalSeconds)),
+        onPressed: () => Navigator.pop(
+          context,
+          ArenaGeometrySelection(
+            shape,
+            obstacle,
+            scale,
+            rotateThemes,
+            rotateShapes,
+            intervalSeconds,
+          ),
+        ),
         child: const Text('Apply'),
       ),
     ],
@@ -159,7 +206,10 @@ class _GeometryPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide * 0.44;
-    final pen = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 3;
+    final pen = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
     // Use the same boundary geometry as gameplay collision and rendering.
     canvas.save();
     canvas.translate(center.dx, center.dy);
@@ -168,12 +218,21 @@ class _GeometryPainter extends CustomPainter {
     if (obstacle == CenterObstacle.circle) {
       canvas.drawCircle(center, radius * scale, pen);
     } else if (obstacle == CenterObstacle.square) {
-      canvas.drawRect(Rect.fromCenter(center: center, width: radius * scale * 2,
-          height: radius * scale * 2), pen);
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: center,
+          width: radius * scale * 2,
+          height: radius * scale * 2,
+        ),
+        pen,
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _GeometryPainter old) =>
-      old.shape != shape || old.obstacle != obstacle || old.scale != scale || old.color != color;
+      old.shape != shape ||
+      old.obstacle != obstacle ||
+      old.scale != scale ||
+      old.color != color;
 }

@@ -9,14 +9,15 @@ import 'arena_preview.dart';
 Future<ArenaDecoration?> showArenaSelectionDialog(BuildContext context, {
   required ArenaDecoration selected,String? selectedPresetId,
   ArenaShape shape=ArenaShape.circle,ValueChanged<ArenaDefinition>? onSelectPreset,
-  List<ArenaDefinition> transientPresets = const [],
-})=>showDialog<ArenaDecoration>(context:context,builder:(_)=>ArenaSelectionDialog(
-  selected:selected,selectedPresetId:selectedPresetId,shape:shape,onSelectPreset:onSelectPreset,
-  presets:onSelectPreset==null ? const [] : <String,ArenaDefinition>{
-    for (final arena in AppSettingsScope.of(context).arenaCatalog.arenas)
-      if (arena.enabled) arena.id:arena,
-    for (final arena in transientPresets) arena.id:arena,
-  }.values.toList()));
+  List<ArenaDefinition> transientPresets = const [],ThemeData? theme,
+})=>showDialog<ArenaDecoration>(context:context,builder:(_){
+  final dialog=ArenaSelectionDialog(selected:selected,selectedPresetId:selectedPresetId,shape:shape,onSelectPreset:onSelectPreset,
+    presets:onSelectPreset==null?const []:<String,ArenaDefinition>{
+      for(final arena in AppSettingsScope.of(context).arenaCatalog.arenas)if(arena.enabled)arena.id:arena,
+      for(final arena in transientPresets)arena.id:arena,
+    }.values.toList());
+  return theme==null?dialog:Theme(data:theme,child:dialog);
+});
 
 /// Shared by player setup, administrator defaults and Power-up Test.
 class ArenaSelectionDialog extends StatelessWidget {

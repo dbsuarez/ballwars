@@ -79,6 +79,10 @@ flutter:
     - assets/sounds/
     - assets/sprites/
     - assets/help/
+    - assets/ui/
+    - assets/licenses/
+    - assets/fonts/Manrope-OFL.txt
+    - assets/fonts/JetBrainsMono-OFL.txt
 
   # Bundled fonts (SIL Open Font License, see assets/fonts/*-OFL.txt).
   # Manrope is a variable font: weights are set with FontVariation('wght').

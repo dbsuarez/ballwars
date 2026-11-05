@@ -1,0 +1,110 @@
+{
+  "capture": "Flutter runtime, local offline fixtures, real bundled fonts; not physical-device photographs",
+  "screenshots": [
+    {
+      "path": "docs/ux/screenshots/gallery-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 172142,
+      "sha256": "a4934658b6f860b80031e86357bf81c5f48d729b1c02b4b18225d3b90c676cc6"
+    },
+    {
+      "path": "docs/ux/screenshots/gallery-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 235718,
+      "sha256": "a2853812ca9d06919d59346dc36b909dcd579ed2831ddc03e25d86b5cb4b770e"
+    },
+    {
+      "path": "docs/ux/screenshots/gallery-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 95645,
+      "sha256": "44a4963612e6d9b5e0798caf6a9921e3c8e4df89b3aa599be8155180c321a166"
+    },
+    {
+      "path": "docs/ux/screenshots/home-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 290993,
+      "sha256": "6acea4b45d5a378c4a03f131a4ab27aaa5dbdb89eda5ace4ec717fe1d297828a"
+    },
+    {
+      "path": "docs/ux/screenshots/home-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 378291,
+      "sha256": "046233df110464c6bb7432e4332b677f7546ceac6ef88ddd6194887e6bee8ca3"
+    },
+    {
+      "path": "docs/ux/screenshots/home-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 261611,
+      "sha256": "d0f1545008688a8ba41722c4905aefa6ac8889540c6c571699d5fe329eff3e01"
+    },
+    {
+      "path": "docs/ux/screenshots/powerup-320x740.png",
+      "width": 320,
+      "height": 740,
+      "bytes": 80684,
+      "sha256": "bc40745393cad6f737cd166daef32d8d97cd3eda4a35dcbb27d2df10fd390daa"
+    },
+    {
+      "path": "docs/ux/screenshots/powerup-390x844.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 107740,
+      "sha256": "2b3972e8818a2c4d8533ab1d1969760b669020f036639d8c8adfa3fcdadb204c"
+    },
+    {
+      "path": "docs/ux/screenshots/powerup-collapsed-390x844.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 106836,
+      "sha256": "ca79305b4f231029d916535ce282a5965210ebde572581fd6932e897264957a0"
+    },
+    {
+      "path": "docs/ux/screenshots/setup-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 199895,
+      "sha256": "03f3e4024ce745f93d9b7dda3a5ad2a43a0147ab3d7e3e67ce8d319d9f905935"
+    },
+    {
+      "path": "docs/ux/screenshots/setup-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 244738,
+      "sha256": "293b0227affa49fd5ebb8d280c121a9a2a01034c64659d78150abcb6e618db24"
+    },
+    {
+      "path": "docs/ux/screenshots/setup-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 90166,
+      "sha256": "68d9ee07c6000c0d953781ca8cc5645c42b7bc9f8ff23abd4ab3dcf0ca01d26f"
+    },
+    {
+      "path": "docs/ux/screenshots/setup-disabled-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 183754,
+      "sha256": "5b031873cd6a1f3eb05d1b02b07eb474a64cd8211c7cdd0c9eb5f549f2930552"
+    },
+    {
+      "path": "docs/ux/screenshots/setup-disabled-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 230477,
+      "sha256": "c6d01ab31333733f1ea1f0769a6289fe91399951f96c8452296fcc50d87f106d"
+    },
+    {
+      "path": "docs/ux/screenshots/setup-disabled-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 86759,
+      "sha256": "fa434f41c6e15c359fddf65b754ef5027a454e86225a41d94eb71a395f05b673"
+    }
+  ]
+}

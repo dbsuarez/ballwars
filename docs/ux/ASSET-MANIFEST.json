@@ -1,0 +1,70 @@
+{
+  "verified_on": "2026-11-06",
+  "new_runtime_dependencies": [],
+  "artwork": [
+    {
+      "path": "assets/ui/lobby-hero.webp",
+      "bytes": 129778,
+      "sha256": "631f5bad6b827279c4f7c3372a9ca2142a008266fb77bbccb742a412a9aad78d",
+      "creator": "User-supplied artwork",
+      "permission": "Owner confirmed in conversation on 2026-11-06: these are mine; reuse the artwork. Approved for Ball Wars commercial use; no third-party open-source license is asserted.",
+      "source": "docs/ux/ChatGPT Image Nov 6, 2026, 12_23_28 AM-1.png",
+      "processing": {
+        "tool": "PhotoCraft CLI",
+        "crop": {
+          "x": 0,
+          "y": 425,
+          "width": 941,
+          "height": 555
+        },
+        "output": "WebP quality 88",
+        "master": "docs/ux/processed/lobby-hero.png",
+        "master_sha256": "77e3d7af3fce55850121fee8f8e8b8583950f1ea7af135400a721e8f5a3c4d6d"
+      },
+      "source_sha256": "b461836c393123361c5b4b892dee17650ca535ac4dda122baa8c6b36330a81b1"
+    }
+  ],
+  "existing_fonts": [
+    {
+      "path": "assets/fonts/Manrope-OFL.txt",
+      "bytes": 4387,
+      "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b",
+      "asset": "Manrope",
+      "license": "SIL-OFL-1.1",
+      "credit": "The Manrope Project Authors"
+    },
+    {
+      "path": "assets/fonts/JetBrainsMono-OFL.txt",
+      "bytes": 4399,
+      "sha256": "b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d",
+      "asset": "JetBrains Mono",
+      "license": "SIL-OFL-1.1",
+      "credit": "The JetBrains Mono Project Authors"
+    },
+    {
+      "path": "assets/licenses/material-icons-license.txt",
+      "bytes": 18531,
+      "sha256": "be698262aecd042c0de6f886cc0af622f8def446462026992cc530275d8a9e74",
+      "asset": "Material Design icons, supplied by Flutter SDK 3.38.5",
+      "license": "CC-BY-4.0",
+      "credit": "Google",
+      "source": "https://github.com/google/material-design-icons"
+    }
+  ],
+  "tools": [
+    {
+      "name": "PhotoCraft CLI",
+      "use": "Local crop and WebP export only; not shipped",
+      "license": "MIT OR Apache-2.0",
+      "evidence": "C:/Program Files/PhotoCraft/NOTICE, first four lines, inspected 2026-11-06",
+      "trademarks": "No ArtCraft marks or logos are included in Ball Wars."
+    },
+    {
+      "name": "Flutter/Dart SDK 3.38.5",
+      "use": "Existing SDK, UI rendering and validation",
+      "license": "BSD-3-Clause (Flutter SDK LICENSE inspected locally)"
+    }
+  ],
+  "notices": "Home > Credits & licenses exposes explicit font/icon notices alongside Flutter package notices.",
+  "original_ui": "Game chrome, panels, background painting and component source are authored in this project; no third-party UI kit or paid dependency was added."
+}

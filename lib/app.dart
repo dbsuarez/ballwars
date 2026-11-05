@@ -1,8 +1,10 @@
+import 'core/legal/app_licenses.dart';
+import 'core/theme/game_ui.dart';
+import 'features/lobby/presentation/lobby_hero.dart';
 import 'dart:async';
 import 'features/arena_simulation/presentation/power_up_sprites.dart';
 import 'core/widgets/app_frame.dart';
 import 'core/sprites/visual_quality.dart';
-import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -85,12 +87,15 @@ class _BallWarsAppState extends State<BallWarsApp> {
   @override
   void initState() {
     super.initState();
+    AppLicenses.register();
     VisualQuality.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(PowerUpSprites.load().catchError((Object error) {
-        debugPrint('Background artwork warm-up failed: $error');
-      }));
+      unawaited(
+        PowerUpSprites.load().catchError((Object error) {
+          debugPrint('Background artwork warm-up failed: $error');
+        }),
+      );
     });
     // The admin's music choice applies to every player's matches.
     _settings.addListener(_applyMusic);
@@ -162,7 +167,8 @@ class _BallWarsAppState extends State<BallWarsApp> {
         valueListenable: _settings,
         builder: (context, settings, _) => MaterialApp(
           title: 'Ball Wars',
-          builder:(context,child)=>AppFrame(child:child ?? const SizedBox.shrink()),
+          builder: (context, child) =>
+              AppFrame(child: child ?? const SizedBox.shrink()),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.build(AppPalettes.byId(settings.themeId)),
           home: FutureBuilder<void>(
@@ -305,13 +311,26 @@ class _HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<_HomeScreen> {
   BallPackRepository get _packs => widget.packs;
-  String _version = '1.14.11';
+  String _version = '...';
   int _savedReplayCount = 0;
   bool _savedReplayReadFailed = false;
+  MatchMode _lastMode = MatchMode.threads;
+  bool _lastMayhem = false, _modeChosen = false;
+  Future<void> _restoreLobbyMode() async {
+    final mode = MatchMode.byId(await DevicePrefs.read('lobby-mode'));
+    final mayhem = await DevicePrefs.read('lobby-mayhem') == '1';
+    if (mounted && !_modeChosen) {
+      setState(() {
+        _lastMode = mode ?? MatchMode.threads;
+        _lastMayhem = mayhem && _lastMode == MatchMode.arsenal;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _restoreLobbyMode();
     PackageInfo.fromPlatform()
         .then((info) {
           if (mounted) setState(() => _version = info.version);
@@ -555,9 +574,9 @@ class _HomeScreenState extends State<_HomeScreen> {
             ballSize: link.ballSize,
             mode: link.mode,
             threadGrowthMaxThreads: link.threadGrowthMaxThreads,
-      neoThreadsTarget: link.neoThreadsTarget,
-      threadCutRace: link.threadCutRace,
-      cutRaceSurvival: link.cutRaceSurvival,
+            neoThreadsTarget: link.neoThreadsTarget,
+            threadCutRace: link.threadCutRace,
+            cutRaceSurvival: link.cutRaceSurvival,
             question: link.question,
             powerUps: link.powerUps,
             customSkills: link.customSkills,
@@ -601,6 +620,13 @@ class _HomeScreenState extends State<_HomeScreen> {
     MatchMode mode = MatchMode.threads,
     bool mayhem = false,
   ]) {
+    _modeChosen = true;
+    setState(() {
+      _lastMode = mode;
+      _lastMayhem = mayhem;
+    });
+    DevicePrefs.write('lobby-mode', mode.id);
+    DevicePrefs.write('lobby-mayhem', mayhem ? '1' : '0');
     GameAudio.instance.click();
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -622,43 +648,56 @@ class _HomeScreenState extends State<_HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final c = BallWarsColors.of(context);
+  Widget build(BuildContext context) =>
+      GameTheme(child: Builder(builder: _buildLobby));
+
+  Widget _buildLobby(BuildContext context) {
     final customGroups = widget.customGroups;
+    Widget mode(
+      String title,
+      String subtitle,
+      IconData icon,
+      Color accent,
+      MatchMode value, {
+      bool mayhem = false,
+    }) => GameModeTile(
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      accent: accent,
+      selected: _lastMode == value && _lastMayhem == mayhem,
+      onTap: () => _openMatchSetup(value, mayhem),
+    );
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AppFrame.maxWidth),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      body: GameBackdrop(
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, bounds) => SingleChildScrollView(
+              key: const ValueKey('game-lobby-scroll'),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        'BALL WARS',
-                        style: AppText.ui(
-                          15,
-                          FontWeight.w800,
-                          color: c.text,
-                          letterSpacing: 2.6,
+                      const Expanded(
+                        child: Text(
+                          'BATTLE LOBBY',
+                          style: TextStyle(
+                            color: GameUi.cyan,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
                         ),
                       ),
-                      const Spacer(),
-                      IconButton(
+                      GameIconButton(
                         tooltip: GameAudio.instance.menuMusicOn
                             ? 'Home music: on'
                             : 'Home music: off',
-                        icon: Icon(
-                          GameAudio.instance.menuMusicOn
-                              ? Icons.music_note_rounded
-                              : Icons.music_off_rounded,
-                          color: GameAudio.instance.menuMusicOn
-                              ? c.text
-                              : c.muted,
-                        ),
+                        icon: GameAudio.instance.menuMusicOn
+                            ? Icons.music_note_rounded
+                            : Icons.music_off_rounded,
                         onPressed: () async {
                           await GameAudio.instance.setMenuMusicOn(
                             !GameAudio.instance.menuMusicOn,
@@ -667,9 +706,9 @@ class _HomeScreenState extends State<_HomeScreen> {
                           if (mounted) setState(() {});
                         },
                       ),
-                      IconButton(
+                      GameIconButton(
                         tooltip: 'Settings',
-                        icon: const Icon(Icons.tune),
+                        icon: Icons.tune,
                         onPressed: () {
                           GameAudio.instance.click();
                           Navigator.of(context).push(
@@ -686,14 +725,41 @@ class _HomeScreenState extends State<_HomeScreen> {
                   ),
                   if (widget.offlineProgress != null)
                     _OfflineProgress(widget.offlineProgress!),
-                  Expanded(
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: CustomPaint(
-                          painter: _HomeArenaPainter(rim: c.text),
+                  const Icon(
+                    Icons.workspace_premium_rounded,
+                    color: GameUi.gold,
+                    size: 27,
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'BALL ',
+                          style: TextStyle(
+                            color: BallWarsColors.of(context).text,
+                          ),
                         ),
-                      ),
+                        TextSpan(
+                          text: 'WARS',
+                          style: TextStyle(color: GameUi.gold),
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Manrope',
+                      fontSize: 43,
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.8,
+                      shadows: [
+                        Shadow(
+                          color: Color(0xFF03051B),
+                          offset: Offset(0, 4),
+                          blurRadius: 1,
+                        ),
+                        Shadow(color: Color(0x80417AF4), blurRadius: 18),
+                      ],
                     ),
                   ),
                   Text(
@@ -703,83 +769,99 @@ class _HomeScreenState extends State<_HomeScreen> {
                       RegExp(r'^\w'),
                       (m) => m[0]!.toUpperCase(),
                     ),
-                    style: AppText.ui(
-                      40,
-                      FontWeight.w800,
-                      color: c.text,
-                      height: 1.05,
-                      letterSpacing: -0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Pick two to four balls. Each holds a fan of lines to the rim - cut them all and it\'s out.',
-                    style: AppText.ui(
-                      15,
-                      FontWeight.w500,
-                      color: c.muted,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Version $_version',
                     textAlign: TextAlign.center,
-                    style: AppText.ui(12, FontWeight.w500, color: c.muted),
+                    style: TextStyle(
+                      color: BallWarsColors.of(context).muted,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(
+                    height: (bounds.maxWidth * .45).clamp(145.0, 200.0),
+                    child: const LobbyHero(),
+                  ),
+                  GameActionButton(
+                    key: const ValueKey('lobby-play'),
+                    label: 'Play',
+                    onPressed: () => _openMatchSetup(_lastMode, _lastMayhem),
+                    height: 58,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'CHOOSE YOUR BATTLE',
+                    style: TextStyle(
+                      color: BallWarsColors.of(context).text,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 9),
+                  SizedBox(
+                    height: 92,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: mode(
+                            'Arsenal',
+                            'Weapon battles',
+                            Icons.gps_fixed,
+                            GameUi.cyan,
+                            MatchMode.arsenal,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: mode(
+                            'Mayhem',
+                            '6-8 ball chaos',
+                            Icons.cyclone,
+                            GameUi.purple,
+                            MatchMode.arsenal,
+                            mayhem: true,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: mode(
+                            'All-Out',
+                            'Threads + arms',
+                            Icons.local_fire_department,
+                            GameUi.orange,
+                            MatchMode.allOut,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () =>
-                                  _openMatchSetup(MatchMode.threads),
-                              child: const Text('Threads'),
-                            ),
+                  SizedBox(
+                    height: 82,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: mode(
+                            'Threads',
+                            'The original',
+                            Icons.hub_outlined,
+                            GameUi.cyan,
+                            MatchMode.threads,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () =>
-                                  _openMatchSetup(MatchMode.threadGrowth),
-                              child: const Text('Neo Threads'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () =>
-                                  _openMatchSetup(MatchMode.arsenal),
-                              child: const Text('Arsenal'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () =>
-                                  _openMatchSetup(MatchMode.arsenal, true),
-                              child: const Text('Mayhem'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () => _openMatchSetup(MatchMode.allOut),
-                          child: const Text('All-Out'),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: mode(
+                            'Neo Threads',
+                            'Grow. Cut. Survive.',
+                            Icons.auto_awesome,
+                            GameUi.purple,
+                            MatchMode.threadGrowth,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -824,11 +906,27 @@ class _HomeScreenState extends State<_HomeScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Version $_version',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: BallWarsColors.of(context).muted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => showLicensePage(
+                      context: context,
+                      applicationName: 'Ball Wars',
+                    ),
+                    child: const Text('Credits & licenses'),
+                  ),
                   if (!kIsWeb &&
                       defaultTargetPlatform == TargetPlatform.android)
                     TextButton.icon(
                       onPressed: () => SystemNavigator.pop(),
-                      icon: const Icon(Icons.exit_to_app),
+                      icon: const Icon(Icons.exit_to_app, size: 16),
                       label: const Text('Quit game'),
                     ),
                 ],
@@ -855,98 +953,46 @@ class _HomeTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final c = BallWarsColors.of(context);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: c.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      customBorder: BeveledRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: GamePanel(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(icon, color: GameUi.cyan, size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 20, color: c.text),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: AppText.ui(14, FontWeight.w700, color: c.text),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: BallWarsColors.of(context).text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: BallWarsColors.of(context).muted,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: AppText.ui(12, FontWeight.w500, color: c.muted),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-/// The home screen's arena illustration: a rim and two fans of lines.
-class _HomeArenaPainter extends CustomPainter {
-  final Color rim;
-
-  _HomeArenaPainter({required this.rim});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final r = size.shortestSide / 2 - 4;
-    final center = size.center(Offset.zero);
-    canvas.drawCircle(
-      center,
-      r,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = rim,
-    );
-    void fan(Offset ball, Color color, double fromDeg, double toDeg) {
-      final paint = Paint()
-        ..color = color.withValues(alpha: 0.85)
-        ..strokeWidth = 1;
-      for (var i = 0; i < 13; i++) {
-        final a = (fromDeg + (toDeg - fromDeg) * i / 12) * math.pi / 180;
-        canvas.drawLine(
-          center + Offset(math.cos(a), math.sin(a)) * r,
-          ball,
-          paint,
-        );
-      }
-      canvas.drawCircle(ball, r * 0.1, Paint()..color = rim);
-      canvas.drawCircle(
-        ball,
-        r * 0.1,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..color = color,
-      );
-    }
-
-    fan(
-      center + Offset(r * 0.25, -r * 0.32),
-      const Color(0xFF4FD1C5),
-      200,
-      330,
-    );
-    fan(center + Offset(-r * 0.29, r * 0.29), const Color(0xFFFF7A59), 15, 150);
-  }
-
-  @override
-  bool shouldRepaint(_HomeArenaPainter oldDelegate) => oldDelegate.rim != rim;
+    ),
+  );
 }

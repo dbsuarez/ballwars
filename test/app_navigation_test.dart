@@ -21,6 +21,7 @@ void main() {
     // No backend in tests: My Groups is hidden.
     expect(find.text('My groups'), findsNothing);
 
+    await tester.ensureVisible(find.text('Threads'));
     await tester.tap(find.text('Threads'));
     await tester.pumpAndSettle();
     expect(
@@ -35,6 +36,7 @@ void main() {
       ('Mayhem', MatchMode.arsenal, true),
       ('All-Out', MatchMode.allOut, false),
     ]) {
+      await tester.ensureVisible(find.text(choice.$1));
       await tester.tap(find.text(choice.$1));
       await tester.pumpAndSettle();
       final setup = tester.widget<MatchSetupScreen>(
@@ -45,6 +47,7 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
     }
+    await tester.ensureVisible(find.byTooltip('Settings'));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('Settings'), findsOneWidget);

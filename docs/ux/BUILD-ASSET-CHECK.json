@@ -1,0 +1,28 @@
+{
+  "checks": [
+    {
+      "asset": "assets/ui/lobby-hero.webp",
+      "bytes": 129778,
+      "sha256": "631f5bad6b827279c4f7c3372a9ca2142a008266fb77bbccb742a412a9aad78d",
+      "bundled_match": true
+    },
+    {
+      "asset": "assets/licenses/material-icons-license.txt",
+      "bytes": 18531,
+      "sha256": "be698262aecd042c0de6f886cc0af622f8def446462026992cc530275d8a9e74",
+      "bundled_match": true
+    },
+    {
+      "asset": "assets/fonts/Manrope-OFL.txt",
+      "bytes": 4387,
+      "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b",
+      "bundled_match": true
+    },
+    {
+      "asset": "assets/fonts/JetBrainsMono-OFL.txt",
+      "bytes": 4399,
+      "sha256": "b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d",
+      "bundled_match": true
+    }
+  ]
+}

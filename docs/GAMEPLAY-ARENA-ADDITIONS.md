@@ -45,3 +45,5 @@ Manual acceptance still needed: actual browser/Android file pickers and upload, 
 Ghost artwork: original `assets/sprites/Ghost Orb Idle Animation Sprite Sheet.png` preserved. `tools/photocraft/Export-DeathGhost.ps1` crops four isolated cells, resizes consistently and assembles the normalized transparent sheet through PhotoCraft. The runtime uses the animation and a code-drawn fallback if artwork is unavailable.
 
 Maps with uploaded images use definition version 2 so older clients reject them instead of silently stripping the background during an edit. Template-only maps retain version 1. Update browser/APK clients before editing image-backed maps.
+
+Deployment and signed APK release submitted as v1.14.57 on 2026-11-05. Workflow completion and device acceptance remain manual.

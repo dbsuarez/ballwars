@@ -134,3 +134,5 @@ Completed implementation boxes reflect the local remediation batches and their l
 - [ ] Manual phone/browser acceptance for this new batch. See [details](GAMEPLAY-ARENA-ADDITIONS.md).
 
 Follow-up verification: full suite 1,718 passed / one skipped; final map/schema suite 35 passed; analysis clean. Background crop and numeric target dialogs were rendered at phone width, along with the supplied Ghost Orb animation. Device acceptance remains manual.
+
+Follow-up batch deployment and APK release submitted as v1.14.57 on 2026-11-05; workflow completion is not monitored automatically.

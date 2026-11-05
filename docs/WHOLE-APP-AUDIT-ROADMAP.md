@@ -136,3 +136,11 @@ Completed implementation boxes reflect the local remediation batches and their l
 Follow-up verification: full suite 1,718 passed / one skipped; final map/schema suite 35 passed; analysis clean. Background crop and numeric target dialogs were rendered at phone width, along with the supplied Ghost Orb animation. Device acceptance remains manual.
 
 Follow-up batch deployment and APK release submitted as v1.14.57 on 2026-11-05; workflow completion is not monitored automatically.
+
+## My Groups creation hotfix (2026-11-05)
+
+- [x] Fix int4 overflow on ball creation: use the next group-local ordering index, not a millisecond timestamp. Preserve existing stable ID tie-breaking for simultaneous additions.
+- [x] Establish the account before reading ordering data; fail visibly before uploading if lookup fails or the integer range is exhausted.
+- [x] Replace the source-text test that required the timestamp with actual HTTP-request ordering tests. Verify empty groups, existing/gapped indices, integer bounds, saved fields and failure behavior.
+- [x] Group/persistence regression suite: 49 passed; lint clean; release web build passed.
+- [ ] Deploy this hotfix and confirm ball creation with and without a picture on the published app. No migration is required.

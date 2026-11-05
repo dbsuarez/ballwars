@@ -318,9 +318,27 @@ class SupabaseCustomGroupRepository implements CustomGroupRepository {
     required Color color,
     BallGender gender = BallGender.none,
   }) async {
+    await _userId();
+    // position is a PostgreSQL int4 ordering index, not a timestamp. Read the
+    // group's highest index to continue its ordering sequence after deletions.
+    // Equal concurrent positions are already ordered
+    // deterministically by ID in every group read.
+    final last = await _client
+        .from('group_balls')
+        .select('position')
+        .eq('group_id', groupId)
+        .order('position', ascending: false)
+        .limit(1)
+        .retry(enabled: false);
+    final previous = last.isEmpty ? -1 : last.first['position'] as int;
+    if (previous >= 2147483647) {
+      throw StateError(
+        'This group reached its ball ordering limit. An administrator needs to reset its ball order.',
+      );
+    }
+    final position = math.max(0, previous + 1);
     final path = png == null ? null : await _upload(png);
     try {
-      final position = DateTime.now().millisecondsSinceEpoch;
       final row = await _gender.run(
         (withGender) => _client
             .from('group_balls')

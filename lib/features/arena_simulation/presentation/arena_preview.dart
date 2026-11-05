@@ -1,3 +1,5 @@
+import '../../arenas/domain/arena_definition.dart';
+import '../../arenas/domain/arena_geometry.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -12,8 +14,10 @@ import 'arena_painter.dart';
 class ArenaPreview extends StatelessWidget {
   final ArenaDecoration decoration;
   final double size;
+  final ArenaDefinition? arena;
+  final ArenaShape shape;
 
-  const ArenaPreview({super.key, required this.decoration, this.size = 96});
+  const ArenaPreview({super.key, required this.decoration, this.size = 96, this.arena, this.shape = ArenaShape.circle});
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +28,9 @@ class ArenaPreview extends StatelessWidget {
       floatingTexts: FloatingTextManager(),
       status: MatchStatus.running,
       winnerId: null,
+      arenaShape: arena?.shape ?? shape,
+      centerObstacle: arena?.obstacle ?? CenterObstacle.none,
+      centerObstacleScale: arena?.obstacleScale ?? .22,
       arenaRadius: 200,
     );
     return SizedBox.square(
@@ -36,7 +43,8 @@ class ArenaPreview extends StatelessWidget {
             rimAngle: 0,
             arenaTitle: '',
             arenaSubtitle: '',
-            arenaDecoration: decoration,
+            arenaPreset: arena,
+            arenaDecoration: arena?.trapTheme ?? decoration,
             background: c.background,
             rimColor: c.text,
           ),

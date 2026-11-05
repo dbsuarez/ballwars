@@ -23,9 +23,11 @@ Future<ArenaGeometrySelection?> showArenaGeometryEditor(
   bool rotateThemes = false,
   bool rotateShapes = false,
   int intervalSeconds = 60,
+  bool allowRotation = true,
 }) => showDialog<ArenaGeometrySelection>(
   context: context,
   builder: (context) => _ArenaGeometryEditor(
+    allowRotation: allowRotation,
     initialShape: shape,
     initialObstacle: obstacle,
     initialScale: scale,
@@ -37,6 +39,7 @@ Future<ArenaGeometrySelection?> showArenaGeometryEditor(
 
 class _ArenaGeometryEditor extends StatefulWidget {
   const _ArenaGeometryEditor({
+    this.allowRotation = true,
     required this.initialShape,
     required this.initialObstacle,
     required this.initialScale,
@@ -44,6 +47,7 @@ class _ArenaGeometryEditor extends StatefulWidget {
     required this.initialRotateShapes,
     required this.initialIntervalSeconds,
   });
+  final bool allowRotation;
   final ArenaShape initialShape;
   final CenterObstacle initialObstacle;
   final double initialScale;
@@ -95,20 +99,20 @@ class _ArenaGeometryEditorState extends State<_ArenaGeometryEditor> {
               onChanged: (value) { if (value != null) setState(() => obstacle = value); },
             ),
             const Divider(),
-            SwitchListTile(
+            if(widget.allowRotation) SwitchListTile(
               key: const ValueKey('editor-rotate-themes'),
               title: const Text('Rotate arena themes'),
               subtitle: const Text('Default, Neon Grid, Desert, Space, Wilderness'),
               value: rotateThemes,
               onChanged: (value) => setState(() => rotateThemes = value),
             ),
-            SwitchListTile(
+            if(widget.allowRotation) SwitchListTile(
               key: const ValueKey('editor-rotate-shapes'),
               title: const Text('Rotate circle / square'),
               value: rotateShapes,
               onChanged: (value) => setState(() => rotateShapes = value),
             ),
-            if (rotateThemes || rotateShapes)
+            if (widget.allowRotation && (rotateThemes || rotateShapes))
               DropdownButtonFormField<int>(
                 key: const ValueKey('editor-rotation-interval'),
                 initialValue: intervalSeconds,

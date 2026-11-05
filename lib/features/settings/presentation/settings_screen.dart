@@ -1,3 +1,5 @@
+import '../../arenas/presentation/arena_library_screen.dart';
+import '../../arenas/domain/arena_definition.dart';
 import '../../admin_guide/presentation/admin_guide_screen.dart';
 import 'ball_studio_screen.dart';
 import '../../../core/widgets/legacy_tag.dart';
@@ -225,6 +227,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _openArenaEditor() async {
+    final scope = _scope!;
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ArenaLibraryScreen(
+      initial:scope.notifier!.value.arenaCatalog,onSave:(catalog) async {
+        final next=scope.notifier!.value.copyWith(arenaCatalog:catalog, arenaDecoration:catalog.find(catalog.defaultId)?.trapTheme ?? scope.notifier!.value.arenaDecoration);
+        await scope.repository!.save(next);
+        scope.notifier!.value=next;
+      })));
+  }
+
   /// Applies [settings] right away (live preview) and saves it for everyone.
   Future<void> _save(AppSettings settings, {String? done}) {
     final scope = _scope!;
@@ -407,18 +419,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
+                                OutlinedButton.icon(key: const ValueKey('open-arena-editor'),
+                                  onPressed:_busy?null:_openArenaEditor,icon:const Icon(Icons.edit_location_alt_outlined),label:const Text('Manage arenas')),
                                 OutlinedButton.icon(
                                   key: const ValueKey('choose-default-arena'),
                                   icon: ArenaPreview(
                                     decoration: settings.arenaDecoration,
+                                    arena: settings.arenaCatalog.find(settings.arenaCatalog.defaultId),
                                     size: 64,
                                   ),
                                   label: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(settings.arenaDecoration.label),
+                                      Text(settings.arenaCatalog.find(settings.arenaCatalog.defaultId)?.name ?? settings.arenaDecoration.label),
                                       Text(
-                                        settings.arenaDecoration.hazardCaption,
+                                        settings.arenaCatalog.find(settings.arenaCatalog.defaultId)?.trapCaption ?? settings.arenaDecoration.hazardCaption,
                                         style: const TextStyle(fontSize: 11),
                                       ),
                                       const Text('Choose arena'),
@@ -427,11 +442,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   onPressed: _busy
                                       ? null
                                       : () async {
+                                          ArenaDefinition? custom;
                                           final picked =
                                               await showArenaSelectionDialog(
                                                 context,
-                                                selected:
-                                                    settings.arenaDecoration,
+                                                selected: settings.arenaDecoration,
+                                                selectedPresetId: settings.arenaCatalog.defaultId,
+                                                onSelectPreset: (arena)=>custom=arena,
                                               );
                                           if (picked == null || !mounted) {
                                             return;
@@ -439,7 +456,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           await _save(
                                             AppSettingsScope.of(
                                               this.context,
-                                            ).copyWith(arenaDecoration: picked),
+                                            ).copyWith(arenaDecoration: picked, arenaCatalog: settings.arenaCatalog.withDefault(custom?.id)),
                                             done:
                                                 '${picked.label} arena saved.',
                                           );

@@ -680,6 +680,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     mayhemSeconds: widget.config.mayhemSeconds,
     shrinkingArena: widget.config.shrinkingArena,
     minimumArenaScale: widget.config.minimumArenaScale,
+    arenaPreset: widget.config.arenaPreset,
     arenaDecoration: widget.config.arenaDecoration,
     arenaShape: widget.config.arenaShape,
     centerObstacle: widget.config.centerObstacle,
@@ -1072,6 +1073,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                               arenaSubtitle: AppSettingsScope.of(
                                 context,
                               ).arenaSubtitle,
+                              arenaPreset: widget.config.arenaPreset,
                               arenaDecoration: _controller.arenaDecoration,
                               wallSparkSize: widget.config.wallSparkSize,
                               repaint: _frame,
@@ -1479,7 +1481,8 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 finishersEnabled: _finishersOn,
                                 randomizedHairstyles:
                                     widget.config.randomizedHairstyles,
-                                arenaDecoration: widget.config.arenaDecoration,
+                                arenaPreset: widget.config.arenaPreset,
+    arenaDecoration: widget.config.arenaDecoration,
                                 headline: headline,
                                 colors: c,
                                 ballGlowEnabled: exportSettings.ballGlowEnabled,

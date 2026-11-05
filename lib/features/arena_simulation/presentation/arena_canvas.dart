@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import '../../settings/presentation/app_settings_scope.dart';
 import '../../../core/sprites/visual_quality.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ class ArenaCanvas extends StatelessWidget {
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
   final ArenaDecoration arenaDecoration;
+  final ArenaDefinition? arenaPreset;
   final bool handsOnPictures;
   final bool whitePickupBackgrounds;
   final EffectRenderMode projectileRenderMode;
@@ -52,6 +54,7 @@ class ArenaCanvas extends StatelessWidget {
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaPreset,
     this.handsOnPictures = false,
     this.whitePickupBackgrounds = true,
     this.projectileRenderMode = EffectRenderMode.sprite,
@@ -86,6 +89,7 @@ class ArenaCanvas extends StatelessWidget {
             arenaTitle: arenaTitle,
             arenaSubtitle: arenaSubtitle,
             wallSparkSize: wallSparkSize,
+            arenaPreset: arenaPreset,
             arenaDecoration: arenaDecoration,
             handsOnPictures: handsOnPictures,
             whitePickupBackgrounds: whitePickupBackgrounds,

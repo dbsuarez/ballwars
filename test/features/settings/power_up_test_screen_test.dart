@@ -1,3 +1,5 @@
+import 'package:ballwars/features/arenas/domain/arena_definition.dart';
+import 'package:ballwars/features/arenas/domain/arena_geometry.dart';
 import 'package:ballwars/core/audio/game_audio.dart';
 import 'package:ballwars/core/offline/device_prefs.dart';
 import 'package:ballwars/core/offline/offline_store.dart';
@@ -42,16 +44,39 @@ Widget _app(
   bool admin, {
   SkillDefinition? initialSkill,
   SkillLibrary? library,
+  ArenaDefinition? initialArena,
 }) => AppSettingsScope(
   settings: ValueNotifier(AppSettings.defaults.copyWith(skillLibrary: library)),
   adminAuth: _Auth(admin),
   child: MaterialApp(
     theme: AppTheme.build(AppPalettes.midnight),
-    home: PowerUpTestScreen(initialSkill: initialSkill),
+    home: PowerUpTestScreen(initialSkill: initialSkill, initialArena:initialArena),
   ),
 );
 
 void main() {
+  testWidgets('unsaved map tests its real geometry and appearance without saving its ID', (tester)async{
+    final previous=OfflineStore.instance;OfflineStore.instance=MemoryOfflineStore();
+    addTearDown(()=>OfflineStore.instance=previous);
+    const arena=ArenaDefinition(id:'draft',name:'Draft court',shape:ArenaShape.square,obstacle:CenterObstacle.square,obstacleScale:.34,floorColor:0xffbbaa55);
+    await tester.pumpWidget(_app(true,initialArena:arena));
+    await tester.pumpAndSettle();
+    final canvas=tester.widget<ArenaCanvas>(find.byType(ArenaCanvas));
+    expect(canvas.arenaPreset,same(arena));
+    expect(canvas.state.arenaShape,ArenaShape.square);
+    expect(canvas.state.centerObstacle,CenterObstacle.square);
+    expect(canvas.state.balls.every((ball)=>ball.position.dx.abs() >= 200*.34+ball.radius),isTrue);
+    expect(await DevicePrefs.read('power-test-arena-preset'),isNull);
+    await tester.tap(find.byTooltip('Change arena: Draft court'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('unavailable'),findsNothing);
+    await tester.tap(find.byKey(const ValueKey('arena-option-draft')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<ArenaCanvas>(find.byType(ArenaCanvas)).arenaPreset,same(arena));
+    expect(await DevicePrefs.read('power-test-arena-preset'),isNull);
+    expect(tester.takeException(),isNull);
+  });
+
   testWidgets(
     'custom knife and built-in knife keep separate identities in both slots and picker',
     (tester) async {

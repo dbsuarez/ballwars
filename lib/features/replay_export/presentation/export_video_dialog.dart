@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import 'dart:convert';
 import '../../../core/offline/device_prefs.dart';
 import '../domain/video_visibility.dart';
@@ -134,6 +135,7 @@ class ExportVideoDialog extends StatefulWidget {
     bool finishersEnabled = true,
     bool randomizedHairstyles = false,
     ArenaDecoration arenaDecoration = ArenaDecoration.defaultArena,
+    ArenaDefinition? arenaPreset,
     BallLook look = BallLook.pictures,
     bool showHpBars = false,
     String headline = 'WHO WINS?',
@@ -195,6 +197,7 @@ class ExportVideoDialog extends StatefulWidget {
           bloodColor: bloodColor,
           arenaTitle: arenaTitle,
           arenaSubtitle: arenaSubtitle,
+          arenaPreset: arenaPreset,
           arenaDecoration: arenaDecoration,
           watermarkText: AppSettingsScope.of(context).exportWatermarkText,
         ),

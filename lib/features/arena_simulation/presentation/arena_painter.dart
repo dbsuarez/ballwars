@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import '../../../core/sprites/visual_quality.dart';
 import '../../skills/presentation/skill_effect_renderer.dart';
 import 'dart:typed_data';
@@ -44,6 +45,7 @@ class ArenaPainter extends CustomPainter {
   final String arenaSubtitle;
   final WallSparkSize wallSparkSize;
   final ArenaDecoration arenaDecoration;
+  final ArenaDefinition? arenaPreset;
   final bool handsOnPictures;
   final bool whitePickupBackgrounds;
   final EffectRenderMode projectileRenderMode;
@@ -76,6 +78,7 @@ class ArenaPainter extends CustomPainter {
     this.arenaSubtitle = 'bakbakan na',
     this.wallSparkSize = WallSparkSize.normal,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaPreset,
     this.handsOnPictures = false,
     this.whitePickupBackgrounds = true,
     this.projectileRenderMode = EffectRenderMode.sprite,
@@ -213,12 +216,19 @@ class ArenaPainter extends CustomPainter {
         : (Path()..addOval(rect));
   }
 
+  ArenaDefinition? get _activePreset => arenaPreset != null && arenaDecoration == arenaPreset!.trapTheme ? arenaPreset : null;
+  Color _floor(Color fallback) => _activePreset?.floorColor == null ? fallback : Color(_activePreset!.floorColor!);
+  Color _floorShade(Color fallback, double darkness) => _activePreset?.floorColor == null ? fallback : Color.lerp(Color(_activePreset!.floorColor!), Colors.black, darkness)!;
+  Color _accent(Color fallback) => _activePreset?.accentColor == null ? fallback : Color(_activePreset!.accentColor!);
+  Color _rim(Color fallback) => _activePreset?.rimColor == null ? fallback : Color(_activePreset!.rimColor!);
+
   void _paintBackground(Canvas canvas) {
     final visibleRadius = state.arenaRadius;
     canvas.save();
     canvas.clipPath(Path()..addPath(_arenaOutline(visibleRadius), Offset.zero));
-    canvas.drawPath(_arenaOutline(visibleRadius), Paint()..color = background);
-    switch (arenaDecoration) {
+    canvas.drawRect(Rect.fromLTRB(-visibleRadius,-visibleRadius,visibleRadius,visibleRadius), Paint()..color = _floor(background));
+    switch (arenaPreset != null && arenaDecoration == arenaPreset!.trapTheme
+        ? arenaPreset!.theme : arenaDecoration) {
       case ArenaDecoration.defaultArena:
         _paintDefaultFloor(canvas, visibleRadius);
       case ArenaDecoration.space:
@@ -257,28 +267,27 @@ class ArenaPainter extends CustomPainter {
   void _paintDefaultFloor(Canvas canvas, double visibleRadius) {
     final paint = Paint()
       ..shader = ui.Gradient.radial(Offset.zero, visibleRadius, [
-        Color.lerp(background, rimColor, 0.05)!,
-        background,
+        Color.lerp(_floor(background), _rim(rimColor), 0.05)!,
+        _floor(background),
       ]);
-    canvas.drawPath(_arenaOutline(visibleRadius), paint);
+    canvas.drawRect(Rect.fromLTRB(-visibleRadius,-visibleRadius,visibleRadius,visibleRadius), paint);
     _paintGrid(canvas);
   }
 
   void _paintSpaceFloor(Canvas canvas, double radius) {
-    canvas.drawCircle(
-      Offset.zero,
-      radius,
+    canvas.drawRect(
+      Rect.fromLTRB(-radius,-radius,radius,radius),
       Paint()
         ..shader = ui.Gradient.radial(
           Offset(-radius * 0.25, -radius * 0.3),
           radius * 1.35,
-          const [Color(0xFF18245A), Color(0xFF050611)],
+          [_floor(const Color(0xFF18245A)), _floorShade(const Color(0xFF050611), .35)],
         ),
     );
     canvas.drawCircle(
       Offset(radius * 0.25, radius * 0.1),
       radius * 0.55,
-      Paint()..color = const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+      Paint()..color = _accent(const Color(0xFF8B5CF6)).withValues(alpha: 0.12),
     );
     final star = Paint()..color = const Color(0xFFE7F7FF);
     for (var i = 0; i < 80; i++) {
@@ -289,13 +298,12 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintDesertFloor(Canvas canvas, double radius) {
-    canvas.drawCircle(
-      Offset.zero,
-      radius,
-      Paint()..color = const Color(0xFFC88746),
+    canvas.drawRect(
+      Rect.fromLTRB(-radius,-radius,radius,radius),
+      Paint()..color = _floor(const Color(0xFFC88746)),
     );
     final dune = Paint()
-      ..color = const Color(0xFFF0C276).withValues(alpha: 0.5)
+      ..color = _accent(const Color(0xFFF0C276)).withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = radius * 0.16;
     for (var i = -2; i <= 2; i++) {
@@ -327,24 +335,23 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintWildernessFloor(Canvas canvas, double radius) {
-    canvas.drawCircle(
-      Offset.zero,
-      radius,
+    canvas.drawRect(
+      Rect.fromLTRB(-radius,-radius,radius,radius),
       Paint()
-        ..shader = ui.Gradient.radial(Offset.zero, radius, const [
-          Color(0xFF315B37),
-          Color(0xFF102A1B),
+        ..shader = ui.Gradient.radial(Offset.zero, radius, [
+          _floor(const Color(0xFF315B37)),
+          _floorShade(const Color(0xFF102A1B), .35),
         ]),
     );
     final rings = Paint()
-      ..color = const Color(0xFF9CCC65).withValues(alpha: 0.13)
+      ..color = _accent(const Color(0xFF9CCC65)).withValues(alpha: 0.13)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     for (var i = 1; i <= 6; i++) {
       canvas.drawCircle(Offset.zero, radius * i / 7, rings);
     }
     final leaves = Paint()
-      ..color = const Color(0xFFB7D66A).withValues(alpha: 0.35);
+      ..color = _accent(const Color(0xFFB7D66A)).withValues(alpha: 0.35);
     for (var i = 0; i < 32; i++) {
       final at = Offset(math.sin(i * 13.7), math.cos(i * 29.1)) * radius * 0.82;
       canvas.drawOval(Rect.fromCenter(center: at, width: 9, height: 4), leaves);
@@ -352,13 +359,12 @@ class ArenaPainter extends CustomPainter {
   }
 
   void _paintNeonFloor(Canvas canvas, double radius) {
-    canvas.drawCircle(
-      Offset.zero,
-      radius,
-      Paint()..color = const Color(0xFF050912),
+    canvas.drawRect(
+      Rect.fromLTRB(-radius,-radius,radius,radius),
+      Paint()..color = _floor(const Color(0xFF050912)),
     );
     final grid = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.22)
+      ..color = _accent(const Color(0xFF00E5FF)).withValues(alpha: 0.22)
       ..strokeWidth = 1.5;
     final step = radius / 6;
     for (var i = -6; i <= 6; i++) {
@@ -377,7 +383,7 @@ class ArenaPainter extends CustomPainter {
       Offset.zero,
       radius * 0.62,
       Paint()
-        ..color = const Color(0xFFFF2BD6).withValues(alpha: 0.22)
+        ..color = _accent(const Color(0xFFFF2BD6)).withValues(alpha: 0.22)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4,
     );
@@ -440,10 +446,10 @@ class ArenaPainter extends CustomPainter {
   /// Squares across the arena floor, [gridCells] across the diameter.
   static const int gridCells = 16;
 
-  // Grid line endpoints per arena radius (each line is a chord, so no clip is needed).
+  // Shape-independent square grid. The floor's active boundary clip masks it.
   static final Map<double, Float32List> _gridCache = {};
 
-  /// A faint square grid on the floor: one batched drawRawPoints call, chords cached per arena size.
+  /// One batched square grid, cached per size and shared by both shapes.
   void _paintGrid(Canvas canvas) {
     final points = _gridCache[arenaRadius] ??= () {
       final r = arenaRadius;
@@ -451,10 +457,9 @@ class ArenaPainter extends CustomPainter {
       final list = <double>[];
       for (var i = 1; i < gridCells; i++) {
         final x = -r + i * step;
-        final half = math.sqrt(math.max(0, r * r - x * x));
         list
-          ..addAll([x, -half, x, half])
-          ..addAll([-half, x, half, x]);
+          ..addAll([x, -r, x, r])
+          ..addAll([-r, x, r, x]);
       }
       return Float32List.fromList(list);
     }();
@@ -463,7 +468,7 @@ class ArenaPainter extends CustomPainter {
       points,
       Paint()
         ..strokeWidth = 1
-        ..color = rimColor.withValues(alpha: 0.06),
+        ..color = _accent(rimColor).withValues(alpha: 0.06),
     );
   }
 
@@ -476,7 +481,7 @@ class ArenaPainter extends CustomPainter {
     // A soft halo (two wide translucent strokes) under the crisp rim.
     final halo = Paint()
       ..style = PaintingStyle.stroke
-      ..color = rimColor.withValues(alpha: 0.12);
+      ..color = _rim(rimColor).withValues(alpha: 0.12);
     final outline = _arenaOutline(visibleRadius);
     canvas.drawPath(outline, halo..strokeWidth = 6.5);
     canvas.drawPath(outline, halo..strokeWidth = 4.5);
@@ -485,7 +490,7 @@ class ArenaPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5
-        ..color = rimColor,
+        ..color = _rim(rimColor),
     );
   }
 

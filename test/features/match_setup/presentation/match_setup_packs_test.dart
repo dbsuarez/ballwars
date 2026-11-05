@@ -1,3 +1,4 @@
+import 'package:ballwars/features/arenas/domain/arena_catalog.dart';
 import 'package:flutter/material.dart';
 import 'package:ballwars/features/match_setup/domain/loadout_preset.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +42,7 @@ void main() {
     MatchMode? initialMode,
     bool initialMayhem = false,
     SkillLibrary? skillLibrary,
+    ArenaCatalog arenaCatalog = const ArenaCatalog(),
   }) async {
     started = null;
     // These existing cases exercise the retained List layout. Card defaults
@@ -58,7 +60,7 @@ void main() {
         theme: AppTheme.build(AppPalettes.midnight),
         home: AppSettingsScope(
           settings: ValueNotifier(
-            AppSettings(skillLibrary: skillLibrary ?? SkillLibrary.defaults),
+            AppSettings(skillLibrary: skillLibrary ?? SkillLibrary.defaults, arenaCatalog:arenaCatalog),
           ),
           child: MatchSetupScreen(
             initialMode: initialMode,
@@ -91,6 +93,48 @@ void main() {
     await tester.tap(find.text(name).last);
     await tester.pumpAndSettle();
   }
+
+  testWidgets('custom map defaults reach the actual match and stay per mode', (tester)async{
+    const map=ArenaDefinition(id:'square-court',name:'Square court',theme:ArenaDecoration.desert,
+      trapTheme:ArenaDecoration.neonGrid,shape:ArenaShape.square,obstacle:CenterObstacle.square,
+      obstacleScale:.3,arenaTrapsEnabled:false);
+    final catalog=const ArenaCatalog().withArena(map);
+    await DevicePrefs.write('match-arsenal-arena-preset-id',map.id);
+    await pumpSetup(tester,initialMode:MatchMode.arsenal,arenaCatalog:catalog);
+    await tester.tap(find.text('Nike'));await tester.tap(find.text('Adidas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start'));
+    expect(started,isNotNull);
+    expect(started!.simulationRevision,9);
+    expect(started!.arenaPreset!.id,map.id);
+    expect(started!.arenaDecoration,ArenaDecoration.neonGrid);
+    expect(started!.arenaShape,ArenaShape.square);
+    expect(started!.centerObstacle,CenterObstacle.square);
+    expect(started!.centerObstacleScale,.3);
+    expect(started!.tuning.arenaTrapsEnabled,isFalse);
+    await tester.pumpWidget(const SizedBox());await tester.pumpAndSettle();
+    await pumpSetup(tester,initialMode:MatchMode.allOut,arenaCatalog:catalog);
+    await tester.tap(find.text('Nike'));await tester.tap(find.text('Adidas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start'));
+    expect(started,isNotNull);
+    expect(started!.arenaPreset,isNull);
+    expect(started!.arenaShape,ArenaShape.circle);
+  });
+
+  testWidgets('explicit player geometry overrides custom-map defaults', (tester)async{
+    const map=ArenaDefinition(id:'square-court',name:'Square court',shape:ArenaShape.square,obstacle:CenterObstacle.square);
+    await DevicePrefs.write('match-arsenal-arena-preset-id',map.id);
+    await DevicePrefs.write('match-arsenal-arena-geometry-override','1');
+    await DevicePrefs.write('match-arsenal-arena-shape','circle');
+    await pumpSetup(tester,initialMode:MatchMode.arsenal,arenaCatalog:const ArenaCatalog().withArena(map));
+    await tester.tap(find.text('Nike'));await tester.tap(find.text('Adidas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start'));
+    expect(started,isNotNull);
+    expect(started!.simulationRevision,9);
+    expect(started!.arenaPreset!.id,map.id);expect(started!.arenaShape,ArenaShape.circle);
+  });
 
   testWidgets(
     'loadout preset changes only the current mode and retains automatic traps',

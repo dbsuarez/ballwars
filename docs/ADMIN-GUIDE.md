@@ -10,6 +10,7 @@ Open Admin Settings > General > Admin Guide, or Read full guide from a skill edi
 - [Build a new skill instead of a variant](#new-composed)
 - [Import an icon or animated sprite sheet](#sprites-tutorial)
 - [Add an explosion that actually does damage](#explosion-tutorial)
+- [Create and customize an arena](#arena-editor)
 
 ## How it works
 
@@ -702,3 +703,32 @@ Use explicit Casting, Direct hit, Explosion, Ground zone and other current event
 Use the conversion action only after reviewing the effect/role it creates. Test in Skill Demo and Live Arena, then save. Do not replace a working native mechanic by changing only a legacy artwork field.
 
 Related: [Casting, projectiles and impact effects](#visual-events), [Troubleshooting and current limits](#limitations)
+
+<a id="arena-editor"></a>
+## Create and customize an arena
+
+Make a named map from an existing theme, configure its shape and arena traps, then make it available to players.
+
+### 1. Start with a template
+
+Open Admin Settings > Appearance > Manage arenas. Create an arena or duplicate a built-in template. Choose a unique name; hiding an arena removes it from new player selections while existing replays keep working.
+
+### 2. Customize appearance
+
+Appearance chooses the background template and optional floor, detail and boundary colors. Color buttons open a picker; reset returns to the theme color. All themes cover a square surface. The active boundary masks the artwork for circle arenas.
+
+### 3. Choose geometry and traps
+
+Geometry opens the existing visual boundary/center-obstacle editor. Select a circle or square outer boundary, an optional center wall and its size. Obstacle sizes are limited to 12-34% of the arena radius to retain playable space. Pick the built-in arena trap set independently of the floor theme. Arena traps by default can be switched off; players may override trap toggles in Match Settings. Damage and timing come from Skill Management.
+
+### 4. Save and choose it
+
+Test opens your current unsaved map in Power-up Test, including its appearance and physical geometry. Returning keeps the draft. Save publishes it to the shared Custom tab in the arena chooser. The same dialog is used by administrator defaults, player Match Settings and Power-up Test. Geometry may be overridden for a match. The selected map is remembered separately for each game mode.
+
+### Replay snapshots and arena changes
+
+New matches, saved replays, .bw files and video exports keep the selected arena data. Editing, hiding or deleting the catalog entry does not change an existing match or replay. Changing-arena mode still cycles the built-in themes; custom styling applies when the cycle is at the starting map.
+
+### If saving fails
+
+Your draft stays open after a failed save. The backend requires migration 029_arena_catalog.sql for shared arena persistence. A missing column, stale settings or unconfirmed server write is shown as an error instead of silently saving only on this device.

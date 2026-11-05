@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import '../../match_setup/domain/arena_rotation.dart';
 import 'dart:convert';
 import 'replay_assets.dart';
@@ -78,6 +79,7 @@ class ReplayLink {
   final bool shrinkingArena;
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
+  final ArenaDefinition? arenaPreset;
   final ArenaShape arenaShape;
   final CenterObstacle centerObstacle;
   final double centerObstacleScale;
@@ -121,6 +123,7 @@ class ReplayLink {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaPreset,
     this.arenaShape = ArenaShape.circle,
     this.centerObstacle = CenterObstacle.none,
     this.centerObstacleScale = 0.22,
@@ -159,6 +162,9 @@ class ReplayLink {
 
   /// [presets] are balls every copy of the app has; they are linked by id.
   Uri toUri({required Set<String> presetIds, String? appUrl}) {
+    if (arenaPreset != null && simulationRevision < ArenaDefinition.replayRevision) {
+      throw StateError('Custom arenas require replay revision 9. Start a new match with this arena.');
+    }
     final assetSnapshot = ReplayAssets.encode(
       skillLibrary,
       artworkRevisions,
@@ -212,7 +218,7 @@ class ReplayLink {
         : '&shape=${arenaShape.name}';
     final obstacleToken = centerObstacle == CenterObstacle.none
         ? ''
-        : '&obstacle=${centerObstacle.name}&obsize=${centerObstacleScale.toStringAsFixed(2)}';
+        : '&obstacle=${centerObstacle.name}&obsize=$centerObstacleScale';
     final rotationToken =
         !arenaRotation.rotateThemes && !arenaRotation.rotateShapes
         ? ''
@@ -250,8 +256,9 @@ class ReplayLink {
     final effectVisuals = effectRenderMode == null
         ? ''
         : '&effectvisuals=${effectRenderMode!.name}';
+    final presetToken = arenaPreset == null ? '' : '&map=${arenaPreset!.encode()}';
     final query =
-        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$obstacleToken$rotationToken$shrinking$minimumArena$automaticSpeed$arena$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
+        'seed=$seed&speed=$speedMultiplier${showEffects ? '' : '&fx=0'}$size$growthCap$q$t$kc$dw$endless$mayhemToken$shapeToken$obstacleToken$rotationToken$shrinking$minimumArena$automaticSpeed$arena$presetToken$skills$glow$blood$hair$lookToken$customToken$nudgeToken$endToken&balls=${tokens.join(',')}';
     return Uri.parse(
       '${app.replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '')}?$query$effectVisuals$assets',
     );
@@ -287,7 +294,8 @@ class ReplayLink {
           marker != 'v.5' &&
           marker != 'v.6' &&
           marker != 'v.7' &&
-          marker != 'v.8') {
+          marker != 'v.8' &&
+          marker != 'v.9') {
         return null;
       }
       simulationRevision = int.parse(marker.substring(2));
@@ -464,6 +472,13 @@ class ReplayLink {
               .where((value) => value.name == params['arena'])
               .firstOrNull;
     if (arenaDecoration == null) return null;
+    ArenaDefinition? arenaPreset;
+    if (params.containsKey('map')) {
+      if (simulationRevision < ArenaDefinition.replayRevision) return null;
+      try { arenaPreset = ArenaDefinition.decode(params['map']!); }
+      on FormatException { return null; }
+      if (arenaPreset.trapTheme != arenaDecoration) return null;
+    }
     final ballGlowWidth = double.tryParse(params['glow'] ?? '4');
     if (ballGlowWidth == null ||
         !ballGlowWidth.isFinite ||
@@ -534,6 +549,7 @@ class ReplayLink {
       mayhemSeconds: mayhemSeconds,
       shrinkingArena: shrinkingArena,
       minimumArenaScale: minimumArenaScale,
+      arenaPreset: arenaPreset,
       arenaDecoration: arenaDecoration,
       arenaShape: arenaShape,
       centerObstacle: centerObstacle,

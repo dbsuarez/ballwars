@@ -1,3 +1,6 @@
+import '../../arenas/domain/arena_definition.dart';
+export '../../arenas/domain/arena_geometry.dart';
+import '../../arenas/domain/arena_geometry.dart';
 import 'package:flutter/painting.dart';
 
 import 'arena_rotation.dart';
@@ -8,31 +11,6 @@ import '../../settings/domain/app_settings.dart';
 import '../../skills/domain/skill_library.dart';
 
 enum WinCondition { domination, timeAttack }
-
-/// Physical shape of the outer arena. Independent of match mode.
-enum ArenaShape {
-  circle('Circle'),
-  square('Square');
-
-  final String label;
-  const ArenaShape(this.label);
-
-  static ArenaShape? byName(String? value) =>
-      values.where((shape) => shape.name == value).firstOrNull;
-}
-
-/// Optional solid central wall. The empty space around it remains playable.
-enum CenterObstacle {
-  none('None'),
-  circle('Circle'),
-  square('Square');
-
-  final String label;
-  const CenterObstacle(this.label);
-
-  static CenterObstacle? byName(String? value) =>
-      values.where((item) => item.name == value).firstOrNull;
-}
 
 /// How big every ball in a match is, relative to today's (medium) size. All
 /// balls share it, so it's fair; bigger balls cut more and end matches
@@ -169,6 +147,7 @@ class MatchConfig {
 
   /// The player's arena choice for this match. Admin settings remain the default.
   final ArenaDecoration arenaDecoration;
+  final ArenaDefinition? arenaPreset;
 
   /// Power-up modes: the power-up numbers (the admin's settings, or a replay link's).
   final PowerUpConfig tuning;
@@ -210,6 +189,7 @@ class MatchConfig {
     this.shrinkingArena = false,
     this.minimumArenaScale = 0.60,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaPreset,
     this.tuning = PowerUpConfig.defaults,
     this.skillLibrary = SkillLibrary.defaults,
     this.artworkRevisions = const {},

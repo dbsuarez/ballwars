@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_catalog.dart';
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../skills/domain/skill_library.dart';
 import 'dart:convert';
@@ -64,6 +65,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
   bool _hasMinimumArenaScaleColumn = false;
   bool _hasSkillLibraryColumn = false;
   bool _hasArenaDecorationColumn = false;
+  bool _hasArenaCatalogColumn = false;
   bool _hasEffectRenderModesColumn = false;
 
   SupabaseAppSettingsRepository(this._client, {SupabaseClient? writer})
@@ -112,6 +114,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
     _hasMinimumArenaScaleColumn = row.containsKey('minimum_arena_scale');
     _hasSkillLibraryColumn = row.containsKey('skill_library');
     _hasArenaDecorationColumn = row.containsKey('arena_decoration');
+    _hasArenaCatalogColumn = row.containsKey('arena_catalog');
     _hasEffectRenderModesColumn =
         row.containsKey('projectile_render_mode') &&
         row.containsKey('explosion_render_mode') &&
@@ -136,6 +139,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
       minimumArenaScale:
           (row['minimum_arena_scale'] as num?)?.toDouble() ??
           AppSettings.defaultMinimumArenaScale,
+      arenaCatalog: ArenaCatalog.fromJson(row['arena_catalog']),
       arenaDecoration: ArenaDecoration.values.firstWhere(
         (value) => value.name == row!['arena_decoration'],
         orElse: () => ArenaDecoration.defaultArena,
@@ -162,6 +166,11 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
 
   @override
   Future<void> save(AppSettings settings) async {
+    final catalog = ArenaCatalog.fromJson(settings.arenaCatalog.toJson());
+    if (!_hasArenaCatalogColumn && !catalog.isEmpty) {
+      throw StateError('Arenas were not saved: apply migration 029_arena_catalog.sql and reload settings.');
+    }
+
     if (!_hasPowerUpsColumn && !settings.powerUps.isDefault) {
       throw StateError(
         'Power-up settings could not be saved: the power_ups '
@@ -249,6 +258,7 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
             'minimum_arena_scale': settings.minimumArenaScale,
           if (_hasArenaDecorationColumn)
             'arena_decoration': settings.arenaDecoration.name,
+          if (_hasArenaCatalogColumn) 'arena_catalog': catalog.toJson(),
           if (_hasEffectRenderModesColumn)
             'projectile_render_mode': settings.projectileRenderMode.name,
           if (_hasEffectRenderModesColumn)
@@ -297,6 +307,9 @@ class SupabaseAppSettingsRepository implements AppSettingsRepository {
           'The server did not confirm the Skill Library. Reload settings before saving again.',
         );
       }
+    }
+    if (_hasArenaCatalogColumn && !catalog.matchesStored(updated.first['arena_catalog'])) {
+      throw StateError('The server did not confirm the arena catalog. Your edits were not confirmed; reload before retrying.');
     }
     _loadedVersion = updated.first['updated_at'] as String?;
     try {

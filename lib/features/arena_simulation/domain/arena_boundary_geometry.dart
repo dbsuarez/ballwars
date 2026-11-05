@@ -124,3 +124,9 @@ bool segmentsProperlyCross(Offset p1, Offset p2, Offset q1, Offset q2) {
   final d = orientation(p1, p2, q2);
   return c != 0 && d != 0 && c != d;
 }
+
+/// A diameter across the active shape, including diagonal square corners.
+(Offset, Offset) arenaGateSegment(double angle, double radius, ArenaShape shape) {
+  final end=arenaBoundaryPoint(angle,radius,shape);
+  return (-end,end);
+}

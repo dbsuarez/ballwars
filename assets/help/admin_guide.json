@@ -793,6 +793,49 @@
       ],
       "diagram": false,
       "keywords": []
+    },
+    {
+      "id": "arena-editor",
+      "tab": "tutorials",
+      "title": "Create and customize an arena",
+      "summary": "Make a named map from an existing theme, configure its shape and arena traps, then make it available to players.",
+      "keywords": [
+        "arena",
+        "map",
+        "background",
+        "square",
+        "circle",
+        "geometry",
+        "laser",
+        "catalog"
+      ],
+      "sections": [
+        {
+          "title": "1. Start with a template",
+          "body": "Open Admin Settings > Appearance > Manage arenas. Create an arena or duplicate a built-in template. Choose a unique name; hiding an arena removes it from new player selections while existing replays keep working."
+        },
+        {
+          "title": "2. Customize appearance",
+          "body": "Appearance chooses the background template and optional floor, detail and boundary colors. Color buttons open a picker; reset returns to the theme color. All themes cover a square surface. The active boundary masks the artwork for circle arenas."
+        },
+        {
+          "title": "3. Choose geometry and traps",
+          "body": "Geometry opens the existing visual boundary/center-obstacle editor. Select a circle or square outer boundary, an optional center wall and its size. Obstacle sizes are limited to 12-34% of the arena radius to retain playable space. Pick the built-in arena trap set independently of the floor theme. Arena traps by default can be switched off; players may override trap toggles in Match Settings. Damage and timing come from Skill Management."
+        },
+        {
+          "title": "4. Save and choose it",
+          "body": "Test opens your current unsaved map in Power-up Test, including its appearance and physical geometry. Returning keeps the draft. Save publishes it to the shared Custom tab in the arena chooser. The same dialog is used by administrator defaults, player Match Settings and Power-up Test. Geometry may be overridden for a match. The selected map is remembered separately for each game mode."
+        },
+        {
+          "title": "Replay snapshots and arena changes",
+          "body": "New matches, saved replays, .bw files and video exports keep the selected arena data. Editing, hiding or deleting the catalog entry does not change an existing match or replay. Changing-arena mode still cycles the built-in themes; custom styling applies when the cycle is at the starting map."
+        },
+        {
+          "title": "If saving fails",
+          "body": "Your draft stays open after a failed save. The backend requires migration 029_arena_catalog.sql for shared arena persistence. A missing column, stale settings or unconfirmed server write is shown as an error instead of silently saving only on this device."
+        }
+      ],
+      "related": []
     }
   ]
 }

@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import '../../arena_simulation/application/match_simulation_controller.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../../arena_simulation/domain/equipped_items.dart';
@@ -92,6 +93,7 @@ class ReplayFramePainter {
         arenaSubtitle: _style.visibility.shows(VideoLayer.arenaText)
             ? _style.arenaSubtitle
             : '',
+        arenaPreset: _style.arenaPreset,
         arenaDecoration: arenaDecoration ?? _style.arenaDecoration,
         background: _style.background,
         rimColor: _style.text,
@@ -720,6 +722,7 @@ class ReplayStyle {
   final String arenaTitle;
   final String arenaSubtitle;
   final ArenaDecoration arenaDecoration;
+  final ArenaDefinition? arenaPreset;
 
   /// Ball look (pictures or faces), as in the app.
   final BallLook look;
@@ -743,6 +746,7 @@ class ReplayStyle {
     bloodColor: bloodColor,
     arenaTitle: arenaTitle,
     arenaSubtitle: arenaSubtitle,
+    arenaPreset: arenaPreset,
     arenaDecoration: arenaDecoration,
     look: look,
     showHpBars: showHpBars,
@@ -765,6 +769,7 @@ class ReplayStyle {
     this.arenaTitle = 'dbsuarez',
     this.arenaSubtitle = 'bakbakan na',
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaPreset,
     this.look = BallLook.pictures,
     this.showHpBars = false,
     this.visibility = const VideoVisibility(),

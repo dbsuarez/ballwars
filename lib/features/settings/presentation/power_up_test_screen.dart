@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import 'dart:math' as math;
 
 import '../../../core/audio/game_audio.dart';
@@ -26,11 +27,12 @@ import '../domain/app_settings.dart';
 
 /// Runs actual matches with local, admin-only scenario controls.
 class PowerUpTestScreen extends StatefulWidget {
-  const PowerUpTestScreen({super.key, this.initialSkill, this.initialLibrary});
+  const PowerUpTestScreen({super.key, this.initialSkill, this.initialLibrary, this.initialArena});
 
   /// An unsaved editor draft to inject into this test session only.
   final SkillDefinition? initialSkill;
   final SkillLibrary? initialLibrary;
+  final ArenaDefinition? initialArena;
 
   @override
   State<PowerUpTestScreen> createState() => _PowerUpTestScreenState();
@@ -74,6 +76,11 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
 
   /// The arena picked in the bottom bar; null follows the admin's setting.
   ArenaDecoration? _arenaChoice;
+  String? _arenaPresetId;
+  late ArenaDefinition? _arenaDraft = widget.initialArena;
+  ArenaDefinition? get _selectedArena => _arenaDraft ?? AppSettingsScope.of(context).arenaCatalog.find(
+    _arenaPresetId ?? AppSettingsScope.of(context).arenaCatalog.defaultId);
+
   String _layout = 'Separated';
   final _motion = [_TestMotion.moving, _TestMotion.moving];
   final _randomStart = math.Random();
@@ -166,12 +173,18 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
             widget.initialSkill!,
             settings.powerUps,
           );
+    _arenaPresetId=await DevicePrefs.read('power-test-arena-preset');
     final savedShape = await DevicePrefs.read('power-test-arena-shape');
-    _arenaShape = ArenaShape.values.where((shape) => shape.name == savedShape).firstOrNull ?? ArenaShape.circle;
+    _arenaShape = ArenaShape.values.where((shape) => shape.name == savedShape).firstOrNull ?? _selectedArena?.shape ?? ArenaShape.circle;
     final savedArena = await DevicePrefs.read('power-test-arena');
     _arenaChoice = ArenaDecoration.values
         .where((d) => d.name == savedArena)
         .firstOrNull;
+    if (_arenaDraft case final arena?) {
+      _arenaPresetId = arena.id;
+      _arenaChoice = arena.trapTheme;
+      _arenaShape = arena.shape;
+    }
     for (var i = 0; i < 2; i++) {
       final raw = await DevicePrefs.read('power-test-item-$i');
       final remembered = PowerUpKind.values
@@ -262,21 +275,25 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           );
     _match = MatchSimulationController(
       _balls,
+      simulationRevision: _selectedArena == null ? 8 : ArenaDefinition.replayRevision,
       arenaRadius: 200,
       arenaShape: _arenaShape,
+      centerObstacle: _selectedArena?.obstacle ?? CenterObstacle.none,
+      centerObstacleScale: _selectedArena?.obstacleScale ?? .22,
       seed: 42,
       mode: _mode,
-      tuning: settings.powerUps,
+      tuning: _selectedArena?.arenaTrapsEnabled == false ? settings.powerUps.withValue('arenaTrapsEnabled',0) : settings.powerUps,
       skillLibrary: skillLibrary,
       lookAhead: false,
       slowMotionLines: 0,
       endlessBattle: _endless,
       dualWield: true,
-      arenaDecoration: _arenaChoice ?? settings.arenaDecoration,
+      arenaDecoration: _selectedArena?.trapTheme ?? _arenaChoice ?? settings.arenaDecoration,
     );
     _match!.powerUps!.automaticSpawning = _randomSpawns;
     final balls = _match!.state.balls;
-    final distance = _layout == 'Contact' ? balls.first.radius : 75.0;
+    final distance = math.max(_layout == 'Contact' ? balls.first.radius : 75.0,
+      _selectedArena?.obstacle == null || _selectedArena!.obstacle == CenterObstacle.none ? 0.0 : 200 * _selectedArena!.obstacleScale + balls.first.radius + 4);
     if (_layout != 'Natural') {
       balls[0].position = Offset(-distance, 0);
       balls[1].position = Offset(distance, 0);
@@ -785,8 +802,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                         arenaSubtitle: AppSettingsScope.of(
                           context,
                         ).arenaSubtitle,
+                        arenaPreset: _selectedArena,
                         arenaDecoration:
-                            _arenaChoice ??
+                            _selectedArena?.trapTheme ?? _arenaChoice ??
                             AppSettingsScope.of(context).arenaDecoration,
                         projectileRenderMode: AppSettingsScope.of(
                           context,
@@ -1250,12 +1268,24 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   Future<void> _changeArena() async {
-    final active = _arenaChoice ?? AppSettingsScope.of(context).arenaDecoration;
-    final picked = await showArenaSelectionDialog(context, selected: active);
+    final active = _selectedArena?.trapTheme ?? _arenaChoice ?? AppSettingsScope.of(context).arenaDecoration;
+    ArenaDefinition? custom;
+    final picked = await showArenaSelectionDialog(context, selected: active,
+      selectedPresetId: _arenaPresetId ?? AppSettingsScope.of(context).arenaCatalog.defaultId,
+      shape:_arenaShape,onSelectPreset:(arena)=>custom=arena,
+      transientPresets: [?widget.initialArena]);
     if (picked == null || !mounted) return;
-    DevicePrefs.write('power-test-arena', picked.name);
+    final isDraft = custom != null && custom!.id == widget.initialArena?.id;
+    if (!isDraft) {
+      DevicePrefs.write('power-test-arena', picked.name);
+      DevicePrefs.write('power-test-arena-preset', custom?.id ?? '');
+      if(custom!=null)DevicePrefs.write('power-test-arena-shape',custom!.shape.name);
+    }
     setState(() {
       _arenaChoice = picked;
+      _arenaDraft = isDraft ? widget.initialArena : null;
+      _arenaPresetId=custom?.id ?? '';
+      if(custom!=null)_arenaShape=custom!.shape;
       _reset();
     });
   }
@@ -1265,7 +1295,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
     final finished = match.state.status == MatchStatus.finished;
     const speeds = [0.5, 1.0, 2.0];
     final nextSpeed = speeds[(speeds.indexOf(_speed) + 1) % speeds.length];
-    final arenaLabel =
+    final arenaLabel = _selectedArena?.name ??
         (_arenaChoice ?? AppSettingsScope.of(context).arenaDecoration).label;
     final playbackLabel = finished
         ? 'Replay'

@@ -1,3 +1,4 @@
+import '../../arenas/domain/arena_definition.dart';
 import '../../../core/audio/audio_channel_button.dart';
 import '../../../core/sprites/visual_quality.dart';
 import 'dart:math' as math;
@@ -137,6 +138,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
     // prevents starting the match until the draft is repaired.
     final adminTuning = AppSettingsScope.of(context).powerUps;
     var tuning = _rarityWeights?.applyTo(adminTuning) ?? adminTuning;
+    if (_selectedArena?.arenaTrapsEnabled == false) {
+      tuning = tuning.withValue('arenaTrapsEnabled', 0);
+    }
     if (_matchDisableAllTraps != null) {
       tuning = tuning.withValue(
         'allTrapsDisabled',
@@ -273,13 +277,24 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
   bool _mayhem = false;
   int _mayhemSeconds = 120;
   bool _shrinkingArena = false;
-  ArenaShape _arenaShape = ArenaShape.circle;
+  bool _arenaGeometryOverride = false;
+  ArenaShape _manualArenaShape = ArenaShape.circle;
+  ArenaShape get _arenaShape => !_arenaGeometryOverride && _selectedArena!=null ? _selectedArena!.shape : _manualArenaShape;
+  set _arenaShape(ArenaShape value) => _manualArenaShape=value;
   bool _rotateThemes = false;
   bool _rotateShapes = false;
   int _rotationInterval = 60;
-  CenterObstacle _centerObstacle = CenterObstacle.none;
-  double _centerObstacleScale = 0.22;
+  CenterObstacle _manualObstacle = CenterObstacle.none;
+  CenterObstacle get _centerObstacle => !_arenaGeometryOverride && _selectedArena!=null ? _selectedArena!.obstacle : _manualObstacle;
+  set _centerObstacle(CenterObstacle value) => _manualObstacle=value;
+  double _manualObstacleScale = .22;
+  double get _centerObstacleScale => !_arenaGeometryOverride && _selectedArena!=null ? _selectedArena!.obstacleScale : _manualObstacleScale;
+  set _centerObstacleScale(double value) => _manualObstacleScale=value;
   ArenaDecoration? _arenaDecoration;
+  String? _arenaPresetId;
+  String? get _effectiveArenaId => _arenaPresetId ?? AppSettingsScope.of(context).arenaCatalog.defaultId;
+  ArenaDefinition? get _selectedArena => AppSettingsScope.of(context).arenaCatalog.find(_effectiveArenaId);
+
   bool _finishersOn = true;
   bool _settingCards = true;
   int _settingsTab = 0;
@@ -489,6 +504,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       'shrinking-arena',
       mayhem: profileMayhem,
     );
+    final arenaGeometryOverride = await _readProfile(profileMode, 'arena-geometry-override', mayhem:profileMayhem);
+    final arenaPresetId = await _readProfile(profileMode, 'arena-preset-id', mayhem:profileMayhem);
     final arenaDecoration = await _readProfile(
       profileMode,
       'arena-decoration-user',
@@ -532,7 +549,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
       _mayhemSeconds = const [30, 60, 120, 180, 300, 600].contains(duration)
           ? duration
           : 120;
-      _arenaShape = rememberedShape ?? ArenaShape.circle;
+      _arenaPresetId=arenaPresetId;
+      _arenaGeometryOverride=arenaGeometryOverride=='1';
+      _arenaShape = rememberedShape ?? _selectedArena?.shape ?? ArenaShape.circle;
       _rotateThemes = rotateThemes == '1';
       _rotateShapes = rotateShapes == '1';
       _rotationInterval = rotationInterval;
@@ -743,8 +762,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         },
         arsenal: _mode == MatchMode.arsenal,
         config: AppSettingsScope.of(context).powerUps,
-        arenaDecoration:
-            _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+        arenaDecoration: _selectedArena?.trapTheme ?? _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
       ),
     );
     if (choice == null || !mounted) return;
@@ -794,22 +812,43 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
           : _selected.length >= 2 && _selected.length <= _maxBalls);
 
   Future<void> _chooseArena() async {
+    ArenaDefinition? custom;
     final picked = await showArenaSelectionDialog(
       context,
-      selected:
-          _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+      selected: _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+      selectedPresetId: _effectiveArenaId,
+      shape: _arenaShape,
+      onSelectPreset:(arena)=>custom=arena,
     );
     if (picked == null || !mounted) return;
-    _update(() => _arenaDecoration = picked);
+    _update(() {
+      _arenaDecoration=picked;
+      _arenaPresetId=custom?.id ?? '';
+      _arenaGeometryOverride=false;
+      if(custom case final arena?) {
+        _arenaShape=arena.shape;_centerObstacle=arena.obstacle;_centerObstacleScale=arena.obstacleScale;
+      }
+    });
+    _writeProfile('arena-preset-id',_arenaPresetId!);
+    _writeProfile('arena-geometry-override','0');
+    if(custom case final arena?) {
+      _writeProfile('arena-shape',arena.shape.name);
+      _writeProfile('center-obstacle',arena.obstacle.name);
+      _writeProfile('center-obstacle-scale',arena.obstacleScale.toString());
+    }
     _writeProfile('arena-decoration-user', picked.name);
   }
 
   void _start() {
     if (!_canStart) return;
+    if ((_effectiveArenaId ?? '').isNotEmpty && _selectedArena==null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Saved arena is unavailable. Choose another arena.')));
+      return;
+    }
     GameAudio.instance.click();
     widget.onStartBattle(
       MatchConfig(
-        simulationRevision: 8,
+        simulationRevision: _selectedArena == null ? 8 : ArenaDefinition.replayRevision,
         contestants: _selected.values.toList(),
         speedMultiplier: _speedMultiplier,
         automaticSpeedUp: _automaticSpeedUp,
@@ -845,8 +884,8 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
         centerObstacle: _centerObstacle,
         centerObstacleScale: _centerObstacleScale,
         minimumArenaScale: AppSettingsScope.of(context).minimumArenaScale,
-        arenaDecoration:
-            _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
+        arenaPreset: _selectedArena?.validated(),
+        arenaDecoration: _selectedArena?.trapTheme ?? _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
         // The admin's power-up numbers; part of the match (and of its replay link).
         tuning: _mode.isThreadOnly ? PowerUpConfig.defaults : _matchTuning,
         skillLibrary: _mode.isThreadOnly
@@ -1721,6 +1760,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
               );
               if (selection == null || !mounted) return;
               _update(() {
+                _arenaGeometryOverride = true;
                 _arenaShape = selection.shape;
                 _centerObstacle = selection.obstacle;
                 _centerObstacleScale = selection.scale;
@@ -1728,6 +1768,7 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
                 _rotateShapes = selection.rotateShapes;
                 _rotationInterval = selection.intervalSeconds;
               });
+              _writeProfile('arena-geometry-override','1');
               _writeProfile('arena-shape', selection.shape.name);
               _writeProfile('center-obstacle', selection.obstacle.name);
               _writeProfile(
@@ -1897,9 +1938,9 @@ class _MatchSetupScreenState extends State<MatchSetupScreen> {
             'Arena',
             ArenaDecoration.values,
             _arenaDecoration ?? AppSettingsScope.of(context).arenaDecoration,
-            (v) => v.label,
+            (v) => _selectedArena?.name ?? ((_effectiveArenaId ?? '').isNotEmpty ? 'Unavailable arena - choose another' : v.label),
             (v) {
-              _update(() => _arenaDecoration = v);
+              _update(() { _arenaDecoration=v; _arenaPresetId=''; });
               _writeProfile('arena-decoration-user', v.name);
             },
             onTap: _chooseArena,

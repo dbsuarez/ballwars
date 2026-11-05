@@ -112,10 +112,12 @@ approval to migrate engines.
 - [ ] Manual visible-browser/subjective phone acceptance; separate cold-launch and longer soak/additional-phone checks before reconsidering migration.
 
 Flame 1.35.1 exists only in `.worktrees/flame-renderer`; no engine dependency is
-added to production. The next proposed feature remains the named-arena editor.
+added to production. The named-arena editor implementation is documented below.
 
-## Separate future feature
+## Arena editor
 
-- [ ] Persistent named-arena editor/catalog with safe geometry/trap validation. Existing user/admin selection and geometry dialogs already exist; reuse them.
+- [x] Persistent named-arena editor/catalog with validated geometry, trap sets, shared user/admin chooser, draft testing and immutable replay/video snapshots. See [Arena editor](ARENA-EDITOR.md).
+- [x] Square background coverage and boundary-aware laser endpoints, including shrinking arenas.
+- [ ] Apply migration 029 and verify shared catalog saving/selection on production devices.
 
 Completed implementation boxes reflect the local remediation batches and their linked verification reports. No release/deployment is implied by a passing local check.

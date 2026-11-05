@@ -1,31 +1,12 @@
+import '../../arenas/domain/arena_catalog.dart';
+export '../../arenas/domain/arena_theme.dart';
+import '../../arenas/domain/arena_theme.dart';
 import 'ball_appearance.dart';
 export 'ball_appearance.dart';
 import 'dart:ui';
 
 import '../../arena_simulation/domain/power_up_config.dart';
 import '../../skills/domain/skill_library.dart';
-
-enum ArenaDecoration {
-  defaultArena('Default'),
-  space('Space'),
-  desert('Desert'),
-  wilderness('Wilderness'),
-  neonGrid('Neon Grid'),
-  chaotic('Chaotic');
-
-  const ArenaDecoration(this.label);
-  final String label;
-
-  /// The hazard this arena adds, as the arena pickers caption it under [label].
-  String get hazardCaption => switch (this) {
-    ArenaDecoration.defaultArena => 'Spike Wall',
-    ArenaDecoration.space => 'Gravity Well',
-    ArenaDecoration.desert => 'Quicksand',
-    ArenaDecoration.wilderness => 'Vine Snare',
-    ArenaDecoration.neonGrid => 'Laser Gate',
-    ArenaDecoration.chaotic => 'All arena traps',
-  };
-}
 
 enum EffectRenderMode {
   sprite('Sprite'),
@@ -54,6 +35,7 @@ class AppSettings {
   final String arenaSubtitle;
   final double minimumArenaScale;
   final ArenaDecoration arenaDecoration;
+  final ArenaCatalog arenaCatalog;
   final EffectRenderMode projectileRenderMode;
   final EffectRenderMode explosionRenderMode;
   final EffectRenderMode freezeRenderMode;
@@ -90,6 +72,7 @@ class AppSettings {
     this.arenaSubtitle = defaultArenaSubtitle,
     this.minimumArenaScale = defaultMinimumArenaScale,
     this.arenaDecoration = ArenaDecoration.defaultArena,
+    this.arenaCatalog = const ArenaCatalog(),
     this.projectileRenderMode = EffectRenderMode.sprite,
     this.explosionRenderMode = EffectRenderMode.sprite,
     this.freezeRenderMode = EffectRenderMode.sprite,
@@ -128,6 +111,7 @@ class AppSettings {
     String? arenaSubtitle,
     double? minimumArenaScale,
     ArenaDecoration? arenaDecoration,
+    ArenaCatalog? arenaCatalog,
     EffectRenderMode? projectileRenderMode,
     EffectRenderMode? explosionRenderMode,
     EffectRenderMode? freezeRenderMode,
@@ -151,6 +135,7 @@ class AppSettings {
     arenaSubtitle: arenaSubtitle ?? this.arenaSubtitle,
     minimumArenaScale: minimumArenaScale ?? this.minimumArenaScale,
     arenaDecoration: arenaDecoration ?? this.arenaDecoration,
+    arenaCatalog: arenaCatalog ?? this.arenaCatalog,
     projectileRenderMode: projectileRenderMode ?? this.projectileRenderMode,
     explosionRenderMode: explosionRenderMode ?? this.explosionRenderMode,
     freezeRenderMode: freezeRenderMode ?? this.freezeRenderMode,

@@ -787,7 +787,7 @@ class PowerUpPainter {
     }
 
     for (final hazard in p.arenaThemeHazards) {
-      paintArenaThemeHazard(canvas, hazard, arenaRadius, r, state.step);
+      paintArenaThemeHazard(canvas, hazard, state.arenaRadius, r, state.step, shape: state.arenaShape);
     }
 
     for (final tendril in p.omegaTendrils) {
@@ -2451,8 +2451,9 @@ class PowerUpPainter {
     ArenaThemeHazard hazard,
     double arenaRadius,
     double itemRadius,
-    int step,
-  ) {
+    int step, {
+    ArenaShape shape = ArenaShape.circle,
+  }) {
     final radius = arenaRadius * 0.18;
     final pulse = 0.92 + math.sin((step - hazard.spawnStep) * 0.12) * 0.08;
     switch (hazard.kind) {
@@ -2520,12 +2521,7 @@ class PowerUpPainter {
           );
         }
       case ArenaThemeHazardKind.laserGate:
-        final direction = Offset(
-          math.cos(hazard.angle),
-          math.sin(hazard.angle),
-        );
-        final from = direction * -arenaRadius;
-        final to = direction * arenaRadius;
+        final (from,to) = arenaGateSegment(hazard.angle, arenaRadius, shape);
         final flicker = 0.55 + 0.45 * math.sin(step * 0.32).abs();
         canvas.drawLine(
           from,

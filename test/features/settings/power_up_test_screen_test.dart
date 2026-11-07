@@ -70,7 +70,7 @@ void _phoneTest(String description, WidgetTesterCallback body) {
 void main() {
   setUp(() => OfflineStore.instance = MemoryOfflineStore());
   _phoneTest(
-    'arena and controls center together with a large reachable Play button',
+    'arena and controls center together with a compact circular reachable Play button',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -84,7 +84,22 @@ void main() {
       final play = tester.getRect(find.byKey(const ValueKey('test-playback')));
       expect(stage.center.dy, closeTo(viewport.center.dy, 1));
       expect(play.center.dx, closeTo(viewport.center.dx, 1));
-      expect(play.size, const Size(72, 72));
+      expect(play.size, const Size(56, 56));
+      final playback = tester.widget<IconButton>(
+        find.byKey(const ValueKey('test-playback')),
+      );
+      expect(playback.style!.shape!.resolve({}), isA<CircleBorder>());
+      final loadouts = tester.getRect(
+        find.byKey(const ValueKey('below-arena-loadout-controls')),
+      );
+      expect(loadouts.top, greaterThan(play.bottom));
+      for (var index = 0; index < 2; index++) {
+        expect(
+          tester.getRect(find.byKey(ValueKey('item-preview-$index'))).top,
+          greaterThan(loadouts.bottom),
+        );
+      }
+
       expect(find.byTooltip('Play').hitTestable(), findsOneWidget);
       expect(tester.getSize(find.byType(ArenaCanvas)).width, 390);
       final arena = tester.getRect(find.byType(ArenaCanvas));
@@ -186,7 +201,7 @@ void main() {
     }
     expect(
       tester.getSize(find.byKey(const ValueKey('test-playback'))).height,
-      72,
+      56,
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('finisher-preview-0-0'))).height,

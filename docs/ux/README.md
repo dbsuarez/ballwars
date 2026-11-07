@@ -106,3 +106,16 @@ component proof. It has not replaced the implemented A-E UI or changed gameplay.
 ## Selectable skins
 
 [Classic Arcade and Battle Garage](skins/README.md) are selectable under Settings > Appearance. The FigCraft styling is now available as a device-local skin; the existing layouts, arena and gameplay remain.
+
+
+## Approved compact Power-up Test playback (2026-11-07)
+
+The owner approved a 56 px circular Play/Pause button, replacing the earlier
+72 px ticket-shaped control. Playback comes first below the arena status, then
+the additional loadout row, then both ball finisher rows. Arena width and the
+existing tap-to-rearm/hold-to-choose behavior remain. The applied runtime capture
+matches the approved draft at 390 x 844 and 360 x 800. All 23 screen checks plus
+the capture check pass; static analysis is clean.
+
+[390 px preview](screenshots/powerup-circle-play-390x844.png) and
+[360 px preview](screenshots/powerup-circle-play-360x800.png).

@@ -1471,34 +1471,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Text(
-                  'A',
-                  style: TextStyle(
-                    color: _balls[0].primaryColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                _itemPreview(0),
-                const Spacer(),
-                _itemPreview(1),
-                const SizedBox(width: 4),
-                Text(
-                  'B',
-                  style: TextStyle(
-                    color: _balls[1].primaryColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
           Row(
             children: [
               tools([
@@ -1531,20 +1503,20 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
               ]),
               const SizedBox(width: 12),
               SizedBox.square(
-                dimension: 72,
+                dimension: 56,
                 child: IconButton.filled(
                   key: const ValueKey('test-playback'),
                   tooltip: playbackLabel,
                   style: IconButton.styleFrom(
-                    shape: _overlayShape,
+                    shape: const CircleBorder(),
                     padding: EdgeInsets.zero,
-                    minimumSize: const Size.square(72),
+                    minimumSize: const Size.square(56),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   onPressed: _togglePlayback,
                   icon: Icon(
                     finished || _paused ? Icons.play_arrow : Icons.pause,
-                    size: 36,
+                    size: 30,
                   ),
                 ),
               ),
@@ -1584,6 +1556,34 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: _belowArenaLoadoutControls(),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              children: [
+                Text(
+                  'A',
+                  style: TextStyle(
+                    color: _balls[0].primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                _itemPreview(0),
+                const Spacer(),
+                _itemPreview(1),
+                const SizedBox(width: 4),
+                Text(
+                  'B',
+                  style: TextStyle(
+                    color: _balls[1].primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

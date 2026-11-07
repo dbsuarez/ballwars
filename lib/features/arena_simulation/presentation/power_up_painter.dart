@@ -1506,24 +1506,29 @@ class PowerUpPainter {
         p.artworkTint(flash.swap ? PowerUpKind.swapCannon : PowerUpKind.portal),
       );
       try {
+        // Both teleport ends share the portal artwork scale. Swap Cannon
+        // retains its independent burst geometry.
+        final flashRadius = flash.swap
+            ? r
+            : r * p.effectDisplayScale(PowerUpKind.portal);
         final t = flash.age / PowerUpTuning.explosionShowSteps;
         final fade = (1 - t).clamp(0.0, 1.0);
         final portalPaint = Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(2, r * 0.18)
+          ..strokeWidth = math.max(2, flashRadius * 0.18)
           ..color = colorOf(PowerUpKind.portal).withValues(alpha: fade);
         for (final spot in [flash.from, flash.to]) {
           if (flash.swap) {
             final burst = Paint()
               ..style = PaintingStyle.stroke
-              ..strokeWidth = math.max(2, r * 0.15)
+              ..strokeWidth = math.max(2, flashRadius * 0.15)
               ..color = const Color(0xFF7DF9FF).withValues(alpha: fade);
             for (var i = 0; i < 5; i++) {
               final angle = i * math.pi * 2 / 5 + state.step * 0.08;
               final direction = Offset.fromDirection(angle);
               canvas.drawLine(
-                spot + direction * r * 0.25,
-                spot + direction * r * (1.6 + t * 1.4),
+                spot + direction * flashRadius * 0.25,
+                spot + direction * flashRadius * (1.6 + t * 1.4),
                 burst
                   ..color =
                       (i.isEven
@@ -1534,10 +1539,10 @@ class PowerUpPainter {
             }
             canvas.drawCircle(
               spot,
-              r * (0.45 + t * 1.25),
+              flashRadius * (0.45 + t * 1.25),
               Paint()
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = math.max(3, r * 0.22)
+                ..strokeWidth = math.max(3, flashRadius * 0.22)
                 ..color = Colors.white.withValues(alpha: fade),
             );
           }
@@ -1557,7 +1562,7 @@ class PowerUpPainter {
               canvas,
               sprite,
               spot,
-              r * (1.1 + t),
+              flashRadius * (1.1 + t),
               t,
               opacity: fade,
               anchor: SpriteRegistry.anchor(
@@ -1568,8 +1573,8 @@ class PowerUpPainter {
           canvas.drawOval(
             Rect.fromCenter(
               center: spot,
-              width: r * (1.2 + t),
-              height: r * (2.2 + t * 0.5),
+              width: flashRadius * (1.2 + t),
+              height: flashRadius * (2.2 + t * 0.5),
             ),
             portalPaint,
           );

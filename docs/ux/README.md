@@ -2,11 +2,13 @@
 
 Status: Phase A + B implemented and submitted for deployment/release as v1.14.61. The centered Power-up Test follow-up is submitted as v1.14.62 on 2026-11-06. Workflow completion and device acceptance remain manual. [Validation and screenshots](PHASE-A-B-REPORT.md).
 
-Phase C is implemented locally on 2026-11-07. [Skill workbench report and screenshots](PHASE-C-REPORT.md). Phase C has not been pushed or released.
+Phase C is implemented locally on 2026-11-07. [Skill workbench report and screenshots](PHASE-C-REPORT.md). Phase C is included in the v1.14.63 deployment/release submission.
 
-Phase D is implemented locally on 2026-11-07. [Battle, results and replay report](PHASE-D-REPORT.md). Phase D has not been pushed or released.
+Phase D is implemented locally on 2026-11-07. [Battle, results and replay report](PHASE-D-REPORT.md). Phase D is included in the v1.14.63 deployment/release submission.
 
-Phase E is implemented locally on 2026-11-07. [Final polish report, measurements and screenshots](PHASE-E-REPORT.md). **A-E coding is complete.** Device/browser acceptance and actual phone performance remain open; Phase E has not been pushed or released.
+Phase E is implemented locally on 2026-11-07. [Final polish report, measurements and screenshots](PHASE-E-REPORT.md). **A-E coding is complete.** Device/browser acceptance and actual phone performance remain open; Phase E is included in the v1.14.63 deployment/release submission.
+
+Phases C-E submitted for web deployment and signed APK release as **v1.14.63** on 2026-11-07. [Release notes](RELEASE-v1.14.63.md). Workflow completion is checked manually.
 
 The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_CODEX_HANDOFF.md). The reference checkpoint was refreshed against master v1.14.60 (`15c500d`), preserving all five existing mode entries, current settings, simulation and release workflows.
 

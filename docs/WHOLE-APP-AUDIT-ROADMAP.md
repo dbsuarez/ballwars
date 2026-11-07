@@ -255,3 +255,6 @@ Centered Power-up Test follow-up submitted for web deployment and signed APK rel
 - [ ] Published browser/Android acceptance and actual phone performance verification remain manual.
 
 [A-E implementation is complete locally](ux/README.md). [Phase E report and performance evidence](ux/PHASE-E-REPORT.md). No push, release or device installation in this pass.
+
+
+Phases C-E submitted for web deployment and signed APK release as **v1.14.63** on 2026-11-07. See [release notes](ux/RELEASE-v1.14.63.md). Workflow completion and published phone/browser acceptance remain manually checked.

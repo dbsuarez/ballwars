@@ -1472,10 +1472,6 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _belowArenaLoadoutControls(),
-          ),
-          Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
@@ -1584,6 +1580,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
                 ),
               ]),
             ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: _belowArenaLoadoutControls(),
           ),
         ],
       ),

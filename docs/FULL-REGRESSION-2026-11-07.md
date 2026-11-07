@@ -56,3 +56,13 @@ reachability limit. Those edits were preserved for their active author. The
 1,787-pass result applies to the recorded full-run snapshot, not a claim that
 this newer dirty layout has passed. This separate regression needs resolution
 in the concurrent layout work.
+
+
+### Reachability follow-up resolved
+
+After reviewing local commit `97490e6`, the added loadout row was moved below the
+playback buttons. The 72 px Play button is closer to the arena without changing
+arena width. All 23 Power-up Test checks now pass, including the <150 px
+reachability check; static analysis is clean. Runtime previews:
+[390 x 844](ux/screenshots/powerup-loadout-layout-390x844.png) and
+[360 x 800](ux/screenshots/powerup-loadout-layout-360x800.png).

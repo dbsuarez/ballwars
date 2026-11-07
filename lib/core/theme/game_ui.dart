@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 
-/// Player-facing visual language. Scoped to the lobby/setup, never the arena.
+/// Shared game chrome. Does not change arena rendering or simulation settings.
 class GameUi {
   static const navy = Color(0xFF080E2B);
   static const blue = Color(0xFF417AF4);
@@ -75,6 +75,8 @@ class GameUi {
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
         fillColor: chrome.surface,
+        helperMaxLines: 3,
+        errorMaxLines: 3,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: chrome.border),
@@ -91,6 +93,51 @@ class GameTheme extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Theme(data: GameUi.theme(context), child: child);
+}
+
+/// Supplies a scoped theme to the builder as well as its descendants. Native
+/// controls keep their controllers, semantics and validation behavior.
+class GameWorkbench extends StatelessWidget {
+  const GameWorkbench({super.key, required this.builder});
+  final WidgetBuilder builder;
+
+  @override
+  Widget build(BuildContext context) => GameTheme(
+    child: Builder(
+      builder: (context) => GameBackdrop(
+        child: Theme(
+          data: Theme.of(
+            context,
+          ).copyWith(scaffoldBackgroundColor: Colors.transparent),
+          child: Builder(builder: builder),
+        ),
+      ),
+    ),
+  );
+}
+
+/// A rarity frame around a real, interactive library entry.
+class GameSkillFrame extends StatelessWidget {
+  const GameSkillFrame({super.key, required this.child, required this.color});
+  final Widget child;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    shape: BeveledRectangleBorder(
+      borderRadius: BorderRadius.circular(9),
+      side: BorderSide(color: color.withValues(alpha: .75)),
+    ),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: .13), Colors.transparent],
+        ),
+      ),
+      child: child,
+    ),
+  );
 }
 
 class GameBackdrop extends StatelessWidget {

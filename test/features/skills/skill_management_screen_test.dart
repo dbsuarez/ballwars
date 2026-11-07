@@ -789,6 +789,18 @@ void main() {
       // Tapping an off-screen ListTile silently misses and leaves the editor
       // unopened. Bring the tile into view and verify the dialog is mounted.
       final knifeVolley = find.widgetWithText(ListTile, 'Knife Volley');
+      if (knifeVolley.evaluate().isEmpty) {
+        await tester.scrollUntilVisible(
+          knifeVolley,
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView).first,
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+      }
       expect(knifeVolley, findsOneWidget);
       await tester.ensureVisible(knifeVolley);
       await tester.pumpAndSettle();
@@ -2120,6 +2132,8 @@ void main() {
       // Kutsilyo to Special.
       await _setSkillLibraryFilter(tester, 'source', 'Custom');
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.widgetWithText(ListTile, 'Kutsilyo'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Kutsilyo'));
       await tester.pumpAndSettle();
       await _revealEditor(
@@ -2153,6 +2167,8 @@ void main() {
         find.widgetWithText(TextField, 'Search skills'),
         'Knife',
       );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.widgetWithText(ListTile, 'Knife'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'Knife'));
       await tester.pumpAndSettle();

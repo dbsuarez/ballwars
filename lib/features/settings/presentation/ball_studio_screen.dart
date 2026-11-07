@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import '../../../core/utils/ball_image_loader.dart';
@@ -313,7 +314,7 @@ class _BallStudioScreenState extends State<BallStudioScreen>
         .where((p) => p.name.toLowerCase() == name.toLowerCase())
         .firstOrNull;
     if (!delete && existing != null) {
-      final replace = await showDialog<bool>(
+      final replace = await showGameDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Text('Replace ${existing.name}?'),
@@ -696,7 +697,7 @@ class _BallStudioScreenState extends State<BallStudioScreen>
               onPressed: _selectedPreset == null || _presetBusy
                   ? null
                   : () async {
-                      final yes = await showDialog<bool>(
+                      final yes = await showGameDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Delete preset?'),
@@ -754,14 +755,16 @@ class _BallStudioScreenState extends State<BallStudioScreen>
   );
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Ball Studio'),
       actions: [
         IconButton(
           tooltip: 'About Ball Studio',
           icon: const Icon(Icons.info_outline),
-          onPressed: () => showDialog<void>(
+          onPressed: () => showGameDialog<void>(
             context: context,
             builder: (_) => AlertDialog(
               title: const Text('Ball Studio'),
@@ -792,260 +795,289 @@ class _BallStudioScreenState extends State<BallStudioScreen>
         ],
       ),
     ),
-    body: Column(
-      children: [
-        _preview(),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Live arena preview · preview choices do not change ball stats',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12),
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabs,
+    body: LayoutBuilder(
+      builder: (context, bounds) => SingleChildScrollView(
+        child: SizedBox(
+          height: math.max(440, bounds.maxHeight),
+          child: Column(
             children: [
-              ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Outer glow'),
-                    value: _glow,
-                    onChanged: (v) => _edit(() => _glow = v),
-                  ),
-                  _slider(
-                    'Glow width',
-                    _glowWidth,
-                    1,
-                    12,
-                    (v) => _edit(() => _glowWidth = v),
-                    key: const ValueKey('studio-glow-width'),
-                  ),
-                  _row(
-                    'Glow color',
-                    Row(
+              _preview(),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Live arena preview · preview choices do not change ball stats',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabs,
+                  children: [
+                    ListView(
+                      padding: const EdgeInsets.all(16),
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            key: const ValueKey('studio-glow-color'),
-                            icon: Icon(
-                              Icons.circle,
-                              color: Color(
-                                _appearance.glowColorValue ?? _color.toARGB32(),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Outer glow'),
+                          value: _glow,
+                          onChanged: (v) => _edit(() => _glow = v),
+                        ),
+                        _slider(
+                          'Glow width',
+                          _glowWidth,
+                          1,
+                          12,
+                          (v) => _edit(() => _glowWidth = v),
+                          key: const ValueKey('studio-glow-width'),
+                        ),
+                        _row(
+                          'Glow color',
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  key: const ValueKey('studio-glow-color'),
+                                  icon: Icon(
+                                    Icons.circle,
+                                    color: Color(
+                                      _appearance.glowColorValue ??
+                                          _color.toARGB32(),
+                                    ),
+                                  ),
+                                  label: Text(
+                                    _appearance.glowColorValue == null
+                                        ? 'Ball color'
+                                        : 'Custom',
+                                  ),
+                                  onPressed: () async {
+                                    final chosen = await showColorPicker(
+                                      context,
+                                      initialColor: Color(
+                                        _appearance.glowColorValue ??
+                                            _color.toARGB32(),
+                                      ),
+                                      title: 'Glow color',
+                                    );
+                                    if (chosen != null && mounted) {
+                                      _edit(
+                                        () =>
+                                            _appearance = _appearance.copyWith(
+                                              glowColorValue: chosen.toARGB32(),
+                                            ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Use each ball color',
+                                onPressed: () => _edit(
+                                  () => _appearance = _appearance.copyWith(
+                                    resetGlowColor: true,
+                                  ),
+                                ),
+                                icon: const Icon(Icons.restart_alt),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        SwitchListTile(
+                          key: const ValueKey('studio-expressions'),
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Enhanced expressions'),
+                          subtitle: const Text(
+                            'React to aiming, stun, overcharge and health.',
+                          ),
+                          value: _appearance.expressiveFaces,
+                          onChanged: (v) => _edit(
+                            () => _appearance = _appearance.copyWith(
+                              expressiveFaces: v,
+                            ),
+                          ),
+                        ),
+                        _row(
+                          'Hand style',
+                          DropdownButtonFormField<BallHandStyle>(
+                            key: ValueKey(
+                              'studio-hand-style-${_appearance.handStyle}',
+                            ),
+                            initialValue: _appearance.handStyle,
+                            isExpanded: true,
+                            items: [
+                              for (final style in BallHandStyle.values)
+                                DropdownMenuItem(
+                                  value: style,
+                                  child: Text(style.label),
+                                ),
+                            ],
+                            onChanged: (v) => _edit(
+                              () => _appearance = _appearance.copyWith(
+                                handStyle: v,
                               ),
                             ),
-                            label: Text(
-                              _appearance.glowColorValue == null
-                                  ? 'Ball color'
-                                  : 'Custom',
-                            ),
-                            onPressed: () async {
-                              final chosen = await showColorPicker(
-                                context,
-                                initialColor: Color(
-                                  _appearance.glowColorValue ??
-                                      _color.toARGB32(),
-                                ),
-                                title: 'Glow color',
-                              );
-                              if (chosen != null && mounted) {
-                                _edit(
-                                  () => _appearance = _appearance.copyWith(
-                                    glowColorValue: chosen.toARGB32(),
-                                  ),
-                                );
-                              }
-                            },
                           ),
                         ),
-                        IconButton(
-                          tooltip: 'Use each ball color',
-                          onPressed: () => _edit(
+                        _slider(
+                          'Hand size',
+                          _appearance.handScale,
+                          .5,
+                          2,
+                          (v) => _edit(
                             () => _appearance = _appearance.copyWith(
-                              resetGlowColor: true,
+                              handScale: v,
                             ),
                           ),
-                          icon: const Icon(Icons.restart_alt),
+                          key: const ValueKey('studio-hand-scale'),
+                          unit: '×',
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  SwitchListTile(
-                    key: const ValueKey('studio-expressions'),
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Enhanced expressions'),
-                    subtitle: const Text(
-                      'React to aiming, stun, overcharge and health.',
-                    ),
-                    value: _appearance.expressiveFaces,
-                    onChanged: (v) => _edit(
-                      () => _appearance = _appearance.copyWith(
-                        expressiveFaces: v,
-                      ),
-                    ),
-                  ),
-                  _row(
-                    'Hand style',
-                    DropdownButtonFormField<BallHandStyle>(
-                      key: ValueKey(
-                        'studio-hand-style-${_appearance.handStyle}',
-                      ),
-                      initialValue: _appearance.handStyle,
-                      isExpanded: true,
-                      items: [
-                        for (final style in BallHandStyle.values)
-                          DropdownMenuItem(
-                            value: style,
-                            child: Text(style.label),
+                        _slider(
+                          'Eye size',
+                          _appearance.eyeScale,
+                          .5,
+                          1.5,
+                          (v) => _edit(
+                            () =>
+                                _appearance = _appearance.copyWith(eyeScale: v),
                           ),
+                          key: const ValueKey('studio-eye-size'),
+                          unit: '×',
+                        ),
+                        _slider(
+                          'Mouth position',
+                          _appearance.mouthOffset,
+                          -.25,
+                          .25,
+                          (v) => _edit(
+                            () => _appearance = _appearance.copyWith(
+                              mouthOffset: v,
+                            ),
+                          ),
+                          key: const ValueKey('studio-mouth-position'),
+                        ),
+                        _slider(
+                          'Mouth size',
+                          _appearance.mouthScale,
+                          .5,
+                          1.5,
+                          (v) => _edit(
+                            () => _appearance = _appearance.copyWith(
+                              mouthScale: v,
+                            ),
+                          ),
+                          key: const ValueKey('studio-mouth-size'),
+                        ),
+                        _slider(
+                          'Pupil tracking',
+                          _appearance.pupilFollow,
+                          0,
+                          2,
+                          (v) => _edit(
+                            () => _appearance = _appearance.copyWith(
+                              pupilFollow: v,
+                            ),
+                          ),
+                          key: const ValueKey('studio-pupil-follow'),
+                        ),
+                        const Text(
+                          '0 centers the pupils; 1 follows opponents normally; 2 emphasizes the look. Choose Six balls in Preview to see tracking.',
+                        ),
+                        SwitchListTile(
+                          title: const Text('Blink'),
+                          value: _appearance.blinkInterval > 0,
+                          onChanged: (v) => _edit(
+                            () => _appearance = _appearance.copyWith(
+                              blinkInterval: v ? 4 : 0,
+                            ),
+                          ),
+                        ),
+                        if (_appearance.blinkInterval > 0) ...[
+                          _slider(
+                            'Blink every',
+                            _appearance.blinkInterval,
+                            1,
+                            10,
+                            (v) => _edit(
+                              () => _appearance = _appearance.copyWith(
+                                blinkInterval: v,
+                              ),
+                            ),
+                            unit: ' s',
+                          ),
+                          _slider(
+                            'Blink duration',
+                            _appearance.blinkDuration,
+                            .06,
+                            .4,
+                            (v) => _edit(
+                              () => _appearance = _appearance.copyWith(
+                                blinkDuration: v,
+                              ),
+                            ),
+                            unit: ' s',
+                          ),
+                        ],
                       ],
-                      onChanged: (v) => _edit(
-                        () => _appearance = _appearance.copyWith(handStyle: v),
-                      ),
                     ),
-                  ),
-                  _slider(
-                    'Hand size',
-                    _appearance.handScale,
-                    .5,
-                    2,
-                    (v) => _edit(
-                      () => _appearance = _appearance.copyWith(handScale: v),
-                    ),
-                    key: const ValueKey('studio-hand-scale'),
-                    unit: '×',
-                  ),
-                  _slider(
-                    'Eye size',
-                    _appearance.eyeScale,
-                    .5,
-                    1.5,
-                    (v) => _edit(
-                      () => _appearance = _appearance.copyWith(eyeScale: v),
-                    ),
-                    key: const ValueKey('studio-eye-size'),
-                    unit: '×',
-                  ),
-                  _slider(
-                    'Mouth position',
-                    _appearance.mouthOffset,
-                    -.25,
-                    .25,
-                    (v) => _edit(
-                      () => _appearance = _appearance.copyWith(mouthOffset: v),
-                    ),
-                    key: const ValueKey('studio-mouth-position'),
-                  ),
-                  _slider(
-                    'Mouth size',
-                    _appearance.mouthScale,
-                    .5,
-                    1.5,
-                    (v) => _edit(
-                      () => _appearance = _appearance.copyWith(mouthScale: v),
-                    ),
-                    key: const ValueKey('studio-mouth-size'),
-                  ),
-                  _slider(
-                    'Pupil tracking',
-                    _appearance.pupilFollow,
-                    0,
-                    2,
-                    (v) => _edit(
-                      () => _appearance = _appearance.copyWith(pupilFollow: v),
-                    ),
-                    key: const ValueKey('studio-pupil-follow'),
-                  ),
-                  const Text(
-                    '0 centers the pupils; 1 follows opponents normally; 2 emphasizes the look. Choose Six balls in Preview to see tracking.',
-                  ),
-                  SwitchListTile(
-                    title: const Text('Blink'),
-                    value: _appearance.blinkInterval > 0,
-                    onChanged: (v) => _edit(
-                      () => _appearance = _appearance.copyWith(
-                        blinkInterval: v ? 4 : 0,
-                      ),
-                    ),
-                  ),
-                  if (_appearance.blinkInterval > 0) ...[
-                    _slider(
-                      'Blink every',
-                      _appearance.blinkInterval,
-                      1,
-                      10,
-                      (v) => _edit(
-                        () => _appearance = _appearance.copyWith(
-                          blinkInterval: v,
+                    ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _row(
+                          'HP-bar size',
+                          DropdownButtonFormField<HpBarSize>(
+                            key: ValueKey(
+                              'studio-hp-size-${_appearance.hpBarSize}',
+                            ),
+                            initialValue: _appearance.hpBarSize,
+                            isExpanded: true,
+                            items: [
+                              for (final size in HpBarSize.values)
+                                DropdownMenuItem(
+                                  value: size,
+                                  child: Text(size.label),
+                                ),
+                            ],
+                            onChanged: (v) => _edit(
+                              () => _appearance = _appearance.copyWith(
+                                hpBarSize: v,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      unit: ' s',
-                    ),
-                    _slider(
-                      'Blink duration',
-                      _appearance.blinkDuration,
-                      .06,
-                      .4,
-                      (v) => _edit(
-                        () => _appearance = _appearance.copyWith(
-                          blinkDuration: v,
+                        const Text(
+                          'Small preserves the current size. A one-pixel outline keeps the bar visible. Match Setup still controls whether HP bars are shown.',
                         ),
-                      ),
-                      unit: ' s',
+                      ],
                     ),
+                    _previewControls(),
+                    _presetControls(),
                   ],
-                ],
+                ),
               ),
-              ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _row(
-                    'HP-bar size',
-                    DropdownButtonFormField<HpBarSize>(
-                      key: ValueKey('studio-hp-size-${_appearance.hpBarSize}'),
-                      initialValue: _appearance.hpBarSize,
-                      isExpanded: true,
-                      items: [
-                        for (final size in HpBarSize.values)
-                          DropdownMenuItem(
-                            value: size,
-                            child: Text(size.label),
-                          ),
-                      ],
-                      onChanged: (v) => _edit(
-                        () => _appearance = _appearance.copyWith(hpBarSize: v),
-                      ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    'Save failed: $_error',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
-                  const Text(
-                    'Small preserves the current size. A one-pixel outline keeps the bar visible. Match Setup still controls whether HP bars are shown.',
-                  ),
-                ],
-              ),
-              _previewControls(),
-              _presetControls(),
+                ),
+              if (_message != null)
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(_message!),
+                ),
             ],
           ),
         ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(
-              'Save failed: $_error',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        if (_message != null)
-          Padding(padding: const EdgeInsets.all(8), child: Text(_message!)),
-      ],
+      ),
     ),
     bottomNavigationBar: SafeArea(
       child: Padding(

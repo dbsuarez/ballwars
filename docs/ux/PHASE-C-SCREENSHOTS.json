@@ -1,0 +1,90 @@
+{
+  "capture": "Actual Flutter runtime with bundled fonts and sprites; local fixtures; not physical-device photographs",
+  "command": "flutter test test/visual/capture_skill_ui.dart",
+  "screenshots": [
+    {
+      "path": "docs/ux/screenshots/phase-c/demo-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 92189,
+      "sha256": "48661ca5447f6be4dcda765c0e4bff3e525aecfaf4da95bd409f8ac1326987ee"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/demo-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 116514,
+      "sha256": "87d0ee9d61e85e83fa87da4398554e932b0b37b02d8738656cecbd583b31afe7"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/demo-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 40948,
+      "sha256": "79f2dbd4f82165ee4231e24643d4b2533d266cf4dd131c161188c2eabcc19f85"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/editor-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 176340,
+      "sha256": "5b581ebe37193126608166d275017be923f2e718b11316e107f0287fe62fec34"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/editor-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 229853,
+      "sha256": "8ccc98d56b35dfd32f92b287ab5181f3bae3bc7e07622e101f72ddf649da8d99"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/editor-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 119151,
+      "sha256": "04ad759af246333fbe0cea0d6b4d2f289d9aa8d71a017975dcea6eef50b8c20f"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/library-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 192323,
+      "sha256": "33897e920981e964035e3dc61c82d54c56e59826efc91acb10907293c1c9bc9c"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/library-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 262740,
+      "sha256": "69c0ae9493de358ef9cc5a6de0cf10308e3fc8fce7311cfdacf0b7620666d91e"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/library-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 95655,
+      "sha256": "b596ec410c2449ec53a06bc6f3e14adff7318c300cad1ab37435ee83b9bfd7f5"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/studio-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 175819,
+      "sha256": "c916e75ae1fc24372ad37e17bf580be4253a4d46de7d15ffb5b01b5adc654032"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/studio-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 227109,
+      "sha256": "3fedaa0985d142ed6ec624f08f21f614b5bd47f8be2bbbc4335e7ca6220c0794"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-c/studio-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 107180,
+      "sha256": "f95879059a5f5875fbeba0ce1f90fc673b65bc2dd3e3a669cb4a147998383600"
+    }
+  ]
+}

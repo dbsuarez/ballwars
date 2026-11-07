@@ -218,3 +218,14 @@ Phase A + B and the annotated Power-up Test changes submitted for web deployment
 
 
 Centered Power-up Test follow-up submitted for web deployment and signed APK release as v1.14.62 on 2026-11-06. Next session starts Phase C of the [UI roadmap](ux/README.md); no Phase C implementation was started by this release task. Workflow completion remains manually checked.
+
+
+## UI Phase C: skill workbenches (2026-11-07)
+
+- [x] Tier-framed unified library, labeled filters and shared game navigation/dialog styling.
+- [x] Existing six editor sections, prominent Save and previews retained; no skill/simulation semantics changed.
+- [x] Ball Studio and Skill Demo share the visual system; short-window scrolling.
+- [x] 141 affected regressions and 12 portrait/landscape runtime screenshots passed. Static analysis clean.
+- [ ] Physical phone/browser acceptance after explicit deployment.
+
+[Phase C report and screenshots](ux/PHASE-C-REPORT.md). Phase D (battle HUD, results and replay presentation) is next. This pass does not push or release.

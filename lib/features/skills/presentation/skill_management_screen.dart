@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import '../../admin_guide/domain/admin_guide.dart';
 import '../../admin_guide/presentation/admin_guide_screen.dart';
 import '../../../core/widgets/number_stepper.dart';
@@ -138,7 +139,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       '  ',
     ).convert(_library.toJson());
     if (!mounted) return;
-    await showDialog<void>(
+    await showGameDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Export skill library'),
@@ -168,7 +169,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   Future<void> _importLibrary() async {
     final controller = TextEditingController();
     String? error;
-    final imported = await showDialog<SkillLibrary>(
+    final imported = await showGameDialog<SkillLibrary>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
@@ -231,7 +232,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       );
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGameDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Review legacy VFX conversion'),
@@ -315,7 +316,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
         !_library.hasBuiltInOverride(skill.id)) {
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGameDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Restore built-in skill?'),
@@ -422,7 +423,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
 
   Future<void> _duplicate(SkillDefinition source) async {
     final controller = TextEditingController(text: '${source.name} Variant');
-    final name = await showDialog<String>(
+    final name = await showGameDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Duplicate skill'),
@@ -456,7 +457,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   Future<void> _create() async {
     final name = TextEditingController();
     var carrier = PowerUpKind.pistol;
-    final draft = await showDialog<SkillDefinition>(
+    final draft = await showGameDialog<SkillDefinition>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
@@ -669,7 +670,13 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                 arsenal: true,
                 config: descriptionTuning,
               );
-        return Card(
+        return GameSkillFrame(
+          key: ValueKey('skill-frame-${skill.id}'),
+          color:
+              skill.resolvedCategory == SkillCategory.trap ||
+                  skill.resolvedCategory == SkillCategory.arenaTrap
+              ? GameUi.gold
+              : SkillLibrary.rarityOf(skill, _tuning)?.color ?? GameUi.cyan,
           child: ListTile(
             minVerticalPadding: 12,
             leading: PowerUpIcon(
@@ -793,7 +800,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
 
     var enabled = _tuning.arenaTrapsEnabled;
     var draft = _tuning;
-    final result = await showDialog<PowerUpConfig>(
+    final result = await showGameDialog<PowerUpConfig>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
@@ -986,7 +993,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
     SkillLibrary Function(SkillLibrary library) apply,
   ) async {
     final count = _library.all(_tuning).length;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGameDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Apply to all skills'),
@@ -1159,7 +1166,7 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
                   key: const ValueKey('trap-help-allTrapsDisabled'),
                   tooltip: 'Disable all traps: master override',
                   icon: const Icon(Icons.help_outline),
-                  onPressed: () => showDialog<void>(
+                  onPressed: () => showGameDialog<void>(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
                       title: const Text('Disable all traps'),
@@ -1386,16 +1393,32 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
       List<String> choices,
       ValueChanged<String> update,
     ) {
-      return DropdownButton<String>(
-        key: ValueKey('skill-filter-$key'),
-        value: value,
-        items: [
-          for (final choice in choices)
-            DropdownMenuItem(value: choice, child: Text(choice)),
-        ],
-        onChanged: (choice) {
-          if (choice != null) setState(() => update(choice));
-        },
+      return SizedBox(
+        width: MediaQuery.sizeOf(context).width > 600
+            ? (MediaQuery.sizeOf(context).width - 80) / 4
+            : (MediaQuery.sizeOf(context).width - 48) / 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${key[0].toUpperCase()}${key.substring(1)}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            DropdownButton<String>(
+              key: ValueKey('skill-filter-$key'),
+              isExpanded: true,
+              value: value,
+              items: [
+                for (final choice in choices)
+                  DropdownMenuItem(value: choice, child: Text(choice)),
+              ],
+              onChanged: (choice) {
+                if (choice != null) setState(() => update(choice));
+              },
+            ),
+          ],
+        ),
       );
     }
 
@@ -1533,7 +1556,9 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) {
     final c = BallWarsColors.of(context);
     final page = DefaultTabController(
       length: 2,
@@ -1588,49 +1613,59 @@ class _SkillManagementScreenState extends State<SkillManagementScreen> {
             ],
           ),
         ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  labelText: 'Search skills',
-                  hintText: 'Name, description, rarity, source or status',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          key: const ValueKey('clear-skill-search'),
-                          tooltip: 'Clear search',
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _query = '');
-                          },
-                          icon: const Icon(Icons.close),
-                        ),
-                ),
-                onChanged: (value) => setState(() => _query = value),
+        body: LayoutBuilder(
+          builder: (context, bounds) => SingleChildScrollView(
+            child: SizedBox(
+              height: math.max(400, bounds.maxHeight),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Search skills',
+                        hintText: 'Name, description, rarity, source or status',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                key: const ValueKey('clear-skill-search'),
+                                tooltip: 'Clear search',
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _query = '');
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
+                      ),
+                      onChanged: (value) => setState(() => _query = value),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 6,
+                    ),
+                    child: Text(
+                      'Browse all skills together. Use filters to narrow by category, source, status, or rarity.',
+                      style: AppText.ui(
+                        12,
+                        FontWeight.w500,
+                        color: c.muted,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [_unifiedLibrary(), _globalSettings()],
+                    ),
+                  ),
+                ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-              child: Text(
-                'Browse all skills together. Use filters to narrow by category, source, status, or rarity.',
-                style: AppText.ui(
-                  12,
-                  FontWeight.w500,
-                  color: c.muted,
-                  height: 1.35,
-                ),
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [_unifiedLibrary(), _globalSettings()],
-              ),
-            ),
-          ],
+          ),
         ),
         bottomNavigationBar: SafeArea(
           top: false,
@@ -1741,7 +1776,7 @@ class _SkillEditorState extends State<_SkillEditor>
       );
       return;
     }
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGameDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Review this skill’s legacy VFX conversion'),
@@ -1875,7 +1910,7 @@ class _SkillEditorState extends State<_SkillEditor>
     }
     _closing = true;
     FocusScope.of(context).unfocus();
-    final action = await showDialog<String>(
+    final action = await showGameDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Unsaved skill changes'),
@@ -2635,7 +2670,7 @@ class _SkillEditorState extends State<_SkillEditor>
   Future<void> _previewSkill() async {
     final skill = _result;
     if (skill == null) return;
-    await showDialog<void>(
+    await showGameDialog<void>(
       context: context,
       builder: (_) => _SkillPreviewDialog(skill: skill),
     );
@@ -2647,7 +2682,7 @@ class _SkillEditorState extends State<_SkillEditor>
     final effectMode = AppSettingsScope.of(context).explosionRenderMode;
     final library = _effectLibrary;
     final tuning = widget.tuning;
-    final editMode = await showDialog<String>(
+    final editMode = await showGameDialog<String>(
       context: context,
       builder: (_) => SkillDemoDialog(
         skill: skill,
@@ -2682,7 +2717,7 @@ class _SkillEditorState extends State<_SkillEditor>
     );
   }
 
-  void _showArtworkFacingHelp() => showDialog<void>(
+  void _showArtworkFacingHelp() => showGameDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Artwork facing'),
@@ -2782,7 +2817,7 @@ class _SkillEditorState extends State<_SkillEditor>
     final guidance = isAppearance
         ? appearanceGuides[appearanceIndex]
         : sectionGuides[safeSection];
-    showDialog<void>(
+    showGameDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Skill settings guide'),
@@ -2821,11 +2856,17 @@ class _SkillEditorState extends State<_SkillEditor>
           ),
         ),
         actions: [
-          TextButton(key: const ValueKey('skill-open-full-guide'),
+          TextButton(
+            key: const ValueKey('skill-open-full-guide'),
             onPressed: () {
               Navigator.pop(dialogContext);
-              openAdminGuide(context, topic: guideTopicForEditor(safeSection, appearanceIndex));
-            }, child: const Text('Read full guide')),
+              openAdminGuide(
+                context,
+                topic: guideTopicForEditor(safeSection, appearanceIndex),
+              );
+            },
+            child: const Text('Read full guide'),
+          ),
 
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -3413,16 +3454,23 @@ class _SkillEditorState extends State<_SkillEditor>
   };
 
   void _showFieldHelp(String label, String description, {String? guideTopic}) {
-    showDialog<void>(
+    showGameDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(label),
         content: Text(description),
         actions: [
-          TextButton(onPressed: () {
-            Navigator.pop(dialogContext);
-            openAdminGuide(context, topic: guideTopic ?? guideTopicForField(label), highlight: label);
-          }, child: const Text('Read full guide')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              openAdminGuide(
+                context,
+                topic: guideTopic ?? guideTopicForField(label),
+                highlight: label,
+              );
+            },
+            child: const Text('Read full guide'),
+          ),
 
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -3479,7 +3527,7 @@ class _SkillEditorState extends State<_SkillEditor>
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
+        GameSectionHeader(title: title, icon: Icons.tune_rounded),
         const SizedBox(height: 4),
         Text(description, style: Theme.of(context).textTheme.bodySmall),
       ],
@@ -3607,12 +3655,12 @@ class _SkillEditorState extends State<_SkillEditor>
     if (initial == null) return;
     var library = _effectLibrary;
     var bindings = {..._visualBindings};
-    final accepted = await showDialog<bool>(
+    final accepted = await showGameDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, update) => AlertDialog(
           title: const Text('Area artwork'),
-          insetPadding: const EdgeInsets.symmetric(vertical:20),
+          insetPadding: const EdgeInsets.symmetric(vertical: 20),
           content: SizedBox(
             width: 620,
             height: MediaQuery.sizeOf(context).height * .6,
@@ -3629,7 +3677,7 @@ class _SkillEditorState extends State<_SkillEditor>
                   library = next;
                   bindings = {...nextBindings};
                 }),
-                onPreview: (next, skill) => showDialog<void>(
+                onPreview: (next, skill) => showGameDialog<void>(
                   context: context,
                   builder: (_) => SkillDemoDialog(
                     skill: skill,
@@ -3840,7 +3888,11 @@ class _SkillEditorState extends State<_SkillEditor>
                   key: ValueKey('skill-number-help-$key'),
                   tooltip: 'About $label',
                   icon: const Icon(Icons.help_outline, size: 18),
-                  onPressed: () => _showFieldHelp(label, description, guideTopic: guideTopicForNumber(key)),
+                  onPressed: () => _showFieldHelp(
+                    label,
+                    description,
+                    guideTopic: guideTopicForNumber(key),
+                  ),
                 ),
               ),
             _fixedRow(
@@ -3919,7 +3971,9 @@ class _SkillEditorState extends State<_SkillEditor>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) {
     final result = _result;
     final compatibilityIssues = <String>[
       ...?result?.compatibilityIssues,
@@ -3985,6 +4039,16 @@ class _SkillEditorState extends State<_SkillEditor>
                   ),
                   TextButton(
                     key: const ValueKey('save-skill'),
+                    style: TextButton.styleFrom(
+                      backgroundColor: GameUi.gold,
+                      foregroundColor: GameUi.navy,
+                      disabledBackgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      shape: BeveledRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                    ),
                     onPressed:
                         _saving ||
                             result == null ||
@@ -4235,34 +4299,36 @@ class _SkillEditorState extends State<_SkillEditor>
                             icon: const Icon(Icons.tune),
                             label: const Text('Apply trap behavior preset'),
                             onPressed: () async {
-                              final preset = await showDialog<SkillTrapPreset>(
-                                context: context,
-                                builder: (dialogContext) => SimpleDialog(
-                                  title: const Text('Choose trap behavior'),
-                                  children: [
-                                    for (final option in SkillTrapPreset.values)
-                                      SimpleDialogOption(
-                                        onPressed: () => Navigator.pop(
-                                          dialogContext,
-                                          option,
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              option.label,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                              final preset =
+                                  await showGameDialog<SkillTrapPreset>(
+                                    context: context,
+                                    builder: (dialogContext) => SimpleDialog(
+                                      title: const Text('Choose trap behavior'),
+                                      children: [
+                                        for (final option
+                                            in SkillTrapPreset.values)
+                                          SimpleDialogOption(
+                                            onPressed: () => Navigator.pop(
+                                              dialogContext,
+                                              option,
                                             ),
-                                            Text(option.description),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  option.label,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                Text(option.description),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
                               if (!mounted || preset == null) return;
                               final values = SkillTrapPresets.values(preset);
                               setState(() {
@@ -4356,7 +4422,7 @@ class _SkillEditorState extends State<_SkillEditor>
                             label: const Text('Apply behavior starting point'),
                             onPressed: () async {
                               final preset =
-                                  await showDialog<SkillBehaviorPreset>(
+                                  await showGameDialog<SkillBehaviorPreset>(
                                     context: context,
                                     builder: (dialogContext) => SimpleDialog(
                                       title: const Text(
@@ -5464,7 +5530,7 @@ class _SkillEditorState extends State<_SkillEditor>
                                     trailing: const Icon(Icons.chevron_right),
                                     onTap: () async {
                                       if (slot.$1.startsWith('Held artwork')) {
-                                        final mode = await showDialog<String>(
+                                        final mode = await showGameDialog<String>(
                                           context: context,
                                           builder: (dialogContext) => SimpleDialog(
                                             title: const Text(
@@ -5825,12 +5891,15 @@ class _SkillEditorState extends State<_SkillEditor>
                                     ? _delivery == SkillDelivery.projectile ||
                                           _delivery == SkillDelivery.beam ||
                                           _payload != null
-                                    : {PowerUpKind.flamethrower, PowerUpKind.energyWave}.contains(widget.skill.baseKind) ||
-                                        SkillLibrary.isProjectileKind(
-                                            widget.skill.baseKind,
-                                          ) &&
-                                          widget.skill.baseKind !=
-                                              PowerUpKind.sniperRifle)
+                                    : {
+                                            PowerUpKind.flamethrower,
+                                            PowerUpKind.energyWave,
+                                          }.contains(widget.skill.baseKind) ||
+                                          SkillLibrary.isProjectileKind(
+                                                widget.skill.baseKind,
+                                              ) &&
+                                              widget.skill.baseKind !=
+                                                  PowerUpKind.sniperRifle)
                                   _projectileOriginEditor(),
                                 if (_usesProjectileDelivery)
                                   _number(
@@ -5875,7 +5944,7 @@ class _SkillEditorState extends State<_SkillEditor>
                                           _visualBindings = bindings;
                                         }),
                                     onPreview: (library, skill) =>
-                                        showDialog<void>(
+                                        showGameDialog<void>(
                                           context: context,
                                           builder: (_) => SkillDemoDialog(
                                             skill: skill,

@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-07",
+  "flutter": "3.38.5",
+  "host": "Windows",
+  "baseline": "v1.14.62 / 2473a78",
+  "runs": [
+    {
+      "command": "flutter test test/features/skills/skill_management_screen_test.dart test/features/skills/native_skill_editor_roundtrip_test.dart test/batch2/skill_editor_safety_test.dart test/features/skills/skill_demo_test.dart test/features/skills/skill_demo_preferences_test.dart test/features/skills/skill_demo_arena_options_test.dart test/features/settings/ball_studio_test.dart test/features/settings/ball_studio_followup_test.dart test/core/theme/game_ui_test.dart test/visual/capture_skill_ui.dart --concurrency=1 --reporter=expanded",
+      "result": "141 passed",
+      "local_log": "build/phase-c-verified-regression.log",
+      "log_sha256": "fd659152b9de1f3a68010bc00daf4df7488618d7901386c84ca94ab03ba7f41e"
+    },
+    {
+      "command": "flutter analyze",
+      "result": "No issues found",
+      "local_log": "build/phase-c-verified-analysis.log",
+      "log_sha256": "cfca4734dbb724028a3e445005d8ebe6fcc66c01dd3d6db8288bd275b9a03e92"
+    },
+    {
+      "command": "flutter build web --release --no-pub --no-wasm-dry-run --base-href /ballwars/",
+      "result": "Passed; exit 0",
+      "local_log": "build/phase-c-verified-web.log",
+      "log_sha256": "e4577fabb2e56c2dd02a483697f2efe9dc2228a0e2345af54494009506e4d6ec"
+    }
+  ],
+  "note": "Affected checks, not a repeat full-app suite. Twelve runtime captures. Physical-device and production acceptance remain manual. No push or release."
+}

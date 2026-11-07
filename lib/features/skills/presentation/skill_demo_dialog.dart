@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import '../../sprites/application/skill_sprite_readiness.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -113,8 +114,10 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
         if (!_demo.started && !_demo.hasPreviewPickup) _demo.reset();
       });
     }
-    if (mounted && initialGeneration == _previewGeneration &&
-        !_speedChosen && {.25, .5, 1.0}.contains(speed)) {
+    if (mounted &&
+        initialGeneration == _previewGeneration &&
+        !_speedChosen &&
+        {.25, .5, 1.0}.contains(speed)) {
       setState(() => _demo.speed = speed!);
     }
   }
@@ -158,15 +161,16 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
     if (event == null) return;
     final powerUps = _demo.match.powerUps!;
     final reached = switch (event) {
-      'Casting' => powerUps.castingArtwork.isNotEmpty ||
-          powerUps.muzzleArtwork.isNotEmpty,
-      'Projectile' => powerUps.shots > _eventStartShots ||
-          powerUps.projectiles.isNotEmpty,
-      'Impact' => powerUps.hits > _eventStartHits ||
-          powerUps.blasts > _eventStartBlasts ||
-          powerUps.slashes > _eventStartSlashes ||
-          powerUps.blocks > _eventStartBlocks ||
-          powerUps.weaponImpacts.length > _eventStartImpacts,
+      'Casting' =>
+        powerUps.castingArtwork.isNotEmpty || powerUps.muzzleArtwork.isNotEmpty,
+      'Projectile' =>
+        powerUps.shots > _eventStartShots || powerUps.projectiles.isNotEmpty,
+      'Impact' =>
+        powerUps.hits > _eventStartHits ||
+            powerUps.blasts > _eventStartBlasts ||
+            powerUps.slashes > _eventStartSlashes ||
+            powerUps.blocks > _eventStartBlocks ||
+            powerUps.weaponImpacts.length > _eventStartImpacts,
       _ => false,
     };
     if (reached) {
@@ -177,7 +181,8 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
       _previous = null;
     } else if (!_demo.playing) {
       _awaitedPreviewEvent = null;
-      _previewEventMessage = 'No observable $event event occurred during this replay.';
+      _previewEventMessage =
+          'No observable $event event occurred during this replay.';
     }
   }
 
@@ -248,10 +253,10 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
       _eventStartImpacts = powerUps.weaponImpacts.length;
       _awaitedPreviewEvent =
           _focusedArtwork == 'Casting' ||
-          _focusedArtwork == 'Projectile' ||
-          _focusedArtwork == 'Impact'
-              ? _focusedArtwork
-              : null;
+              _focusedArtwork == 'Projectile' ||
+              _focusedArtwork == 'Impact'
+          ? _focusedArtwork
+          : null;
       _demo.activate();
       _audio();
       _checkPreviewEvent();
@@ -385,11 +390,13 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) {
     final skill = widget.skill;
     final size = MediaQuery.sizeOf(context);
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(vertical:12),
+      insetPadding: const EdgeInsets.symmetric(vertical: 12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
         child: SizedBox(
@@ -443,49 +450,51 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                      LayoutBuilder(
-                        builder: (context, bounds) => Center(
-                          child: SizedBox.square(
-                            dimension: math.min(
-                              bounds.maxWidth,
-                              math.min(310, size.height * .34),
-                            ),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                ArenaCanvas(
-                                  key: const ValueKey('skill-demo-arena'),
-                                  state: _demo.match.state,
-                                  arenaRadius: 180,
-                                  rimAngle: 0,
-                                  look: BallLook.faces,
-                                  arenaTitle: '',
-                                  arenaSubtitle: '',
-                                  showHpBars: true,
-                                  showBallGlow: false,
-                                  explosionRenderMode: widget.effectMode,
-                                  projectileRenderMode: widget.effectMode,
-                                  freezeRenderMode: widget.effectMode,
+                    LayoutBuilder(
+                      builder: (context, bounds) => Center(
+                        child: SizedBox.square(
+                          dimension: math.min(
+                            bounds.maxWidth,
+                            math.min(310, size.height * .34),
+                          ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ArenaCanvas(
+                                key: const ValueKey('skill-demo-arena'),
+                                state: _demo.match.state,
+                                arenaRadius: 180,
+                                rimAngle: 0,
+                                look: BallLook.faces,
+                                arenaTitle: '',
+                                arenaSubtitle: '',
+                                showHpBars: true,
+                                showBallGlow: false,
+                                explosionRenderMode: widget.effectMode,
+                                projectileRenderMode: widget.effectMode,
+                                freezeRenderMode: widget.effectMode,
+                              ),
+                              if (_combatDiagnostics)
+                                IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: CombatDiagnosticsOverlay(
+                                      _demo.match,
+                                    ),
+                                  ),
                                 ),
-                                if (_combatDiagnostics)
-                                  IgnorePointer(
-                                    child: CustomPaint(
-                                      painter: CombatDiagnosticsOverlay(_demo.match),
+                              if (_inspect)
+                                IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: SkillDemoCollisionPainter(
+                                      _demo.match,
                                     ),
                                   ),
-                                if (_inspect)
-                                  IgnorePointer(
-                                    child: CustomPaint(
-                                      painter: SkillDemoCollisionPainter(
-                                        _demo.match,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -546,9 +555,13 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                       if (_demo.centerObstacle != CenterObstacle.none) ...[
                         Row(
                           children: [
-                            const Expanded(child: Text('Obstacle shot scenario')),
+                            const Expanded(
+                              child: Text('Obstacle shot scenario'),
+                            ),
                             DropdownButton<SkillDemoObstacleScenario>(
-                              key: const ValueKey('skill-demo-obstacle-scenario'),
+                              key: const ValueKey(
+                                'skill-demo-obstacle-scenario',
+                              ),
                               value: _demo.obstacleScenario,
                               items: const [
                                 DropdownMenuItem(
@@ -580,9 +593,12 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                       SwitchListTile.adaptive(
                         key: const ValueKey('skill-demo-combat-diagnostics'),
                         title: const Text('Combat diagnostics'),
-                        subtitle: const Text('Target lines, obstruction and projectile paths'),
+                        subtitle: const Text(
+                          'Target lines, obstruction and projectile paths',
+                        ),
                         value: _combatDiagnostics,
-                        onChanged: (value) => setState(() => _combatDiagnostics = value),
+                        onChanged: (value) =>
+                            setState(() => _combatDiagnostics = value),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -667,7 +683,10 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                       const SizedBox(height: 10),
                       const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text('Artwork focus', style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text(
+                          'Artwork focus',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Wrap(
@@ -676,19 +695,27 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                         runSpacing: 4,
                         children: [
                           for (final mode in const [
-                            'Casting', 'Equipped', 'Projectile', 'Impact', 'Pickup',
+                            'Casting',
+                            'Equipped',
+                            'Projectile',
+                            'Impact',
+                            'Pickup',
                           ])
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 ChoiceChip(
-                                  key: ValueKey('skill-demo-mode-${mode.toLowerCase()}'),
+                                  key: ValueKey(
+                                    'skill-demo-mode-${mode.toLowerCase()}',
+                                  ),
                                   label: Text(mode),
                                   selected: _focusedArtwork == mode,
                                   onSelected: (_) => _selectArtworkFocus(mode),
                                 ),
                                 IconButton(
-                                  key: ValueKey('skill-demo-edit-${mode.toLowerCase()}'),
+                                  key: ValueKey(
+                                    'skill-demo-edit-${mode.toLowerCase()}',
+                                  ),
                                   tooltip: 'Edit $mode settings',
                                   visualDensity: VisualDensity.compact,
                                   iconSize: 18,
@@ -705,14 +732,17 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                         children: [
                           OutlinedButton.icon(
                             key: const ValueKey('skill-demo-spawn-pickup'),
-                            onPressed: () => _mutatePreviewArena(_demo.spawnPreviewPickup),
+                            onPressed: () =>
+                                _mutatePreviewArena(_demo.spawnPreviewPickup),
                             icon: const Icon(Icons.add_location_alt_outlined),
                             label: const Text('Spawn pickup'),
                           ),
                           OutlinedButton.icon(
                             key: const ValueKey('skill-demo-clear-pickup'),
                             onPressed: _demo.hasPreviewPickup
-                                ? () => _mutatePreviewArena(_demo.clearPreviewPickup)
+                                ? () => _mutatePreviewArena(
+                                    _demo.clearPreviewPickup,
+                                  )
                                 : null,
                             icon: const Icon(Icons.clear),
                             label: const Text('Clear pickup'),
@@ -732,16 +762,20 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           OutlinedButton.icon(
-                            key: const ValueKey('skill-demo-preview-focused-artwork'),
-                            onPressed: _preparing ? null : _previewFocusedArtwork,
+                            key: const ValueKey(
+                              'skill-demo-preview-focused-artwork',
+                            ),
+                            onPressed: _preparing
+                                ? null
+                                : _previewFocusedArtwork,
                             icon: const Icon(Icons.play_circle_outline),
                             label: Text(switch (_focusedArtwork) {
                               'Pickup' => 'Show pickup in arena',
                               'Equipped' => 'Inspect equipped in arena',
-                               'Casting' => 'Replay to first casting event',
-                               'Projectile' => 'Replay to first projectile',
-                               'Impact' => 'Replay to first impact',
-                               _ => 'Replay skill in arena',
+                              'Casting' => 'Replay to first casting event',
+                              'Projectile' => 'Replay to first projectile',
+                              'Impact' => 'Replay to first impact',
+                              _ => 'Replay skill in arena',
                             }),
                           ),
                           if (skill.resolvedCategory == SkillCategory.weapon)
@@ -757,11 +791,14 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                                 impactSpriteId: skill.impactSpriteId,
                                 displayScale: skill.weaponDisplayScale,
                                 tint: skill.spriteTint,
-                                useSprite: skill.spriteMode == SkillVisualMode.sprite,
+                                useSprite:
+                                    skill.spriteMode == SkillVisualMode.sprite,
                                 grip: GripValues(
                                   attackAnimation: skill.heldAttackAnimation,
-                                  attackRepeatCount: skill.heldAttackRepeatCount,
-                                  attackDurationSteps: skill.heldAttackDurationSteps,
+                                  attackRepeatCount:
+                                      skill.heldAttackRepeatCount,
+                                  attackDurationSteps:
+                                      skill.heldAttackDurationSteps,
                                   attackArcScale: skill.heldAttackArcScale,
                                   attackVfxScale: skill.heldAttackVfxScale,
                                   inset: skill.weaponGripInset,
@@ -780,23 +817,26 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                               label: const Text('Attack timeline'),
                             ),
                           TextButton.icon(
-                            key: const ValueKey('skill-demo-edit-focused-artwork'),
-                            onPressed: () => Navigator.pop(context, _focusedArtwork),
+                            key: const ValueKey(
+                              'skill-demo-edit-focused-artwork',
+                            ),
+                            onPressed: () =>
+                                Navigator.pop(context, _focusedArtwork),
                             icon: const Icon(Icons.edit_outlined),
                             label: Text('Edit $_focusedArtwork artwork'),
                           ),
                         ],
                       ),
                       Text(
-                         'Selected: $_focusedArtwork. Pickup places artwork in the arena; Equipped inspects the held state without firing. Casting, Projectile and Impact pause at the first corresponding observable arena event (when one occurs). These are not isolated animation tracks.',
+                        'Selected: $_focusedArtwork. Pickup places artwork in the arena; Equipped inspects the held state without firing. Casting, Projectile and Impact pause at the first corresponding observable arena event (when one occurs). These are not isolated animation tracks.',
                         style: const TextStyle(fontSize: 12),
                       ),
-                       if (_previewEventMessage != null)
-                         Text(
-                           _previewEventMessage!,
-                           key: const ValueKey('skill-demo-event-status'),
-                           style: const TextStyle(fontSize: 12),
-                         ),
+                      if (_previewEventMessage != null)
+                        Text(
+                          _previewEventMessage!,
+                          key: const ValueKey('skill-demo-event-status'),
+                          style: const TextStyle(fontSize: 12),
+                        ),
                       const SizedBox(height: 8),
                       ValueListenableBuilder<int>(
                         valueListenable: SpriteRegistry.revision,
@@ -1027,7 +1067,9 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                           key: const ValueKey('pause-demo-skill'),
                           tooltip: _demo.playing ? 'Pause demo' : 'Resume demo',
                           onPressed:
-                              !_preparing && _demo.started && _demo.elapsed < _demo.duration
+                              !_preparing &&
+                                  _demo.started &&
+                                  _demo.elapsed < _demo.duration
                               ? _pause
                               : null,
                           icon: Icon(
@@ -1048,7 +1090,7 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                       onPressed: _preparing
                           ? null
                           : () async {
-                                                             final generation = ++_previewGeneration;
+                              final generation = ++_previewGeneration;
                               // Incoming-hit inspection is a new preview action.
                               // Discard any prior event target and playback clock.
                               _ticker.stop();
@@ -1062,22 +1104,26 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                               try {
                                 await _preferences;
                                 await _ensureArtwork();
-                                if (!mounted || generation != _previewGeneration) return;
+                                if (!mounted ||
+                                    generation != _previewGeneration) {
+                                  return;
+                                }
                                 if (!_demo.started ||
                                     _demo.elapsed >= _demo.duration) {
                                   _heard.clear();
                                   _hits = _shots = _slashes = _blocks =
                                       _blasts = _pickups = 0;
                                 }
-                                                                 _demo.incomingHit();
+                                _demo.incomingHit();
                                 _audio();
                                 // A completed or paused preview must not
                                 // leave an idle ticker running indefinitely.
                                 if (_demo.playing) _ticker.start();
                                 setState(() => _error = null);
                               } catch (error) {
-                                if (mounted && generation == _previewGeneration) {
-                                                                     _ticker.stop();
+                                if (mounted &&
+                                    generation == _previewGeneration) {
+                                  _ticker.stop();
                                   _previous = null;
                                   _demo.stopPlayback();
                                   setState(
@@ -1086,7 +1132,8 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                                   );
                                 }
                               } finally {
-                                if (mounted && generation == _previewGeneration) {
+                                if (mounted &&
+                                    generation == _previewGeneration) {
                                   setState(() => _preparing = false);
                                 }
                               }
@@ -1122,7 +1169,10 @@ class _SkillDemoDialogState extends State<SkillDemoDialog>
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                   border: _focusedArtwork == label
-                      ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2,
+                        )
                       : null,
                 ),
                 child: image == null

@@ -8,6 +8,44 @@ import 'package:ballwars/features/match_setup/presentation/match_setup_screen.da
 import 'package:ballwars/features/match_setup/domain/match_config.dart';
 
 void main() {
+  testWidgets(
+    'workbench builder gets game chrome and contrasting save controls',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: GameWorkbench(
+            builder: (context) => Scaffold(
+              body: GameSkillFrame(
+                color: GameUi.purple,
+                child: const Text('Epic skill'),
+              ),
+              bottomNavigationBar: FilledButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Save'),
+              ),
+            ),
+          ),
+        ),
+      );
+      final context = tester.element(find.byType(Scaffold));
+      final theme = Theme.of(context);
+      expect(BallWarsColors.of(context).background, GameUi.navy);
+      expect(theme.scaffoldBackgroundColor, Colors.transparent);
+      expect(find.byType(GameBackdrop), findsOneWidget);
+      final button = tester.widget<FilledButton>(
+        find.byWidgetPredicate((widget) => widget is FilledButton),
+      );
+      final style = theme.filledButtonTheme.style!;
+      expect(
+        style.foregroundColor!.resolve({}),
+        isNot(style.backgroundColor!.resolve({})),
+      );
+      expect(button.onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets('arcade styling preserves every non-default configured palette', (
     tester,
   ) async {

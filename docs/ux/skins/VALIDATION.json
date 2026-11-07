@@ -4,7 +4,7 @@
   "final_skin_passed": 9,
   "analysis": "no issues",
   "web_release": "passed",
-  "full_suite": "incomplete: Windows out of memory after 756 passes; license expectation corrected and independently verified",
+  "full_suite": "1787 passed, 1 existing opt-in performance profile skipped, 0 failures; 248 files in 16 sequential batches",
   "screenshots": [
     {
       "path": "docs/ux/skins/screenshots/battle-garage-home.png",
@@ -34,5 +34,7 @@
       "path": "docs/ux/skins/screenshots/skin-selector.png",
       "sha256": "76d7b141c9c1bcf9228f277534c2e05e15e8e2e06ddaba1e31e99855f78bea4b"
     }
-  ]
+  ],
+  "previous_full_suite_attempt": "incomplete: Windows out of memory after 756 passes; license expectation corrected and independently verified",
+  "full_suite_report": "docs/FULL-REGRESSION-2026-11-07.md"
 }

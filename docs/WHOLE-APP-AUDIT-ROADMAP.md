@@ -270,3 +270,17 @@ Phases C-E submitted for web deployment and signed APK release as **v1.14.63** o
 - [ ] Physical phone acceptance after explicit deployment.
 
 [Skin report and screenshots](ux/skins/README.md).
+
+
+## Maintenance and verification closure (2026-11-07)
+
+- [x] Full functional suite rerun in 16 isolated serial batches: 1,787 passed,
+  one existing opt-in profile skipped, zero failures across 248 files.
+- [x] Final static analysis: no issues. [Regression evidence](FULL-REGRESSION-2026-11-07.md).
+- [x] Supabase CLI initialized and linked; credentials/local link cache ignored.
+- [x] Production schema verified against 29 canonical migrations; duplicate 022
+  budget SQL archived outside migrations, canonical version 026 retained.
+- [x] Missing migration 013 (blood color) applied with explicit approval and verified.
+- [x] Verified history repaired; local/remote 001-029 match and dry-run reports
+  remote database up to date. [Setup and evidence](SUPABASE-CLI-SETUP.md).
+- [ ] Published browser and physical phone acceptance remain manual.

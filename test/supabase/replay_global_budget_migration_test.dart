@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('H1 replay quota is shared across anonymous accounts and serialized', () {
-    final sql = File('supabase/migrations/022_replay_global_budget.sql')
+    final sql = File('supabase/migrations/026_replay_global_budget.sql')
         .readAsStringSync();
     expect(sql, contains('BEFORE INSERT ON public.replays'));
     expect(sql, contains('pg_advisory_xact_lock'));

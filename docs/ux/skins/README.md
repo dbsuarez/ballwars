@@ -53,3 +53,11 @@ previews come from the actual implemented Home screens rather than design boards
 
 Physical phone acceptance remains manual. No deployment, tag, release or device
 installation is included in this change.
+
+
+### Subsequent full-suite closure
+
+The earlier memory-limited run is now superseded by the completed
+[2026-11-07 full regression](../../FULL-REGRESSION-2026-11-07.md): 1,787 passed,
+one existing opt-in profile skipped, zero failures. It used sequential process
+batches and covered every ordinary test file.

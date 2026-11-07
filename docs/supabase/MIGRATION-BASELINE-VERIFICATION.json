@@ -1,0 +1,1160 @@
+{
+  "project_ref": "ehepdokwjmudssgkxoij",
+  "verified_on": "2026-11-07",
+  "metadata_snapshot_sha256": "82deebe1feaf25b7ff3d4d5b069b87c9e976dae4d85dc6349bf80f62e33b4f8c",
+  "all_verified": true,
+  "migrations": [
+    {
+      "version": "001",
+      "file": "001_ball_groups.sql",
+      "sha256": "1533f95c7353da069c0b0cdcf9961192701bb72e3523d0044e4434af7d566ecc",
+      "verified": true,
+      "checks": [
+        {
+          "check": "ball_groups RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.id present",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.owner present",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.name present",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.is_public present",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.created_at present",
+          "passed": true
+        },
+        {
+          "check": "group_balls RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "group_balls.id present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.group_id present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.owner present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.name present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.image_path present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.image_style present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.color present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.position present",
+          "passed": true
+        },
+        {
+          "check": "group_balls.created_at present",
+          "passed": true
+        },
+        {
+          "check": "constraint ball_groups_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint ball_groups_owner_fkey",
+          "passed": true
+        },
+        {
+          "check": "constraint ball_groups_name_check",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_group_id_fkey",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_owner_fkey",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_name_check",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_check",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_image_style_check",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_color_check",
+          "passed": true
+        },
+        {
+          "check": "index group_balls_group_id_idx",
+          "passed": true
+        },
+        {
+          "check": "index ball_groups_owner_idx",
+          "passed": true
+        },
+        {
+          "check": "policy groups readable",
+          "passed": true
+        },
+        {
+          "check": "policy groups owned",
+          "passed": true
+        },
+        {
+          "check": "policy balls readable",
+          "passed": true
+        },
+        {
+          "check": "policy balls owned",
+          "passed": true
+        },
+        {
+          "check": "policy ball images upload own",
+          "passed": true
+        },
+        {
+          "check": "policy ball images change own",
+          "passed": true
+        },
+        {
+          "check": "policy ball images delete own",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger ball_groups_limit",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger group_balls_limit",
+          "passed": true
+        },
+        {
+          "check": "function enforce_ball_limits exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function enforce_ball_limits SECURITY DEFINER",
+          "passed": true
+        },
+        {
+          "check": "ball-images public 512 KiB raster bucket",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "002",
+      "file": "002_admin_and_settings.sql",
+      "sha256": "d30676eb71d799a358e6d5e13603da995adecc816df2acf3676cfc25f7ff9547",
+      "verified": true,
+      "checks": [
+        {
+          "check": "admins RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "admins.user_id present",
+          "passed": true
+        },
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.id present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.headline present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.theme present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.updated_at present",
+          "passed": true
+        },
+        {
+          "check": "constraint admins_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint admins_user_id_fkey",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_id_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_headline_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_theme_check",
+          "passed": true
+        },
+        {
+          "check": "policy settings readable",
+          "passed": true
+        },
+        {
+          "check": "policy settings admin",
+          "passed": true
+        },
+        {
+          "check": "policy groups admin",
+          "passed": true
+        },
+        {
+          "check": "policy balls admin",
+          "passed": true
+        },
+        {
+          "check": "policy ball images admin",
+          "passed": true
+        },
+        {
+          "check": "function is_admin exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function is_admin SECURITY DEFINER",
+          "passed": true
+        },
+        {
+          "check": "function enforce_ball_limits exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function enforce_ball_limits SECURITY DEFINER",
+          "passed": true
+        },
+        {
+          "check": "singleton settings row exists",
+          "passed": true
+        },
+        {
+          "check": "admins has no API policies",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "003",
+      "file": "003_short_links_and_watermark.sql",
+      "sha256": "4848a44a7b385d37da38bc3ad9d9e99a340447c711224e2fd18e440941ad8099",
+      "verified": true,
+      "checks": [
+        {
+          "check": "replays RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "replays.id present",
+          "passed": true
+        },
+        {
+          "check": "replays.seed present",
+          "passed": true
+        },
+        {
+          "check": "replays.speed present",
+          "passed": true
+        },
+        {
+          "check": "replays.effects present",
+          "passed": true
+        },
+        {
+          "check": "replays.balls present",
+          "passed": true
+        },
+        {
+          "check": "replays.created_at present",
+          "passed": true
+        },
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.watermark_enabled present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.watermark_text present",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_id_check",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_speed_check",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_balls_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_watermark_text_check",
+          "passed": true
+        },
+        {
+          "check": "policy replays readable",
+          "passed": true
+        },
+        {
+          "check": "policy replays insert",
+          "passed": true
+        },
+        {
+          "check": "latest replay insert policy requires authenticated creator",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "004",
+      "file": "004_saved_groups.sql",
+      "sha256": "a5a853244a9b13819d9dc3c295abce241ee10d1afaea74be8fd9d8c55e38562b",
+      "verified": true,
+      "checks": [
+        {
+          "check": "saved_groups RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "saved_groups.user_id present",
+          "passed": true
+        },
+        {
+          "check": "saved_groups.group_id present",
+          "passed": true
+        },
+        {
+          "check": "saved_groups.created_at present",
+          "passed": true
+        },
+        {
+          "check": "constraint saved_groups_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint saved_groups_user_id_fkey",
+          "passed": true
+        },
+        {
+          "check": "constraint saved_groups_group_id_fkey",
+          "passed": true
+        },
+        {
+          "check": "index saved_groups_group_idx",
+          "passed": true
+        },
+        {
+          "check": "policy saved groups own",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger saved_groups_limit",
+          "passed": true
+        },
+        {
+          "check": "function enforce_saved_groups_limit exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function enforce_saved_groups_limit SECURITY DEFINER",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "005",
+      "file": "005_music_setting.sql",
+      "sha256": "73dab2410018b12d031523cc0cc1634edea7207953e861be0e769d682e1af8e4",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.music present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_music_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "006",
+      "file": "006_slow_motion_setting.sql",
+      "sha256": "90da57ab704fd26bbd400f2d001bdb25781958fe388d808f24494903e71460ee",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.slow_motion_lines present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.slow_motion_before_win present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_slow_motion_lines_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_slow_motion_before_win_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "007",
+      "file": "007_replay_limits_and_image_cleanup.sql",
+      "sha256": "7f09229d00492e81bda98f482c1212b4e275e038a95e20eb27517466f3565865",
+      "verified": true,
+      "checks": [
+        {
+          "check": "replays RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "replays.creator present",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_creator_fkey",
+          "passed": true
+        },
+        {
+          "check": "index replays_creator_idx",
+          "passed": true
+        },
+        {
+          "check": "policy replays insert",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger replays_limit",
+          "passed": true
+        },
+        {
+          "check": "function enforce_replay_limit exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function enforce_replay_limit SECURITY DEFINER",
+          "passed": true
+        },
+        {
+          "check": "function orphan_ball_images exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function orphan_ball_images SECURITY DEFINER",
+          "passed": true
+        },
+        {
+          "check": "latest replay insert policy requires authenticated creator",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "008",
+      "file": "008_ball_size_and_pack_extras.sql",
+      "sha256": "c53071c78063125da3eed2f8d03c5523bb808cdb36ee83906ad2ea358c10e954",
+      "verified": true,
+      "checks": [
+        {
+          "check": "replays RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "replays.size present",
+          "passed": true
+        },
+        {
+          "check": "ball_groups RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.pack_id present",
+          "passed": true
+        },
+        {
+          "check": "ball_groups.submitted_at present",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_size_check",
+          "passed": true
+        },
+        {
+          "check": "constraint ball_groups_pack_id_check",
+          "passed": true
+        },
+        {
+          "check": "index ball_groups_pack_idx",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger ball_groups_pack_link",
+          "passed": true
+        },
+        {
+          "check": "function enforce_pack_link_admin exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function enforce_pack_link_admin SECURITY DEFINER",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "009",
+      "file": "009_home_music.sql",
+      "sha256": "30640d6ab21b4704973e8765fd98e25396efb461d955ff369ecb926f5836fe6b",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.menu_music present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_menu_music_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "010",
+      "file": "010_replay_question.sql",
+      "sha256": "7cfe787b932b38a3ec33d572624af0d185b73bf173be0ff6717f45a8a91463b2",
+      "verified": true,
+      "checks": [
+        {
+          "check": "replays RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "replays.question present",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_question_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "011",
+      "file": "011_power_up_tuning.sql",
+      "sha256": "b7fb83e5984eda41bad9280576ed874d57942d16c371250f199e470f6ece52af",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.power_ups present",
+          "passed": true
+        },
+        {
+          "check": "replays RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "replays.tuning present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_power_ups_check",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_tuning_check",
+          "passed": true
+        },
+        {
+          "check": "corrected tuning regex and 2000 character bound",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "012",
+      "file": "012_ball_glow.sql",
+      "sha256": "3833dd35b8b6a9426bbd2a224aad18b4a15584886f60507a9a89a0faf698de3c",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.ball_glow_enabled present",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "013",
+      "file": "013_blood_color.sql",
+      "sha256": "e7456b4894d639ec2b444c5d05dc6c48ae5853a544b7f7a33d6ab7481c2e6bb8",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.blood_color present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_blood_color_check",
+          "passed": true
+        },
+        {
+          "check": "blood_color bigint NOT NULL default ARGB red",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "014",
+      "file": "014_arena_text.sql",
+      "sha256": "638695a5fddc20e0121fd9611f701a5a254f1fa40782f9a6bc7dcbd4ff42c0d9",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.arena_title present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.arena_subtitle present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_arena_title_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_arena_subtitle_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "015",
+      "file": "015_minimum_arena_scale.sql",
+      "sha256": "60a142301067dbbde4cf1ddcabfe7192cf2d4b3634ea9db1f5120f8e95d5088d",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.minimum_arena_scale present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_minimum_arena_scale_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "016",
+      "file": "016_skill_library.sql",
+      "sha256": "262bcf8317e16c67a79ca430b5820d93295dc4bc835fd2c8267ea0e83ba1e7c1",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.skill_library present",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "017",
+      "file": "017_arena_decoration.sql",
+      "sha256": "a56d1b5d1722b758c3fcb0cecafd6e5d00be15b510855a21a9e83e0327ea2984",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.arena_decoration present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_arena_decoration_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "018",
+      "file": "018_effect_render_modes.sql",
+      "sha256": "8144ca93b53dc3dd5685e765913f305bef62c95853d946da9e08d3760c2b98fd",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.projectile_render_mode present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.explosion_render_mode present",
+          "passed": true
+        },
+        {
+          "check": "app_settings.freeze_render_mode present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_projectile_render_mode_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_explosion_render_mode_check",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_freeze_render_mode_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "019",
+      "file": "019_ball_glow_width.sql",
+      "sha256": "f92122c1c8faa08458757a2bd6090bce218477022b9d7fe4bef3290217208b3c",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.ball_glow_width present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_ball_glow_width_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "020",
+      "file": "020_replay_documents.sql",
+      "sha256": "65945ef7eeee733ff30b810db720bd3631b6185d7177718fa93400cf494440da",
+      "verified": true,
+      "checks": [
+        {
+          "check": "replays RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "replays.replay_payload present",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_payload_check",
+          "passed": true
+        },
+        {
+          "check": "constraint replays_balls_check",
+          "passed": true
+        },
+        {
+          "check": "full replay document constraint",
+          "passed": true
+        },
+        {
+          "check": "expanded balls payload limit",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "021",
+      "file": "021_fix_replay_tuning_check.sql",
+      "sha256": "1b8561472f8ed7029a03f98ae577f01b995de6bc9de418bae883dc70d48567f2",
+      "verified": true,
+      "checks": [
+        {
+          "check": "constraint replays_tuning_check",
+          "passed": true
+        },
+        {
+          "check": "corrected tuning regex and 2000 character bound",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "022",
+      "file": "022_ball_gender.sql",
+      "sha256": "f8eed03a5851f2b37af743c08366e7867f8787192b312d53f83ab05a4588ee6c",
+      "verified": true,
+      "checks": [
+        {
+          "check": "group_balls RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "group_balls.gender present",
+          "passed": true
+        },
+        {
+          "check": "constraint group_balls_gender_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "023",
+      "file": "023_sprite_atlases.sql",
+      "sha256": "b735630a076fc492fdbe453c36d75163625b496f2b7b31472e7994e44702273d",
+      "verified": true,
+      "checks": [
+        {
+          "check": "sprite_atlases RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlases.id present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlases.name present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlases.sheet_path present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlases.manifest present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlases.updated_at present",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlases_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlases_name_check",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlases_sheet_path_check",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlases_manifest_check",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlases_sheet_path_key",
+          "passed": true
+        },
+        {
+          "check": "policy Public sprite manifests",
+          "passed": true
+        },
+        {
+          "check": "policy Admins insert sprite manifests",
+          "passed": true
+        },
+        {
+          "check": "policy Admins update sprite manifests",
+          "passed": true
+        },
+        {
+          "check": "policy Admins delete sprite manifests",
+          "passed": true
+        },
+        {
+          "check": "policy Admins upload sprite sheets",
+          "passed": true
+        },
+        {
+          "check": "policy Admins delete sprite sheets",
+          "passed": true
+        },
+        {
+          "check": "sprite-sheets public 4 MiB PNG/WebP bucket",
+          "passed": true
+        },
+        {
+          "check": "sprite manifest grants",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "024",
+      "file": "024_sprite_revisions.sql",
+      "sha256": "769d01f1febb255bbe84191bd72299143417f7346573fc81f2cc598008ff4990",
+      "verified": true,
+      "checks": [
+        {
+          "check": "sprite_atlas_revisions RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlas_revisions.atlas_id present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlas_revisions.revision_id present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlas_revisions.name present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlas_revisions.sheet_path present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlas_revisions.manifest present",
+          "passed": true
+        },
+        {
+          "check": "sprite_atlas_revisions.updated_at present",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlas_revisions_pkey",
+          "passed": true
+        },
+        {
+          "check": "constraint sprite_atlas_revisions_sheet_path_key",
+          "passed": true
+        },
+        {
+          "check": "policy Public sprite revisions",
+          "passed": true
+        },
+        {
+          "check": "policy Retain revision sheets",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger archive_sprite_revision",
+          "passed": true
+        },
+        {
+          "check": "function archive_sprite_revision exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function archive_sprite_revision SECURITY DEFINER",
+          "passed": true
+        },
+        {
+          "check": "sprite revisions complete for current library",
+          "passed": true
+        },
+        {
+          "check": "sprite revisions read-only to API roles",
+          "passed": true
+        },
+        {
+          "check": "revision storage retention is restrictive",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "025",
+      "file": "025_ball_appearance.sql",
+      "sha256": "09c3980837af9834da034b62c0cf13a228dd160977af438ce35dd28392972331",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.ball_appearance present",
+          "passed": true
+        },
+        {
+          "check": "constraint app_settings_ball_appearance_check",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "026",
+      "file": "026_replay_global_budget.sql",
+      "sha256": "14c03f13b9ee52cc407022a537efbd6f1ec31fabee90985ca5890767896d7b94",
+      "verified": true,
+      "checks": [
+        {
+          "check": "index replays_created_at_global_budget_idx",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger enforce_replay_global_budget",
+          "passed": true
+        },
+        {
+          "check": "function enforce_replay_global_budget exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function enforce_replay_global_budget SECURITY DEFINER",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "027",
+      "file": "027_serialize_group_limits.sql",
+      "sha256": "73ccae642d2f8a34ac1b780587282883684993fca0d0a96ef2b33c22e42f31f8",
+      "verified": true,
+      "checks": [
+        {
+          "check": "enabled trigger a_lock_ball_group_limit",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger a_lock_group_ball_limit",
+          "passed": true
+        },
+        {
+          "check": "enabled trigger a_lock_saved_group_limit",
+          "passed": true
+        },
+        {
+          "check": "function lock_ball_wars_limit_insert exact normalized body",
+          "passed": true
+        },
+        {
+          "check": "function lock_ball_wars_limit_insert SECURITY DEFINER",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "028",
+      "file": "028_export_watermark.sql",
+      "sha256": "99f56693daf149baef7fe7ce352f3ff02fb01bd8c9c756ba45ed37015859895e",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.export_watermark_text present",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "version": "029",
+      "file": "029_arena_catalog.sql",
+      "sha256": "159826669010a544cd0611cf6c15d0a2603de084b3874add48d12221b04ca78d",
+      "verified": true,
+      "checks": [
+        {
+          "check": "app_settings RLS enabled",
+          "passed": true
+        },
+        {
+          "check": "app_settings.arena_catalog present",
+          "passed": true
+        },
+        {
+          "check": "constraint arena_catalog_size",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

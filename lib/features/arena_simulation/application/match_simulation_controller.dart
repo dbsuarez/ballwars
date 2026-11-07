@@ -159,6 +159,8 @@ class MatchSimulationController {
   int threadCuts = 0;
   int knockouts = 0;
   final List<DeathGhost> _deathGhosts = [];
+  static const deathHitStopSteps = 6; // 100 ms at normal playback speed.
+  int _deathHitStopLeft = 0;
   final Map<SimulationBall,int> _pendingRespawns = {};
   void _advanceDeathGhosts(double dt) {
     for(final ghost in _deathGhosts) { ghost.age += dt; }
@@ -888,8 +890,10 @@ class MatchSimulationController {
       _accumulator -= fixedTimestep;
     }
 
-    _particles.update(realDeltaSeconds);
-    _floatingTexts.update(realDeltaSeconds);
+    if (_deathHitStopLeft == 0) {
+      _particles.update(realDeltaSeconds);
+      _floatingTexts.update(realDeltaSeconds);
+    }
   }
 
   /// Change arenas using simulation time so pauses do not advance rotation.
@@ -1024,6 +1028,11 @@ class MatchSimulationController {
   }
 
   void _stepPhysics(double dt) {
+    if (_deathHitStopLeft > 0) {
+      _deathHitStopLeft--;
+      _advanceDeathGhosts(dt);
+      return;
+    }
     if(simulationRevision >= 10) {
       _advanceDeathGhosts(dt);
       for(final ball in _pendingRespawns.keys.toList()) {
@@ -1301,6 +1310,11 @@ class MatchSimulationController {
       }
     }
 
+    if (simulationRevision >= 11 && eliminatedNow.isNotEmpty) {
+      // One short stop for the whole knockout batch; simultaneous deaths do
+      // not stack pauses. Ghosts continue on the deterministic fixed timeline.
+      _deathHitStopLeft = deathHitStopSteps;
+    }
     _powerUps?.onEliminations(eliminatedNow, _lastDamageBy);
 
     if (endlessBattle && eliminatedNow.isNotEmpty) {

@@ -233,12 +233,14 @@ class ArenaPainter extends CustomPainter {
   void _paintDeathGhosts(Canvas canvas) {
     for(final ghost in state.deathGhosts) {
       if(state.balls.any((b)=>b.config.id==ghost.ballId && !b.isEliminated)) continue;
-      final t=(ghost.age/.75).clamp(0.0,1.0);
+      final t=(ghost.age/DeathGhost.duration).clamp(0.0,1.0);
       final r=ghost.radius;
       final p=ghost.position+Offset(math.sin(t*math.pi*2)*r*.2,-r*3*t);
       final frame = SpriteRegistry.frameAt('anim.death-ghost', (ghost.age * 60).floor());
       if(frame != null) {
-        final side = r * 3;
+        // Account for the supplied sprite's transparent margin: its visible
+        // round body should be about the defeated ball's diameter.
+        final side = r * 3.6;
         canvas.drawImageRect(frame, Rect.fromLTWH(0,0,frame.width.toDouble(),frame.height.toDouble()),
           Rect.fromCenter(center:p,width:side,height:side), Paint()..color=Colors.white.withValues(alpha:1-t)..filterQuality=FilterQuality.none);
         continue;

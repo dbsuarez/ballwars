@@ -89,3 +89,19 @@ Android/browser hands-on acceptance remains unchecked. GitHub deployment complet
 - [ ] Manual phone checks for eight-ball density, background picking/upload, dragging and death animation.
 
 Implementation and verification: [Gameplay and arena additions](GAMEPLAY-ARENA-ADDITIONS.md).
+
+
+## Death animation emphasis (2026-11-07)
+
+- [x] Supplied Ghost Orb artwork is 20% larger; framing compensates for its
+  transparent margins so the visible round body is approximately ball-sized.
+- [x] New matches use replay revision 11: six fixed simulation steps (100 ms at
+  normal speed) freeze survivor movement, combat and live particle/text updates
+  after a knockout, while death ghosts continue floating. Simultaneous deaths
+  share one pause. Normal playback resumes automatically.
+- [x] Respawn delay and ghost lifetime remain 0.75 seconds; no extra respawn wait.
+- [x] Revision 10 and earlier retain their previous mechanics; revision 11 links
+  round-trip. Match Setup and Power-up Test create revision 11 matches.
+- [x] Ghost rendering, pause/resume, simultaneous deaths, respawn and old-replay
+  behavior have regression coverage. Static analysis is clean.
+- [ ] Physical phone pacing acceptance after explicit deployment.

@@ -153,7 +153,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     expect(started,isNotNull);
-    expect(started!.simulationRevision,10);
+    expect(started!.simulationRevision,11);
     expect(started!.arenaPreset!.id,map.id);
     expect(started!.arenaDecoration,ArenaDecoration.neonGrid);
     expect(started!.arenaShape,ArenaShape.square);
@@ -180,7 +180,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Start'));
     expect(started,isNotNull);
-    expect(started!.simulationRevision,10);
+    expect(started!.simulationRevision,11);
     expect(started!.arenaPreset!.id,map.id);expect(started!.arenaShape,ArenaShape.circle);
   });
 

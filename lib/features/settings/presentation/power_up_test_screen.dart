@@ -296,7 +296,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
           );
     _match = MatchSimulationController(
       _balls,
-      simulationRevision: 10,
+      simulationRevision: 11,
       arenaRadius: 200,
       arenaShape: _arenaShape,
       centerObstacle: _selectedArena?.obstacle ?? CenterObstacle.none,

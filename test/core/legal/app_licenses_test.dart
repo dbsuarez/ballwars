@@ -8,6 +8,7 @@ void main() {
   test('all bundled visual-asset notices load with attribution', () async {
     final entries = await AppLicenses.entries().toList();
     expect(entries.map((e) => e.packages.single).toList(), [
+      'Inter',
       'Manrope',
       'JetBrains Mono',
       'Material Design icons (Google)',

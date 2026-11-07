@@ -1,3 +1,7 @@
+import 'garage_theme.dart';
+import 'garage_action_button.dart';
+import 'ui_skin.dart';
+import 'ui_skin_scope.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
@@ -20,6 +24,9 @@ class GameUi {
     isDark: true,
   );
   static ThemeData theme(BuildContext context) {
+    if (UiSkinScope.of(context) == UiSkin.garage) {
+      return GarageTheme.apply(Theme.of(context));
+    }
     final inherited = BallWarsColors.of(context);
     final standard =
         inherited.background == AppPalettes.midnight.background &&
@@ -156,10 +163,12 @@ class GameSkillFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     clipBehavior: Clip.antiAlias,
-    shape: BeveledRectangleBorder(
-      borderRadius: BorderRadius.circular(9),
-      side: BorderSide(color: color.withValues(alpha: .75)),
-    ),
+    shape: UiSkinScope.of(context) == UiSkin.garage
+        ? TicketBorder(side: BorderSide(color: color.withValues(alpha: .75)))
+        : BeveledRectangleBorder(
+            borderRadius: BorderRadius.circular(9),
+            side: BorderSide(color: color.withValues(alpha: .75)),
+          ),
     child: DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -199,7 +208,9 @@ class GameBackdrop extends StatelessWidget {
                     stops: const [0, .45, 1],
                   ),
                 ),
-                child: CustomPaint(painter: const _StadiumLights()),
+                child: UiSkinScope.of(context) == UiSkin.garage
+                    ? const CustomPaint(painter: _GarageGrid())
+                    : const CustomPaint(painter: _StadiumLights()),
               ),
             ),
           ),
@@ -295,13 +306,20 @@ class GamePanel extends StatelessWidget {
           BallWarsColors.of(context).background,
         ],
       ),
-      shape: BeveledRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: selected ? GameUi.gold : accent.withValues(alpha: .65),
-          width: selected ? 2 : 1,
-        ),
-      ),
+      shape: UiSkinScope.of(context) == UiSkin.garage
+          ? TicketBorder(
+              side: BorderSide(
+                color: selected ? GarageTheme.gold : GarageTheme.border,
+                width: selected ? 2 : 1,
+              ),
+            )
+          : BeveledRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: selected ? GameUi.gold : accent.withValues(alpha: .65),
+                width: selected ? 2 : 1,
+              ),
+            ),
       shadows: [
         BoxShadow(
           color: (selected ? GameUi.gold : Colors.black).withValues(
@@ -329,74 +347,90 @@ class GameActionButton extends StatelessWidget {
   final IconData icon;
   final double height;
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: math.max(height, 44 * MediaQuery.textScalerOf(context).scale(1)),
-    child: DecoratedBox(
-      decoration: ShapeDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: onPressed == null
-              ? [
-                  BallWarsColors.of(context).surfaceHigh,
-                  BallWarsColors.of(context).surface,
-                ]
-              : [const Color(0xFFFFEEA2), GameUi.gold, const Color(0xFFF3A523)],
-        ),
-        shape: BeveledRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        shadows: onPressed == null
-            ? []
-            : [
-                BoxShadow(
-                  color: GameUi.gold.withValues(alpha: .25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-      ),
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          minimumSize: Size.zero,
-          backgroundColor: Colors.transparent,
-          disabledBackgroundColor: Colors.transparent,
-          foregroundColor: GameUi.navy,
-          disabledForegroundColor: BallWarsColors.of(context).muted,
-          shadowColor: Colors.transparent,
-          shape: BeveledRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: onPressed == null
-                  ? BallWarsColors.of(context).border
-                  : const Color(0xFFFFF3BC),
-              width: 1.5,
-            ),
+  Widget build(BuildContext context) => UiSkinScope.of(context) == UiSkin.garage
+      ? GarageActionButton(
+          label: label,
+          onPressed: onPressed,
+          icon: icon,
+          height: height,
+        )
+      : SizedBox(
+          height: math.max(
+            height,
+            44 * MediaQuery.textScalerOf(context).scale(1),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 28),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Manrope',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: .5,
+          child: DecoratedBox(
+            decoration: ShapeDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: onPressed == null
+                    ? [
+                        BallWarsColors.of(context).surfaceHigh,
+                        BallWarsColors.of(context).surface,
+                      ]
+                    : [
+                        const Color(0xFFFFEEA2),
+                        GameUi.gold,
+                        const Color(0xFFF3A523),
+                      ],
+              ),
+              shape: BeveledRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              shadows: onPressed == null
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: GameUi.gold.withValues(alpha: .25),
+                        blurRadius: 18,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+            ),
+            child: FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: Size.zero,
+                backgroundColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
+                foregroundColor: GameUi.navy,
+                disabledForegroundColor: BallWarsColors.of(context).muted,
+                shadowColor: Colors.transparent,
+                shape: BeveledRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: onPressed == null
+                        ? BallWarsColors.of(context).border
+                        : const Color(0xFFFFF3BC),
+                    width: 1.5,
+                  ),
                 ),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 28),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Manrope',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
-    ),
-  );
+          ),
+        );
 }
 
 class GameModeTile extends StatelessWidget {
@@ -528,3 +562,22 @@ Future<T?> showGameDialog<T>({
   barrierDismissible: barrierDismissible,
   builder: (_) => GameTheme(child: Builder(builder: builder)),
 );
+
+class _GarageGrid extends CustomPainter {
+  const _GarageGrid();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = GarageTheme.cyan.withValues(alpha: .035)
+      ..strokeWidth = 1;
+    for (double x = 0; x < size.width; x += 32) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += 32) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GarageGrid oldDelegate) => false;
+}

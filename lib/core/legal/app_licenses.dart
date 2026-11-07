@@ -14,6 +14,7 @@ class AppLicenses {
 
   static Stream<LicenseEntry> entries() async* {
     for (final item in [
+      ('Inter', 'assets/fonts/Inter-OFL.txt'),
       ('Manrope', 'assets/fonts/Manrope-OFL.txt'),
       ('JetBrains Mono', 'assets/fonts/JetBrainsMono-OFL.txt'),
     ]) {

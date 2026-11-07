@@ -1,0 +1,38 @@
+{
+  "flutter": "3.38.5",
+  "focused_passed": 34,
+  "final_skin_passed": 9,
+  "analysis": "no issues",
+  "web_release": "passed",
+  "full_suite": "incomplete: Windows out of memory after 756 passes; license expectation corrected and independently verified",
+  "screenshots": [
+    {
+      "path": "docs/ux/skins/screenshots/battle-garage-home.png",
+      "sha256": "8be02cf6a722a07659bde6ae86f34aba659b9718f273d3db26835dfcfefcfb55"
+    },
+    {
+      "path": "docs/ux/skins/screenshots/battle-garage-workbench-320.png",
+      "sha256": "02bc8614c721c341d2282c0b1ce5ccd82cf43b1aa79834a5c97c3c445301e950"
+    },
+    {
+      "path": "docs/ux/skins/screenshots/battle-garage-workbench-800.png",
+      "sha256": "eb862f510c8a60a77802e7e1204be1709b1e3a1be15b83de196b7c5280e7db9b"
+    },
+    {
+      "path": "docs/ux/skins/screenshots/classic-arcade-home.png",
+      "sha256": "9051bc6cb72daa0d3dc0d28cf2d1a03eff44f6726451bdf1726c079515bba9de"
+    },
+    {
+      "path": "docs/ux/skins/screenshots/classic-arcade-workbench-320.png",
+      "sha256": "abbf0265aa7008726ad94d5aba47b9c3315356b6ebe365fa180b375e666fc544"
+    },
+    {
+      "path": "docs/ux/skins/screenshots/classic-arcade-workbench-800.png",
+      "sha256": "f0ba66ebcacbf445609b20608a413235455eec6a58c2866622db907cb3b6b0aa"
+    },
+    {
+      "path": "docs/ux/skins/screenshots/skin-selector.png",
+      "sha256": "76d7b141c9c1bcf9228f277534c2e05e15e8e2e06ddaba1e31e99855f78bea4b"
+    }
+  ]
+}

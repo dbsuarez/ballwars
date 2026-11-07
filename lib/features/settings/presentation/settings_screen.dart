@@ -1,3 +1,5 @@
+import '../../../core/theme/ui_skin_scope.dart';
+import '../../../core/theme/ui_skin_picker.dart';
 import '../../../core/theme/game_ui.dart';
 import '../../arenas/presentation/arena_library_screen.dart';
 import '../../arenas/domain/arena_definition.dart';
@@ -266,7 +268,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+  Widget build(BuildContext context) =>
+      UiSkinScope.controllerOf(context) == null
+      ? UiSkinHost(child: GameWorkbench(builder: _buildWorkbench))
+      : GameWorkbench(builder: _buildWorkbench);
 
   Widget _buildWorkbench(BuildContext context) {
     final c = BallWarsColors.of(context);
@@ -281,41 +286,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
           child: DefaultTabController(
-            length: 4,
+            key: ValueKey(_isAdmin == true),
+            length: _isAdmin == true ? 4 : 2,
+            initialIndex: _isAdmin == true
+                ? _settingsTab
+                : (_settingsTab == 2 ? 1 : 0),
             child: Scaffold(
               appBar: AppBar(
                 title: const Text('Settings'),
-                bottom: _isAdmin == true
-                    ? PreferredSize(
-                        preferredSize: const Size.fromHeight(50),
-                        child: Column(
-                          children: [
-                            if (_busy)
-                              const LinearProgressIndicator(minHeight: 2),
-                            TabBar(
-                              isScrollable: true,
-                              tabAlignment: TabAlignment.start,
-                              labelPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              onTap: (index) =>
-                                  setState(() => _settingsTab = index),
-                              tabs: const [
-                                Tab(text: 'General'),
-                                Tab(text: 'Gameplay'),
-                                Tab(text: 'Appearance'),
-                                Tab(text: 'Audio'),
-                              ],
-                            ),
-                          ],
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(50),
+                  child: Column(
+                    children: [
+                      if (_busy) const LinearProgressIndicator(minHeight: 2),
+                      TabBar(
+                        isScrollable: true,
+                        tabAlignment: TabAlignment.start,
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
                         ),
-                      )
-                    : _busy
-                    ? const PreferredSize(
-                        preferredSize: Size.fromHeight(2),
-                        child: LinearProgressIndicator(),
-                      )
-                    : null,
+                        onTap: (index) => setState(
+                          () => _settingsTab = _isAdmin == true
+                              ? index
+                              : index == 0
+                              ? 0
+                              : 2,
+                        ),
+                        tabs: [
+                          const Tab(text: 'General'),
+                          if (_isAdmin == true) const Tab(text: 'Gameplay'),
+                          const Tab(text: 'Appearance'),
+                          if (_isAdmin == true) const Tab(text: 'Audio'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               body: Align(
                 alignment: Alignment.topCenter,
@@ -336,7 +342,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                         ),
-                      if (!hasBackend)
+                      if (_settingsTab == 2) const UiSkinPicker(),
+                      if (_isAdmin != true && _settingsTab == 2)
+                        const SizedBox.shrink()
+                      else if (!hasBackend)
                         Text(
                           'Settings need a connection to the Ball Wars server.',
                           style: AppText.ui(

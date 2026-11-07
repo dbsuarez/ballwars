@@ -258,3 +258,15 @@ Centered Power-up Test follow-up submitted for web deployment and signed APK rel
 
 
 Phases C-E submitted for web deployment and signed APK release as **v1.14.63** on 2026-11-07. See [release notes](ux/RELEASE-v1.14.63.md). Workflow completion and published phone/browser acceptance remain manually checked.
+
+## Selectable UI skins (2026-11-07)
+
+- [x] Classic Arcade default and optional Battle Garage shared theme.
+- [x] Public Appearance selector with previews and per-device persistence.
+- [x] Visible save failures with previous skin retained; retry supported.
+- [x] FigCraft button assets, code-drawn ticket panels and Inter OFL notice.
+- [x] Runtime portrait/landscape screenshots and draft-preservation checks.
+- [x] Automated validation recorded: 34 focused checks, final skin captures, clean analysis and release web build. Full-suite attempt stopped at machine memory exhaustion; no full-suite pass claimed.
+- [ ] Physical phone acceptance after explicit deployment.
+
+[Skin report and screenshots](ux/skins/README.md).

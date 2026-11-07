@@ -101,3 +101,8 @@ A separate design proposal, **The Battle Garage**, is available as an editable
 [Flutter implementation handoff](figcraft/FLUTTER-HANDOFF.md).
 It includes ten boards, seven text-free PNG/SVG skins and an actual Flutter
 component proof. It has not replaced the implemented A-E UI or changed gameplay.
+
+
+## Selectable skins
+
+[Classic Arcade and Battle Garage](skins/README.md) are selectable under Settings > Appearance. The FigCraft styling is now available as a device-local skin; the existing layouts, arena and gameplay remain.

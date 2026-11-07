@@ -112,7 +112,7 @@ void main() {
       await tester.tap(find.text('Appearance'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('open-ball-studio')),
+        find.byKey(const ValueKey('open-ball-studio')).hitTestable(),
         300,
         scrollable: find
             .descendant(
@@ -121,6 +121,9 @@ void main() {
             )
             .first,
         maxScrolls: 30,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('open-ball-studio')),
       );
       await tester.tap(find.byKey(const ValueKey('open-ball-studio')));
       await tester.pumpAndSettle();

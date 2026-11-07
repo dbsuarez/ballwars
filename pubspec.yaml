@@ -79,6 +79,9 @@ flutter:
     - assets/sounds/
     - assets/sprites/
     - assets/help/
+    - assets/ui/skins/battle-garage/
+    - assets/ui/skins/classic-arcade/
+    - assets/fonts/Inter-OFL.txt
     - assets/ui/
     - assets/licenses/
     - assets/fonts/Manrope-OFL.txt
@@ -87,6 +90,9 @@ flutter:
   # Bundled fonts (SIL Open Font License, see assets/fonts/*-OFL.txt).
   # Manrope is a variable font: weights are set with FontVariation('wght').
   fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
     - family: Manrope
       fonts:
         - asset: assets/fonts/Manrope-Variable.ttf

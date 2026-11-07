@@ -1,3 +1,6 @@
+import 'core/theme/ui_skin.dart';
+import 'core/theme/ui_skin_scope.dart';
+import 'core/theme/garage_theme.dart';
 import 'core/legal/app_licenses.dart';
 import 'core/theme/game_ui.dart';
 import 'features/lobby/presentation/lobby_hero.dart';
@@ -71,6 +74,7 @@ class BallWarsApp extends StatefulWidget {
 }
 
 class _BallWarsAppState extends State<BallWarsApp> {
+  final _uiSkin = UiSkinController();
   CustomSpriteLoader? _spriteLoader;
   final ValueNotifier<AppSettings> _settings = ValueNotifier(
     AppSettings.defaults,
@@ -120,6 +124,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
   Future<void> _prepare() async {
     await Future.wait([
       _loadSettings(),
+      _uiSkin.load(),
       if (widget.syncOffline)
         _packs.load().then((_) {}, onError: (Object _) {}),
     ]);
@@ -150,6 +155,7 @@ class _BallWarsAppState extends State<BallWarsApp> {
     if (identical(SkillSpriteReadiness.loader, _spriteLoader)) {
       SkillSpriteReadiness.loader = null;
     }
+    _uiSkin.dispose();
     _settings.dispose();
     _progress.dispose();
     super.dispose();
@@ -157,6 +163,15 @@ class _BallWarsAppState extends State<BallWarsApp> {
 
   @override
   Widget build(BuildContext context) {
+    return UiSkinHost(
+      controller: _uiSkin,
+      load: false,
+      child: Builder(builder: _buildApplication),
+    );
+  }
+
+  Widget _buildApplication(BuildContext context) {
+    final garage = UiSkinScope.of(context) == UiSkin.garage;
     return AppSettingsScope(
       settings: _settings,
       repository: widget.settingsRepository,
@@ -170,7 +185,11 @@ class _BallWarsAppState extends State<BallWarsApp> {
           builder: (context, child) =>
               AppFrame(child: child ?? const SizedBox.shrink()),
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.build(AppPalettes.byId(settings.themeId)),
+          theme: garage
+              ? GarageTheme.apply(
+                  AppTheme.build(AppPalettes.byId(settings.themeId)),
+                )
+              : AppTheme.build(AppPalettes.byId(settings.themeId)),
           home: FutureBuilder<void>(
             future: _ready,
             builder: (context, snapshot) =>

@@ -98,8 +98,13 @@ class GameTheme extends StatelessWidget {
 /// Supplies a scoped theme to the builder as well as its descendants. Native
 /// controls keep their controllers, semantics and validation behavior.
 class GameWorkbench extends StatelessWidget {
-  const GameWorkbench({super.key, required this.builder});
+  const GameWorkbench({
+    super.key,
+    required this.builder,
+    this.animateEntrance = false,
+  });
   final WidgetBuilder builder;
+  final bool animateEntrance;
 
   @override
   Widget build(BuildContext context) => GameTheme(
@@ -109,11 +114,37 @@ class GameWorkbench extends StatelessWidget {
           data: Theme.of(
             context,
           ).copyWith(scaffoldBackgroundColor: Colors.transparent),
-          child: Builder(builder: builder),
+          child: animateEntrance
+              ? GameEntrance(child: Builder(builder: builder))
+              : Builder(builder: builder),
         ),
       ),
     ),
   );
+}
+
+/// One-shot menu entrance. Reduced motion builds the final state immediately.
+class GameEntrance extends StatelessWidget {
+  const GameEntrance({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: reduced ? 1 : 0, end: 1),
+      duration: reduced ? Duration.zero : const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) => Opacity(
+        opacity: reduced ? 1 : value,
+        child: Transform.translate(
+          offset: reduced ? Offset.zero : Offset(0, 6 * (1 - value)),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// A rarity frame around a real, interactive library entry.
@@ -146,18 +177,35 @@ class GameBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: c.background == GameUi.navy
-              ? const [Color(0xFF183778), Color(0xFF161444), GameUi.navy]
-              : [c.surfaceHigh, c.surface, c.background],
-          stops: const [0, .45, 1],
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: RepaintBoundary(
+              key: const ValueKey('game-backdrop-artwork'),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: c.background == GameUi.navy
+                        ? const [
+                            Color(0xFF183778),
+                            Color(0xFF161444),
+                            GameUi.navy,
+                          ]
+                        : [c.surfaceHigh, c.surface, c.background],
+                    stops: const [0, .45, 1],
+                  ),
+                ),
+                child: CustomPaint(painter: const _StadiumLights()),
+              ),
+            ),
+          ),
         ),
-      ),
-      child: CustomPaint(painter: const _StadiumLights(), child: child),
+        child,
+      ],
     );
   }
 }
@@ -232,7 +280,11 @@ class GamePanel extends StatelessWidget {
   final EdgeInsets padding;
   final bool selected;
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 180),
+    curve: Curves.easeOutCubic,
     decoration: ShapeDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft,

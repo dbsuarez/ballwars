@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import '../../arenas/presentation/arena_library_screen.dart';
 import '../../arenas/domain/arena_definition.dart';
 import '../../admin_guide/presentation/admin_guide_screen.dart';
@@ -44,7 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           .padLeft(6, '0')
           .toUpperCase(),
     );
-    final color = await showDialog<Color>(
+    final color = await showGameDialog<Color>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Custom blood color'),
@@ -158,7 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _signIn() async {
-    final result = await showDialog<(String, String, bool)>(
+    final result = await showGameDialog<(String, String, bool)>(
       context: context,
       builder: (_) => const _SignInDialog(),
     );
@@ -230,12 +231,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _openArenaEditor() async {
     final scope = _scope!;
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>ArenaLibraryScreen(
-      initial:scope.notifier!.value.arenaCatalog,onSave:(catalog) async {
-        final next=scope.notifier!.value.copyWith(arenaCatalog:catalog, arenaDecoration:catalog.find(catalog.defaultId)?.trapTheme ?? scope.notifier!.value.arenaDecoration);
-        await scope.repository!.save(next);
-        scope.notifier!.value=next;
-      })));
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ArenaLibraryScreen(
+          initial: scope.notifier!.value.arenaCatalog,
+          onSave: (catalog) async {
+            final next = scope.notifier!.value.copyWith(
+              arenaCatalog: catalog,
+              arenaDecoration:
+                  catalog.find(catalog.defaultId)?.trapTheme ??
+                  scope.notifier!.value.arenaDecoration,
+            );
+            await scope.repository!.save(next);
+            scope.notifier!.value = next;
+          },
+        ),
+      ),
+    );
   }
 
   /// Applies [settings] right away (live preview) and saves it for everyone.
@@ -254,7 +266,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) {
     final c = BallWarsColors.of(context);
     final settings = AppSettingsScope.of(context);
     final hasBackend = _scope?.adminAuth != null && _scope?.repository != null;
@@ -262,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // The whole page (header too) is as wide as Home's column on big
     // screens, so switching between them feels even.
     return ColoredBox(
-      color: c.background,
+      color: Colors.transparent,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
@@ -279,6 +293,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             if (_busy)
                               const LinearProgressIndicator(minHeight: 2),
                             TabBar(
+                              isScrollable: true,
+                              tabAlignment: TabAlignment.start,
+                              labelPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               onTap: (index) =>
                                   setState(() => _settingsTab = index),
                               tabs: const [
@@ -358,14 +377,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         )
                       else ...[
                         if (_settingsTab == 0)
-                          Card(child: ListTile(
-                            key: const ValueKey('open-admin-guide'),
-                            leading: const Icon(Icons.menu_book_outlined),
-                            title: const Text('Admin Guide'),
-                            subtitle: const Text('Create skills, understand effects and look up parameters.'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => openAdminGuide(context),
-                          )),
+                          Card(
+                            child: ListTile(
+                              key: const ValueKey('open-admin-guide'),
+                              leading: const Icon(Icons.menu_book_outlined),
+                              title: const Text('Admin Guide'),
+                              subtitle: const Text(
+                                'Create skills, understand effects and look up parameters.',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => openAdminGuide(context),
+                            ),
+                          ),
                         if (_settingsTab == 0)
                           _Section(
                             title: 'HEADLINE',
@@ -420,21 +443,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                OutlinedButton.icon(key: const ValueKey('open-arena-editor'),
-                                  onPressed:_busy?null:_openArenaEditor,icon:const Icon(Icons.edit_location_alt_outlined),label:const Text('Manage arenas')),
+                                OutlinedButton.icon(
+                                  key: const ValueKey('open-arena-editor'),
+                                  onPressed: _busy ? null : _openArenaEditor,
+                                  icon: const Icon(
+                                    Icons.edit_location_alt_outlined,
+                                  ),
+                                  label: const Text('Manage arenas'),
+                                ),
                                 OutlinedButton.icon(
                                   key: const ValueKey('choose-default-arena'),
                                   icon: ArenaPreview(
                                     decoration: settings.arenaDecoration,
-                                    arena: settings.arenaCatalog.find(settings.arenaCatalog.defaultId),
+                                    arena: settings.arenaCatalog.find(
+                                      settings.arenaCatalog.defaultId,
+                                    ),
                                     size: 64,
                                   ),
                                   label: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(settings.arenaCatalog.find(settings.arenaCatalog.defaultId)?.name ?? settings.arenaDecoration.label),
                                       Text(
-                                        settings.arenaCatalog.find(settings.arenaCatalog.defaultId)?.trapCaption ?? settings.arenaDecoration.hazardCaption,
+                                        settings.arenaCatalog
+                                                .find(
+                                                  settings
+                                                      .arenaCatalog
+                                                      .defaultId,
+                                                )
+                                                ?.name ??
+                                            settings.arenaDecoration.label,
+                                      ),
+                                      Text(
+                                        settings.arenaCatalog
+                                                .find(
+                                                  settings
+                                                      .arenaCatalog
+                                                      .defaultId,
+                                                )
+                                                ?.trapCaption ??
+                                            settings
+                                                .arenaDecoration
+                                                .hazardCaption,
                                         style: const TextStyle(fontSize: 11),
                                       ),
                                       const Text('Choose arena'),
@@ -447,9 +496,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           final picked =
                                               await showArenaSelectionDialog(
                                                 context,
-                                                selected: settings.arenaDecoration,
-                                                selectedPresetId: settings.arenaCatalog.defaultId,
-                                                onSelectPreset: (arena)=>custom=arena,
+                                                selected:
+                                                    settings.arenaDecoration,
+                                                selectedPresetId: settings
+                                                    .arenaCatalog
+                                                    .defaultId,
+                                                onSelectPreset: (arena) =>
+                                                    custom = arena,
                                               );
                                           if (picked == null || !mounted) {
                                             return;
@@ -457,7 +510,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           await _save(
                                             AppSettingsScope.of(
                                               this.context,
-                                            ).copyWith(arenaDecoration: picked, arenaCatalog: settings.arenaCatalog.withDefault(custom?.id)),
+                                            ).copyWith(
+                                              arenaDecoration: picked,
+                                              arenaCatalog: settings
+                                                  .arenaCatalog
+                                                  .withDefault(custom?.id),
+                                            ),
                                             done:
                                                 '${picked.label} arena saved.',
                                           );
@@ -1237,11 +1295,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   child: const Text('Save watermark text'),
                                 ),
                                 const SizedBox(height: 16),
-                                TextField(controller: _exportWatermark,
+                                TextField(
+                                  controller: _exportWatermark,
                                   maxLength: 80,
-                                  decoration: const InputDecoration(labelText: 'Bouncing video watermark', helperText: 'Saved videos only; users can hide it during export.')),
-                                TextButton(onPressed: _busy ? null : () => _save(settings.copyWith(exportWatermarkText: _exportWatermark.text.trim()), done: 'Video watermark saved.'), child: const Text('Save video watermark')),
-
+                                  decoration: const InputDecoration(
+                                    labelText: 'Bouncing video watermark',
+                                    helperText:
+                                        'Saved videos only; users can hide it during export.',
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _save(
+                                          settings.copyWith(
+                                            exportWatermarkText:
+                                                _exportWatermark.text.trim(),
+                                          ),
+                                          done: 'Video watermark saved.',
+                                        ),
+                                  child: const Text('Save video watermark'),
+                                ),
                               ],
                             ),
                           ),
@@ -1516,7 +1590,9 @@ class _SignInDialogState extends State<_SignInDialog> {
             contentPadding: EdgeInsets.zero,
             controlAffinity: ListTileControlAffinity.leading,
             title: const Text('Remember me'),
-            subtitle: const Text('Stay signed in on this browser or device. Use only on a trusted device.'),
+            subtitle: const Text(
+              'Stay signed in on this browser or device. Use only on a trusted device.',
+            ),
             value: _rememberMe,
             onChanged: (value) => setState(() => _rememberMe = value ?? false),
           ),

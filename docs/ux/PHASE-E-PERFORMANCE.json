@@ -1,0 +1,14 @@
+{
+  "method": "Flutter debug widget test, deterministic paint-count comparison using the actual stadium painter; not a phone GPU/frame-rate benchmark",
+  "test": "test/core/theme/game_motion_test.dart",
+  "changing_child_frames": 40,
+  "baseline_static_painter_invocations": 40,
+  "isolated_static_painter_repaints": 0,
+  "cached_layer_reuses": 40,
+  "home_decode_width_before": 940,
+  "home_decode_width_360px_1x_after": 360,
+  "home_decode_width_360px_3x_after": 940,
+  "source_artwork_unchanged": true,
+  "estimated_1x_decoded_pixel_ratio": 0.1466727025803531,
+  "note": "Image widths are verified provider decode requests. Pixel ratio is an estimate at unchanged aspect ratio, not measured browser/phone memory. Actual device profiling remains manual."
+}

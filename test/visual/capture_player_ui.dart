@@ -1,3 +1,4 @@
+import 'package:ballwars/features/lobby/presentation/lobby_hero.dart';
 import 'package:ballwars/features/settings/data/app_settings_repository.dart';
 import 'package:ballwars/features/settings/presentation/power_up_test_screen.dart';
 import 'package:ballwars/core/widgets/app_frame.dart';
@@ -171,10 +172,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.runAsync(
         () => precacheImage(
-          const ResizeImage(
-            AssetImage('assets/ui/lobby-hero.webp'),
-            width: 940,
-          ),
+          tester
+              .widget<Image>(
+                find
+                    .descendant(
+                      of: find.byType(LobbyHero),
+                      matching: find.byType(Image),
+                    )
+                    .first,
+              )
+              .image,
           tester.element(find.byType(Scaffold).first),
         ),
       );

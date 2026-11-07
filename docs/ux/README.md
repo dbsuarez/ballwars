@@ -4,7 +4,9 @@ Status: Phase A + B implemented and submitted for deployment/release as v1.14.61
 
 Phase C is implemented locally on 2026-11-07. [Skill workbench report and screenshots](PHASE-C-REPORT.md). Phase C has not been pushed or released.
 
-Phase D is implemented locally on 2026-11-07. [Battle, results and replay report](PHASE-D-REPORT.md). Phase E is next; Phase D has not been pushed or released.
+Phase D is implemented locally on 2026-11-07. [Battle, results and replay report](PHASE-D-REPORT.md). Phase D has not been pushed or released.
+
+Phase E is implemented locally on 2026-11-07. [Final polish report, measurements and screenshots](PHASE-E-REPORT.md). **A-E coding is complete.** Device/browser acceptance and actual phone performance remain open; Phase E has not been pushed or released.
 
 The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_CODEX_HANDOFF.md). The reference checkpoint was refreshed against master v1.14.60 (`15c500d`), preserving all five existing mode entries, current settings, simulation and release workflows.
 
@@ -37,7 +39,7 @@ The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_COD
 - [x] Center arena, status, finishers and playback as one group. Scroll short windows instead of shrinking the arena. [Preview](POWERUP-TEST-CENTERED-PREVIEW.md).
 - [x] Keep the arena full width, tap-to-rearm, hold-to-choose, random initial direction and normal bounce physics. Play does not rearm automatically.
 
-## Phase C and next visual slices
+## Phases C-E
 
 - [x] Phase C: Skill Library, Skill Editor, Ball Studio and Skill Demo. Implemented locally on 2026-11-07; [report and screenshots](PHASE-C-REPORT.md).
   - [x] Tier-aware skill frames, visibly labeled unified filters and shared game chrome/dialogs.
@@ -53,7 +55,15 @@ The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_COD
   - [x] Saved replay and export-dialog styling; existing replay/export choices preserved.
   - [x] 122 affected checks passed; 15 runtime captures at three screen sizes. Analysis clean and release web build passed.
 - [ ] Phase D phone/browser acceptance after publication.
-- [ ] Phase E (next): additional motion, measured performance polish and remaining player screens.
+- [x] Phase E implementation: motion, measured paint/cache improvements and remaining player screens. [Report](PHASE-E-REPORT.md).
+  - [x] One-shot menu entrance and selected-panel feedback; existing native exit transitions retained.
+  - [x] Reduced-motion support for entrances, empty states and winner effects; unsaved text/focus preserved.
+  - [x] Stop hidden confetti work when effects are off; isolate static backdrop painting.
+  - [x] Home artwork decode requests follow viewport pixels with the existing 940 px cap.
+  - [x] My Groups, ball editor, Settings and Power-up Test share game chrome; tabs remain readable.
+  - [x] Full serial suite: 1,770 passed / one existing opt-in skip. Final focused visual checks: 54 passed; larger-text captures passed. Analysis clean and release web build passed.
+  - [x] 25 runtime screenshots, including keyboard, narrow phone and 1.4x-text/reduced-motion states.
+- [ ] A-E published browser/Android acceptance and actual phone performance comparison. These gates require hands-on device checks; local tests do not close them.
 
 ## Artwork and tools
 
@@ -72,6 +82,8 @@ flutter test test/core/theme/game_ui_gallery_test.dart --dart-define=GAME_UI_GOL
 flutter test test/visual/capture_player_ui.dart
 flutter test test/visual/capture_skill_ui.dart
 flutter test test/visual/capture_battle_ui.dart
+flutter test test/visual/capture_polish_ui.dart
+flutter test test/core/theme/game_motion_test.dart
 ```
 
 The optional pixel comparison uses the checked-in Windows/Flutter 3.38.5 baselines. Ordinary widget interaction/layout checks run on all hosts. Refresh intentional visual baselines with `--update-goldens` and inspect the output. Capture output goes to `build/game-ui-screenshots`; committed copies and hashes are in `screenshots/` and `SCREENSHOT-MANIFEST.json`.

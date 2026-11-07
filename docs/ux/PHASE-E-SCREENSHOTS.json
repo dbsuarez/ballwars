@@ -1,0 +1,184 @@
+{
+  "capture": "Actual Flutter runtime, bundled fonts and assets, in-memory account fixtures; not physical-device photographs",
+  "commands": [
+    "flutter test test/visual/capture_player_ui.dart",
+    "flutter test test/visual/capture_polish_ui.dart"
+  ],
+  "screenshots": [
+    {
+      "path": "docs/ux/screenshots/phase-e/home-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 289468,
+      "sha256": "6c45c9cf4ddc008dd41d2389b2e4a0ef58d90230430bcb1b3416b9c4781ff688"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/home-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 374185,
+      "sha256": "3b55c49f0d3c441b7715ffb41ef44310f6c93a00436ecf0453db8f0e9f5fbf48"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/home-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 257556,
+      "sha256": "e61206d3b6739623b236d29e886314fb1628877583f914e65281cecc1118f778"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-320x740.png",
+      "width": 320,
+      "height": 740,
+      "bytes": 147837,
+      "sha256": "bf957f61f60d4426da67856c0f423691af3f6d5ad83dac23bf2bcc70168dd017"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-390x844.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 198368,
+      "sha256": "4fa37b66e769cdeba6c9ef1091e2adad1173cf1a44b96cb39db9c858017be613"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-collapsed-390x844.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 199090,
+      "sha256": "1cb6eb1a7f37d52a56d2d41b947605cfad5980c37b4a19e281dbed3e2f3b524a"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/audio-large-text-reduced-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 74937,
+      "sha256": "466fc9c13990efb7e154a0665e6a09ddede2db1fe913761301d85988b02c5ba2"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/ball-editor-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 36192,
+      "sha256": "01949ba3cdce81d7895fa337c3ed7b91cb83f82324e153f109acc9301b2b5717"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/ball-editor-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 57940,
+      "sha256": "cf37f763194911e9446c6ace7a728f3fa0385fd65141bf3636b1e7f7b3a489f2"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/ball-editor-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 15424,
+      "sha256": "0104dcf0f9eb91b0084e790564252318ca6f7c13ea39e8b5b3fb081f3f528897"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/ball-editor-keyboard-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 32195,
+      "sha256": "690aac6492c9236edca3c40a322ba76f965bd523287e149749fd947e2af76593"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/ball-editor-keyboard-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 38735,
+      "sha256": "b5799ecca6242c74d00dadb1e0003c8e3f1edfcd67c94bca9a94e9dba710ff10"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/ball-editor-keyboard-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 11745,
+      "sha256": "a52528b171cf0c4022f4e8d52ed1b2535b0b06518cf30af75351d0649636b3f8"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/groups-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 158649,
+      "sha256": "222b27a4585812f04aa167de16797f6a8e078dfa2ded6761ffb573dbd91f5ab5"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/groups-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 209156,
+      "sha256": "0c0a52ed0491a6158f3a44aa627e851c52f6633362d6f3975b91de6769670bd8"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/groups-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 109598,
+      "sha256": "fedf8fd3f30a7bfe231e1995867f74d52d12ce6ed9131b61978f9c93235dd0d3"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/groups-large-text-reduced-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 161330,
+      "sha256": "58c4a2e5d3550a6e372088474e309928c081e8ded9a9c244c3eccda79204d8b2"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 174140,
+      "sha256": "c0b0f4eed06e0aac38d37729535ece1a138e1a282da113e8b3d3a5d181809a36"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 228170,
+      "sha256": "711788ba7d6917797670b916bc69099022fe5a4e7a1f5fe6a451d27eee0c64a0"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 104243,
+      "sha256": "9f07a683c00c28da086ff543a1b0958e3f7696c950e0f570a13eb69c98b10244"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/powerup-large-text-reduced-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 176068,
+      "sha256": "c032c007ef58ba01c30a25d9890b65a9fafa0c033286ee8e7d908942b128db2f"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/settings-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 72655,
+      "sha256": "77035d27c366892696d2e3fa5027a2c09877e61e34ce7116d7f5a98fe2e4441b"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/settings-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 88423,
+      "sha256": "cbeae92d610a8987aaa4a1edd0fedf3136df0cdfceb737fff428a09941c46f22"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/settings-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 37627,
+      "sha256": "4495a496bcebe7571d345ba89ff344b17246ddfedae7c29d4479fd0ecd429c5d"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-e/settings-large-text-reduced-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 72102,
+      "sha256": "33023563f6891d41d757cc3518d234298b52fc13a0b3c697f2f7bc4de6348839"
+    }
+  ]
+}

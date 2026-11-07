@@ -208,7 +208,8 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => GameWorkbench(builder: _buildLibrary);
+  Widget build(BuildContext context) =>
+      GameWorkbench(animateEntrance: true, builder: _buildLibrary);
 
   Widget _buildLibrary(BuildContext context) => Scaffold(
     appBar: AppBar(

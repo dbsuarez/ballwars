@@ -110,6 +110,8 @@ class _WinnerModalState extends State<WinnerModal>
 
   bool _dontAskAgain = false;
   bool _slowAnswered = false;
+  bool _reduceMotion = false;
+  bool _confettiStarted = false;
 
   @override
   void initState() {
@@ -130,7 +132,32 @@ class _WinnerModalState extends State<WinnerModal>
     _confetti = AnimationController(
       duration: WinnerModal.confettiDuration,
       vsync: this,
-    )..forward();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion) _controller.value = 1;
+    _syncConfetti();
+  }
+
+  @override
+  void didUpdateWidget(covariant WinnerModal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncConfetti();
+  }
+
+  void _syncConfetti() {
+    if (_reduceMotion || !widget.showEffects) {
+      _confetti.stop();
+    } else if (!_confettiStarted) {
+      _confettiStarted = true;
+      _confetti.forward();
+    } else if (_confetti.value < 1 && !_confetti.isAnimating) {
+      _confetti.forward();
+    }
   }
 
   @override
@@ -378,7 +405,7 @@ class _WinnerModalState extends State<WinnerModal>
               ),
             ),
           ),
-        if (widget.showEffects)
+        if (widget.showEffects && !_reduceMotion)
           Positioned.fill(
             child: IgnorePointer(
               // Its own layer: the falling confetti repaints every frame, the

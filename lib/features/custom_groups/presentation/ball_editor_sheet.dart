@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import 'dart:ui' as ui;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -52,6 +53,7 @@ class BallEditorSheet extends StatefulWidget {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: GameUi.theme(context).colorScheme.surface,
     constraints: const BoxConstraints(maxWidth: 440),
     builder: (_) => BallEditorSheet(
       groupId: groupId,
@@ -182,7 +184,10 @@ class _BallEditorSheetState extends State<BallEditorSheet> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      GameTheme(child: Builder(builder: _buildEditor));
+
+  Widget _buildEditor(BuildContext context) {
     final c = BallWarsColors.of(context);
     final picture = _picture;
     final canSave = !_working && _name.text.trim().isNotEmpty;

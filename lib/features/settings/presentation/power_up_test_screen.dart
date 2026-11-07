@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import '../../arena_simulation/domain/simulation_ball.dart';
 import '../../arenas/domain/arena_definition.dart';
 import 'dart:math' as math;
@@ -1468,7 +1469,9 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) {
     if (_allowed != true || _match == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Power-up Tests')),

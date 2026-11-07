@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
@@ -149,7 +150,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
 
   Future<String?> _askName({required String title, String initial = ''}) {
     final controller = TextEditingController(text: initial);
-    return showDialog<String>(
+    return showGameDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
@@ -177,7 +178,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   }
 
   Future<bool> _confirm(String message) async =>
-      await showDialog<bool>(
+      await showGameDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           content: Text(message),
@@ -245,7 +246,7 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   Future<void> _addToPack(CustomGroup group) async {
     final packs = [..._packs]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    final packId = await showDialog<String>(
+    final packId = await showGameDialog<String>(
       context: context,
       builder: (context) =>
           _PackPickerDialog(groupName: group.name, packs: packs),
@@ -308,7 +309,10 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      GameWorkbench(animateEntrance: true, builder: _buildWorkbench);
+
+  Widget _buildWorkbench(BuildContext context) {
     final c = BallWarsColors.of(context);
     final groups = _groups;
     return Scaffold(
@@ -438,13 +442,8 @@ class _MyGroupsScreenState extends State<MyGroupsScreen> {
     bool editable = true,
     bool? inMyCategories,
   }) {
-    return Container(
+    return GamePanel(
       padding: const EdgeInsets.fromLTRB(18, 8, 4, 18),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: c.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

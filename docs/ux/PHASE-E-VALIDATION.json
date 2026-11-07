@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-07",
+  "flutter": "3.38.5",
+  "host": "Windows",
+  "baseline": "Phase D / f29e60f",
+  "runs": [
+    {
+      "command": "flutter test --concurrency=1 --reporter=expanded",
+      "result": "1770 passed; 1 existing opt-in skip",
+      "local_log": "build/phase-e-full-tests.log",
+      "log_sha256": "d43e7ea69864df8c9e02299621b57be903e7eb6a5c2111c450e57e9c77793205"
+    },
+    {
+      "command": "flutter test test/features/settings/settings_screen_test.dart test/features/custom_groups test/core/theme/game_motion_test.dart test/core/theme/game_ui_gallery_test.dart test/visual/capture_player_ui.dart test/visual/capture_polish_ui.dart --concurrency=1 --dart-define=GAME_UI_GOLDENS=true --reporter=expanded",
+      "result": "54 passed, including gallery pixel baselines",
+      "local_log": "build/phase-e-verified-visual-tests.log",
+      "log_sha256": "1e8a8467e98db431648c955d5aca685ae9fb893c8b72520041c58e002a00305c"
+    },
+    {
+      "command": "flutter test test/visual/capture_polish_ui.dart --reporter=expanded",
+      "result": "1 passed; includes final 1.4x-text/reduced-motion captures",
+      "local_log": "build/phase-e-accessibility-capture.log",
+      "log_sha256": "e94f490e65ceb563568eeacf1d438520b34ee277c1aa6acb803d523d74f5bec0"
+    },
+    {
+      "command": "flutter analyze",
+      "result": "No issues found; exit 0",
+      "local_log": "build/phase-e-analysis.log",
+      "log_sha256": "6ffdd0ff13a2e5cec632bc89039294658bc08e49f5d0aafb90ee28a4fff745c2"
+    },
+    {
+      "command": "flutter build web --release --no-pub --no-wasm-dry-run --base-href /ballwars/",
+      "result": "Passed; exit 0",
+      "local_log": "build/phase-e-web.log",
+      "log_sha256": "bd3fe7273ff062490280610505bce8a348a688beb5f14e7eae8db9e4efada112"
+    }
+  ],
+  "note": "Separate overlapping runs. Full suite plus final focused settings/motion/visual refinements and larger-text captures. Local paint-count benchmark, not physical-device GPU/FPS acceptance. No push, tag or APK release."
+}

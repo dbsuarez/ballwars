@@ -41,7 +41,11 @@ class LobbyHero extends StatelessWidget {
         child: Image.asset(
           'assets/ui/lobby-hero.webp',
           fit: BoxFit.cover,
-          cacheWidth: 940,
+          cacheWidth:
+              (MediaQuery.sizeOf(context).width *
+                      MediaQuery.devicePixelRatioOf(context))
+                  .ceil()
+                  .clamp(1, 940),
           excludeFromSemantics: true,
           frameBuilder: (_, child, frame, _) => frame == null
               ? CustomPaint(painter: _HeroPainter(), size: Size.infinite)

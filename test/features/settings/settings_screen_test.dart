@@ -64,18 +64,32 @@ class _SignedOutAdmin implements AdminAuth {
 
 void main() {
   for (final admin in [false, true]) {
-    testWidgets('Admin Guide entry is ${admin ? "available" : "hidden"} for admin=$admin', (tester) async {
-      await tester.pumpWidget(AppSettingsScope(settings: ValueNotifier(AppSettings.defaults),
-        repository: _FakeRepo(), adminAuth: admin ? _Admin() : _SignedOutAdmin(),
-        child: MaterialApp(theme: AppTheme.build(AppPalettes.midnight), home: const SettingsScreen())));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('open-admin-guide')), admin ? findsOneWidget : findsNothing);
-      if (admin) {
-        await tester.tap(find.byKey(const ValueKey('open-admin-guide')));
+    testWidgets(
+      'Admin Guide entry is ${admin ? "available" : "hidden"} for admin=$admin',
+      (tester) async {
+        await tester.pumpWidget(
+          AppSettingsScope(
+            settings: ValueNotifier(AppSettings.defaults),
+            repository: _FakeRepo(),
+            adminAuth: admin ? _Admin() : _SignedOutAdmin(),
+            child: MaterialApp(
+              theme: AppTheme.build(AppPalettes.midnight),
+              home: const SettingsScreen(),
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
-        expect(find.text('Create your first skill'), findsOneWidget);
-      }
-    });
+        expect(
+          find.byKey(const ValueKey('open-admin-guide')),
+          admin ? findsOneWidget : findsNothing,
+        );
+        if (admin) {
+          await tester.tap(find.byKey(const ValueKey('open-admin-guide')));
+          await tester.pumpAndSettle();
+          expect(find.text('Create your first skill'), findsOneWidget);
+        }
+      },
+    );
   }
 
   testWidgets(
@@ -142,7 +156,9 @@ void main() {
     await tester.tap(find.text('Admin sign-in'));
     await tester.pumpAndSettle();
     expect(find.text('Remember me'), findsOneWidget);
-    final checkbox = tester.widget<CheckboxListTile>(find.byType(CheckboxListTile));
+    final checkbox = tester.widget<CheckboxListTile>(
+      find.byType(CheckboxListTile),
+    );
     expect(checkbox.value, isFalse);
     expect(checkbox.onChanged, isNotNull);
     await tester.enterText(
@@ -180,7 +196,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Audio'));
+      await tester.ensureVisible(find.widgetWithText(Tab, 'Audio'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Audio'));
       await tester.pumpAndSettle();
 
       expect(find.text('MUSIC'), findsOneWidget);

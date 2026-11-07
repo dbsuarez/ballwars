@@ -242,3 +242,16 @@ Centered Power-up Test follow-up submitted for web deployment and signed APK rel
 - [ ] Physical phone/browser acceptance after explicit deployment.
 
 [Phase D report and screenshots](ux/PHASE-D-REPORT.md). Phase E (motion, performance and remaining player screens) is next. No push or release in this pass.
+
+
+## UI Phase E: final implementation pass (2026-11-07)
+
+- [x] Remaining player/editor chrome: My Groups, ball editor, Settings and Power-up Test.
+- [x] Bounded menu/selection motion; reduced-motion support, draft/focus preservation and no hidden confetti ticker when effects are off.
+- [x] Measured static-paint isolation: 40 changing frames go from 40 background repaints to zero, with 40 cached layer reuses.
+- [x] Viewport/DPR-sized Home image decode requests, capped at the existing 940 px maximum.
+- [x] 1,770 full-suite checks passed / one existing opt-in skip; final visual/focused checks passed. Static analysis clean and release web build passed.
+- [x] 25 runtime screenshots, including keyboard, 320 px width and 1.4x text/reduced motion.
+- [ ] Published browser/Android acceptance and actual phone performance verification remain manual.
+
+[A-E implementation is complete locally](ux/README.md). [Phase E report and performance evidence](ux/PHASE-E-REPORT.md). No push, release or device installation in this pass.

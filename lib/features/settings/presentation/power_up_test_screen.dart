@@ -311,6 +311,7 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       slowMotionLines: 0,
       endlessBattle: _endless,
       dualWield: true,
+      bloodColor: settings.bloodColor,
       arenaDecoration:
           _selectedArena?.trapTheme ?? _arenaChoice ?? settings.arenaDecoration,
     );
@@ -775,6 +776,123 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       ),
     );
   }
+
+  Widget _belowArenaSlot({
+    required Key key,
+    required String label,
+    required PowerUpKind? item,
+    required String? skillId,
+    required Color accent,
+    required double size,
+    required VoidCallback choose,
+    required VoidCallback rearm,
+  }) {
+    final skill = _selection(item, skillId);
+    return Tooltip(
+      message: item == null
+          ? 'Choose $label'
+          : '${skill?.name ?? item.label}: tap to re-arm, hold to replace',
+      child: GestureDetector(
+        key: key,
+        onLongPress: choose,
+        child: InkWell(
+          onTap: item == null ? choose : rearm,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.72),
+              border: Border.all(color: accent.withValues(alpha: 0.75)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            alignment: Alignment.center,
+            child: item == null
+                ? Icon(Icons.add, size: size * 0.5, color: accent)
+                : PowerUpIcon(
+                    item,
+                    useSettingsArtwork: false,
+                    spriteId: skill?.iconSpriteId,
+                    size: size * 0.75,
+                    tint: skill?.spriteTint ?? 0xFFFFFFFF,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _belowArenaLoadoutControls() => LayoutBuilder(
+    key: const ValueKey('below-arena-loadout-controls'),
+    builder: (context, constraints) {
+      final size = math.min(36.0, math.max(28.0, (constraints.maxWidth - 20) / 9));
+      final trapAccent = Theme.of(context).colorScheme.tertiary;
+
+      Widget group(Color accent, List<Widget> children) => Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.18),
+          border: Border.all(color: accent.withValues(alpha: 0.55)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: children),
+      );
+
+      Widget ballGroup(int ball) {
+        final items = <PowerUpKind?>[
+          _savedItems[ball],
+          _secondaryWeapons[ball],
+          _powerUps[ball],
+        ];
+        return group(_balls[ball].primaryColor, [
+          for (var slot = 0; slot < items.length; slot++)
+            _belowArenaSlot(
+              key: ValueKey('below-arena-loadout-$ball-$slot'),
+              label: 'Ball ${ball == 0 ? 'A' : 'B'} item ${slot + 1}',
+              item: items[slot],
+              skillId: _skillIds[ball][slot],
+              accent: _balls[ball].primaryColor,
+              size: size,
+              choose: () => _chooseLoadoutItem(
+                ball,
+                slot == 2 ? 1 : 0,
+                secondary: slot == 1,
+              ),
+              rearm: () => _rearmItem(ball, items[slot], slot: slot),
+            ),
+        ]);
+      }
+
+      Widget divider() => Container(
+        width: 1,
+        height: size * 0.72,
+        color: Theme.of(context).dividerColor,
+      );
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          ballGroup(0),
+          divider(),
+          group(trapAccent, [
+            for (var trap = 0; trap < _arenaTraps.length; trap++)
+              _belowArenaSlot(
+                key: ValueKey('below-arena-trap-$trap'),
+                label: 'Arena trap ${trap + 1}',
+                item: _arenaTraps[trap],
+                skillId: _trapSkillIds[trap],
+                accent: trapAccent,
+                size: size,
+                choose: () => _chooseTrap(trap),
+                rearm: () => setState(() => _rearmTrap(trap)),
+              ),
+          ]),
+          divider(),
+          ballGroup(1),
+        ],
+      );
+    },
+  );
 
   void _launchSound(FinisherProfile profile) {
     final audio = GameAudio.instance;
@@ -1353,6 +1471,10 @@ class _PowerUpTestScreenState extends State<PowerUpTestScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _belowArenaLoadoutControls(),
+          ),
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(

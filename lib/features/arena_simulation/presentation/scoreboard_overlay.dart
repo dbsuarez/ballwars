@@ -101,6 +101,12 @@ class ScoreboardOverlay extends StatelessWidget {
                 width: width,
                 child: Card(
                   margin: EdgeInsets.zero,
+                  shape: BeveledRectangleBorder(
+                    borderRadius: BorderRadius.circular(7),
+                    side: BorderSide(
+                      color: ball.config.primaryColor.withValues(alpha: .7),
+                    ),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: Column(

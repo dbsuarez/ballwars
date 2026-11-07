@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import '../../../core/sprites/sprite_registry.dart';
 import '../../../core/widgets/screen_awake.dart';
 import '../../sprites/application/skill_sprite_readiness.dart';
@@ -321,8 +322,12 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       includeTraps: !widget.config.mode.isThreadOnly,
     );
     requiredSprites.addAll(widget.config.artworkRevisions.values);
-    if(widget.config.simulationRevision>=10) requiredSprites.add('anim.death-ghost');
-    if(widget.config.arenaPreset?.backgroundSpriteId case final id?) requiredSprites.add(id);
+    if (widget.config.simulationRevision >= 10) {
+      requiredSprites.add('anim.death-ghost');
+    }
+    if (widget.config.arenaPreset?.backgroundSpriteId case final id?) {
+      requiredSprites.add(id);
+    }
     _spriteLease?.call();
     _spriteLease = SpriteRegistry.pin(requiredSprites);
     final startupWatch = Stopwatch()..start();
@@ -332,7 +337,11 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
       final audioWatch = Stopwatch()..start();
       final audioReady = _audio.prepareMatchAudio();
       final missing = await SkillSpriteReadiness.prepare(
-        extraIds: [...widget.config.artworkRevisions.values, if(widget.config.simulationRevision>=10) 'anim.death-ghost', ?widget.config.arenaPreset?.backgroundSpriteId],
+        extraIds: [
+          ...widget.config.artworkRevisions.values,
+          if (widget.config.simulationRevision >= 10) 'anim.death-ghost',
+          ?widget.config.arenaPreset?.backgroundSpriteId,
+        ],
         embedded: widget.config.artworkFrames,
         includeTraps: !widget.config.mode.isThreadOnly,
         library: widget.config.skillLibrary,
@@ -674,9 +683,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
     ballSize: widget.config.ballSize,
     mode: widget.config.mode,
     threadGrowthMaxThreads: widget.config.threadGrowthMaxThreads,
-      neoThreadsTarget: widget.config.neoThreadsTarget,
-      threadCutRace: widget.config.threadCutRace,
-      cutRaceSurvival: widget.config.cutRaceSurvival,
+    neoThreadsTarget: widget.config.neoThreadsTarget,
+    threadCutRace: widget.config.threadCutRace,
+    cutRaceSurvival: widget.config.cutRaceSurvival,
     question: widget.config.question,
     look: widget.config.look,
     showBallNames: widget.config.showBallNames,
@@ -956,7 +965,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildBattle);
+
+  Widget _buildBattle(BuildContext context) {
     final c = BallWarsColors.of(context);
     // A Yes or No question takes the headline's place.
     final headline =
@@ -1248,31 +1259,45 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           // Leaves room for the three audio buttons at the bottom right.
                           right: _audioButtonsWidth,
                           child: LayoutBuilder(
-                            builder: (context, box) => Row(
-                              mainAxisSize: MainAxisSize.min,
+                            builder: (context, box) => Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
                                 Tooltip(
                                   message:
                                       'Unstuck: push every ball in a random direction',
-                                  child: OutlinedButton.icon(
-                                    key: const ValueKey('arena-unstuck'),
-                                    onPressed: finished ? null : _unstuck,
-                                    icon: const Icon(
-                                      Icons.open_with_rounded,
-                                      size: 18,
-                                    ),
-                                    label: const Text('Unstuck'),
-                                    style: OutlinedButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                      ),
-                                    ),
-                                  ),
+                                  child: box.maxWidth < 110
+                                      ? OutlinedButton(
+                                          key: const ValueKey('arena-unstuck'),
+                                          onPressed: finished ? null : _unstuck,
+                                          style: OutlinedButton.styleFrom(
+                                            minimumSize: const Size(40, 36),
+                                            padding: const EdgeInsets.all(8),
+                                          ),
+                                          child: const Icon(
+                                            Icons.open_with_rounded,
+                                            size: 18,
+                                          ),
+                                        )
+                                      : OutlinedButton.icon(
+                                          key: const ValueKey('arena-unstuck'),
+                                          onPressed: finished ? null : _unstuck,
+                                          icon: const Icon(
+                                            Icons.open_with_rounded,
+                                            size: 18,
+                                          ),
+                                          label: const Text('Unstuck'),
+                                          style: OutlinedButton.styleFrom(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                            ),
+                                          ),
+                                        ),
                                 ),
                                 if (widget.config.endlessBattle &&
                                     !widget.config.mayhem) ...[
-                                  const SizedBox(width: 8),
                                   _endBattleButton(
                                     compact:
                                         box.maxWidth <
@@ -1408,7 +1433,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                         for (final ball in _state.balls)
                           (
                             ball.config,
-                            widget.config.mode == MatchMode.threadGrowth && widget.config.threadCutRace ? ball.threadsCut : _controller.eliminations[ball.config.id] ?? 0,
+                            widget.config.mode == MatchMode.threadGrowth &&
+                                    widget.config.threadCutRace
+                                ? ball.threadsCut
+                                : _controller.eliminations[ball.config.id] ?? 0,
                             _controller.deaths[ball.config.id] ?? 0,
                             widget.config.mode == MatchMode.arsenal
                                 ? ball.life
@@ -1416,7 +1444,9 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                           ),
                       ],
                       tallyIsHealth: widget.config.mode == MatchMode.arsenal,
-                      tallyIsCuts: widget.config.mode == MatchMode.threadGrowth && widget.config.threadCutRace,
+                      tallyIsCuts:
+                          widget.config.mode == MatchMode.threadGrowth &&
+                          widget.config.threadCutRace,
                       question: widget.config.question,
                       durationSeconds: _controller.elapsedSeconds,
                       winningMove: _controller.winningMove,
@@ -1468,9 +1498,10 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 mode: widget.config.mode,
                                 threadGrowthMaxThreads:
                                     widget.config.threadGrowthMaxThreads,
-      neoThreadsTarget: widget.config.neoThreadsTarget,
-      threadCutRace: widget.config.threadCutRace,
-      cutRaceSurvival: widget.config.cutRaceSurvival,
+                                neoThreadsTarget:
+                                    widget.config.neoThreadsTarget,
+                                threadCutRace: widget.config.threadCutRace,
+                                cutRaceSurvival: widget.config.cutRaceSurvival,
                                 arenaShape: widget.config.arenaShape,
                                 arenaRotation: widget.config.arenaRotation,
                                 centerObstacle: widget.config.centerObstacle,
@@ -1478,7 +1509,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                     widget.config.centerObstacleScale,
                                 look: widget.config.look,
                                 showHpBars: widget.config.showHpBars,
-                              showBallNames: widget.config.showBallNames,
+                                showBallNames: widget.config.showBallNames,
                                 powerUps: widget.config.powerUps,
                                 customSkills: widget.config.customSkills,
                                 tuning: widget.config.tuning,
@@ -1497,7 +1528,7 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
                                 randomizedHairstyles:
                                     widget.config.randomizedHairstyles,
                                 arenaPreset: widget.config.arenaPreset,
-    arenaDecoration: widget.config.arenaDecoration,
+                                arenaDecoration: widget.config.arenaDecoration,
                                 headline: headline,
                                 colors: c,
                                 ballGlowEnabled: exportSettings.ballGlowEnabled,
@@ -1571,53 +1602,54 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
 
               if (isPortrait) {
                 return Stack(
+                  fit: StackFit.expand,
                   children: [
                     SingleChildScrollView(
                       key: const ValueKey('arena-portrait-scroll'),
                       child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
-                          child: Row(
-                            children: [
-                              leave,
-                              Expanded(
-                                child: MatchStatusHeader(
-                                  headline: headline,
-                                  subtitle: roundLabel,
-                                  dimmed: finished,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                            child: Row(
+                              children: [
+                                leave,
+                                Expanded(
+                                  child: MatchStatusHeader(
+                                    headline: headline,
+                                    subtitle: roundLabel,
+                                    dimmed: finished,
+                                  ),
                                 ),
-                              ),
-                              pause,
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
-                          child: ListenableBuilder(
-                            listenable: _frame,
-                            builder: (context, _) => _VersusHeader(
-                              balls: _state.balls,
-                              compact: true,
-                              look: widget.config.look,
+                                pause,
+                              ],
                             ),
                           ),
-                        ),
-                        SizedBox(
-                          key: const ValueKey('arena-priority-square'),
-                          height: constraints.maxWidth,
-                          width: constraints.maxWidth,
-                          child: arena,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                          child: scoreboard,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                          child: Row(children: [timer, restart]),
-                        ),
-                      ],
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+                            child: ListenableBuilder(
+                              listenable: _frame,
+                              builder: (context, _) => _VersusHeader(
+                                balls: _state.balls,
+                                compact: true,
+                                look: widget.config.look,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            key: const ValueKey('arena-priority-square'),
+                            height: constraints.maxWidth,
+                            width: constraints.maxWidth,
+                            child: arena,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                            child: scoreboard,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                            child: Row(children: [timer, restart]),
+                          ),
+                        ],
                       ),
                     ),
                     ...overlays,
@@ -1626,70 +1658,77 @@ class _ArenaBattleScreenState extends State<ArenaBattleScreen>
               }
 
               // Wide screens (web, landscape): the game takes the left half and
-              // the winner card stays there, centered on the arena; the
-              // headline, scores and controls sit in the right half.
-              return Row(
+              // headline, scores and controls sit in the right half. Result and
+              // cinematic overlays span the app window so they remain centered.
+              return Stack(
+                fit: StackFit.expand,
                 children: [
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(child: arena),
-                        ...overlays,
-                      ],
-                    ),
-                  ),
-                  Container(width: 1, color: c.border),
-                  Expanded(
-                    child: Center(
-                      // Landscape phones are too short for the whole panel: it scrolls there.
-                      // Where it fits, the scroll view is as tall as the panel, so nothing moves.
-                      child: SingleChildScrollView(
-                        key: const ValueKey('arena-side-panel'),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 420),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: leave,
+                  Row(
+                    children: [
+                      Expanded(child: arena),
+                      Container(width: 1, color: c.border),
+                      Expanded(
+                        child: Center(
+                          // Landscape phones are too short for the whole panel: it scrolls there.
+                          // Where it fits, the scroll view is as tall as the panel, so nothing moves.
+                          child: SingleChildScrollView(
+                            key: const ValueKey('arena-side-panel'),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 420),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
                                 ),
-                                const SizedBox(height: 8),
-                                ListenableBuilder(
-                                  listenable: _frame,
-                                  builder: (context, _) => _VersusHeader(
-                                    balls: _state.balls,
-                                    look: widget.config.look,
-                                  ),
-                                ),
-                                const SizedBox(height: 28),
-                                MatchStatusHeader(
-                                  headline: headline,
-                                  subtitle: roundLabel,
-                                  dimmed: finished,
-                                  align: TextAlign.start,
-                                ),
-                                const SizedBox(height: 28),
-                                scoreboard,
-                                const SizedBox(height: 28),
-                                Row(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
-                                    timer,
-                                    pause,
-                                    const SizedBox(width: 8),
-                                    restart,
+                                    Row(
+                                      children: [leave, const Spacer(), pause],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ListenableBuilder(
+                                      listenable: _frame,
+                                      builder: (context, _) => _VersusHeader(
+                                        balls: _state.balls,
+                                        look: widget.config.look,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 28),
+                                    MatchStatusHeader(
+                                      headline: headline,
+                                      subtitle: roundLabel,
+                                      dimmed: finished,
+                                      align: TextAlign.start,
+                                    ),
+                                    const SizedBox(height: 28),
+                                    scoreboard,
+                                    const SizedBox(height: 28),
+                                    LayoutBuilder(
+                                      builder: (context, bounds) =>
+                                          bounds.maxWidth < 280
+                                          ? Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                Row(children: [timer]),
+                                                const SizedBox(height: 8),
+                                                restart,
+                                              ],
+                                            )
+                                          : Row(children: [timer, restart]),
+                                    ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
+                  ...overlays,
                 ],
               );
             },
@@ -1728,6 +1767,21 @@ class _VersusHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = BallWarsColors.of(context);
+    if (!compact && balls.length > 2) {
+      return LayoutBuilder(
+        builder: (context, bounds) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final ball in balls)
+              SizedBox(
+                width: (bounds.maxWidth - 24) / 4,
+                child: _VersusHeader(balls: [ball], compact: true, look: look),
+              ),
+          ],
+        ),
+      );
+    }
     final size = compact
         ? (balls.length <= 2 ? 40.0 : 32.0)
         : (balls.length <= 2 ? 96.0 : 64.0);

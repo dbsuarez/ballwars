@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-07",
+  "flutter": "3.38.5",
+  "host": "Windows",
+  "baseline": "Phase C / c9d07da",
+  "runs": [
+    {
+      "command": "flutter test test/features/arena_simulation/presentation/arena_battle_screen_test.dart test/features/arena_simulation/presentation/winner_modal_test.dart test/features/arena_simulation/presentation/scoreboard_overlay_test.dart test/features/replay_export test/batch1/saved_replay_recovery_ui_test.dart test/visual/capture_battle_ui.dart --concurrency=1 --reporter=expanded",
+      "result": "122 passed",
+      "local_log": "build/phase-d-final-tests.log",
+      "log_sha256": "72db034b8c950e6d10e411bd6190023ebd88d2cf52e95795a2c37f816f3b5982"
+    },
+    {
+      "command": "flutter analyze",
+      "result": "No issues found; exit 0",
+      "local_log": "build/phase-d-verified-analysis.log",
+      "log_sha256": "c61403b23e80b38dab3d4b2815daf8baba6a0c05e2ff73232cc75df82541a197"
+    },
+    {
+      "command": "flutter build web --release --no-pub --no-wasm-dry-run --base-href /ballwars/",
+      "result": "Passed; exit 0",
+      "local_log": "build/phase-d-verified-web.log",
+      "log_sha256": "4292bb13cd35f182fd3aa6135975161920ab0aa2b423bb7187fe37b8cda822f2"
+    }
+  ],
+  "note": "Affected suite, not the full app suite. Analysis/build followed removal of an unused test import. Fifteen runtime captures. No production or physical-device acceptance implied; no push or release."
+}

@@ -1,0 +1,111 @@
+{
+  "capture": "Actual Flutter runtime, bundled fonts and sprites, in-memory fixtures; not phone photographs",
+  "command": "flutter test test/visual/capture_battle_ui.dart",
+  "screenshots": [
+    {
+      "path": "docs/ux/screenshots/phase-d/battle-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 173813,
+      "sha256": "121e82e6ddd61199638321eae58b6cbd037901d2349d894766c41b93729dc579"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/battle-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 246030,
+      "sha256": "8416145befe321fa7e8f0827822a71c1f78343c32ddd1f6b8fdd2033d705447d"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/battle-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 168527,
+      "sha256": "d3f7f40b87ca3f83ac04d1e2b107f35d99c2901835f78982852ac6c7a76932bf"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/export-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 32511,
+      "sha256": "a531b2e58a0132790685d6431eaaaf0bcbd4a1a160617f14dd25a79dfad97ab3"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/export-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 33578,
+      "sha256": "353dca34c6b50022467e4db2b3f7c78d44b99a0472b57da25238ed742c00c875"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/export-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 20247,
+      "sha256": "bf36b06c76bca3f6c85f3c54e5cae52243eb618420567b36c5505a5cf454a4ec"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/replays-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 152355,
+      "sha256": "f3ec18822caa518a5126aa3b41b99bc08726c838ba40e7305da2cd81a6c5b2b6"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/replays-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 205822,
+      "sha256": "3977f0c173dc28b0e6caede6e8e8d98d7d391f7ee1535b547dc05fbcfb76822d"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/replays-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 106202,
+      "sha256": "c9b1681910eac6d6b3b79b1a187b453b3c3e24f196909ba4a764b0b9ec8f7774"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/results-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 126735,
+      "sha256": "3928b1f794656e493b3a4ed777f1ee531e29d69bddd4000ab4b32a321e0f92d6"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/results-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 151173,
+      "sha256": "f216b51c06f0a1818ed4c08aadb5ff7cef65c364a16eba51bdb949936a4fc5d7"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/results-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 84358,
+      "sha256": "60dca82ad186de3cbc7e96e7b84e440d12dc7baff00604367579a6e7f739a579"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/results-tally-360x800.png",
+      "width": 360,
+      "height": 800,
+      "bytes": 127429,
+      "sha256": "4e70df8b1c45905d0cfdf9976a2729eebeaddebb0175acb87538f182cd5806a0"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/results-tally-440x900.png",
+      "width": 440,
+      "height": 900,
+      "bytes": 151173,
+      "sha256": "f216b51c06f0a1818ed4c08aadb5ff7cef65c364a16eba51bdb949936a4fc5d7"
+    },
+    {
+      "path": "docs/ux/screenshots/phase-d/results-tally-800x360.png",
+      "width": 800,
+      "height": 360,
+      "bytes": 80964,
+      "sha256": "e0cb0ccbdf2ae7861d53c9e028da3dfe0833d4036d510866732aaaefd31e9542"
+    }
+  ]
+}

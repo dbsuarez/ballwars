@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import '../../arenas/domain/arena_definition.dart';
 import 'dart:convert';
 import '../../../core/offline/device_prefs.dart';
@@ -157,7 +158,7 @@ class ExportVideoDialog extends StatefulWidget {
     String arenaSubtitle = 'bakbakan na',
     required VideoExportBackend backend,
   }) {
-    return showDialog<void>(
+    return showGameDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => ExportVideoDialog(
@@ -173,9 +174,9 @@ class ExportVideoDialog extends StatefulWidget {
         ballScale: ballScale,
         mode: mode,
         threadGrowthMaxThreads: threadGrowthMaxThreads,
-      neoThreadsTarget: neoThreadsTarget,
-      threadCutRace: threadCutRace,
-      cutRaceSurvival: cutRaceSurvival,
+        neoThreadsTarget: neoThreadsTarget,
+        threadCutRace: threadCutRace,
+        cutRaceSurvival: cutRaceSurvival,
         arenaShape: arenaShape,
         centerObstacle: centerObstacle,
         centerObstacleScale: centerObstacleScale,
@@ -308,9 +309,9 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         ballScale: widget.ballScale,
         mode: widget.mode,
         threadGrowthMaxThreads: widget.threadGrowthMaxThreads,
-      neoThreadsTarget: widget.neoThreadsTarget,
-      threadCutRace: widget.threadCutRace,
-      cutRaceSurvival: widget.cutRaceSurvival,
+        neoThreadsTarget: widget.neoThreadsTarget,
+        threadCutRace: widget.threadCutRace,
+        cutRaceSurvival: widget.cutRaceSurvival,
         arenaShape: widget.arenaShape,
         centerObstacle: widget.centerObstacle,
         centerObstacleScale: widget.centerObstacleScale,
@@ -338,7 +339,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
         isCancelled: () => _cancelled,
         confirmDurationLimit: () async {
           if (!mounted || _cancelled) return false;
-          return await showDialog<bool>(
+          return await showGameDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('10-minute video limit'),
@@ -390,7 +391,7 @@ class _ExportVideoDialogState extends State<ExportVideoDialog> {
   @override
   Widget build(BuildContext context) => ScreenAwake(
     enabled: _phase == _Phase.exporting,
-    child: _buildDialog(context),
+    child: GameTheme(child: Builder(builder: _buildDialog)),
   );
 
   Widget _buildDialog(BuildContext context) {

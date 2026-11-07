@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import '../domain/replay_document.dart';
@@ -137,7 +138,7 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
     final controller = TextEditingController(text: entry.displayName);
     String? name;
     try {
-      name = await showDialog<String>(
+      name = await showGameDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Rename replay'),
@@ -207,7 +208,9 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => GameWorkbench(builder: _buildLibrary);
+
+  Widget _buildLibrary(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Saved replays'),
       actions: [
@@ -252,10 +255,15 @@ class _SavedReplaysScreenState extends State<SavedReplaysScreen> {
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final entry = entries[index];
-            return Card(
+            return GameSkillFrame(
+              color: GameUi.cyan,
               child: ListTile(
                 leading: const Icon(Icons.play_circle_outline),
-                title: Text(entry.displayName),
+                title: Text(
+                  entry.displayName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(_stamp(entry.savedAt)),
                 onTap: () {
                   Navigator.pop(context);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ballwars/core/theme/app_theme.dart';
+import 'package:ballwars/core/widgets/app_frame.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_battle_screen.dart';
 import 'package:ballwars/features/arena_simulation/presentation/arena_canvas.dart';
 import 'package:ballwars/features/arena_simulation/presentation/power_up_sprites.dart';
@@ -52,20 +53,72 @@ bool _shows(String label) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() => Future<void>.sync(PowerUpSprites.load));
-  testWidgets('eight-ball tally never shrinks the portrait arena', (tester) async {
+  testWidgets(
+    'winner panel centers in the app window in portrait and landscape',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      for (final size in [const Size(360, 800), const Size(800, 360)]) {
+        await tester.pumpWidget(const SizedBox());
+        tester.view.physicalSize = size;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.build(AppPalettes.midnight),
+            builder: (_, child) => AppFrame(child: child!),
+            home: const ArenaBattleScreen(
+              config: MatchConfig(contestants: _balls),
+              seed: 17,
+            ),
+          ),
+        );
+        await _playUntilWinnerCard(tester);
+        final center = tester.getCenter(
+          find.byKey(const ValueKey('winner-result-panel')),
+        );
+        expect(center.dx, closeTo(size.width / 2, .5));
+        expect(center.dy, closeTo(size.height / 2, .5));
+        expect(find.text('Play again').hitTestable(), findsOneWidget);
+        expect(find.text('Replay').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets('eight-ball tally never shrinks the portrait arena', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 740);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final balls = List.generate(8, (i) => CustomBall(id: 'ball$i', name: 'Ball $i',
-      primaryColor: Colors.blue, glowColor: Colors.cyan));
-    await tester.pumpWidget(_app(MatchConfig(contestants: balls,
-      mode: MatchMode.arsenal, mayhem: true)));
+    final balls = List.generate(
+      8,
+      (i) => CustomBall(
+        id: 'ball$i',
+        name: 'Ball $i',
+        primaryColor: Colors.blue,
+        glowColor: Colors.cyan,
+      ),
+    );
+    await tester.pumpWidget(
+      _app(
+        MatchConfig(contestants: balls, mode: MatchMode.arsenal, mayhem: true),
+      ),
+    );
     await tester.pump();
-    expect(tester.getSize(find.byKey(const ValueKey('arena-priority-square'))), const Size(390,390));
+    expect(
+      tester.getSize(find.byKey(const ValueKey('arena-priority-square'))),
+      const Size(390, 390),
+    );
     expect(tester.takeException(), isNull);
-    await tester.drag(find.byKey(const ValueKey('arena-portrait-scroll')), const Offset(0,-400));
+    await tester.drag(
+      find.byKey(const ValueKey('arena-portrait-scroll')),
+      const Offset(0, -400),
+    );
     await tester.pump();
-    expect(tester.getSize(find.byKey(const ValueKey('arena-priority-square'))), const Size(390,390));
+    expect(
+      tester.getSize(find.byKey(const ValueKey('arena-priority-square'))),
+      const Size(390, 390),
+    );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });

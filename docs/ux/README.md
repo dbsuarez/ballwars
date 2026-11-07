@@ -2,7 +2,9 @@
 
 Status: Phase A + B implemented and submitted for deployment/release as v1.14.61. The centered Power-up Test follow-up is submitted as v1.14.62 on 2026-11-06. Workflow completion and device acceptance remain manual. [Validation and screenshots](PHASE-A-B-REPORT.md).
 
-Phase C is implemented locally on 2026-11-07. [Skill workbench report and screenshots](PHASE-C-REPORT.md). Phase D is next; Phase C has not been pushed or released.
+Phase C is implemented locally on 2026-11-07. [Skill workbench report and screenshots](PHASE-C-REPORT.md). Phase C has not been pushed or released.
+
+Phase D is implemented locally on 2026-11-07. [Battle, results and replay report](PHASE-D-REPORT.md). Phase E is next; Phase D has not been pushed or released.
 
 The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_CODEX_HANDOFF.md). The reference checkpoint was refreshed against master v1.14.60 (`15c500d`), preserving all five existing mode entries, current settings, simulation and release workflows.
 
@@ -43,8 +45,15 @@ The implementation follows [the supplied handoff](BALL_WARS_FREE_UI_REDESIGN_COD
   - [x] Ball Studio and Skill Demo share the visual system; short windows scroll.
   - [x] 141 affected regressions passed; portrait/landscape screenshots captured at three sizes. Analysis clean.
 - [ ] Phase C phone/browser acceptance after publication.
-- [ ] Phase D (next): battle HUD, results and replay presentation, preserving arena area and replay/export choices.
-- [ ] Phase E: additional motion, measured performance polish and remaining player screens.
+- [x] Phase D: battle HUD, results and replay presentation. [Report and screenshots](PHASE-D-REPORT.md).
+  - [x] Shared game chrome and ball-color standing frames; portrait arena area preserved.
+  - [x] Center win panels in the full app viewport, including short two-ball layouts and landscape.
+  - [x] Scroll result details with a visible winner title and reachable playback/save actions.
+  - [x] Responsive landscape contestants, pause, timer/restart and utility controls.
+  - [x] Saved replay and export-dialog styling; existing replay/export choices preserved.
+  - [x] 122 affected checks passed; 15 runtime captures at three screen sizes. Analysis clean and release web build passed.
+- [ ] Phase D phone/browser acceptance after publication.
+- [ ] Phase E (next): additional motion, measured performance polish and remaining player screens.
 
 ## Artwork and tools
 
@@ -62,6 +71,7 @@ flutter test test/core/theme/game_ui_gallery_test.dart
 flutter test test/core/theme/game_ui_gallery_test.dart --dart-define=GAME_UI_GOLDENS=true
 flutter test test/visual/capture_player_ui.dart
 flutter test test/visual/capture_skill_ui.dart
+flutter test test/visual/capture_battle_ui.dart
 ```
 
 The optional pixel comparison uses the checked-in Windows/Flutter 3.38.5 baselines. Ordinary widget interaction/layout checks run on all hosts. Refresh intentional visual baselines with `--update-goldens` and inspect the output. Capture output goes to `build/game-ui-screenshots`; committed copies and hashes are in `screenshots/` and `SCREENSHOT-MANIFEST.json`.

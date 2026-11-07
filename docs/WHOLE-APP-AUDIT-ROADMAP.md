@@ -229,3 +229,16 @@ Centered Power-up Test follow-up submitted for web deployment and signed APK rel
 - [ ] Physical phone/browser acceptance after explicit deployment.
 
 [Phase C report and screenshots](ux/PHASE-C-REPORT.md). Phase D (battle HUD, results and replay presentation) is next. This pass does not push or release.
+
+
+## UI Phase D: battle, results and replays (2026-11-07)
+
+- [x] Shared battle chrome and ball-color tally frames; full-width portrait arena retained.
+- [x] Winner panel centers in the full app viewport in both orientations, including short two-ball content.
+- [x] Visible winner name; scrolling details with reachable playback/save/share actions.
+- [x] Narrow landscape HUD controls and contestants fit without overflow.
+- [x] Saved replay and export-dialog styling with existing replay/visibility/audio behavior retained.
+- [x] 122 affected checks and 15 runtime screenshots passed.
+- [ ] Physical phone/browser acceptance after explicit deployment.
+
+[Phase D report and screenshots](ux/PHASE-D-REPORT.md). Phase E (motion, performance and remaining player screens) is next. No push or release in this pass.

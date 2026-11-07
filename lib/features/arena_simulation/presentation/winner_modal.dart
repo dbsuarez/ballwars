@@ -1,3 +1,4 @@
+import '../../../core/theme/game_ui.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
@@ -348,10 +349,14 @@ class _WinnerModalState extends State<WinnerModal>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      GameTheme(child: Builder(builder: _buildResult));
+
+  Widget _buildResult(BuildContext context) {
     final c = BallWarsColors.of(context);
     final settings = AppSettingsScope.of(context);
     final score = widget.score;
+    final compact = MediaQuery.sizeOf(context).height < 520;
     return Stack(
       children: [
         // Covers the arena; taps pass through so the screen's own controls
@@ -401,12 +406,12 @@ class _WinnerModalState extends State<WinnerModal>
               ),
             ),
           ),
-        // Shrinks to fit small areas (e.g. the left half of a wide screen).
+        // Result details scroll; actions stay reachable at native text size.
         Center(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
               child: AnimatedBuilder(
                 animation: _controller,
                 builder: (context, child) => Opacity(
@@ -416,90 +421,140 @@ class _WinnerModalState extends State<WinnerModal>
                     child: child,
                   ),
                 ),
-                child: SizedBox(
-                  width: 340,
+                child: GamePanel(
+                  key: const ValueKey('winner-result-panel'),
+                  accent: GameUi.gold,
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (widget.round != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: Text(
-                            widget.seriesOver
-                                ? 'SERIES · ${widget.round} ROUNDS'
-                                : 'ROUND ${widget.round}',
-                            textAlign: TextAlign.center,
-                            style: AppText.mono(
-                              11,
-                              color: c.muted,
-                              letterSpacing: 1.8,
-                            ),
-                          ),
-                        ),
-                      Center(
-                        child: CircularBallPreview(
-                          ball: widget.winner,
-                          size: 160,
-                        ),
-                      ),
-                      const SizedBox(height: 26),
                       Text(
                         widget.winner.name,
+                        key: const ValueKey('winner-result-title'),
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.ui(
-                          38,
+                          compact ? 24 : 32,
                           FontWeight.w800,
                           color: c.text,
                           height: 1.05,
                           letterSpacing: -0.6,
                         ),
                       ),
-                      if (widget.question != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.question!,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.ui(
-                            14,
-                            FontWeight.w600,
-                            color: c.muted,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Answer: ${widget.winner.name}',
-                          textAlign: TextAlign.center,
-                          style: AppText.ui(20, FontWeight.w800, color: c.text),
-                        ),
-                      ],
                       const SizedBox(height: 6),
                       Text(
                         _result,
                         textAlign: TextAlign.center,
                         style: AppText.ui(18, FontWeight.w600, color: c.muted),
                       ),
-                      if (widget.winningMove != null) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          'Winning move: ${widget.winningMove}',
-                          textAlign: TextAlign.center,
-                          style: AppText.ui(14, FontWeight.w700, color: c.text),
+                      const SizedBox(height: 8),
+                      Flexible(
+                        child: SingleChildScrollView(
+                          key: const ValueKey('winner-result-scroll'),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (widget.round != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 24),
+                                  child: Text(
+                                    widget.seriesOver
+                                        ? 'SERIES · ${widget.round} ROUNDS'
+                                        : 'ROUND ${widget.round}',
+                                    textAlign: TextAlign.center,
+                                    style: AppText.mono(
+                                      11,
+                                      color: c.muted,
+                                      letterSpacing: 1.8,
+                                    ),
+                                  ),
+                                ),
+                              if (!compact) ...[
+                                Center(
+                                  child: CircularBallPreview(
+                                    ball: widget.winner,
+                                    size: 160,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                              ],
+                              if (widget.question != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  widget.question!,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w600,
+                                    color: c.muted,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Answer: ${widget.winner.name}',
+                                  textAlign: TextAlign.center,
+                                  style: AppText.ui(
+                                    20,
+                                    FontWeight.w800,
+                                    color: c.text,
+                                  ),
+                                ),
+                              ],
+                              if (widget.winningMove != null) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Winning move: ${widget.winningMove}',
+                                  textAlign: TextAlign.center,
+                                  style: AppText.ui(
+                                    14,
+                                    FontWeight.w700,
+                                    color: c.text,
+                                  ),
+                                ),
+                              ],
+                              if (widget.onReplayFinisher != null) ...[
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  key: const ValueKey('replay-finisher'),
+                                  onPressed: widget.onReplayFinisher,
+                                  icon: const Icon(Icons.replay_rounded),
+                                  label: const Text('Replay finisher'),
+                                ),
+                              ],
+                              if (score != null)
+                                _mayhemResults(
+                                  context,
+                                  title: 'SERIES TALLY',
+                                  entries: [
+                                    for (final entry in score)
+                                      (
+                                        entry.ball,
+                                        entry.wins,
+                                        entry.losses,
+                                        entry.hp,
+                                      ),
+                                  ],
+                                ),
+                              if (widget.mayhemTally != null)
+                                _mayhemResults(context),
+                              if (widget.durationSeconds != null) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'match time ${_time(widget.durationSeconds!)}',
+                                  textAlign: TextAlign.center,
+                                  style: AppText.mono(12, color: c.muted),
+                                ),
+                              ],
+                              if (widget.onSlowAnswer != null && !_slowAnswered)
+                                _slowPrompt(c),
+                            ],
+                          ),
                         ),
-                      ],
-                      if (widget.onReplayFinisher != null) ...[
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          key: const ValueKey('replay-finisher'),
-                          onPressed: widget.onReplayFinisher,
-                          icon: const Icon(Icons.replay_rounded),
-                          label: const Text('Replay finisher'),
-                        ),
-                      ],
+                      ),
                       if (widget.onSaveReplay != null) ...[
                         const SizedBox(height: 8),
                         TextButton.icon(
@@ -509,25 +564,7 @@ class _WinnerModalState extends State<WinnerModal>
                           label: const Text('Save replay'),
                         ),
                       ],
-                      if (score != null)
-                        _mayhemResults(
-                          context,
-                          title: 'SERIES TALLY',
-                          entries: [
-                            for (final entry in score)
-                              (entry.ball, entry.wins, entry.losses, entry.hp),
-                          ],
-                        ),
-                      if (widget.mayhemTally != null) _mayhemResults(context),
-                      if (widget.durationSeconds != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          'match time ${_time(widget.durationSeconds!)}',
-                          textAlign: TextAlign.center,
-                          style: AppText.mono(12, color: c.muted),
-                        ),
-                      ],
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 8),
                       if (widget.onNextRound != null)
                         FilledButton(
                           onPressed: widget.onNextRound,
@@ -597,8 +634,6 @@ class _WinnerModalState extends State<WinnerModal>
                             child: const Text('Start over'),
                           ),
                         ),
-                      if (widget.onSlowAnswer != null && !_slowAnswered)
-                        _slowPrompt(c),
                     ],
                   ),
                 ),

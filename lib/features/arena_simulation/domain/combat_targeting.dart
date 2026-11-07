@@ -23,6 +23,7 @@ class CombatTargeting {
     double obstacleExtent = 0,
     bool preferClearLine = true,
     bool legacyOrder = false,
+    bool farthest = false,
   }) {
     if (!origin.dx.isFinite || !origin.dy.isFinite) return null;
     final eligible = <SimulationBall>[];
@@ -56,11 +57,13 @@ class CombatTargeting {
         : eligible;
     final pool = visible.isNotEmpty ? visible : eligible;
     SimulationBall? nearest;
-    var nearestDistance = double.infinity;
+    var nearestDistance = farthest ? -1.0 : double.infinity;
     for (final ball in pool) {
       final distance = (ball.position - origin).distanceSquared;
       if (!distance.isFinite) continue;
-      if (distance < nearestDistance ||
+      if ((farthest
+              ? distance > nearestDistance
+              : distance < nearestDistance) ||
           (!legacyOrder &&
               distance == nearestDistance &&
               nearest != null &&
@@ -78,9 +81,10 @@ class CombatTargeting {
     final previousDistance = (previous.position - origin).distanceSquared;
     if (!previousDistance.isFinite) return nearest;
     // Compare squared distances to avoid square roots on every step.
-    return previousDistance <= nearestDistance * retentionRatio * retentionRatio
-        ? previous
-        : nearest;
+    final retain = farthest
+        ? previousDistance * retentionRatio * retentionRatio >= nearestDistance
+        : previousDistance <= nearestDistance * retentionRatio * retentionRatio;
+    return retain ? previous : nearest;
   }
 
   /// True only if the *interior* of the central wall obstructs the segment.

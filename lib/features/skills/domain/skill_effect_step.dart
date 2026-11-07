@@ -3,7 +3,7 @@ part of 'skill_library.dart';
 enum EffectStepTarget {
   affected('Hit targets'),
   self('Caster'),
-  nearestOpponent('Nearest opponent'),
+  nearestOpponent('Selected opponent'),
   allOpponents('All opponents');
 
   const EffectStepTarget(this.label);

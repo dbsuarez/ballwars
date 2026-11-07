@@ -1881,6 +1881,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _homing,
       _returnsToOrigin,
       _trackNearestOpponent,
+      _opponentPriority.name,
       _explodesOnImpact,
     ],
     'steps': _effectSteps.map((step) => step.toJson()).toList(),
@@ -2220,6 +2221,7 @@ class _SkillEditorState extends State<_SkillEditor>
   late int _heldAttackDurationSteps = widget.skill.heldAttackDurationSteps
       .clamp(12, 90);
   late bool _trackNearestOpponent = widget.skill.trackNearestOpponent;
+  late OpponentPriority _opponentPriority = widget.skill.resolvedOpponentPriority;
   late SkillTrigger? _trigger = widget.skill.trigger;
   late SkillTargeting? _targeting = widget.skill.targeting;
   late SkillDelivery? _delivery = widget.skill.delivery;
@@ -2478,6 +2480,7 @@ class _SkillEditorState extends State<_SkillEditor>
       _heldAttackRepeatCount = defaults.heldAttackRepeatCount;
       _heldAttackDurationSteps = defaults.heldAttackDurationSteps;
       _trackNearestOpponent = defaults.trackNearestOpponent;
+      _opponentPriority = defaults.resolvedOpponentPriority;
       _sprite = defaults.spriteMode;
       _effect = defaults.effectMode;
       _globalEffectVisuals = defaults.useGlobalEffectVisuals;
@@ -2975,6 +2978,7 @@ class _SkillEditorState extends State<_SkillEditor>
       heldAttackArcScale: _heldAttackArcScale,
       heldAttackVfxScale: _heldAttackVfxScale,
       trackNearestOpponent: _trackNearestOpponent,
+      opponentPriority: _opponentPriority,
       weaponDisplayScale: _double('weaponDisplayScale'),
       pickupDisplayScale: _double('pickupDisplayScale'),
       effectDisplayScale: _double('effectDisplayScale'),
@@ -4188,6 +4192,22 @@ class _SkillEditorState extends State<_SkillEditor>
                       _section('Identity', 'Name, category and availability.'),
                       // Keep invalid fired-skill references discoverable even
                       // when the rest of the Identity form is very long.
+                      _fixedRow(
+                        'Opponent priority',
+                        DropdownButtonFormField<OpponentPriority>(
+                          key: const ValueKey('skill-opponent-priority'),
+                          initialValue: _opponentPriority,
+                          isExpanded: true,
+                          decoration: const InputDecoration(),
+                          items: const [
+                            DropdownMenuItem(value: OpponentPriority.nearest, child: Text('Nearest opponent')),
+                            DropdownMenuItem(value: OpponentPriority.farthest, child: Text('Farthest opponent')),
+                          ],
+                          onChanged: (value) { if(value != null) setState(() => _opponentPriority = value); },
+                        ),
+                      ),
+                      const Padding(padding: EdgeInsets.only(top: 6, bottom: 12),
+                        child: Text('Used when this skill chooses an opponent. Self, area and all-opponent effects keep their existing behavior. With only two balls, both choices select the same opponent.')),
                       ..._combineSection(result),
                       if (_numbers.keys.any((key) => _numberError(key) != null))
                         Padding(
@@ -4545,7 +4565,7 @@ class _SkillEditorState extends State<_SkillEditor>
                               for (final value in SkillTargeting.values)
                                 DropdownMenuItem(
                                   value: value,
-                                  child: Text(value.name),
+                                  child: Text(value == SkillTargeting.nearestOpponent ? 'Selected opponent' : value.name),
                                 ),
                             ],
                             onChanged: (value) =>
@@ -5020,7 +5040,7 @@ class _SkillEditorState extends State<_SkillEditor>
                           onChanged: (value) =>
                               setState(() => _trackNearestOpponent = value),
                           title: const Text(
-                            'Track nearest opponent while equipped',
+                            'Track selected opponent while equipped',
                           ),
                           subtitle: const Text(
                             'Continuously turns the held artwork toward the nearest opponent.',

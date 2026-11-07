@@ -346,3 +346,18 @@ Replay artwork revisions, dependency validation, decoded cache budgets and devic
 
 
 New arena and ball requests, their implementation order and the deliberately deferred replay work are tracked separately in [ARENA-AND-BALL-ROADMAP.md](ARENA-AND-BALL-ROADMAP.md).
+
+
+## Shared opponent priority (2026-11-07)
+
+- [x] Identity > Opponent priority dropdown for every built-in and custom skill.
+- [x] Per-skill nearest/farthest selection reused across native attacks, powers,
+  composed effects, equipped tracking fallback, melee within reach and homing retargets.
+- [x] Independent dual-wield selection and captured native projectile preference.
+- [x] Stored JSON, restore defaults and editor save/reopen; full/compact replay
+  versions 14/15, with historical defaults preserved for older snapshots.
+- [x] In-app help and recommended model updated; dedicated runtime/serialization
+  checks, affected regressions and static analysis completed.
+- [ ] Published 3+ ball match acceptance after explicit deployment.
+
+[Model and validation details](RECOMMENDED-SKILL-MODEL.md#shared-opponent-priority-2026-11-07).

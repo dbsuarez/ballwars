@@ -75,6 +75,7 @@ class PowerUpSystem {
 
   // Retained aimed targets are per-match state and are discarded on respawn.
   final Map<SimulationBall, SimulationBall> _aimedTargets = {};
+  final Map<(SimulationBall, String), SimulationBall> _skillAimedTargets = {};
   int targetSwitchCount = 0;
   int homingRetargetCount = 0;
   int blockedTargetFallbackCount = 0;
@@ -96,6 +97,7 @@ class PowerUpSystem {
   /// Casings ejected so far this match ([ShellCasing.sequence]).
   int _shellSequence = 0;
   final Map<Projectile, SkillDefinition> _composedProjectiles = {};
+  final Map<Projectile, OpponentPriority> _projectileOpponentPriorities = {};
 
   /// Shots fired by one skill as another skill's projectile ([SkillDefinition.payloadSkillId]): the skill
   /// that fired them, credited for their hits (the winning move and its finisher name it).
@@ -525,6 +527,7 @@ class PowerUpSystem {
 
   /// Clears equipment and every carried/timed effect before an Endless Battle respawn.
   void resetForRespawn(SimulationBall ball) {
+    _skillAimedTargets.removeWhere((key, target) => identical(key.$1, ball) || identical(target, ball));
     _aimedTargets.remove(ball);
     _aimedTargets.removeWhere((_, target) => identical(target, ball));
     // Respawn is a new life. Old traps and custom projectiles must not
@@ -1394,7 +1397,7 @@ class PowerUpSystem {
         ball.overchargeLeft = _t.maximumPowerSteps;
         _skillYell(ball, p.kind, 'MAXIMUM POWER!');
       case PowerUpKind.gremlin:
-        final target = _nearestTarget(ball);
+        final target = _selectOpponent(ball, skill: activeSkill);
         if (target != null) {
           target.gremlinShots++;
           target.activeEffectSkillIds[PowerUpKind.gremlin] = activeSkill.id;
@@ -1412,7 +1415,7 @@ class PowerUpSystem {
         _launchOmegaTendrils(ball);
         _skillYell(ball, p.kind, 'NO ONE ESCAPES!');
       case PowerUpKind.lightningStrikes:
-        final target = _nearestTarget(ball);
+        final target = _selectOpponent(ball, skill: activeSkill);
         if (target != null) {
           lightningStrikes.add(
             LightningStrike(owner: ball, target: target)
@@ -1424,7 +1427,7 @@ class PowerUpSystem {
         earthquakes.add(EarthquakePulse(owner: ball));
         _skillYell(ball, p.kind, 'SHAKE THE EARTH!');
       case PowerUpKind.tornado:
-        final target = _nearestTarget(ball);
+        final target = _selectOpponent(ball, skill: activeSkill);
         if (target != null) {
           tornadoes.add(
             Tornado(
@@ -1563,7 +1566,7 @@ class PowerUpSystem {
   }
 
   void _startOmnislash(SimulationBall owner) {
-    final target = _farthestTarget(owner);
+    final target = _selectOpponent(owner, skill: visualSkill(PowerUpKind.busterSword, ball: owner));
     if (target == null) return;
     final attack = OmnislashAttack(owner: owner, target: target);
     _freezeTime(52, source: attack);
@@ -1572,7 +1575,7 @@ class PowerUpSystem {
   }
 
   void _startRagingDemon(SimulationBall owner) {
-    final target = _nearestTarget(owner);
+    final target = _selectOpponent(owner, skill: visualSkill(PowerUpKind.ragingDemon, ball: owner));
     if (target == null) return;
     final skill = match.skillLibrary.activeFor(PowerUpKind.ragingDemon, _t);
     final settings = RagingDemonCastSettings.resolve(
@@ -1592,7 +1595,7 @@ class PowerUpSystem {
   /// Kage bunshin: time freezes for the whole sequence while the clones strike one by one
   /// ([_updateShadowClones]).
   void _startShadowClone(SimulationBall owner) {
-    final target = _nearestTarget(owner);
+    final target = _selectOpponent(owner, skill: visualSkill(PowerUpKind.shadowClone, ball: owner));
     if (target == null) return;
     // Native cinematic strikes honor the configured count without replacing
     // their original animation or turning the strikes into projectiles.
@@ -1623,7 +1626,7 @@ class PowerUpSystem {
       if (attack.vanishAt == null) {
         final current = attack.target;
         if (current == null || !_alive(current)) {
-          attack.target = _nearestTarget(attack.owner);
+          attack.target = _selectOpponent(attack.owner, skill: visualSkill(PowerUpKind.shadowClone, ball: attack.owner));
         }
         final victim = attack.target;
         if (victim == null || !_alive(attack.owner)) {
@@ -1644,7 +1647,7 @@ class PowerUpSystem {
           if (attack.clonesDone >= attack.clones) {
             attack.vanishAt = attack.age;
           } else if (!_alive(victim)) {
-            attack.target = _nearestTarget(attack.owner);
+            attack.target = _selectOpponent(attack.owner, skill: visualSkill(PowerUpKind.shadowClone, ball: attack.owner));
             if (attack.target == null) attack.vanishAt = attack.age;
           }
         }
@@ -2600,9 +2603,11 @@ class PowerUpSystem {
       if (ball.trackingItems.isEmpty || !_alive(ball)) {
         continue;
       }
+      final trackingKind = ball.trackingItems.contains(PowerUpKind.shield) ? PowerUpKind.shield : ball.trackingItems.first;
+      final trackingSkill = visualSkill(trackingKind, ball: ball);
       final threat = ball.trackingItems.contains(PowerUpKind.shield)
-          ? _incoming(ball)?.position ?? _nearestTarget(ball)?.position
-          : _nearestTarget(ball)?.position;
+          ? _incoming(ball)?.position ?? _selectOpponent(ball, skill: trackingSkill)?.position
+          : _selectOpponent(ball, skill: trackingSkill)?.position;
       if (threat == null) continue;
       final toThreat = threat - ball.position;
       final want = math.atan2(toThreat.dy, toThreat.dx);
@@ -2996,9 +3001,16 @@ class PowerUpSystem {
 
   /// Stable, obstacle-aware aimed target selection. All-blocked scenarios
   /// fall back to an opponent so the match cannot deadlock behind its wall.
-  SimulationBall? _nearestTarget(SimulationBall ball) {
-    final previous = _aimedTargets[ball];
+  SimulationBall? _selectOpponent(SimulationBall ball, {SkillDefinition? skill}) {
+    // Missing preference preserves the native Buster Sword rule in old replays.
+    if (skill?.baseKind == PowerUpKind.busterSword && skill?.opponentPriority == null) {
+      return _farthestTarget(ball);
+    }
+    final perSkill = skill?.opponentPriority != null;
+    final key = (ball, skill?.id ?? '');
+    final previous = perSkill ? _skillAimedTargets[key] : _aimedTargets[ball];
     final selected = CombatTargeting.select(
+      farthest: skill?.opponentPriority == OpponentPriority.farthest,
       legacyOrder: match.simulationRevision < 7,
       origin: ball.position,
       candidates: match.state.balls,
@@ -3009,12 +3021,12 @@ class PowerUpSystem {
       obstacleExtent: match.arenaRadius * match.centerObstacleScale,
     );
     if (selected == null) {
-      _aimedTargets.remove(ball);
+      if (perSkill) { _skillAimedTargets.remove(key); } else { _aimedTargets.remove(ball); }
     } else {
       if (previous != null && !identical(previous, selected)) {
         targetSwitchCount++;
       }
-      _aimedTargets[ball] = selected;
+      if (perSkill) { _skillAimedTargets[key] = selected; } else { _aimedTargets[ball] = selected; }
       if (match.centerObstacle != CenterObstacle.none &&
           CombatTargeting.centerObstacleBlocks(
             ball.position,
@@ -3263,7 +3275,9 @@ class PowerUpSystem {
     var targets = switch (skill.targeting) {
       SkillTargeting.self => [owner],
       SkillTargeting.nearestOpponent => [
-        ?primary != null && _alive(primary) ? primary : _nearestTarget(owner),
+        ?(!projectileImpact && skill.opponentPriority != null)
+            ? _selectOpponent(owner, skill: skill)
+            : primary != null && _alive(primary) ? primary : _selectOpponent(owner, skill: skill),
       ],
       SkillTargeting.allOpponents => [
         for (final target in match.state.balls)
@@ -3483,7 +3497,7 @@ class PowerUpSystem {
     final candidates = switch (step.target) {
       EffectStepTarget.self => [owner],
       EffectStepTarget.affected => event.targets,
-      EffectStepTarget.nearestOpponent => [?_nearestTarget(owner)],
+      EffectStepTarget.nearestOpponent => [?_selectOpponent(owner, skill: event.skill)],
       EffectStepTarget.allOpponents => [
         for (final ball in match.state.balls)
           if (!identical(owner, ball)) ball,
@@ -3798,7 +3812,8 @@ class PowerUpSystem {
           continue;
         }
         SimulationBall? nearest;
-        var best = double.infinity;
+        final farthest = skill.opponentPriority == OpponentPriority.farthest;
+        var best = farthest ? -1.0 : double.infinity;
         for (final target in standing) {
           if (identical(attacker, target)) continue;
           final distance = (target.position - attacker.position).distance;
@@ -3806,7 +3821,7 @@ class PowerUpSystem {
               attacker.radius +
               target.radius +
               skill.meleeReach * attacker.radius;
-          if (distance <= reach && distance < best) {
+          if (distance <= reach && (farthest ? distance > best : distance < best)) {
             best = distance;
             nearest = target;
           }
@@ -3867,9 +3882,10 @@ class PowerUpSystem {
             firedWeaponHoldLeft(ball, weapon, skillId: entry.skillId) == 0;
       }).toList();
       if (!bursting && guns.isEmpty) continue;
-      final target = _nearestTarget(ball);
-      ball.aimTarget = target;
-      if (target == null) {
+      final aimingSkill = bursting ? _burstShellSkill[ball] : _skillForId(guns.first.kind, guns.first.skillId);
+      final aimedTarget = _selectOpponent(ball, skill: aimingSkill?.opponentPriority == null ? null : aimingSkill);
+      ball.aimTarget = aimedTarget;
+      if (aimedTarget == null) {
         // Nobody to aim at: a new aim starts over once someone is.
         if (!bursting) ball.aimLeft = 0;
         continue;
@@ -3882,7 +3898,7 @@ class PowerUpSystem {
         _holdFiredWeapon(ball, PowerUpKind.gatling);
         _fire(
           ball,
-          target,
+          aimedTarget,
           PowerUpKind.gatling,
           0,
           volley: _burstVolley[ball] ?? 0,
@@ -3894,6 +3910,9 @@ class PowerUpSystem {
         for (final entry in guns) {
           final kind = entry.kind;
           final composed = _skillForId(kind, entry.skillId);
+          final target = composed.opponentPriority == null ? aimedTarget : _selectOpponent(ball, skill: composed);
+          if (target == null) continue;
+          ball.aimTarget = target;
           // A skill that fires another skill (any combination) or a composed aimed skill.
           final payload = match.skillLibrary.resolvePayload(composed, _t);
           if (payload != null ||
@@ -3920,6 +3939,7 @@ class PowerUpSystem {
             continue;
           }
           _holdFiredWeapon(ball, kind, skillId: entry.skillId);
+          final firstNativeShot = projectiles.length;
           switch (kind) {
             case PowerUpKind.shotgun:
               _fireShotgun(ball, target, shellSkill: composed);
@@ -4011,6 +4031,11 @@ class PowerUpSystem {
             default:
               _fire(ball, target, kind, 0, shellSkill: composed);
               _skillYell(ball, kind, 'BANG!');
+          }
+          if (composed.opponentPriority case final priority?) {
+            for (var i = firstNativeShot; i < projectiles.length; i++) {
+              _projectileOpponentPriorities[projectiles[i]] = priority;
+            }
           }
           // Guns that don't fire through _fire drop a casing only when their skill says so.
           if (const {
@@ -4570,6 +4595,9 @@ class PowerUpSystem {
         spinDegreesPerSecond: visualSkill(kind, ball: ball).projectileSpin,
       ),
     );
+    if (skill.opponentPriority case final priority?) {
+      _projectileOpponentPriorities[projectiles.last] = priority;
+    }
     _skillSound(kind);
     shots++;
   }
@@ -4696,6 +4724,7 @@ class PowerUpSystem {
       // Other systems may clear the collection without marking each projectile
       // spent. Do not retain dangling composed-skill metadata.
       _composedProjectiles.clear();
+      _projectileOpponentPriorities.clear();
       _composedIssuers.clear();
       return;
     }
@@ -4745,6 +4774,7 @@ class PowerUpSystem {
             !target.position.dx.isFinite ||
             !target.position.dy.isFinite) {
           target = CombatTargeting.select(
+            farthest: (_projectileOpponentPriorities[p] ?? (issuerSkill ?? composedSkill ?? projectileVisualSkill(p)).opponentPriority) == OpponentPriority.farthest,
             legacyOrder: match.simulationRevision < 7,
             origin: from,
             candidates: balls,
@@ -5467,6 +5497,7 @@ class PowerUpSystem {
     // Prune both maps against the actual live projectile collection.
     projectiles.removeWhere((p) => p.spent);
     final liveProjectiles = projectiles.toSet();
+    _projectileOpponentPriorities.removeWhere((projectile, _) => !liveProjectiles.contains(projectile));
     _composedProjectiles.removeWhere(
       (projectile, _) => !liveProjectiles.contains(projectile),
     );

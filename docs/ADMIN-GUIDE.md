@@ -381,6 +381,14 @@ Delivery is the mechanical route: instant, projectile, area, beam, aura, orbit o
 
 Melee/ranged/hybrid describes the weapon style. One-handed/two-handed affects what can be equipped together. A two-handed weapon cannot occupy a normal dual-wield pair.
 
+### Opponent priority
+
+Where: Skill Management > Edit skill > Identity > Opponent priority
+
+Choose Nearest opponent or Farthest opponent in Identity. The same setting is used by native attacks, single-target powers, composed skills, melee selection within reach and homing retargets. It does not turn self, area or all-opponent effects into single-target attacks. Incoming-projectile defense still takes priority for shields. Buster Sword keeps its historical farthest default; other skills keep their nearest default until changed.
+
+What to check: Use a match with at least three balls, such as Mayhem. Two-ball demos have only one opponent, so nearest and farthest look identical. Save, reopen the editor, then test both choices.
+
 Related: [Build a new skill instead of a variant](#new-composed), [Damage, healing and projectile mechanics](#mechanics), [Mechanical effects versus visual events](#mechanical-steps)
 
 <a id="mechanics"></a>

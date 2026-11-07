@@ -149,3 +149,46 @@ Unknown fields are ignored. Missing fields receive documented defaults. Invalid 
 ## Phase F implementation, 2026-10-29
 
 [Ordered mechanical effect steps](MECHANICAL-EFFECT-STEPS.md) are implemented: up to eight typed steps with independent targeting, delays and relevant parameters. The editor retains its four main tabs and provides a step-by-step dialog under Identity > Behavior. Native built-ins and unconverted primary/secondary skills retain their legacy execution path. New snapshots use schema 12/13; malformed step definitions are rejected explicitly. Demo inspection shows active mechanical effects and budget rejections, and projectile collision outlines follow the separate physical hit radius. Phase E Android profiling remains deferred; device/production acceptance is manual.
+
+
+## Shared opponent priority (2026-11-07)
+
+`SkillDefinition.opponentPriority` is a per-skill optional `nearest` / `farthest`
+choice, serialized as `opponent_priority`. It is editable for built-in and custom
+skills under Identity > Opponent priority. It is independent of category,
+trigger and delivery: a self/area/all-opponents effect stays self/area/all-target.
+`SkillTargeting.nearestOpponent` retains its wire name for compatibility, but the
+editor calls it Selected opponent; single-opponent effect steps use the same
+parent preference. Melee only chooses among opponents within physical reach.
+
+Native aimed attacks, pickup powers, cinematic target selection, equipped
+tracking fallback, composed effects and homing retargets share the choice. Each
+weapon slot selects independently; live native homing shots retain their launch
+preference after the held weapon is discarded. Shield incoming-projectile
+orientation remains authoritative before its opponent fallback.
+
+Missing preference preserves historical behavior: Buster Sword selects farthest;
+other targeting paths retain nearest. Legacy Buster's original selection remains
+available only as the compatibility fallback. New explicit choices use the
+shared deterministic selector, eligibility/ghost filtering, stable ID ties and
+target retention. Center-wall visibility preferences remain in force for initial
+aiming, while homing retargets use the projectile's position and existing wall
+rules. No extra RNG is consumed.
+
+Full/compact skill snapshots with this field use versions 14/15 so older clients
+reject unsupported replay targeting instead of silently choosing a different
+opponent. Older skill snapshots retain their original versions and defaults.
+This is stored in existing skill-library JSON; no SQL migration is needed.
+
+Test with Mayhem or another 3+ ball match. A two-ball demo has only one opponent,
+so nearest and farthest choose the same ball. Save and reopen before live testing.
+
+Validation: 18 dedicated priority checks pass (including serialization for every
+item, full/compact replay round-trips, native powers, Buster Sword, composed
+skills, independent dual-wield guns, homing retargets, eligibility and invalid
+input rejection). Editor save/reopen passes. Broad sweeps passed 465 combat
+application, 84 combat domain and 48 replay domain checks. The skill sweep had
+597 passes and one local missing shader-asset error; that preferences test file
+passed all 3 checks when rerun in isolation. Final model/store/preferences checks
+passed (53), help checks passed, analysis is clean, and generated help is current.
+No full-app suite rerun or physical phone acceptance is claimed for this change.

@@ -150,6 +150,52 @@ Future<void> _openTrapSettings(
 }
 
 void main() {
+  testWidgets(
+    'shared opponent priority saves and reopens in the skill editor',
+    (tester) async {
+      SkillManagementResult? saved;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.build(AppPalettes.midnight),
+          home: SkillManagementScreen(
+            initial: SkillLibrary.defaults,
+            tuning: PowerUpConfig.defaults,
+            onSave: (value) async => saved = value,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search skills'),
+        'Buster Sword',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Buster Sword'));
+      await tester.pumpAndSettle();
+      final selector = find.byKey(const ValueKey('skill-opponent-priority'));
+      await _revealEditor(tester, selector);
+      await tester.tap(selector);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nearest opponent').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-skill')));
+      await tester.pumpAndSettle();
+      expect(
+        saved!.library
+            .builtIn(PowerUpKind.busterSword, saved!.tuning)
+            .opponentPriority,
+        OpponentPriority.nearest,
+      );
+      Navigator.of(tester.element(selector)).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'Buster Sword'));
+      await tester.pumpAndSettle();
+      await _revealEditor(tester, selector);
+      expect(find.text('Nearest opponent'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('library save failure retains route and allows retry', (
     tester,
   ) async {

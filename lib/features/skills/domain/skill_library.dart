@@ -29,6 +29,8 @@ enum SkillTrigger {
   elimination,
 }
 
+enum OpponentPriority { nearest, farthest }
+
 enum SkillTargeting {
   self,
   nearestOpponent,
@@ -137,6 +139,7 @@ class SkillDefinition {
     this.heldAttackArcScale = 1,
     this.heldAttackVfxScale = 1,
     this.trackNearestOpponent = false,
+    this.opponentPriority,
     this.weaponDisplayScale = 1,
     this.pickupDisplayScale = 1,
     this.effectDisplayScale = 1,
@@ -289,6 +292,9 @@ class SkillDefinition {
       hideHeldWhileThrown ?? (baseKind == PowerUpKind.boomerang);
 
   final bool trackNearestOpponent;
+  final OpponentPriority? opponentPriority;
+  OpponentPriority get resolvedOpponentPriority => opponentPriority ??
+      (baseKind == PowerUpKind.busterSword ? OpponentPriority.farthest : OpponentPriority.nearest);
   final double weaponDisplayScale;
   final double pickupDisplayScale;
   final double effectDisplayScale;
@@ -565,6 +571,7 @@ class SkillDefinition {
     double? heldAttackArcScale,
     double? heldAttackVfxScale,
     bool? trackNearestOpponent,
+    OpponentPriority? opponentPriority,
     double? weaponDisplayScale,
     double? pickupDisplayScale,
     double? effectDisplayScale,
@@ -683,6 +690,7 @@ class SkillDefinition {
     heldAttackArcScale: (heldAttackArcScale ?? this.heldAttackArcScale).clamp(0.25, 2.0),
     heldAttackVfxScale: (heldAttackVfxScale ?? this.heldAttackVfxScale).clamp(0.25, 3.0),
     trackNearestOpponent: trackNearestOpponent ?? this.trackNearestOpponent,
+    opponentPriority: opponentPriority ?? this.opponentPriority,
     weaponDisplayScale: weaponDisplayScale ?? this.weaponDisplayScale,
     pickupDisplayScale: pickupDisplayScale ?? this.pickupDisplayScale,
     effectDisplayScale: effectDisplayScale ?? this.effectDisplayScale,
@@ -824,6 +832,7 @@ class SkillDefinition {
     if (heldAttackArcScale != 1) 'held_attack_arc_scale': heldAttackArcScale.clamp(0.25, 2.0),
     if (heldAttackVfxScale != 1) 'held_attack_vfx_scale': heldAttackVfxScale.clamp(0.25, 3.0),
     'track_nearest_opponent': trackNearestOpponent,
+    if (opponentPriority != null) 'opponent_priority': opponentPriority!.name,
     'weapon_display_scale': weaponDisplayScale,
     'pickup_display_scale': pickupDisplayScale,
     'effect_display_scale': effectDisplayScale,
@@ -909,6 +918,8 @@ class SkillDefinition {
 
   static SkillDefinition? fromJson(Object? value) {
     if (value is! Map) return null;
+    final priority = value['opponent_priority'];
+    if (priority != null && !OpponentPriority.values.any((item) => item.name == priority)) return null;
     final id = value['id'];
     final name = value['name'];
     final base = value['base'];
@@ -985,6 +996,7 @@ class SkillDefinition {
       heldAttackArcScale: (decimal('held_attack_arc_scale') ?? 1).clamp(0.25, 2.0),
       heldAttackVfxScale: (decimal('held_attack_vfx_scale') ?? 1).clamp(0.25, 3.0),
       trackNearestOpponent: value['track_nearest_opponent'] as bool? ?? false,
+      opponentPriority: nullableEnum('opponent_priority', OpponentPriority.values),
       weaponDisplayScale: decimal('weapon_display_scale') ?? 1,
       pickupDisplayScale: decimal('pickup_display_scale') ?? 1,
       effectDisplayScale: decimal('effect_display_scale') ?? 1,
@@ -1504,6 +1516,9 @@ class SkillLibrary {
 
   /// The version [toCompactJson] writes (replay snapshots). Saved libraries stay [currentVersion].
   static const int compactVersion = 3;
+  static const int opponentPriorityVersion = 14;
+  static const int opponentPriorityCompactVersion = 15;
+  bool get hasOpponentPriorities => [...overrides.values, ...custom].any((skill) => skill.opponentPriority != null);
   static const int compositionVersion = 12;
   static const int compositionCompactVersion = 13;
   bool get hasEffectSteps => [
@@ -2341,7 +2356,9 @@ class SkillLibrary {
   }
 
   Map<String, Object?> toJson() => {
-    'version': hasEffectSteps
+    'version': hasOpponentPriorities
+        ? opponentPriorityVersion
+        : hasEffectSteps
         ? compositionVersion
         : hasProjectileOrigins
         ? originVersion
@@ -2377,7 +2394,9 @@ class SkillLibrary {
   /// reads both forms to the same library. Used for replay snapshots; saved libraries keep [toJson].
   Map<String, Object?> toCompactJson() => {
     ...toJson(),
-    'version': hasEffectSteps
+    'version': hasOpponentPriorities
+        ? opponentPriorityCompactVersion
+        : hasEffectSteps
         ? compositionCompactVersion
         : hasProjectileOrigins
         ? originCompactVersion
@@ -2446,7 +2465,8 @@ class SkillLibrary {
         version == 7 ||
         version == visualCompactVersion ||
         version == originCompactVersion ||
-        version == compositionCompactVersion;
+        version == compositionCompactVersion ||
+        version == opponentPriorityCompactVersion;
   }
 
   /// Whether [stored] (this library as the server returned it) holds the
@@ -2587,9 +2607,9 @@ class SkillLibrary {
     final version = decoded['version'];
     if (version is! num ||
         version.toInt() < 1 ||
-        version.toInt() > compositionCompactVersion) {
+        version.toInt() > opponentPriorityCompactVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected 1-$compositionCompactVersion.',
+        'Unsupported skill-library version. Expected 1-$opponentPriorityCompactVersion.',
       );
     }
     final compact = _isCompact(decoded);

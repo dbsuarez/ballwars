@@ -196,6 +196,7 @@ String? guideTopicForField(String label) => const {
   'Rarity': 'identity',
   'Trigger': 'identity',
   'Targeting': 'identity',
+  'Opponent priority': 'identity',
   'Delivery': 'identity',
   'Weapon class': 'identity',
   'Attack delivery': 'identity',

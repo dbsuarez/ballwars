@@ -191,4 +191,6 @@ application, 84 combat domain and 48 replay domain checks. The skill sweep had
 597 passes and one local missing shader-asset error; that preferences test file
 passed all 3 checks when rerun in isolation. Final model/store/preferences checks
 passed (53), help checks passed, analysis is clean, and generated help is current.
-No full-app suite rerun or physical phone acceptance is claimed for this change.
+Subsequent patch verification in v1.14.67 completed all 249 ordinary test files:
+1,808 passed, one existing opt-in profile skipped, zero failures. Interrupted
+batch files passed on isolated retry. Physical phone acceptance remains manual.

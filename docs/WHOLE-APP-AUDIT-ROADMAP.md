@@ -284,3 +284,14 @@ Phases C-E submitted for web deployment and signed APK release as **v1.14.63** o
 - [x] Verified history repaired; local/remote 001-029 match and dry-run reports
   remote database up to date. [Setup and evidence](SUPABASE-CLI-SETUP.md).
 - [ ] Published browser and physical phone acceptance remain manual.
+
+
+## Final snapshot-version regression closure (v1.14.67, 2026-11-07)
+
+- [x] Replace the stale unsupported-version assertion: 14 is now supported;
+  future rejection uses the parser's shared maximum (15 + 1).
+- [x] Keep malformed compact entries rejected; positive coverage for versions 14/15.
+- [x] Complete final-code verification: 1,808 passed / one existing opt-in skip,
+  zero failures across 249 files. Interrupted batch fully retried in smaller groups.
+- [x] Static analysis clean. [Evidence](FULL-REGRESSION-v1.14.67.json).
+- [ ] Published browser/phone acceptance remains manual; workflow monitoring is not automated.

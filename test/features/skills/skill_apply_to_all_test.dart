@@ -253,16 +253,41 @@ void main() {
       ),
       isNull,
     );
+  });
+
+  test('a future snapshot version is rejected', () {
+    String link(Object json) =>
+        base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
     expect(
       SkillLibrary.decodeReplay(
         link({
-          'version': SkillLibrary.compositionCompactVersion + 1,
+          'version': SkillLibrary.maxSupportedVersion + 1,
           'overrides': {},
           'custom': [],
         }),
       ),
       isNull,
     );
+  });
+
+  test('current opponent-priority snapshot versions remain supported', () {
+    for (final version in [
+      SkillLibrary.opponentPriorityVersion,
+      SkillLibrary.opponentPriorityCompactVersion,
+    ]) {
+      final encoded = base64Url
+          .encode(
+            utf8.encode(
+              jsonEncode({'version': version, 'overrides': {}, 'custom': []}),
+            ),
+          )
+          .replaceAll('=', '');
+      expect(
+        SkillLibrary.decodeReplay(encoded),
+        isNotNull,
+        reason: 'version $version',
+      );
+    }
   });
 
   test(

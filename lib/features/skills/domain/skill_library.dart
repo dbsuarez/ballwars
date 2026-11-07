@@ -1518,6 +1518,7 @@ class SkillLibrary {
   static const int compactVersion = 3;
   static const int opponentPriorityVersion = 14;
   static const int opponentPriorityCompactVersion = 15;
+  static const int maxSupportedVersion = opponentPriorityCompactVersion;
   bool get hasOpponentPriorities => [...overrides.values, ...custom].any((skill) => skill.opponentPriority != null);
   static const int compositionVersion = 12;
   static const int compositionCompactVersion = 13;
@@ -2607,9 +2608,9 @@ class SkillLibrary {
     final version = decoded['version'];
     if (version is! num ||
         version.toInt() < 1 ||
-        version.toInt() > opponentPriorityCompactVersion) {
+        version.toInt() > maxSupportedVersion) {
       throw FormatException(
-        'Unsupported skill-library version. Expected 1-$opponentPriorityCompactVersion.',
+        'Unsupported skill-library version. Expected 1-$maxSupportedVersion.',
       );
     }
     final compact = _isCompact(decoded);

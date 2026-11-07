@@ -1,0 +1,74 @@
+{
+  "date": "2026-11-07",
+  "figcraft": "figcraft-cli 0.16.0",
+  "design_commands_passed": 1116,
+  "top_level_boards": 10,
+  "skin_masters": 7,
+  "color_variables": 12,
+  "embedded_images": 11,
+  "missing_fonts": [],
+  "import_warnings": [],
+  "screen_dimensions_checked": true,
+  "svg_skins_no_baked_text_or_images": true,
+  "main_portrait_arena_widths": [
+    390,
+    390
+  ],
+  "winner_panel_center": [
+    195,
+    422
+  ],
+  "contrast_ratios": {
+    "body_on_ink": 16.89,
+    "muted_on_panel": 8.37,
+    "primary_label": 13.1
+  },
+  "flutter_proof": {
+    "command": "flutter test test/visual/verify_figcraft_design.dart --reporter=expanded",
+    "result": "1 passed",
+    "viewports": [
+      "320x800",
+      "390x844",
+      "800x480"
+    ],
+    "checks": [
+      "actual PNG decoding",
+      "true transparent cut corner",
+      "nine-slice scaling",
+      "native path clipping",
+      "live text fits",
+      "touch callbacks",
+      "keyboard Enter callbacks"
+    ],
+    "log": "build/figcraft-design/flutter-proof.log",
+    "log_sha256": "9b591583ca9393ce1f52d54301e64685f0ac47231497be388628e00f0abaac1b"
+  },
+  "analysis": {
+    "command": "flutter analyze",
+    "result": "No issues found",
+    "log_sha256": "32d5931cea5bef3e993dcddd1d31d821d298de795092c01ef71f1b417d961e8f"
+  },
+  "files": [
+    {
+      "file": "Ball-Wars-Arcade-Concept.figcraft",
+      "bytes": 320456,
+      "sha256": "95f148632eab04252f646a636e35e3276c6bc66005fdfe0d417c7cc8faf96c29"
+    },
+    {
+      "file": "fonts/Inter-Variable.ttf",
+      "bytes": 876576,
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "file": "fonts/OFL.txt",
+      "bytes": 4377,
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "file": "previews/flutter-proof-390x844.png",
+      "bytes": 36403,
+      "sha256": "f9d94c2f3b149998efde3ebb07ce5ee5d172b9f8ff10cecd802fc77c61784cf3"
+    }
+  ],
+  "boundary": "Static editable design and component proof only; full screen migration, interactive prototype flows and phone performance are not implemented or claimed. No production code or dependencies changed."
+}

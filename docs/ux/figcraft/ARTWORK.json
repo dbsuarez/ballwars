@@ -1,0 +1,184 @@
+[
+  {
+    "name": "pistol",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      0,
+      0,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/pistol.png",
+    "output_sha256": "d44b85143ebc5501958ebef5293ea3140354df5cbea144a5376fd28c2fe7c9f0",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "shotgun",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      128,
+      0,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/shotgun.png",
+    "output_sha256": "5020ee987bc5b4b96629fa65f33f74f1818bfee8dc12dcb1d2ec22f3fa2a4b3b",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "sword",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      512,
+      0,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/sword.png",
+    "output_sha256": "ad8c782887173bc8d77796258aa6b4b7171a767365f3c3837b4cae1287b594e7",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "shield",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      640,
+      0,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/shield.png",
+    "output_sha256": "36f82f76054b92c51745a8dbcfbefa8230a60ccb59452c47956821da82fd4da7",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "apple",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      0,
+      256,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/apple.png",
+    "output_sha256": "e812538f9452c32f9690ee09d83d6198fcbe88ace343a9d4ddd5da5bb6456350",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "speed",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      128,
+      256,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/speed.png",
+    "output_sha256": "dbaeda025bc94de5b3ba5403d21ba5bd422ef592dca23768e0e5bd8a7b4f8719",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "ghost",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      392,
+      264,
+      112,
+      112
+    ],
+    "output": "docs/ux/figcraft/assets/ghost.png",
+    "output_sha256": "d73c7615aa6a9f3e72af33ac60d4c753a80cd9c7343272faeb5ae79068b08749",
+    "processing": "PhotoCraft: inset the original manifest cell by 8px to exclude a neighboring red pixel, trim alpha, proportional nearest resize within 96x96, transparent 128x128 canvas. Original atlas unchanged."
+  },
+  {
+    "name": "grenade",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      896,
+      0,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/grenade.png",
+    "output_sha256": "7a16cf3c2fabafd672e93e6841df00df12d143786fb3ce87d9cafea56f066a22",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "mine",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      512,
+      384,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/mine.png",
+    "output_sha256": "e86fde1afe842c536a37202804a1dba86ecc13a0b09e44f9a357f69372aeaa6a",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "portal",
+    "source": "assets/sprites/powerups-fixed.png",
+    "source_sha256": "4e58abbb5bfd3f027e59bcdc8c3872934ca0ec6513f5a19cb8219a8f2e116e47",
+    "frame": [
+      768,
+      384,
+      128,
+      128
+    ],
+    "output": "docs/ux/figcraft/assets/portal.png",
+    "output_sha256": "f75fb74001d53ce47cc7b2beaa69919785cebdbcf5da05a421b723230b351ffd",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "rocket",
+    "source": "assets/sprites/rocket-launcher.png",
+    "source_sha256": "c6e2f3e42d99026a770cda6d497d3a94aedc414e179ded444efc27966ee83471",
+    "frame": [
+      0,
+      0,
+      887,
+      887
+    ],
+    "output": "docs/ux/figcraft/assets/rocket.png",
+    "output_sha256": "8a6ea02e09669150cd438a30de5676ab3f4a7b0ba4e2a33e3d04e8ff8af46a44",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "missile",
+    "source": "assets/sprites/rocket-launcher.png",
+    "source_sha256": "c6e2f3e42d99026a770cda6d497d3a94aedc414e179ded444efc27966ee83471",
+    "frame": [
+      887,
+      0,
+      887,
+      887
+    ],
+    "output": "docs/ux/figcraft/assets/missile.png",
+    "output_sha256": "4eadb64abce589413eee72e97ac6ded6e5ab6da96c927d8e6523b23d015d38a1",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  },
+  {
+    "name": "boomerang",
+    "source": "assets/sprites/boomerang.png",
+    "source_sha256": "67c1b3ee9efd25a6a7d5417564ecb2f49cfe9545090735112ad7c85d42bcacbc",
+    "frame": [
+      0,
+      0,
+      887,
+      887
+    ],
+    "output": "docs/ux/figcraft/assets/boomerang.png",
+    "output_sha256": "90323299b49052d95de01aaf170ad3ef7aa8cb46afd226569e63ca2adb24bb1e",
+    "processing": "PhotoCraft: crop first manifest frame, trim alpha, proportional nearest resize within 96x96, pad transparently to 128x128"
+  }
+]

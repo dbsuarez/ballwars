@@ -91,3 +91,13 @@ flutter test test/core/theme/game_motion_test.dart
 The optional pixel comparison uses the checked-in Windows/Flutter 3.38.5 baselines. Ordinary widget interaction/layout checks run on all hosts. Refresh intentional visual baselines with `--update-goldens` and inspect the output. Capture output goes to `build/game-ui-screenshots`; committed copies and hashes are in `screenshots/` and `SCREENSHOT-MANIFEST.json`.
 
 No cumulative ZIP is created. Source and documentation are delivered through local Git commits; deploy/release remain explicit commands.
+
+
+## Editable FigCraft concept (2026-11-07)
+
+A separate design proposal, **The Battle Garage**, is available as an editable
+[FigCraft document](figcraft/Ball-Wars-Arcade-Concept.figcraft), with
+[screen previews and asset files](figcraft/README.md) and a
+[Flutter implementation handoff](figcraft/FLUTTER-HANDOFF.md).
+It includes ten boards, seven text-free PNG/SVG skins and an actual Flutter
+component proof. It has not replaced the implemented A-E UI or changed gameplay.

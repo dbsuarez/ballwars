@@ -1,0 +1,12 @@
+# Keep source and provenance checks stable on Windows checkouts.
+*.md text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.svg text eol=lf
+*.txt text eol=lf
+*.figcraft binary
+*.png binary
+*.ttf binary
+.gitattributes text eol=lf
+# Preserve the upstream license byte-for-byte, including its intentional spaces.
+fonts/OFL.txt -whitespace

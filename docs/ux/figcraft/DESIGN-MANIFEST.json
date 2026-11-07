@@ -1,0 +1,178 @@
+{
+  "figcraftVersion": "figcraft-cli 0.16.0",
+  "commandCount": 1116,
+  "screens": [
+    {
+      "name": "01 Home",
+      "file": "previews/01-home.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "a9ddce67ff5fd42e76212a4b61f1c9b868d30e88924ad9b7b618f0b9491f8eed"
+    },
+    {
+      "name": "02 Match Setup",
+      "file": "previews/02-match-setup.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "ef1aed01c86ce913a3d1975e09aa100e2854a80d2cb30bb914a419766a3dfa0e"
+    },
+    {
+      "name": "03 Live Battle",
+      "file": "previews/03-live-battle.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "fa4262b0fc64458ece114efbdb00f6d4b4a26eed788c119cd57ce6da5e4c358c"
+    },
+    {
+      "name": "04 Winner",
+      "file": "previews/04-winner.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "27dbe44a8d4843758f785ce8ec589e838815360bf2fa02ccb88396b7720f2637"
+    },
+    {
+      "name": "05 Skill Library",
+      "file": "previews/05-skill-library.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "f5b2efa43ada3f4180261bd8beb457dc7d080d31733b882f376010dc61502be7"
+    },
+    {
+      "name": "06 Skill Editor",
+      "file": "previews/06-skill-editor.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "cabddaafac12dd07ef21f304ab0b43b9bade8eadbfe934b0b1bf370148692cbd"
+    },
+    {
+      "name": "07 Power-up Test",
+      "file": "previews/07-power-up-test.png",
+      "width": 390,
+      "height": 844,
+      "sha256": "89d0b3ca1b28f9182824489868e4d46df112c9df8f7a3ddc7ac8067b2ac1e16b"
+    },
+    {
+      "name": "08 Battle - landscape",
+      "file": "previews/08-battle-landscape.png",
+      "width": 800,
+      "height": 360,
+      "sha256": "e4b74007cb0f6f1c402eb7982a2b2148041a88a5ff0ca73fd24da84627446ae2"
+    },
+    {
+      "name": "09 Home - narrow phone",
+      "file": "previews/09-home-narrow-phone.png",
+      "width": 360,
+      "height": 800,
+      "sha256": "d9f84524523cbcd450ea4de0ead3852e9fbf8290174c9746e5ac7a39d668c2db"
+    },
+    {
+      "name": "10 Component kit",
+      "file": "previews/10-component-kit.png",
+      "width": 1200,
+      "height": 1020,
+      "sha256": "5af3ac342f5962fdc7e9a932e39b2a84072173f99c4f7e98c1221d8bcb05fff2"
+    }
+  ],
+  "skins": [
+    {
+      "name": "skin-primary-normal",
+      "width": 256,
+      "height": 64,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        16
+      ],
+      "textColor": "#0B111B",
+      "file": "skins/skin-primary-normal.png",
+      "sha256": "60ff7bfed5fcfbcbe04b62ad196656678fe8ae58d805f9c7d816a1276ffde733"
+    },
+    {
+      "name": "skin-primary-pressed",
+      "width": 256,
+      "height": 64,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        16
+      ],
+      "textColor": "#0B111B",
+      "file": "skins/skin-primary-pressed.png",
+      "sha256": "7e6ac4e0f2686c34775a3261998511aadcb7a824a5795cc78503d655603a2cbd"
+    },
+    {
+      "name": "skin-primary-disabled",
+      "width": 256,
+      "height": 64,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        16
+      ],
+      "textColor": "#ACBDCC",
+      "file": "skins/skin-primary-disabled.png",
+      "sha256": "30586acca0a6a7f5e6d4fcf95c70ed19751cf73d3b92ad6e9f7b4c3d3afaef01"
+    },
+    {
+      "name": "skin-card-normal",
+      "width": 256,
+      "height": 192,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        144
+      ],
+      "textColor": "#F5F2E8",
+      "file": "skins/skin-card-normal.png",
+      "sha256": "10b00d3181fe49b7bd634d060cde1f2676fd3e0592550b3260eb4a88eade2b95"
+    },
+    {
+      "name": "skin-card-rare",
+      "width": 256,
+      "height": 192,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        144
+      ],
+      "textColor": "#F5F2E8",
+      "file": "skins/skin-card-rare.png",
+      "sha256": "024e4f7fe866ea0d6eb9a15ab174cb68dee3f55359cfe8ad04d4e3b71f101938"
+    },
+    {
+      "name": "skin-card-epic",
+      "width": 256,
+      "height": 192,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        144
+      ],
+      "textColor": "#F5F2E8",
+      "file": "skins/skin-card-epic.png",
+      "sha256": "378753e246db002077e9c744c02df89f408dc078e63cd7d1fc70575716726b16"
+    },
+    {
+      "name": "skin-card-special",
+      "width": 256,
+      "height": 192,
+      "centerSlice": [
+        24,
+        24,
+        208,
+        144
+      ],
+      "textColor": "#F5F2E8",
+      "file": "skins/skin-card-special.png",
+      "sha256": "2b498c9f927cb8156b1d63633d1561fcd1bb7a42bdb7ba98f8fdf6bddca3ba6e"
+    }
+  ],
+  "native": "Ball-Wars-Arcade-Concept.figcraft",
+  "native_sha256": "95f148632eab04252f646a636e35e3276c6bc66005fdfe0d417c7cc8faf96c29"
+}

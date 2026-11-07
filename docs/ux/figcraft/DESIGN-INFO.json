@@ -1,0 +1,90 @@
+{
+  "file": "D:\\Development\\ballwars\\docs\\ux\\figcraft\\Ball-Wars-Arcade-Concept.figcraft",
+  "images": 11,
+  "missingFonts": [],
+  "name": "Ball Wars - Battle Garage concept",
+  "nodes": 1097,
+  "notes": [],
+  "pages": [
+    {
+      "frames": [
+        {
+          "height": 844.0,
+          "id": 2,
+          "name": "01 Home",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 844.0,
+          "id": 55,
+          "name": "02 Match Setup",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 844.0,
+          "id": 184,
+          "name": "03 Live Battle",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 844.0,
+          "id": 397,
+          "name": "04 Winner",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 844.0,
+          "id": 464,
+          "name": "05 Skill Library",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 844.0,
+          "id": 543,
+          "name": "06 Skill Editor",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 844.0,
+          "id": 622,
+          "name": "07 Power-up Test",
+          "type": "FRAME",
+          "width": 390.0
+        },
+        {
+          "height": 360.0,
+          "id": 801,
+          "name": "08 Battle - landscape",
+          "type": "FRAME",
+          "width": 800.0
+        },
+        {
+          "height": 800.0,
+          "id": 974,
+          "name": "09 Home - narrow phone",
+          "type": "FRAME",
+          "width": 360.0
+        },
+        {
+          "height": 1020.0,
+          "id": 1027,
+          "name": "10 Component kit",
+          "type": "FRAME",
+          "width": 1200.0
+        }
+      ],
+      "id": 1,
+      "name": "Page 1",
+      "nodes": 1096,
+      "topLevel": 10
+    }
+  ],
+  "styles": 0,
+  "variables": 12
+}

@@ -7,3 +7,7 @@ Only the initial direction changes. Starting positions, speed distribution, wall
 The match seed reproduces the same starting headings. Replay links support revision 12; recordings from revisions 1?11 retain their original launch behavior.
 
 Validation covers independent headings in every quadrant, unchanged initial speeds, deterministic seeds, and an eight-ball replay simulation round-trip.
+
+## CI correction
+
+The initial release missed two Match Setup expectations of revision 11. They now explicitly expect 12. All 101 checks across Match Setup and Power-up Test pass; these UI checks are required alongside simulation/replay checks when changing the revision used by those screens. See [v1.14.69](ux/RELEASE-v1.14.69.md).

@@ -433,7 +433,7 @@ class MatchSimulationController {
     _slotOwners = List<SimulationBall?>.filled(rimSlotCount, null);
     _layoutRotation = layoutRotation ?? _rng.nextDoubleRange(0, 2 * math.pi);
 
-    // Two balls launch as in the reference: ~45 degrees between "inward" and
+    // Historical replay launches: two balls start ~45 degrees between "inward" and
     // a shared sideways direction picked by the seed, so they converge as
     // mirror images. Three or more launch along their own tangent with one
     // shared turning sense (see [multiBallTiltMax]). Both treat every start
@@ -503,7 +503,12 @@ class MatchSimulationController {
       final direction = sideways * math.cos(inward) - radial * math.sin(inward);
       final tiltMax = count == 2 ? launchTiltMax : multiBallTiltMax;
       final tilt = _rng.nextDoubleRange(-tiltMax, tiltMax);
-      final heading = math.atan2(direction.dy, direction.dx) + tilt;
+      // New matches choose each heading independently across the full circle.
+      // Reuse the uniform tilt draw across [-pi, pi], preserving RNG order.
+      // Older replays retain their historical launch geometry.
+      final heading = simulationRevision >= 12
+          ? (tilt / tiltMax) * math.pi
+          : math.atan2(direction.dy, direction.dx) + tilt;
       final velocity = Offset(math.cos(heading), math.sin(heading)) * speed;
       return SimulationBall(
         config: lineColors[i] == contestants[i].primaryColor

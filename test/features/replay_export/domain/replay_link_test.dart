@@ -62,6 +62,38 @@ String _legacyTuning() {
 }
 
 void main() {
+  test('independent launch revision round-trips and reproduces eight-ball starts', () {
+    final original = ReplayLink(
+      contestants: List.generate(8, (i) => CustomBall(id: 'launch-$i', name: 'Ball $i', primaryColor: Colors.blue, glowColor: Colors.cyan)),
+      seed: 71,
+      speedMultiplier: 1,
+      mode: MatchMode.arsenal,
+      mayhem: true,
+      endlessBattle: true,
+      simulationRevision: 12,
+    );
+    final decoded = ReplayLink.fromUri(
+      original.toUri(presetIds: _presetIds), presets: _presets,
+    )!;
+    expect(decoded.simulationRevision, 12);
+    MatchSimulationController create(ReplayLink link) => MatchSimulationController(
+      link.contestants, arenaRadius: 260, seed: link.seed,
+      mode: link.mode, mayhem: link.mayhem, endlessBattle: link.endlessBattle, lookAhead: false,
+      simulationRevision: link.simulationRevision,
+    );
+    final live = create(original);
+    final replay = create(decoded);
+    expect(live.state.balls, hasLength(8));
+    for (var step = 0; step < 60; step++) {
+      for (var i = 0; i < 8; i++) {
+        expect(replay.state.balls[i].position, live.state.balls[i].position);
+        expect(replay.state.balls[i].velocity, live.state.balls[i].velocity);
+      }
+      live.tick(1 / 60);
+      replay.tick(1 / 60);
+    }
+  });
+
   test('changing arenas round-trip and malformed rotation is rejected', () {
     final original = ReplayLink(
       contestants: _presets.take(2).toList(),

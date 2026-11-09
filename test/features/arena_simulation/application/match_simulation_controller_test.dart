@@ -636,6 +636,39 @@ void main() {
     },
   );
 
+  test('independent launch headings cover every direction and reproduce by seed', () {
+    final quadrants = [<int>{}, <int>{}];
+    var differentHeadings = false;
+    for (var seed = 1; seed <= 40; seed++) {
+      MatchSimulationController create() => MatchSimulationController(
+        _twoBalls(),
+        arenaRadius: _arenaRadius,
+        layoutRotation: 0,
+        seed: seed,
+        simulationRevision: 12,
+      );
+      final first = create();
+      final replay = create();
+      for (var i = 0; i < 2; i++) {
+        final velocity = first.state.balls[i].velocity;
+        expect(velocity, replay.state.balls[i].velocity);
+        expect(velocity.distance, greaterThan(0));
+        quadrants[i].add((velocity.dx >= 0 ? 1 : 0) + (velocity.dy >= 0 ? 2 : 0));
+        // Direction changes must not change the existing speed distribution.
+        final legacy = MatchSimulationController(
+          _twoBalls(), arenaRadius: _arenaRadius, layoutRotation: 0,
+          seed: seed, simulationRevision: 11,
+        );
+        expect(velocity.distance, closeTo(legacy.state.balls[i].velocity.distance, 1e-9));
+      }
+      final a = first.state.balls[0].velocity.direction;
+      final b = first.state.balls[1].velocity.direction;
+      if ((a - b).abs() > 0.1) differentHeadings = true;
+    }
+    expect(quadrants, [{0, 1, 2, 3}, {0, 1, 2, 3}]);
+    expect(differentHeadings, isTrue);
+  });
+
   test('launch directions have no built-in clockwise bias', () {
     final senses = <bool>{};
     for (var seed = 1; seed <= 20; seed++) {
